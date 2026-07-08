@@ -8,6 +8,7 @@ using ImmersiveAI.Core.Prompts;
 using ImmersiveAI.Llm;
 using ImmersiveAI.Personas;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
@@ -563,6 +564,23 @@ namespace ImmersiveAI
                 var rawReply = await _client.CompleteAsync(messages).ConfigureAwait(false);
                 var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
+                // Then ask her, in a separate breath, how that exchange moved her heart — one number, in
+                // her own voice (the Angel asking privately). Isolating the question makes it reliable even
+                // for chattier models that would never smuggle a mark into a spoken reply. Best-effort: if
+                // she cannot weigh it now, her standing simply holds and the reply is untouched.
+                int feltShift = 0;
+                if (_config.EnableRelationshipChanges)
+                {
+                    try
+                    {
+                        var feelingMessages = _promptBuilder.BuildFeelingQuery(
+                            ctx.Persona, ctx.PlayerName, playerInput, reply, GetStanding(npc), _config.SystemVoiceName);
+                        var feelingRaw = await _client.CompleteAsync(feelingMessages).ConfigureAwait(false);
+                        feltShift = FeelingParser.ParseShift(feelingRaw) ?? 0;
+                    }
+                    catch { /* the number is best-effort; never let it cost us the conversation */ }
+                }
+
                 memory.AddTurn(new ConversationTurn
                 {
                     PlayerLine = playerInput,
@@ -570,6 +588,7 @@ namespace ImmersiveAI
                     GameDay = CampaignTime.Now.ToDays,
                     CalradiaTime = SituationBuilder.Timestamp(),
                     Place = SituationBuilder.Place(npc),
+                    FeltShift = feltShift,
                 });
 
                 var currentGameDay = CampaignTime.Now.ToDays;
@@ -597,6 +616,11 @@ namespace ImmersiveAI
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
+                    // Fold the felt shift into the real standing on the game thread (state + UI), after
+                    // the reply is stored, so a hiccup here never eats the words she just spoke.
+                    if (feltShift != 0)
+                        ApplyRelationShift(npc, feltShift);
+
                     MBTextManager.SetTextVariable(ResponseVar, reply, false);
                     _responseReady = true;
                 });
@@ -610,6 +634,53 @@ namespace ImmersiveAI
                     InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + message));
                     _responseReady = true;
                 });
+            }
+        }
+
+        // The NPC's current standing toward the player, read from the live game relation. Used to give
+        // the feeling query a starting point to move from. Read off the game thread like the persona
+        // build already is; it is a plain lookup, and only the write (ApplyRelationShift) needs the tick.
+        private static int GetStanding(Hero npc)
+        {
+            try
+            {
+                var player = Hero.MainHero;
+                return (npc != null && player != null) ? npc.GetRelation(player) : 0;
+            }
+            catch { return 0; }
+        }
+
+        // Folds the NPC's own felt shift into the real game standing. They set it themselves, in
+        // character, with no ceiling but the -100..100 rail of the relation itself; we just add it to
+        // where they stand and tell the player plainly what moved. Must run on the game thread (touches
+        // campaign state and UI); RespondAsync calls it from inside the main-thread dispatch. Best-effort.
+        private void ApplyRelationShift(Hero npc, int shift)
+        {
+            try
+            {
+                var player = Hero.MainHero;
+                if (npc == null || player == null || shift == 0) return;
+
+                int before = npc.GetRelation(player);
+                int target = Math.Max(-100, Math.Min(100, before + shift));
+                int applied = target - before;
+                if (applied == 0) return; // already pinned to that rail; nothing left to give
+
+                // affectRelatives false: this is one heart's private movement, not a house-wide verdict.
+                // showQuickNotification false: we show our own, gentler line below instead of the stock one.
+                ChangeRelationAction.ApplyPlayerRelation(npc, applied, affectRelatives: false, showQuickNotification: false);
+
+                int after = npc.GetRelation(player);
+                var name = npc.Name?.ToString() ?? "They";
+                var verb = applied > 0 ? "warms to you" : "cools toward you";
+                var sign = applied > 0 ? "+" : string.Empty;
+                var text = $"{name} {verb} ({sign}{applied}) — now {PersonaBuilder.DescribeRelation(after)} ({after}).";
+                var color = applied > 0 ? new Color(0.45f, 0.85f, 0.45f, 1f) : new Color(0.9f, 0.45f, 0.45f, 1f);
+                InformationManager.DisplayMessage(new InformationMessage(text, color));
+            }
+            catch (Exception ex)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
             }
         }
 

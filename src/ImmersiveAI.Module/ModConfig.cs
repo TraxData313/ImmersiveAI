@@ -25,6 +25,11 @@ namespace ImmersiveAI
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
         public bool EnableConversationRecap { get; set; } = true;
 
+        /// <summary>When true, the NPC may set — in character, however they truly feel — how each exchange
+        /// moves their regard for the player, and that shift is folded into the real game standing
+        /// (clamped to -100..100). Set false to leave relations untouched by conversation.</summary>
+        public bool EnableRelationshipChanges { get; set; } = true;
+
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
         /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>

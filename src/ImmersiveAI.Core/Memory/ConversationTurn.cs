@@ -19,6 +19,11 @@ namespace ImmersiveAI.Core.Memory
         /// game layer; empty for older turns. Lets the NPC recall when and where each thing was said.</summary>
         public string Place { get; set; } = string.Empty;
 
+        /// <summary>How the NPC's own regard for the player moved on this exchange, as they themselves set
+        /// it (the private ♥ mark, folded into the real game standing). 0 when they left it unchanged or
+        /// relationship shifts are off. Kept for provenance — a trail of how a bond grew, turn by turn.</summary>
+        public int FeltShift { get; set; }
+
         public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
     }
 }

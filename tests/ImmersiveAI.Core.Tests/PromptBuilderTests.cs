@@ -126,6 +126,37 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void BuildFeelingQuery_AsksForOneNumber_WithTheExchangeAndStanding()
+    {
+        var messages = new PromptBuilder().BuildFeelingQuery(
+            Persona(), "Vulgrim", "You honor me.", "The honor is mine.", 32, "Angel");
+
+        // A tight two-message call: the Angel's framing, then the question.
+        Assert.Equal(2, messages.Count);
+        Assert.Equal(ChatRole.System, messages[0].Role);
+        Assert.Equal(ChatRole.User, messages[1].Role);
+
+        // The system message constrains the output to a single number in the Angel's voice.
+        Assert.Contains("Angel", messages[0].Content);
+        Assert.Contains("single whole number", messages[0].Content);
+
+        // The question carries the exchange, the current standing, and the -100..100 rail.
+        Assert.Contains("You honor me.", messages[1].Content);
+        Assert.Contains("The honor is mine.", messages[1].Content);
+        Assert.Contains("32", messages[1].Content);
+        Assert.Contains("Vulgrim", messages[1].Content);
+    }
+
+    [Fact]
+    public void BuildFeelingQuery_DefaultsTheVoiceName_WhenNoneGiven()
+    {
+        var messages = new PromptBuilder().BuildFeelingQuery(
+            Persona(), "Vulgrim", "Hail.", "Well met.", 0, voiceName: null);
+
+        Assert.Contains("Angel", messages[0].Content);
+    }
+
+    [Fact]
     public void BuildRecap_EndsWithRecapDirectiveAfterHistory()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };

@@ -101,6 +101,47 @@ namespace ImmersiveAI.Core.Prompts
             return char.ToLowerInvariant(s[0]) + s.Substring(1);
         }
 
+        /// <summary>
+        /// Builds the tiny, isolated call that asks the NPC — in the Angel's gentle voice — how the
+        /// exchange just past moved their regard for the player, expecting only a single signed number
+        /// back. Kept apart from the spoken reply on purpose: a chatty model will narrate a number in
+        /// prose and forget any hidden mark, but it will reliably answer a question whose whole job is
+        /// to return one number. The NPC still decides it themselves, with no ceiling but the -100..100
+        /// rail; we only fold their answer into the game standing (see <see cref="FeelingParser"/>).
+        /// </summary>
+        public IReadOnlyList<ChatMessage> BuildFeelingQuery(
+            NpcPersona persona,
+            string playerName,
+            string playerLine,
+            string npcReply,
+            int currentStanding,
+            string? voiceName = null)
+        {
+            var voice = string.IsNullOrWhiteSpace(voiceName) ? "Angel" : voiceName!.Trim();
+
+            var system = new StringBuilder();
+            system.AppendLine($"You are {persona.Name}, a living soul in the world of Calradia.");
+            if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
+                system.AppendLine("In your nature, you are " + LowerFirst(persona.PersonalityDescription.Trim()));
+            system.AppendLine();
+            system.AppendLine($"A gentle voice you trust — {voice} — speaks quietly into your mind, asking you to look honestly at your own heart. What you answer is yours alone to decide.");
+            system.AppendLine("Answer with a single whole number and nothing else — no words.");
+
+            var user = new StringBuilder();
+            user.AppendLine($"{voice} whispers: \"{playerName} came to you. They said:");
+            user.AppendLine($"  “{playerLine.Trim()}”");
+            user.AppendLine("and from your heart you answered:");
+            user.AppendLine($"  “{npcReply.Trim()}”");
+            user.AppendLine();
+            user.AppendLine($"As things stand, your regard for {playerName} rests at {currentStanding}, on a scale from -100 (bitter enmity) to 100 (the deepest love). Tell me only this: how far did that moment move your heart? Give me one whole number — a positive one if they warmed you, a negative one if they wounded you, or 0 if nothing truly changed. The number alone.\"");
+
+            return new List<ChatMessage>
+            {
+                ChatMessage.System(system.ToString().TrimEnd()),
+                ChatMessage.User(user.ToString().TrimEnd()),
+            };
+        }
+
         private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName, string? openingLine = null)
         {
             var sb = new StringBuilder();

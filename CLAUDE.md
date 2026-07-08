@@ -138,7 +138,8 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 ## User-editable runtime files (NOT in the repo)
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
-- `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits.
+- `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
+  `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts; default on).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\<stringId>_<FirstName>\` — one folder per NPC (e.g. `NPCs\lord_7_13_1_Gunjadrid\`).
@@ -166,6 +167,17 @@ CLAUDE.md / AGENTS.md together.**
 Talking to any hero shows a **"Speak freely with me. [Immersive AI]"** dialog option →
 "Say something..." → a text popup → the reply appears in the conversation panel and loops.
 Errors surface as a top-left "Immersive AI: ..." message.
+
+Each exchange can also move the NPC's standing with the player. After the spoken reply, a **second,
+isolated LLM call** (`PromptBuilder.BuildFeelingQuery`) asks the NPC — in the Angel's voice, in first
+person — how that moment moved their heart, expecting only a single signed number back;
+`FeelingParser.ParseShift` reads it and `ChangeRelationAction` folds it into the real game relation
+(clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
+feel). A colored message reports what moved. Toggle with `EnableRelationshipChanges`.
+Why a separate call: an earlier design asked the NPC to smuggle the number into the tail of their
+reply, but chatty/weaker models (e.g. gpt-4o) just narrate a number in prose and never emit the mark,
+so nothing moved. A question whose whole job is to return one number is reliable across backends —
+at the cost of one extra short call per turn.
 
 Known caveat: the "considers your words..." → reply transition can outrun a slow LLM call and
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.
