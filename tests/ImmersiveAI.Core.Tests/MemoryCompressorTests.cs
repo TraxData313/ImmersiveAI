@@ -81,6 +81,51 @@ public class MemoryCompressorTests
     }
 
     [Fact]
+    public async Task ReflectAsync_WithNothingToFold_StillRewritesSummaryAndKeepsAllTurns()
+    {
+        var client = new FakeChatClient
+        {
+            Response = "SUMMARY:\nOn reflection, we are not yet wed, but I hope for it.\nFACTS:\n- We are betrothed, not married"
+        };
+        var memory = MemoryWithTurns(3);
+        memory.Summary = "An old, stale summary.";
+
+        // keepMostRecent >= turn count, so there is nothing old enough to fold away.
+        var reflected = await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5);
+
+        Assert.True(reflected);
+        Assert.NotNull(client.LastRequest); // she actually re-thinks (an LLM call happened)
+        Assert.Equal(3, memory.RecentTurns.Count); // no turns dropped
+        Assert.Contains("not yet wed", memory.Summary); // summary rewritten
+        Assert.Contains("We are betrothed, not married", memory.KnownFacts);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_FoldsExcessTurnsBeyondKeepWindow()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(10);
+
+        var reflected = await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 4);
+
+        Assert.True(reflected);
+        Assert.Equal(4, memory.RecentTurns.Count);
+        Assert.Equal("p6", memory.RecentTurns[0].PlayerLine);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_WithNoMemoryAtAll_ReturnsFalseWithoutCallingLlm()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nirrelevant" };
+        var memory = new NpcMemory { NpcId = "lord_1", NpcName = "Gafnir" };
+
+        var reflected = await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5);
+
+        Assert.False(reflected);
+        Assert.Null(client.LastRequest);
+    }
+
+    [Fact]
     public async Task CompressAsync_AddressesNpcAsIndividualViaNamedSystemVoice()
     {
         var client = new FakeChatClient { Response = "SUMMARY:\nok" };

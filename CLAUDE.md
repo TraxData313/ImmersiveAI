@@ -93,6 +93,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
+  - `current_situation_info.txt` — environmental facts (when/where/who) snapshot, rewritten
+    every time the player opens a chat; built by `SituationBuilder` relative to the party the
+    NPC speaks with, and fed into the prompt as the "Current situation" section.
   - future per-NPC files go here too.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 

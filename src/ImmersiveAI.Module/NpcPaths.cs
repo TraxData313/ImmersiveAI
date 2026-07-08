@@ -29,6 +29,7 @@ namespace ImmersiveAI
     {
         public const string MemoryFileName = "memories.json";
         public const string CustomInstructionsFileName = "custom_instructions.txt";
+        public const string SituationFileName = "current_situation_info.txt";
 
         /// <summary>Root that holds one subfolder per NPC.</summary>
         public static string NpcsRoot => Path.Combine(ModConfig.ConfigDirectory, "NPCs");
@@ -50,6 +51,8 @@ namespace ImmersiveAI
         public static string MemoryFile(Hero npc) => Path.Combine(NpcFolder(npc), MemoryFileName);
 
         public static string CustomInstructionsFile(Hero npc) => Path.Combine(NpcFolder(npc), CustomInstructionsFileName);
+
+        public static string SituationFile(Hero npc) => Path.Combine(NpcFolder(npc), SituationFileName);
 
         /// <summary>The NPC's first name only (second names excluded), for the folder label. Falls back
         /// to the first token of the full name, then to the raw id.</summary>
@@ -188,6 +191,10 @@ Inside each folder:
                             JSON shape. Delete it to make that NPC forget you completely.
   custom_instructions.txt - private instructions for THIS NPC. Lines starting with # or //
                             are ignored. (World-wide instructions go in ..\global_prompt.txt.)
+  current_situation_info.txt - the environmental facts (when/where/who) captured the last time
+                            you opened a chat with this NPC. Regenerated on every chat; read-only
+                            snapshot, edits are overwritten. This is exactly what the NPC 'sees'
+                            as the Current situation in her prompt.
 
 You can delete an NPC's whole folder to reset that character.
 ";

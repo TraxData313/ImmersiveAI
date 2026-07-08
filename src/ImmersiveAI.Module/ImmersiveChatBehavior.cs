@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using ImmersiveAI.Core.Llm;
@@ -8,7 +9,6 @@ using ImmersiveAI.Llm;
 using ImmersiveAI.Personas;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Conversation;
-using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -50,6 +50,11 @@ namespace ImmersiveAI
         // The greeting the NPC just delivered this conversation, fed into the first reply's prompt so
         // it doesn't greet twice. Not persisted to memory; consumed once, then cleared.
         private volatile string? _lastGreeting;
+
+        // The environmental facts (when/where/who) captured when the player opened this chat. Written
+        // to current_situation_info.txt and reused as the scene context for every turn of this
+        // conversation, so what the player inspects on disk is exactly what the NPC's prompt carries.
+        private volatile string? _currentSituation;
 
         public ImmersiveChatBehavior(ModConfig config)
         {
@@ -108,7 +113,7 @@ namespace ImmersiveAI
             {
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_input",
                     "{=ImmersiveAI_Speak}Speak freely with me. [Immersive AI]",
-                    () => Hero.OneToOneConversationHero != null, null, 110);
+                    () => Hero.OneToOneConversationHero != null, OnChatOpenedNoRecap, 110);
             }
 
             // Menu option: say something -> shows the text box, then goes to the await state.
@@ -129,11 +134,20 @@ namespace ImmersiveAI
             starter.AddPlayerLine("immersiveai_update_hold", "immersiveai_update_hold", "immersiveai_updating",
                 "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
 
-            // Show her current deep memory (rolling summary) and memorized facts.
+            // Show the full raw prompt she would receive on the next message: system prompt (persona,
+            // current situation, deep memory, facts, rules, custom instructions), the remembered turns
+            // as real user/assistant messages, then a placeholder for the player's next line.
             starter.AddPlayerLine("immersiveai_deepmem", "immersiveai_input", "immersiveai_deepmem_out",
-                "{=ImmersiveAI_DeepMemory}What do you hold of me in your deeper memory? [Immersive AI]",
-                null, OnShowDeepMemory, 107);
+                "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind as it holds me now. [Immersive AI]",
+                null, OnShowRawPrompt, 107);
             starter.AddDialogLine("immersiveai_deepmem_line", "immersiveai_deepmem_out", "immersiveai_input",
+                "{=!}{" + InfoVar + "}", null, null);
+
+            // Show the environmental facts captured when this chat opened (current_situation_info.txt).
+            starter.AddPlayerLine("immersiveai_situation", "immersiveai_input", "immersiveai_situation_out",
+                "{=ImmersiveAI_Situation}What do you make of our situation here and now? [Immersive AI]",
+                null, OnShowSituation, 105);
+            starter.AddDialogLine("immersiveai_situation_line", "immersiveai_situation_out", "immersiveai_input",
                 "{=!}{" + InfoVar + "}", null, null);
 
             // Show the full verbatim conversation still held in recent memory.
@@ -184,16 +198,49 @@ namespace ImmersiveAI
         // recap is already generating while the "gathers their thoughts..." holding line displays.
         private void OnChatOpened()
         {
-            _currentNpc = Hero.OneToOneConversationHero;
             _recapReady = false;
             _lastGreeting = null;
             MBTextManager.SetTextVariable(RecapVar, "...", false);
 
-            var npc = _currentNpc;
+            var npc = PrepareChat();
             if (npc == null) { _recapReady = true; return; }
 
             // Fire-and-forget; UI updates are marshaled back to the game thread.
             _ = RecapAsync(npc);
+        }
+
+        // Same entry point when the opening recap is disabled: we still capture the situation snapshot
+        // (that's the whole reason the file exists), we just drop straight into the say/leave menu.
+        private void OnChatOpenedNoRecap()
+        {
+            _lastGreeting = null;
+            PrepareChat();
+        }
+
+        // Captures the "current situation" the moment the player opens a chat: builds the environmental
+        // facts relative to the party the NPC is speaking with (the player), caches them for this
+        // conversation's prompts, and writes current_situation_info.txt for inspection. Best-effort on
+        // the file write so a disk hiccup never blocks talking.
+        private Hero? PrepareChat()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            _currentNpc = npc;
+            _currentSituation = null;
+            if (npc == null) return null;
+
+            try
+            {
+                var situation = SituationBuilder.Build(npc, Hero.MainHero);
+                _currentSituation = situation;
+                NpcPaths.EnsureMigrated(npc);
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                File.WriteAllText(NpcPaths.SituationFile(npc), situation);
+            }
+            catch (Exception ex)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+            return npc;
         }
 
         private async Task RecapAsync(Hero npc)
@@ -260,19 +307,21 @@ namespace ImmersiveAI
                     keepRecentDays: 0,
                     _config.MinRecentMemoryTokensAfterCompression);
 
-                var didCompress = await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName)
+                // Always reflect (rewrite the rolling summary and facts), even when nothing is old enough
+                // to fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
+                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName)
                     .ConfigureAwait(false);
 
                 string outcome;
-                if (didCompress)
+                if (didReflect)
                 {
-                    memory.SummaryAsOf = FormatCalradiaNow();
+                    memory.SummaryAsOf = SituationBuilder.Timestamp();
                     SaveMemory(npc, memory);
                     outcome = "(I have turned it all over in my mind, and set what matters into memory.)";
                 }
                 else
                 {
-                    outcome = "(All we have shared is still fresh in my mind; nothing yet needs settling into the deeper past.)";
+                    outcome = "(There is nothing yet between us for me to reflect upon.)";
                 }
 
                 MainThreadDispatcher.Enqueue(() =>
@@ -293,36 +342,57 @@ namespace ImmersiveAI
             }
         }
 
-        // "What do you hold of me in your deeper memory?" -> shows the rolling summary + known facts.
-        private void OnShowDeepMemory()
+        // Placeholder standing in for the player's next line when rendering the raw prompt, so it is
+        // clear where the message being composed would land.
+        private const string NextMessagePlaceholder = "«your next message will be inserted here»";
+
+        // "Reveal the whole of your mind" -> shows the entire raw prompt the NPC would receive on the
+        // next message: the system prompt (persona, current situation, deep memory, known facts, rules,
+        // custom instructions) followed by the remembered turns as real user/assistant messages, then a
+        // placeholder for the player's next line. This is exactly the message list the LLM is sent.
+        private void OnShowRawPrompt()
         {
             var npc = Hero.OneToOneConversationHero;
             if (npc == null) return;
 
-            var memory = LoadMemory(npc);
+            var ctx = BuildContext(npc);
+            var messages = _promptBuilder.Build(
+                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting);
 
             var sb = new StringBuilder();
-            if (!string.IsNullOrWhiteSpace(memory.SummaryAsOf))
+            foreach (var msg in messages)
             {
-                sb.AppendLine("Deep memories as of " + memory.SummaryAsOf.Trim());
+                sb.AppendLine("──────── " + msg.Role.ToString().ToUpperInvariant() + " ────────");
+                sb.AppendLine(msg.Content);
                 sb.AppendLine();
-            }
-            if (!string.IsNullOrWhiteSpace(memory.Summary))
-                sb.AppendLine(memory.Summary.Trim());
-            else
-                sb.AppendLine("(Nothing has yet settled into my deeper memory of you.)");
-
-            if (memory.KnownFacts.Count > 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine("What I hold as true:");
-                foreach (var fact in memory.KnownFacts)
-                    sb.AppendLine("- " + fact);
             }
 
             var name = npc.Name?.ToString() ?? "Unknown";
-            ShowScrollPopup(name + " — deeper memory", sb.ToString().Trim());
-            MBTextManager.SetTextVariable(InfoVar, "(She shares what she holds of you.)", false);
+            ShowScrollPopup(name + " — the full prompt she receives", sb.ToString().Trim());
+            MBTextManager.SetTextVariable(InfoVar, "(She lets you see the whole of her mind.)", false);
+        }
+
+        // "What do you make of our situation?" -> shows the current_situation_info.txt snapshot captured
+        // when this chat opened (the environmental facts, as the NPC sees them in her prompt).
+        private void OnShowSituation()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+
+            // Prefer the snapshot cached for this conversation; fall back to reading the file, then to
+            // rebuilding it live, so the view always has something to show.
+            var situation = _currentSituation;
+            if (string.IsNullOrWhiteSpace(situation))
+            {
+                try { situation = File.ReadAllText(NpcPaths.SituationFile(npc)); }
+                catch { situation = null; }
+            }
+            if (string.IsNullOrWhiteSpace(situation))
+                situation = SituationBuilder.Build(npc, Hero.MainHero);
+
+            var name = npc.Name?.ToString() ?? "Unknown";
+            ShowScrollPopup(name + " — the situation here and now", situation.Trim());
+            MBTextManager.SetTextVariable(InfoVar, "(She takes stock of the moment.)", false);
         }
 
         // "Recount everything we have spoken of" -> shows the verbatim recent turns (and notes that
@@ -417,8 +487,8 @@ namespace ImmersiveAI
                     PlayerLine = playerInput,
                     NpcLine = reply,
                     GameDay = CampaignTime.Now.ToDays,
-                    CalradiaTime = FormatCalradiaNow(),
-                    Place = FormatPlaceNow(npc),
+                    CalradiaTime = SituationBuilder.Timestamp(),
+                    Place = SituationBuilder.Place(npc),
                 });
 
                 var currentGameDay = CampaignTime.Now.ToDays;
@@ -437,7 +507,7 @@ namespace ImmersiveAI
                     try
                     {
                         if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
-                            memory.SummaryAsOf = FormatCalradiaNow();
+                            memory.SummaryAsOf = SituationBuilder.Timestamp();
                     }
                     catch { /* compression is best-effort */ }
                 }
@@ -474,7 +544,12 @@ namespace ImmersiveAI
             var persona = PersonaBuilder.Build(npc);
             persona.CustomInstructions = CombineInstructions(npc);
 
-            var scene = BuildSceneContext(npc);
+            // Reuse the situation snapshot captured when the chat opened; rebuild it if this context is
+            // requested outside a normal chat-open flow (e.g. inspecting the prompt directly).
+            var scene = _currentSituation;
+            if (string.IsNullOrWhiteSpace(scene))
+                scene = SituationBuilder.Build(npc, Hero.MainHero);
+
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
             return new ChatContext(memory, persona, scene, playerName);
@@ -504,47 +579,6 @@ namespace ImmersiveAI
             if (global.Length > 0) sb.AppendLine(global);
             if (npcSpecific.Length > 0) sb.AppendLine(npcSpecific);
             return sb.ToString().Trim();
-        }
-
-        // A human-readable Calradia timestamp for stamping when an NPC last regrouped her deep
-        // memories. Calradia years run 84 days (4 seasons of 21 days): the year comes from the
-        // game clock, season/day/time are derived from elapsed days/hours (same as vanilla).
-        private static readonly string[] CalradiaSeasons = { "Spring", "Summer", "Autumn", "Winter" };
-
-        private static string FormatCalradiaNow()
-        {
-            var now = CampaignTime.Now;
-            int year = now.GetYear;
-
-            int dayOfYear = (int)now.ToDays % 84;
-            if (dayOfYear < 0) dayOfYear += 84;
-            int season = dayOfYear / 21;             // 0..3
-            int dayOfSeason = dayOfYear % 21 + 1;    // 1..21
-
-            double totalHours = now.ToHours;
-            int hour = (int)(totalHours % 24);
-            if (hour < 0) hour += 24;
-            int minute = (int)((totalHours - Math.Floor(totalHours)) * 60);
-
-            return $"{year:0000}.{season + 1:00}.{dayOfSeason:00} {hour:00}.{minute:00} " +
-                   $"({CalradiaSeasons[season]} {dayOfSeason}, Year {year})";
-        }
-
-        // Short label for where the NPC currently is: the settlement name, or a field note.
-        // Used both to stamp conversation turns and to build the live scene context.
-        private static string FormatPlaceNow(Hero npc)
-        {
-            var settlement = npc.CurrentSettlement ?? Settlement.CurrentSettlement;
-            var name = settlement?.Name?.ToString() ?? string.Empty;
-            return name.Trim().Length == 0 ? "the open field" : name;
-        }
-
-        private static string BuildSceneContext(Hero npc)
-        {
-            var sb = new StringBuilder();
-            sb.Append("You are in " + FormatPlaceNow(npc) + ". ");
-            sb.Append("It is " + FormatCalradiaNow() + ".");
-            return sb.ToString();
         }
     }
 }

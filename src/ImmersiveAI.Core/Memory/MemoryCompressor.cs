@@ -43,6 +43,36 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>
+        /// A deliberate reflection (the player asks the NPC to settle her memory now). Unlike
+        /// <see cref="CompressAsync"/> this always runs while there is anything to reflect on — even
+        /// when nothing is old enough to fold away — so she re-thinks and may rewrite her rolling
+        /// summary and durable facts. It only drops the oldest turns beyond <paramref name="keepMostRecent"/>;
+        /// when there is nothing to drop, every recent turn is kept verbatim. Returns false only if
+        /// there is no memory at all to reflect on, or the LLM returned nothing usable.
+        /// </summary>
+        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, CancellationToken cancellationToken = default)
+        {
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            if (keepMostRecent < 0) keepMostRecent = 0;
+
+            // The oldest turns beyond the keep window are folded in; this may be empty (nothing to drop).
+            var turns = memory.GetTurnsToCompress(keepMostRecent);
+
+            // Nothing to reflect on at all — no history and no prior deep memory.
+            if (memory.RecentTurns.Count == 0 && string.IsNullOrWhiteSpace(memory.Summary) && memory.KnownFacts.Count == 0)
+                return false;
+
+            var request = BuildReflectionRequest(memory, turns, systemVoiceName);
+            var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+
+            var parsed = ParseResponse(response);
+            if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
+
+            memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Facts);
+            return true;
+        }
+
+        /// <summary>
         /// Builds the memory-reflection request. Rather than treating the NPC as a data store to be
         /// summarized, a named "System" voice addresses them directly, in the second person, and
         /// leaves it to them to decide what endures and what fades — they are an individual, not a log.
@@ -92,6 +122,74 @@ namespace ImmersiveAI.Core.Memory
             {
                 sb.AppendLine();
                 sb.AppendLine("Still fresh in your mind (context only — these stay with you, do not fold them in yet):");
+                foreach (var turn in freshTurns)
+                {
+                    sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
+                    sb.AppendLine($"You answered: {turn.NpcLine}");
+                }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine($"Answer {voice} in exactly this format:");
+            sb.AppendLine("SUMMARY:");
+            sb.AppendLine("<one short paragraph, in your own first-person voice, of what you choose to remember>");
+            sb.AppendLine("FACTS:");
+            sb.AppendLine("- <a lasting truth worth never forgetting, if any>");
+            sb.AppendLine("Name at most 3 such truths; only what genuinely endures. If none, write FACTS: none.");
+
+            return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+        }
+
+        /// <summary>
+        /// Builds a deliberate-reflection request. Like the compression request it addresses the NPC by
+        /// name through the System voice and shows her whole deep memory, but it always asks her to
+        /// settle her memory — folding in the fading turns if there are any, and simply revising her
+        /// summary and facts if there are none, while the recent turns stay with her. Same SUMMARY:/FACTS:
+        /// reply contract as compression.
+        /// </summary>
+        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null)
+        {
+            var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
+            var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
+
+            var freshTurns = memory.RecentTurns.Skip(turnsToFold.Count).ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"{voice} (System) addresses you, {name}:");
+            sb.AppendLine("Pause a while and gather your thoughts about this person. Settle your memory of them as "
+                + "you see fit — keep what matters to who you are and what you care about, refine what has changed, "
+                + "and let go of what no longer serves. Speak in your own voice.");
+
+            if (memory.KnownFacts.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Truths you already hold as lasting (keep, refine, or let fall away as you see fit):");
+                foreach (var fact in memory.KnownFacts)
+                    sb.AppendLine("- " + fact);
+            }
+
+            if (!string.IsNullOrWhiteSpace(memory.Summary))
+            {
+                sb.AppendLine();
+                sb.AppendLine("What you already hold in memory (revise it as you reflect):");
+                sb.AppendLine(memory.Summary.Trim());
+            }
+
+            if (turnsToFold.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Older moments now fading (fold these into your memory):");
+                foreach (var turn in turnsToFold)
+                {
+                    sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
+                    sb.AppendLine($"You answered: {turn.NpcLine}");
+                }
+            }
+
+            if (freshTurns.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Still fresh in your mind (these remain with you — draw on them, but they are not fading yet):");
                 foreach (var turn in freshTurns)
                 {
                     sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");

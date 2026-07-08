@@ -108,7 +108,18 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(sceneContext))
             {
                 sb.AppendLine();
-                sb.AppendLine("Current situation: " + sceneContext.Trim());
+                // Multi-line situation blocks (the environmental facts) read best on their own lines;
+                // a short one-liner still folds naturally after the label.
+                var scene = sceneContext.Trim();
+                if (scene.IndexOf('\n') >= 0)
+                {
+                    sb.AppendLine("Current situation:");
+                    sb.AppendLine(scene);
+                }
+                else
+                {
+                    sb.AppendLine("Current situation: " + scene);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(memory.Summary))

@@ -79,7 +79,7 @@ namespace ImmersiveAI.Personas
             return sb.ToString();
         }
 
-        private static string DescribeRelation(int relation)
+        public static string DescribeRelation(int relation)
         {
             if (relation >= 60) return "devoted friend";
             if (relation >= 30) return "good friend";
