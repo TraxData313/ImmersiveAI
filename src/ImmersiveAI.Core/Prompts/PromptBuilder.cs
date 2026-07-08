@@ -20,11 +20,12 @@ namespace ImmersiveAI.Core.Prompts
             NpcMemory memory,
             string sceneContext,
             string playerName,
-            string playerInput)
+            string playerInput,
+            string? openingLine = null)
         {
             var messages = new List<ChatMessage>
             {
-                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
+                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName, openingLine))
             };
 
             foreach (var turn in memory.RecentTurns)
@@ -37,7 +38,54 @@ namespace ImmersiveAI.Core.Prompts
             return messages;
         }
 
-        private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
+        /// <summary>
+        /// Builds the messages for the NPC's opening line when the player starts a conversation:
+        /// same persona/memory/scene system prompt and verbatim history, then a stage-direction
+        /// asking the NPC to greet the player and briefly recap what it remembers of them and of
+        /// the last exchange. The greeting is not itself a conversation turn and is not stored.
+        /// </summary>
+        public IReadOnlyList<ChatMessage> BuildRecap(
+            NpcPersona persona,
+            NpcMemory memory,
+            string sceneContext,
+            string playerName)
+        {
+            var messages = new List<ChatMessage>
+            {
+                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
+            };
+
+            foreach (var turn in memory.RecentTurns)
+            {
+                messages.Add(ChatMessage.User(turn.PlayerLine));
+                messages.Add(ChatMessage.Assistant(turn.NpcLine));
+            }
+
+            messages.Add(ChatMessage.User(BuildRecapInstruction(memory, playerName)));
+            return messages;
+        }
+
+        private static bool HasRememberedHistory(NpcMemory memory) =>
+            memory.RecentTurns.Count > 0
+            || !string.IsNullOrWhiteSpace(memory.Summary)
+            || memory.KnownFacts.Count > 0;
+
+        private static string BuildRecapInstruction(NpcMemory memory, string playerName)
+        {
+            if (!HasRememberedHistory(memory))
+            {
+                return $"[{playerName} approaches you. You have never spoken with them before. In character, "
+                     + "greet them naturally in one or two sentences as someone you are meeting for the first "
+                     + "time. Do not pretend to remember anything about them.]";
+            }
+
+            return $"[{playerName} approaches you again to talk. Before they speak, greet them in character and "
+                 + "briefly remind them of who they are to you and what you last spoke about, in 2-4 sentences. "
+                 + "Draw only on what you actually remember above; do not invent shared history. Address them "
+                 + "directly, warmly or coldly as befits your relationship.]";
+        }
+
+        private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName, string? openingLine = null)
         {
             var sb = new StringBuilder();
 
@@ -68,6 +116,14 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine("Facts you know:");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
+            }
+
+            if (!string.IsNullOrWhiteSpace(openingLine))
+            {
+                sb.AppendLine();
+                sb.AppendLine($"You have just greeted {playerName} as they approached, saying:");
+                sb.AppendLine("\"" + openingLine!.Trim() + "\"");
+                sb.AppendLine("Continue from there; do not greet them again as if you had not just spoken.");
             }
 
             sb.AppendLine();

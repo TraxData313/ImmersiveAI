@@ -44,21 +44,20 @@ Memory token settings are configured as percentages of the selected model's cont
 
 - [x] Increase verbatim memory limits: max to 30 turns/days, falling back to 15 turns/days after compression (updating `MaxRecentTurns`, `MaxRecentDays`, `KeepRecentTurnsAfterCompression`, and `KeepRecentDaysAfterCompression` defaults/settings).
 - [x] Implement model-specific token-based limits (min/max limits) and trigger compression based on token counts (using similar compression logic).
-- [ ] Check why in the config MaxRecentMemoryTokens is set to 12800, I thought they were 128k, if it is 12800 then gets divided by the MaxRecentMemoryPercent which is 10% it will shrink it down too much to 1280 - need to be 128k*0.1 = 12.8k
-- [ ] Add a popup when the LLM is ready with its responce so that I dont click Next Next until it is ready
-- [ ] When I initiate a chat with an NPC can he/she give me a summary of what importaint she remenbers and of our last chat in a few sentences
+- [x] Check why in the config MaxRecentMemoryTokens is set to 12800, I thought they were 128k, if it is 12800 then gets divided by the MaxRecentMemoryPercent which is 10% it will shrink it down too much to 1280 - need to be 128k*0.1 = 12.8k
+- [x] When I initiate a chat with an NPC can he/she give me a summary of what important she remembers and of our last chat in a few sentences (opening recap greeting; toggle with `EnableConversationRecap`).
 - [ ] Implement relationship changes (increase/decrease relationship standing based on LLM response/conversation content, similar to ChatAI mod).
-- [ ] Implement NPC tool-use capabilities to fetch relevant data dynamically on demand from the campaign world (e.g. so they don't forget/hallucinate family members' names, location info, faction status).
-- [ ] Append the NPC's first name to memory and prompt file IDs/filenames (e.g., `lord_7_13_1` -> `lord_7_13_1_Gunjadrid`) for easier identification, excluding second names.
+- [ ] Append the NPC's first name to memory and prompt file IDs/filenames (e.g., `lord_7_13_1` -> `lord_7_13_1_Gunjadrid`) for easier identification.
+- [ ] Implement NPC tool-use capabilities to fetch basic relevant data dynamically on demand from the campaign world (e.g. so they don't forget/hallucinate family members' names, location info, faction status).
+- [ ] Add a popup when the LLM is ready with its responce so that I dont click Next Next until it is ready
 
 
 ## Roadmap
 
 - [x] M0: Repo, solution, memory engine core, module skeleton that loads in game
 - [x] M1: Memory & anti-repetition — talk to an NPC in game with layered memory end to end
-- [ ] M2: Real chat UI (custom Gauntlet screen: history, portraits, streaming)
-- [ ] M3: Claude/Anthropic backend with streaming; settings via MCM
-- [ ] M4: Living world — NPC actions, gossip between NPCs, world-event awareness
+- [ ] M2: Real chat UI (custom Gauntlet screen: history, portraits, streaming, easy to see what's going on)
+- [ ] M3: Living world — NPC actions, gossip between NPCs, world-event awareness
 
 ## Build & test
 

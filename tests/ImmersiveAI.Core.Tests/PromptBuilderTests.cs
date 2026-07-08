@@ -62,4 +62,38 @@ public class PromptBuilderTests
         Assert.DoesNotContain("Facts you know:", system);
         Assert.DoesNotContain("Current situation:", system);
     }
+
+    [Fact]
+    public void BuildRecap_EndsWithRecapDirectiveAfterHistory()
+    {
+        var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
+        memory.AddTurn(new ConversationTurn { PlayerLine = "Well met", NpcLine = "Aye." });
+
+        var messages = new PromptBuilder().BuildRecap(Persona(), memory, "In the tavern.", "Vulgrim");
+
+        Assert.Equal(ChatRole.System, messages[0].Role);
+        // History is replayed as real user/assistant turns before the directive.
+        Assert.Equal(ChatRole.User, messages[1].Role);
+        Assert.Equal("Well met", messages[1].Content);
+        Assert.Equal(ChatRole.Assistant, messages[2].Role);
+
+        var last = messages[^1];
+        Assert.Equal(ChatRole.User, last.Role);
+        Assert.Contains("Vulgrim", last.Content);
+        Assert.Contains("last spoke about", last.Content);
+        Assert.DoesNotContain("first time", last.Content);
+    }
+
+    [Fact]
+    public void BuildRecap_WithNoHistory_AsksForFirstMeetingGreeting()
+    {
+        var messages = new PromptBuilder().BuildRecap(new NpcPersona { Name = "Orvi" }, new NpcMemory(), "", "Vulgrim");
+
+        // No turns, so only the system prompt and the directive.
+        Assert.Equal(2, messages.Count);
+        var directive = messages[^1].Content;
+        Assert.Contains("never spoken", directive);
+        Assert.Contains("first time", directive);
+        Assert.DoesNotContain("last spoke about", directive);
+    }
 }

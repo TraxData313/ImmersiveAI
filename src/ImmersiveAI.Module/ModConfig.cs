@@ -21,6 +21,10 @@ namespace ImmersiveAI
 
         public int MaxTokens { get; set; } = 400;
 
+        /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
+        /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
+        public bool EnableConversationRecap { get; set; } = true;
+
         /// <summary>How many verbatim turns an NPC keeps before old ones are compressed into the summary.</summary>
         public int MaxRecentTurns { get; set; } = 30;
 
