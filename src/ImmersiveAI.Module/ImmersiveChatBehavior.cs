@@ -87,7 +87,11 @@ namespace ImmersiveAI
             try
             {
                 var path = NpcPaths.SelfFile(npc);
-                return File.Exists(path) ? File.ReadAllText(path).Trim() : string.Empty;
+                if (!File.Exists(path)) return string.Empty;
+                var text = File.ReadAllText(path).Trim();
+                // Heal an earlier bug where the "no change" marker (e.g. "Unchanged.") was saved as if it
+                // were a real self: treat it as "not yet written" so the NPC is invited to author afresh.
+                return MemoryCompressor.IsUnchangedMarker(text) ? string.Empty : text;
             }
             catch { return string.Empty; }
         }

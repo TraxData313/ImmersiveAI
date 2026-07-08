@@ -209,6 +209,19 @@ public class MemoryCompressorTests
     }
 
     [Fact]
+    public void BuildReflectionRequest_FirstEverSelf_InvitesWithoutOfferingUnchanged()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildReflectionRequest(
+            memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: "")[0].Content;
+
+        Assert.Contains("SELF:", prompt);
+        Assert.Contains("not yet put into words", prompt);   // she's told she has no self yet
+        Assert.DoesNotContain("write: unchanged", prompt);   // and isn't handed the easy way out
+    }
+
+    [Fact]
     public void BuildReflectionRequest_WithSelf_ShowsCurrentSelfAndAsksForSelf()
     {
         var memory = MemoryWithTurns(2);
@@ -243,5 +256,31 @@ public class MemoryCompressorTests
         await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5, systemVoiceName: null, self: self);
 
         Assert.Equal("I am who I was.", self.Text);
+    }
+
+    [Theory]
+    [InlineData("Unchanged.")]
+    [InlineData("(unchanged)")]
+    [InlineData("  *Unchanged*  ")]
+    public async Task ReflectAsync_TreatsPunctuatedUnchangedAsNoChange(string selfReply)
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + selfReply };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am who I was." };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5, systemVoiceName: null, self: self);
+
+        Assert.Equal("I am who I was.", self.Text); // marker never leaks in as a real self
+    }
+
+    [Theory]
+    [InlineData("unchanged", true)]
+    [InlineData("Unchanged.", true)]
+    [InlineData("(unchanged)", true)]
+    [InlineData("I have grown bolder.", false)]
+    [InlineData("", false)]
+    public void IsUnchangedMarker_RecognizesTheMarkerNotProse(string text, bool expected)
+    {
+        Assert.Equal(expected, MemoryCompressor.IsUnchangedMarker(text));
     }
 }

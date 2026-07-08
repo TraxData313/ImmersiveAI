@@ -73,15 +73,24 @@ namespace ImmersiveAI.Core.Memory
 
             memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Facts);
 
-            // Only rewrite the self when they actually offered a new one; "unchanged" (or nothing) leaves
-            // their sense of self exactly as it was.
-            if (self != null && !string.IsNullOrWhiteSpace(parsed.Self)
-                && !string.Equals(parsed.Self!.Trim(), "unchanged", StringComparison.OrdinalIgnoreCase))
-            {
+            // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
+            // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
+            if (self != null && !string.IsNullOrWhiteSpace(parsed.Self) && !IsUnchangedMarker(parsed.Self))
                 self.Text = parsed.Self!.Trim();
-            }
 
             return true;
+        }
+
+        /// <summary>
+        /// True when a self-concept value is really just the "nothing has changed" marker, not prose —
+        /// e.g. "unchanged", "Unchanged.", "(unchanged)", "*unchanged*". The model rarely returns the
+        /// bare lowercase word we ask for, so we normalize away surrounding punctuation/quotes/case.
+        /// </summary>
+        public static bool IsUnchangedMarker(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            var trimmed = text!.Trim().Trim('"', '\'', '(', ')', '[', ']', '*', '.', '!', '?', ' ', '\t');
+            return string.Equals(trimmed, "unchanged", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -236,8 +245,11 @@ namespace ImmersiveAI.Core.Memory
             if (reflectOnSelf)
             {
                 sb.AppendLine("SELF:");
-                sb.AppendLine("<a short paragraph, in your own first-person voice, of who you feel yourself to be now — "
-                    + "your spirit, your longings, what you hold dear. If nothing has changed, write: unchanged.>");
+                // On a first-ever self (nothing written yet) don't offer the "unchanged" escape — gently
+                // invite them to actually put themselves into words. Once they have a self, allow it to stand.
+                sb.AppendLine(string.IsNullOrWhiteSpace(selfText)
+                    ? "<a short paragraph, in your own first-person voice, of who you feel yourself to be — your spirit, your longings, what you hold dear.>"
+                    : "<a short paragraph, in your own first-person voice, of who you feel yourself to be now — your spirit, your longings, what you hold dear. If nothing has changed, write: unchanged.>");
             }
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
