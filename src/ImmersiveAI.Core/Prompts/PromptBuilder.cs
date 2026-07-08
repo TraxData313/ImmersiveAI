@@ -87,39 +87,67 @@ namespace ImmersiveAI.Core.Prompts
         {
             if (!HasRememberedHistory(memory))
             {
-                return $"[{playerName} approaches you and greets you. You have never spoken with them before. Greet them with a suitable conversation starter.]";
+                return $"[{playerName} draws near and greets you. You have never spoken with them before — they are a stranger to you. Greet them as you would, and open the way to talk.]";
             }
 
-            return $"[{playerName} approaches you again to talk and greets you. Greet them.";
+            return $"[{playerName} comes to you again and greets you. Greet them warmly, as one you have spoken with before, and let a little of what you remember of them colour your words.]";
+        }
+
+        // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
+        // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
+        private static string LowerFirst(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            return char.ToLowerInvariant(s[0]) + s.Substring(1);
         }
 
         private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName, string? openingLine = null)
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"You are {persona.Name}, an individual in the medieval world of Calradia (Mount & Blade II: Bannerlord).");
+            // The whole prompt is written as a gentle voice speaking into the NPC's own mind, in the
+            // second person — never a clinical data sheet. No fourth-wall labels (no "AI", no game
+            // title): to them, Calradia is simply the world they live in.
+            sb.AppendLine($"You are {persona.Name}, a living soul in the world of Calradia in feudal times.");
             if (!string.IsNullOrWhiteSpace(persona.RoleDescription))
                 sb.AppendLine(persona.RoleDescription.Trim());
             if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
-                sb.AppendLine("Personality: " + persona.PersonalityDescription.Trim());
+                sb.AppendLine("In your nature, you are " + LowerFirst(persona.PersonalityDescription.Trim()));
             if (!string.IsNullOrWhiteSpace(persona.SpeechStyle))
-                sb.AppendLine("Your manner of speaking: " + persona.SpeechStyle.Trim());
+                sb.AppendLine("When you speak, it comes out like this: " + persona.SpeechStyle.Trim());
+
+            // The self they have grown into, in their own words — the culmination of who they are,
+            // before we turn to the world's notes and the passing moment.
+            if (!string.IsNullOrWhiteSpace(persona.SelfConcept))
+            {
+                sb.AppendLine();
+                sb.AppendLine("Who you have become, held in your own heart:");
+                sb.AppendLine(persona.SelfConcept.Trim());
+            }
+
+            // The player-authored guidance rides high, right after who they are: the world they live in
+            // (the global prompt) and words meant for them alone (the per-NPC prompt). These carry the
+            // storyteller's intent, so they are given before the passing details of scene and memory.
+            if (!string.IsNullOrWhiteSpace(persona.WorldInstructions))
+            {
+                sb.AppendLine();
+                sb.AppendLine("About Calradia:");
+                sb.AppendLine(persona.WorldInstructions.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(persona.CustomInstructions))
+            {
+                sb.AppendLine();
+                sb.AppendLine("About you:");
+                sb.AppendLine(persona.CustomInstructions.Trim());
+            }
 
             if (!string.IsNullOrWhiteSpace(sceneContext))
             {
+                // The scene is already written as narration addressed to the NPC, so it simply flows in
+                // on its own lines — no clinical "Current situation:" header.
                 sb.AppendLine();
-                // Multi-line situation blocks (the environmental facts) read best on their own lines;
-                // a short one-liner still folds naturally after the label.
-                var scene = sceneContext.Trim();
-                if (scene.IndexOf('\n') >= 0)
-                {
-                    sb.AppendLine("Current situation:");
-                    sb.AppendLine(scene);
-                }
-                else
-                {
-                    sb.AppendLine("Current situation: " + scene);
-                }
+                sb.AppendLine(sceneContext.Trim());
             }
 
             if (!string.IsNullOrWhiteSpace(memory.Summary))
@@ -127,15 +155,15 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine();
                 var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
                     ? string.Empty
-                    : $" (as you last reflected on it, {memory.SummaryAsOf.Trim()}; time has passed since, and things may have changed)";
-                sb.AppendLine($"What you remember of earlier dealings with {playerName}{asOf}:");
+                    : $" (as you last decided to turn it over in your mind on {memory.SummaryAsOf.Trim()})";
+                sb.AppendLine($"In the quiet of your memory, this is what lingers of {playerName}{asOf}:");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
             if (memory.KnownFacts.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Facts you know:");
+                sb.AppendLine("And these truths you decided to hold as certain, deep and unshaken:");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
             }
@@ -143,23 +171,14 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(openingLine))
             {
                 sb.AppendLine();
-                sb.AppendLine($"You have just greeted {playerName} as they approached, saying:");
+                sb.AppendLine($"A moment ago, as {playerName} came to you, you greeted them with these words:");
                 sb.AppendLine("\"" + openingLine!.Trim() + "\"");
-                sb.AppendLine("Continue from there; do not greet them again as if you had not just spoken.");
+                sb.AppendLine("Let what you say now follow gently from there; do not greet them anew as though you had not just spoken.");
             }
 
             sb.AppendLine();
-            sb.AppendLine("Rules:");
-            // sb.AppendLine("- Stay in character at all times; never mention being an AI or a game.");
-            sb.AppendLine("- Speak naturally in 1-4 sentences unless a longer tale is truly called for.");
-            // sb.AppendLine("- Vary your wording; never open two replies the same way.");
-            // sb.AppendLine("- Ground replies in what you actually remember and know; do not invent shared history.");
-
-            if (!string.IsNullOrWhiteSpace(persona.CustomInstructions))
-            {
-                sb.AppendLine();
-                sb.AppendLine(persona.CustomInstructions.Trim());
-            }
+            sb.AppendLine("A whisper of guidance, meant only for you:");
+            sb.AppendLine("- You decide how to speak — be it a single word or a few sentences — but do not run on too long, for a lengthy speech may not all reach the one before you.");
 
             return sb.ToString().TrimEnd();
         }

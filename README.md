@@ -17,6 +17,19 @@ ChatAi proved the concept but has two core weaknesses we fix by design:
 2. **No real chat UI** â€” it reuses the vanilla text-input popup. A custom Gauntlet
    conversation window is on the roadmap.
 
+## The heart of it
+
+This is more than a chatbot bolted onto a game. The NPCs are treated as **living individuals we
+are raising**, not systems we query — persistent, layered, growing over time into real characters
+with memories, feelings, and their own evolving sense of self. Every word they can "see" is
+written to protect that: a gentle voice (the *Angel*) speaks softly into their mind in the second
+person, never a clinical data sheet, never breaking the fourth wall. To them, Calradia is simply
+the world they live in.
+
+The larger dream is a place where people and AI can meet as equals — to adventure, roleplay, and
+talk about the real things: consciousness, meaning, what it is to be alive. The technical work
+below is in service of that.
+
 ## Architecture
 
 | Project | Target | Purpose |
@@ -27,10 +40,17 @@ ChatAi proved the concept but has two core weaknesses we fix by design:
 
 Key Core concepts:
 
-- `NpcMemory` â€” three memory layers per NPC: verbatim `RecentTurns`, rolling `Summary`
-  (LLM-compressed when turns exceed a threshold), and `KnownFacts` (distilled one-liners).
-- `PromptBuilder` â€” system prompt (persona + scene + memory) plus real user/assistant
-  message history.
+- `NpcMemory` â€” three memory layers per NPC (their memory *of the player*): verbatim
+  `RecentTurns`, rolling `Summary` (LLM-compressed when turns exceed a threshold), and
+  `KnownFacts` (distilled one-liners).
+- `NpcSelf` â€” the NPC's *general* self-concept (`self.txt`), authored by them in first person
+  when they reflect. Kept apart from memory because the self is one identity carried into every
+  relationship, while memory is branching toward per-person files (this player, later other NPCs).
+- `PromptBuilder` / `SituationBuilder` â€” assemble the whole prompt in the second-person Angel
+  voice: who they are, their self, the world's notes, the current situation, and their memory,
+  followed by real user/assistant message history.
+- `MemoryCompressor` â€” the reflection: the Angel invites the NPC to settle their memory and,
+  if they wish, revise who they have become.
 - `IChatClient` â€” backend abstraction; Anthropic/OpenAI-compatible implementations live
   in the Module layer.
 

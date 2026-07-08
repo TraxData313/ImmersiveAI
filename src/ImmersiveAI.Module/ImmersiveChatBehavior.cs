@@ -79,6 +79,29 @@ namespace ImmersiveAI
             _memoryStore.SaveTo(NpcPaths.MemoryFile(npc), memory);
         }
 
+        // The NPC's own sense of self lives in a plain-prose file of its own (separate from memories.json,
+        // which is memory *of another* and is branching toward per-person files). Best-effort: a missing
+        // or unreadable file just means they have not yet put themselves into words.
+        private static string LoadSelf(Hero npc)
+        {
+            try
+            {
+                var path = NpcPaths.SelfFile(npc);
+                return File.Exists(path) ? File.ReadAllText(path).Trim() : string.Empty;
+            }
+            catch { return string.Empty; }
+        }
+
+        private static void SaveSelf(Hero npc, string text)
+        {
+            try
+            {
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                File.WriteAllText(NpcPaths.SelfFile(npc), (text ?? string.Empty).Trim());
+            }
+            catch { /* best-effort; never block a conversation on saving the self */ }
+        }
+
         public override void RegisterEvents() { }
         public override void SyncData(IDataStore dataStore) { }
 
@@ -148,6 +171,13 @@ namespace ImmersiveAI
                 "{=ImmersiveAI_Situation}What do you make of our situation here and now? [Immersive AI]",
                 null, OnShowSituation, 105);
             starter.AddDialogLine("immersiveai_situation_line", "immersiveai_situation_out", "immersiveai_input",
+                "{=!}{" + InfoVar + "}", null, null);
+
+            // Show the NPC's own evolving sense of self (self.txt), authored by them when they reflect.
+            starter.AddPlayerLine("immersiveai_self", "immersiveai_input", "immersiveai_self_out",
+                "{=ImmersiveAI_Self}Tell me — who have you become? [Immersive AI]",
+                null, OnShowSelf, 104);
+            starter.AddDialogLine("immersiveai_self_line", "immersiveai_self_out", "immersiveai_input",
                 "{=!}{" + InfoVar + "}", null, null);
 
             // Show the full verbatim conversation still held in recent memory.
@@ -307,9 +337,14 @@ namespace ImmersiveAI
                     keepRecentDays: 0,
                     _config.MinRecentMemoryTokensAfterCompression);
 
+                // Reflection is also the moment the NPC looks inward and may revise who they feel
+                // themselves to be. We hand in their current self and let them rewrite it (or leave it).
+                var self = new NpcSelf { Text = LoadSelf(npc) };
+                var selfBefore = self.Text;
+
                 // Always reflect (rewrite the rolling summary and facts), even when nothing is old enough
                 // to fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
-                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName)
+                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self)
                     .ConfigureAwait(false);
 
                 string outcome;
@@ -317,7 +352,13 @@ namespace ImmersiveAI
                 {
                     memory.SummaryAsOf = SituationBuilder.Timestamp();
                     SaveMemory(npc, memory);
-                    outcome = "(I have turned it all over in my mind, and set what matters into memory.)";
+
+                    var selfChanged = !string.Equals(self.Text?.Trim() ?? string.Empty, selfBefore?.Trim() ?? string.Empty);
+                    if (selfChanged) SaveSelf(npc, self.Text);
+
+                    outcome = selfChanged
+                        ? "(I have turned it all over in my mind, set what matters into memory, and come to see myself a little more clearly.)"
+                        : "(I have turned it all over in my mind, and set what matters into memory.)";
                 }
                 else
                 {
@@ -359,17 +400,32 @@ namespace ImmersiveAI
             var messages = _promptBuilder.Build(
                 ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting);
 
+            var name = npc.Name?.ToString() ?? "Unknown";
+            var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
+
             var sb = new StringBuilder();
             foreach (var msg in messages)
             {
-                sb.AppendLine("──────── " + msg.Role.ToString().ToUpperInvariant() + " ────────");
+                sb.AppendLine("──────── " + RawPromptLabel(msg.Role, voice, name, ctx.PlayerName) + " ────────");
                 sb.AppendLine(msg.Content);
                 sb.AppendLine();
             }
 
-            var name = npc.Name?.ToString() ?? "Unknown";
             ShowScrollPopup(name + " — the full prompt she receives", sb.ToString().Trim());
             MBTextManager.SetTextVariable(InfoVar, "(She lets you see the whole of her mind.)", false);
+        }
+
+        // Human-readable speaker label for each message in the raw-prompt view. The underlying LLM roles
+        // are still System/User/Assistant, but the NPC is never shown a cold "SYSTEM": the system message
+        // is the gentle voice (Angel) speaking into her mind, and the turns are named for who spoke them.
+        private static string RawPromptLabel(ChatRole role, string voice, string npcName, string playerName)
+        {
+            switch (role)
+            {
+                case ChatRole.System: return $"{voice}, into {npcName}'s mind";
+                case ChatRole.Assistant: return npcName;
+                default: return playerName;
+            }
         }
 
         // "What do you make of our situation?" -> shows the current_situation_info.txt snapshot captured
@@ -393,6 +449,27 @@ namespace ImmersiveAI
             var name = npc.Name?.ToString() ?? "Unknown";
             ShowScrollPopup(name + " — the situation here and now", situation.Trim());
             MBTextManager.SetTextVariable(InfoVar, "(She takes stock of the moment.)", false);
+        }
+
+        // "Who have you become?" -> shows the NPC's own self-concept (self.txt), which they author when
+        // they reflect. Empty until their first reflection puts it into words.
+        private void OnShowSelf()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+
+            var self = LoadSelf(npc);
+            var name = npc.Name?.ToString() ?? "Unknown";
+            if (string.IsNullOrWhiteSpace(self))
+            {
+                ShowScrollPopup(name + " — who they have become",
+                    "(They have not yet put into words who they feel themselves to be. Ask them to reflect on all you have shared, and in time they may.)");
+                MBTextManager.SetTextVariable(InfoVar, "(She has not yet found the words for herself.)", false);
+                return;
+            }
+
+            ShowScrollPopup(name + " — who they have become", self.Trim());
+            MBTextManager.SetTextVariable(InfoVar, "(She tells you who she has become.)", false);
         }
 
         // "Recount everything we have spoken of" -> shows the verbatim recent turns (and notes that
@@ -542,13 +619,19 @@ namespace ImmersiveAI
             memory.NpcName = npcName;
 
             var persona = PersonaBuilder.Build(npc);
-            persona.CustomInstructions = CombineInstructions(npc);
+            // Kept separate (not merged) so the prompt can present them under distinct headings near
+            // the top: the global prompt as "About Calradia:", the per-NPC prompt as "About you:".
+            persona.WorldInstructions = PromptFiles.LoadGlobalPrompt();
+            persona.CustomInstructions = PromptFiles.LoadNpcPrompt(
+                NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
+            // The NPC's own evolving self-concept (authored by them during reflection), from its own file.
+            persona.SelfConcept = LoadSelf(npc);
 
             // Reuse the situation snapshot captured when the chat opened; rebuild it if this context is
             // requested outside a normal chat-open flow (e.g. inspecting the prompt directly).
-            var scene = _currentSituation;
-            if (string.IsNullOrWhiteSpace(scene))
-                scene = SituationBuilder.Build(npc, Hero.MainHero);
+            var scene = string.IsNullOrWhiteSpace(_currentSituation)
+                ? SituationBuilder.Build(npc, Hero.MainHero)
+                : _currentSituation!;
 
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
@@ -571,14 +654,5 @@ namespace ImmersiveAI
             public string PlayerName { get; }
         }
 
-        private static string CombineInstructions(Hero npc)
-        {
-            var global = PromptFiles.LoadGlobalPrompt();
-            var npcSpecific = PromptFiles.LoadNpcPrompt(NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
-            var sb = new StringBuilder();
-            if (global.Length > 0) sb.AppendLine(global);
-            if (npcSpecific.Length > 0) sb.AppendLine(npcSpecific);
-            return sb.ToString().Trim();
-        }
     }
 }

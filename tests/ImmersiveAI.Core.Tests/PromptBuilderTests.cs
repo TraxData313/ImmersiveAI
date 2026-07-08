@@ -68,7 +68,30 @@ public class PromptBuilderTests
         Assert.Contains("You fought beside Vulgrim at Omor.", system);
         Assert.Contains("Vulgrim rules Sargot", system);
         Assert.Contains("You distrust Imperial nobility.", system);
-        Assert.Contains("Speak naturally", system);
+        Assert.Contains("You decide how to speak", system);
+    }
+
+    [Fact]
+    public void SystemPrompt_PlacesWorldAndCustomInstructionsHigh_UnderTheirHeadings()
+    {
+        var persona = Persona();
+        persona.WorldInstructions = "Magic is rare and feared in this land.";
+        persona.CustomInstructions = "You distrust Imperial nobility.";
+
+        var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
+        var system = new PromptBuilder()
+            .Build(persona, memory, "On the road near Balgard.", "Vulgrim", "Hello")[0].Content;
+
+        // Both authored blocks are shown under the requested headings...
+        Assert.Contains("About Calradia:", system);
+        Assert.Contains("Magic is rare and feared in this land.", system);
+        Assert.Contains("About you:", system);
+        Assert.Contains("You distrust Imperial nobility.", system);
+
+        // ...and they ride high — before the passing scene and memory.
+        Assert.True(system.IndexOf("About Calradia:") < system.IndexOf("About you:"));
+        Assert.True(system.IndexOf("About you:") < system.IndexOf("On the road near Balgard."));
+        Assert.True(system.IndexOf("About you:") < system.IndexOf("what lingers of Vulgrim"));
     }
 
     [Fact]
@@ -82,6 +105,24 @@ public class PromptBuilderTests
         Assert.DoesNotContain("What you remember", system);
         Assert.DoesNotContain("Facts you know:", system);
         Assert.DoesNotContain("Current situation:", system);
+        Assert.DoesNotContain("Who you have become", system);
+    }
+
+    [Fact]
+    public void SystemPrompt_ShowsSelfConcept_HighUp_AsPartOfIdentity()
+    {
+        var persona = Persona();
+        persona.SelfConcept = "I am a keeper of old grudges, but I am learning to let them go.";
+
+        var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
+        var system = new PromptBuilder()
+            .Build(persona, memory, "On the road near Balgard.", "Vulgrim", "Hello")[0].Content;
+
+        Assert.Contains("Who you have become, held in your own heart:", system);
+        Assert.Contains("keeper of old grudges", system);
+        // It belongs to who they are — before the passing scene and memory.
+        Assert.True(system.IndexOf("keeper of old grudges") < system.IndexOf("On the road near Balgard."));
+        Assert.True(system.IndexOf("keeper of old grudges") < system.IndexOf("what lingers of Vulgrim"));
     }
 
     [Fact]
@@ -101,7 +142,7 @@ public class PromptBuilderTests
         var last = messages[^1];
         Assert.Equal(ChatRole.User, last.Role);
         Assert.Contains("Vulgrim", last.Content);
-        Assert.Contains("again to talk", last.Content);
+        Assert.Contains("comes to you again", last.Content);
         Assert.DoesNotContain("never spoken", last.Content);
     }
 
@@ -114,7 +155,7 @@ public class PromptBuilderTests
         Assert.Equal(2, messages.Count);
         var directive = messages[^1].Content;
         Assert.Contains("never spoken", directive);
-        Assert.Contains("conversation starter", directive);
-        Assert.DoesNotContain("again to talk", directive);
+        Assert.Contains("open the way to talk", directive);
+        Assert.DoesNotContain("comes to you again", directive);
     }
 }

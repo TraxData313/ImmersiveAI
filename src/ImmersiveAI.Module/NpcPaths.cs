@@ -30,6 +30,7 @@ namespace ImmersiveAI
         public const string MemoryFileName = "memories.json";
         public const string CustomInstructionsFileName = "custom_instructions.txt";
         public const string SituationFileName = "current_situation_info.txt";
+        public const string SelfFileName = "self.txt";
 
         /// <summary>Root that holds one subfolder per NPC.</summary>
         public static string NpcsRoot => Path.Combine(ModConfig.ConfigDirectory, "NPCs");
@@ -53,6 +54,8 @@ namespace ImmersiveAI
         public static string CustomInstructionsFile(Hero npc) => Path.Combine(NpcFolder(npc), CustomInstructionsFileName);
 
         public static string SituationFile(Hero npc) => Path.Combine(NpcFolder(npc), SituationFileName);
+
+        public static string SelfFile(Hero npc) => Path.Combine(NpcFolder(npc), SelfFileName);
 
         /// <summary>The NPC's first name only (second names excluded), for the folder label. Falls back
         /// to the first token of the full name, then to the raw id.</summary>
@@ -195,6 +198,10 @@ Inside each folder:
                             you opened a chat with this NPC. Regenerated on every chat; read-only
                             snapshot, edits are overwritten. This is exactly what the NPC 'sees'
                             as the Current situation in her prompt.
+  self.txt                - the NPC's OWN evolving sense of who they are, written by them (in their
+                            own first-person voice) when they reflect - not by you. It grows over
+                            time and is folded into their prompt as 'Who you have become'. Safe to
+                            read; you may edit it, but the next reflection may rewrite it.
 
 You can delete an NPC's whole folder to reset that character.
 ";

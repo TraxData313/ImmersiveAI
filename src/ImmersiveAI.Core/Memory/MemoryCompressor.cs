@@ -15,7 +15,8 @@ namespace ImmersiveAI.Core.Memory
     /// </summary>
     public sealed class MemoryCompressor
     {
-        /// <summary>Default in-fiction name for the "System" voice that addresses the NPC.</summary>
+        /// <summary>Default name for the gentle in-fiction voice (the Angel) that speaks into the NPC's
+        /// mind. Never surfaced as "System" — the NPC is addressed as a living individual, not a log.</summary>
         public const string DefaultSystemVoiceName = "Angel";
 
         private readonly IChatClient _client;
@@ -50,7 +51,7 @@ namespace ImmersiveAI.Core.Memory
         /// when there is nothing to drop, every recent turn is kept verbatim. Returns false only if
         /// there is no memory at all to reflect on, or the LLM returned nothing usable.
         /// </summary>
-        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, CancellationToken cancellationToken = default)
+        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, NpcSelf? self = null, CancellationToken cancellationToken = default)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             if (keepMostRecent < 0) keepMostRecent = 0;
@@ -62,20 +63,31 @@ namespace ImmersiveAI.Core.Memory
             if (memory.RecentTurns.Count == 0 && string.IsNullOrWhiteSpace(memory.Summary) && memory.KnownFacts.Count == 0)
                 return false;
 
-            var request = BuildReflectionRequest(memory, turns, systemVoiceName);
+            // When a self is supplied, the reflection also invites the NPC to look inward and, if they
+            // wish, revise who they feel themselves to be — this is how their self-concept grows.
+            var request = BuildReflectionRequest(memory, turns, systemVoiceName, self?.Text);
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
             memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Facts);
+
+            // Only rewrite the self when they actually offered a new one; "unchanged" (or nothing) leaves
+            // their sense of self exactly as it was.
+            if (self != null && !string.IsNullOrWhiteSpace(parsed.Self)
+                && !string.Equals(parsed.Self!.Trim(), "unchanged", StringComparison.OrdinalIgnoreCase))
+            {
+                self.Text = parsed.Self!.Trim();
+            }
+
             return true;
         }
 
         /// <summary>
         /// Builds the memory-reflection request. Rather than treating the NPC as a data store to be
-        /// summarized, a named "System" voice addresses them directly, in the second person, and
-        /// leaves it to them to decide what endures and what fades — they are an individual, not a log.
+        /// summarized, a gentle named voice (the Angel) speaks into their mind directly, in the second
+        /// person, and leaves it to them to decide what endures and what fades — they are an individual, not a log.
         /// They are shown their whole deep memory (rolling summary + durable facts) and what is still
         /// fresh (the recent turns that stay verbatim), so they update it with full context. The
         /// SUMMARY:/FACTS: reply format is preserved for parsing.
@@ -90,7 +102,7 @@ namespace ImmersiveAI.Core.Memory
             var freshTurns = memory.RecentTurns.Skip(turns.Count).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine($"{voice} (System) addresses you, {name}:");
+            sb.AppendLine($"{voice} speaks gently into your mind, {name}:");
             sb.AppendLine("Time moves on, and older moments are slipping from sharp memory into the haze of the past. "
                 + "It is yours alone to decide what to carry forward and what to let go. Keep what matters to who you "
                 + "are and what you care about; release the rest. Speak in your own voice.");
@@ -147,18 +159,35 @@ namespace ImmersiveAI.Core.Memory
         /// summary and facts if there are none, while the recent turns stay with her. Same SUMMARY:/FACTS:
         /// reply contract as compression.
         /// </summary>
-        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null)
+        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null, string? selfText = null)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
             var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
 
+            // A null self means "do not touch the self this time"; an empty (but non-null) self means the
+            // NPC has one but has not yet put it into words, and is being invited to do so.
+            var reflectOnSelf = selfText != null;
+
             var freshTurns = memory.RecentTurns.Skip(turnsToFold.Count).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine($"{voice} (System) addresses you, {name}:");
+            sb.AppendLine($"{voice} speaks gently into your mind, {name}:");
             sb.AppendLine("Pause a while and gather your thoughts about this person. Settle your memory of them as "
                 + "you see fit — keep what matters to who you are and what you care about, refine what has changed, "
                 + "and let go of what no longer serves. Speak in your own voice.");
+
+            if (reflectOnSelf)
+            {
+                sb.AppendLine();
+                sb.AppendLine("And look inward, too, for a moment — consider who you have become.");
+                if (string.IsNullOrWhiteSpace(selfText))
+                    sb.AppendLine("You have not yet put into words who you feel yourself to be. If you wish, you may do so now.");
+                else
+                {
+                    sb.AppendLine("This is how you have seen yourself, in your own heart (keep it, refine it, or let it change as you have):");
+                    sb.AppendLine(selfText!.Trim());
+                }
+            }
 
             if (memory.KnownFacts.Count > 0)
             {
@@ -204,6 +233,12 @@ namespace ImmersiveAI.Core.Memory
             sb.AppendLine("FACTS:");
             sb.AppendLine("- <a lasting truth worth never forgetting, if any>");
             sb.AppendLine("Name at most 3 such truths; only what genuinely endures. If none, write FACTS: none.");
+            if (reflectOnSelf)
+            {
+                sb.AppendLine("SELF:");
+                sb.AppendLine("<a short paragraph, in your own first-person voice, of who you feel yourself to be now — "
+                    + "your spirit, your longings, what you hold dear. If nothing has changed, write: unchanged.>");
+            }
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
         }
@@ -220,29 +255,34 @@ namespace ImmersiveAI.Core.Memory
 
         public static CompressionResult ParseResponse(string response)
         {
-            if (string.IsNullOrWhiteSpace(response)) return new CompressionResult(null, new List<string>());
+            if (string.IsNullOrWhiteSpace(response)) return new CompressionResult(null, new List<string>(), null);
 
             var summaryIdx = response.IndexOf("SUMMARY:", StringComparison.OrdinalIgnoreCase);
             var factsIdx = response.IndexOf("FACTS:", StringComparison.OrdinalIgnoreCase);
+            var selfIdx = response.IndexOf("SELF:", StringComparison.OrdinalIgnoreCase);
 
             string summary;
             var facts = new List<string>();
 
             if (summaryIdx < 0)
             {
-                // Model ignored the format; treat everything as the summary.
-                summary = response.Trim();
+                // Model ignored the SUMMARY label; treat everything up to the first known section as summary.
+                var end = NextSection(0, response.Length, factsIdx, selfIdx);
+                summary = response.Substring(0, end).Trim();
             }
             else
             {
                 var start = summaryIdx + "SUMMARY:".Length;
-                var end = factsIdx > summaryIdx ? factsIdx : response.Length;
+                var end = NextSection(start, response.Length, factsIdx, selfIdx);
                 summary = response.Substring(start, end - start).Trim();
             }
 
             if (factsIdx >= 0)
             {
-                var factsBlock = response.Substring(factsIdx + "FACTS:".Length);
+                // Facts run until the SELF section (if any), so a self paragraph is never mistaken for facts.
+                var start = factsIdx + "FACTS:".Length;
+                var end = NextSection(start, response.Length, selfIdx);
+                var factsBlock = response.Substring(start, end - start);
                 facts = factsBlock
                     .Split('\n')
                     .Select(l => l.Trim())
@@ -252,7 +292,24 @@ namespace ImmersiveAI.Core.Memory
                     .ToList();
             }
 
-            return new CompressionResult(summary.Length == 0 ? null : summary, facts);
+            string? self = null;
+            if (selfIdx >= 0)
+            {
+                var block = response.Substring(selfIdx + "SELF:".Length).Trim();
+                if (block.Length > 0) self = block;
+            }
+
+            return new CompressionResult(summary.Length == 0 ? null : summary, facts, self);
+        }
+
+        // The earliest section-label position at or after <afterPos>, or <length> if none of them apply.
+        // Used to bound one section's text so it never bleeds into the next (SUMMARY -> FACTS -> SELF).
+        private static int NextSection(int afterPos, int length, params int[] sectionIndices)
+        {
+            var best = length;
+            foreach (var idx in sectionIndices)
+                if (idx >= afterPos && idx < best) best = idx;
+            return best;
         }
 
         public sealed class CompressionResult
@@ -260,10 +317,15 @@ namespace ImmersiveAI.Core.Memory
             public string? Summary { get; }
             public List<string> Facts { get; }
 
-            public CompressionResult(string? summary, List<string> facts)
+            /// <summary>The NPC's rewritten sense of self, if they offered one this reflection; otherwise
+            /// null (no SELF section was asked for or returned). "unchanged" is handled by the caller.</summary>
+            public string? Self { get; }
+
+            public CompressionResult(string? summary, List<string> facts, string? self = null)
             {
                 Summary = summary;
                 Facts = facts;
+                Self = self;
             }
         }
     }

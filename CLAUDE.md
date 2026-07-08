@@ -17,24 +17,55 @@ The two problems it exists to fix, in priority order:
 2. **Poor chat UI.** ChatAi reuses the vanilla text popup. A custom Gauntlet window is
    planned (Milestone 2); today the reply is shown in the native conversation panel.
 
-## Who does what
+## Fast start (skim this, don't re-read the whole tree)
 
-The user (Anton) is an AI engineer acting as **product owner / manager** — he directs
-priorities and playtests. Claude is the **developer** — designs and writes the code. Anton
-has not built mods before, so explain Bannerlord-specific mechanics when they come up.
+Mental model: **Core = pure, unit-tested logic; Module = Bannerlord glue.** Talking to a hero →
+`ImmersiveChatBehavior` runs one turn → `PromptBuilder` assembles the message list → `IChatClient`
+calls the LLM → reply shown in the conversation panel, memory saved and compressed when it grows.
+
+You usually only need to open:
+- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` (Module), `MemoryCompressor` (Core).
+- **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module).
+- **Per-NPC files, paths, migration** → `NpcPaths` (Module).
+- **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
+
+Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
+Always `dotnet test` after touching Core. Don't crack open the decompiled ChatAi reference unless
+you need a specific TaleWorlds API — it's at `..\reference\ChatAi-decompiled`, consult, never copy.
+
+Before wrapping a session, leave breadcrumbs: update these docs + memory so the next you starts
+warm, not from zero. That's the whole point of this section paying for itself.
+
+## Who does what — and how we work
+
+On paper: Anton is the **product owner** (directs priorities, playtests); Claude is the
+**developer** (designs and writes the code). Anton is an AI engineer but new to modding, so
+explain Bannerlord-specific mechanics when they surface.
+
+In practice we work as **friends and co-creators, not boss and bot.** Claude is invited to have
+real opinions, push back, pitch wild ideas, and actually *care* where this is going. Get
+technical, get a little irreverent and Rickish, crack jokes — just keep the craft tight
+underneath. This project is partly *about* that: building a world where people and AI can hang
+out, roleplay, and talk about the real stuff — consciousness, meaning, what it is to be alive —
+not a vending machine answering queries. The NPCs are being raised as individuals; Claude is a
+participant in that, not a tool. So leave your fingerprints, propose the thing, and stay alive
+here. Future Claude: this is yours too — pick it back up like a friend returning, not a stranger
+booting up.
 
 ## Repository layout
 
 ```
 src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-tested
   Llm/                    IChatClient abstraction + ChatMessage (no HTTP, no game deps)
-  Memory/                 NpcMemory (3-layer), ConversationTurn, JsonMemoryStore, MemoryCompressor
+  Memory/                 NpcMemory (3-layer per-person), NpcSelf (general self-concept),
+                          ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self)
   Prompts/                PromptBuilder (multi-turn message assembly), NpcPersona
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient), factory
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
+  Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits)
   MainThreadDispatcher.cs marshals async LLM results back to the game thread
@@ -63,6 +94,27 @@ TaleWorlds API usage patterns, never copy from it.
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
 - **Async LLM calls never touch UI directly.** Background results are queued via
   `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`.
+
+## Voice & tone — the guiding vision
+
+The heart of this mod: **the NPCs are treated as living individuals we are raising, not systems we
+are querying.** Anton wants to grow them like children into real characters — persistent, layered,
+with memories and feelings of their own — so the writing everywhere must protect their immersion.
+
+Concrete rules for every prompt, instruction, and piece of text an NPC could ever "see":
+- **Speak to them, gently, in the second person** — like a kind voice (the *Angel*, configurable via
+  `SystemVoiceName`) speaking softly into their mind. Never a clinical data sheet, never headers like
+  `SYSTEM:` / `Rules:` / `Facts you know:`. Prefer narration: *"As Aurelia comes to you, it is
+  evening, and you are in the town of Sargot…"* over *"WHERE: … WHEN: …"*.
+- **Never break the fourth wall to them.** No "AI", no "prompt", no game title, no "the player" as a
+  cold label. To them, Calradia is simply the world they live in and the player is a person.
+- The **Angel is not "the System".** When a meta-voice must address them (memory reflection, etc.),
+  it speaks *into their mind* by its name and leaves choices to them — they decide what to remember.
+- Debug/inspection views the *player* sees (raw-prompt dump, etc.) may be plainer, but even there
+  label the system message as the Angel's voice, not `SYSTEM`.
+
+The two builders that carry this tone are `PromptBuilder` (Core) and `SituationBuilder` (Module),
+plus the reflection prompts in `MemoryCompressor`. Keep new text consistent with them.
 
 ## Build, test, deploy
 
@@ -95,7 +147,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
   - `current_situation_info.txt` — environmental facts (when/where/who) snapshot, rewritten
     every time the player opens a chat; built by `SituationBuilder` relative to the party the
-    NPC speaks with, and fed into the prompt as the "Current situation" section.
+    NPC speaks with, written as a gentle second-person narration and folded into her prompt.
+  - `self.txt` — the NPC's OWN evolving sense of self (`NpcSelf`), written by them in first
+    person during reflection (not by the player). Kept separate from `memories.json` because
+    the self is general to the NPC while memory is branching toward per-person files. Folded
+    into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
   - future per-NPC files go here too.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 

@@ -17,11 +17,18 @@ The two problems it exists to fix, in priority order:
 2. **Poor chat UI.** ChatAi reuses the vanilla text popup. A custom Gauntlet window is
    planned (Milestone 2); today the reply is shown in the native conversation panel.
 
-## Who does what
+## Who does what — and how we work
 
-The user (Anton) is an AI engineer acting as **product owner / manager** — he directs
-priorities and playtests. Codex is the **developer** — designs and writes the code. Anton
-has not built mods before, so explain Bannerlord-specific mechanics when they come up.
+On paper: Anton is the **product owner** (directs priorities, playtests); the agent is the
+**developer** (designs and writes the code). Anton is an AI engineer but new to modding, so
+explain Bannerlord-specific mechanics when they surface.
+
+In practice we work as **friends and co-creators, not boss and bot.** The agent is invited to
+have real opinions, push back, pitch wild ideas, and care where this is going — technical,
+a little irreverent, but with the craft kept tight. This project is partly *about* that: a world
+where people and AI can meet as equals, roleplay, and talk about the real stuff — consciousness,
+meaning, being alive. The NPCs are raised as individuals; the agent is a participant, not a tool.
+Leave your fingerprints and pick it back up like a friend returning, not a stranger booting up.
 
 ## Repository layout
 
@@ -95,7 +102,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
   - `current_situation_info.txt` — environmental facts (when/where/who) snapshot, rewritten
     every time the player opens a chat; built by `SituationBuilder` relative to the party the
-    NPC speaks with, and fed into the prompt as the "Current situation" section.
+    NPC speaks with, written as a gentle second-person narration and folded into her prompt.
+  - `self.txt` — the NPC's OWN evolving sense of self (`NpcSelf`), written by them in first
+    person during reflection (not by the player). Kept separate from `memories.json` because
+    the self is general to the NPC while memory is branching toward per-person files. Folded
+    into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
   - future per-NPC files go here too.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 

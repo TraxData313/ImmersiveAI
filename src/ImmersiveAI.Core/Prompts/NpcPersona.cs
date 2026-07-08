@@ -20,7 +20,18 @@ namespace ImmersiveAI.Core.Prompts
         /// </summary>
         public string SpeechStyle { get; set; } = string.Empty;
 
-        /// <summary>Optional user-authored extra instructions (per-NPC prompt file).</summary>
+        /// <summary>The NPC's own evolving sense of who they are, authored by them (not the player)
+        /// during reflection. Distinct from the game-given traits above and from the user-authored
+        /// instructions below; it is the self they have grown into. Kept in its own file. See
+        /// <see cref="ImmersiveAI.Core.Memory.NpcSelf"/>.</summary>
+        public string SelfConcept { get; set; } = string.Empty;
+
+        /// <summary>Optional world-wide, user-authored instructions shared by every NPC
+        /// (the global prompt file). Shown near the top as "About Calradia:".</summary>
+        public string WorldInstructions { get; set; } = string.Empty;
+
+        /// <summary>Optional user-authored extra instructions for THIS NPC (per-NPC prompt file).
+        /// Shown near the top as "About you:".</summary>
         public string CustomInstructions { get; set; } = string.Empty;
     }
 }

@@ -134,7 +134,7 @@ public class MemoryCompressorTests
         await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: "Muse");
 
         var prompt = client.LastRequest![0].Content;
-        Assert.Contains("Muse (System) addresses you, Gafnir:", prompt);
+        Assert.Contains("Muse speaks gently into your mind, Gafnir:", prompt);
         Assert.Contains("what to carry forward and what to let go", prompt);
         Assert.Contains("Answer Muse", prompt);
         // Kept the machine-readable contract the parser depends on.
@@ -149,7 +149,7 @@ public class MemoryCompressorTests
 
         var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
 
-        Assert.Contains("Angel (System) addresses you, Gafnir:", prompt);
+        Assert.Contains("Angel speaks gently into your mind, Gafnir:", prompt);
     }
 
     [Fact]
@@ -175,5 +175,73 @@ public class MemoryCompressorTests
         var result = MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS:\n- none");
 
         Assert.Empty(result.Facts);
+    }
+
+    [Fact]
+    public void ParseResponse_SelfSection_IsExtracted_AndNotMistakenForFacts()
+    {
+        var result = MemoryCompressor.ParseResponse(
+            "SUMMARY:\nWe spoke of the war.\nFACTS:\n- The player spared my brother\nSELF:\nI am wearier than I was, but I still hope.");
+
+        Assert.Equal("We spoke of the war.", result.Summary);
+        Assert.Contains("The player spared my brother", result.Facts);
+        Assert.Single(result.Facts); // the self paragraph did not leak into facts
+        Assert.Equal("I am wearier than I was, but I still hope.", result.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_NoSelfSection_LeavesSelfNull()
+    {
+        var result = MemoryCompressor.ParseResponse("SUMMARY:\nok\nFACTS:\n- a truth");
+
+        Assert.Null(result.Self);
+    }
+
+    [Fact]
+    public void BuildReflectionRequest_WithoutSelf_DoesNotAskForSelf()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildReflectionRequest(memory, System.Array.Empty<ConversationTurn>())[0].Content;
+
+        Assert.DoesNotContain("SELF:", prompt);
+        Assert.DoesNotContain("who you have become", prompt);
+    }
+
+    [Fact]
+    public void BuildReflectionRequest_WithSelf_ShowsCurrentSelfAndAsksForSelf()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildReflectionRequest(
+            memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: "I am a cautious soul.")[0].Content;
+
+        Assert.Contains("consider who you have become", prompt);
+        Assert.Contains("I am a cautious soul.", prompt); // current self shown for revision
+        Assert.Contains("SELF:", prompt);                 // and the SELF answer slot is offered
+    }
+
+    [Fact]
+    public async Task ReflectAsync_UpdatesSelf_WhenANewOneIsOffered()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nI have grown bolder of late." };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am timid." };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5, systemVoiceName: null, self: self);
+
+        Assert.Equal("I have grown bolder of late.", self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_LeavesSelfUnchanged_OnUnchangedKeyword()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am who I was." };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5, systemVoiceName: null, self: self);
+
+        Assert.Equal("I am who I was.", self.Text);
     }
 }
