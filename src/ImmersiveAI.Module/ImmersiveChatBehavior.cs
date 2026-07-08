@@ -31,6 +31,11 @@ namespace ImmersiveAI
 
         private Hero? _currentNpc;
 
+        // Set false when the player sends a line, true once the reply (or an error) is in.
+        // The dialog uses it to hold on "considers your words..." until the answer is ready,
+        // so the player never clicks into a half-loaded "..." placeholder.
+        private volatile bool _responseReady = true;
+
         public ImmersiveChatBehavior(ModConfig config)
         {
             _config = config;
@@ -46,26 +51,37 @@ namespace ImmersiveAI
         {
             MBTextManager.SetTextVariable(ResponseVar, " ", false);
 
+            // Enter the free-chat menu from the normal conversation hub.
             starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_input",
                 "{=ImmersiveAI_Speak}Speak freely with me. [Immersive AI]",
                 () => Hero.OneToOneConversationHero != null, null, 110);
 
-            starter.AddPlayerLine("immersiveai_say", "immersiveai_input", "immersiveai_thinking",
+            // Menu option: say something -> shows the text box, then goes to the await state.
+            starter.AddPlayerLine("immersiveai_say", "immersiveai_input", "immersiveai_await",
                 "{=ImmersiveAI_Say}Say something...", null, OnPlayerSpeaks, 110);
 
-            starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "hero_main_options",
-                "{=ImmersiveAI_Done}That is all for now.", null, null, 109);
+            // Menu option: leave. "close_window" is the engine's token that ends the conversation.
+            starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "close_window",
+                "{=ImmersiveAI_Done}Farewell.", null, null, 109);
 
-            starter.AddDialogLine("immersiveai_thinking", "immersiveai_thinking", "immersiveai_reply",
-                "{=ImmersiveAI_Thinking}(considers your words...)", null, null);
+            // Await state, reply is in -> show it and return to the menu.
+            // Registered before the "still thinking" line so it wins when the condition holds.
+            starter.AddDialogLine("immersiveai_reply", "immersiveai_await", "immersiveai_input",
+                "{=!}{" + ResponseVar + "}", () => _responseReady, null);
 
-            starter.AddDialogLine("immersiveai_reply", "immersiveai_reply", "immersiveai_input",
-                "{=!}{" + ResponseVar + "}", null, null);
+            // Await state, still waiting -> show a holding line and offer to wait more.
+            starter.AddDialogLine("immersiveai_thinking", "immersiveai_await", "immersiveai_wait",
+                "{=ImmersiveAI_Thinking}(considers your words...)", () => !_responseReady, null);
+
+            // Re-checks the await state; loops until the reply arrives.
+            starter.AddPlayerLine("immersiveai_wait", "immersiveai_wait", "immersiveai_await",
+                "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
         }
 
         private void OnPlayerSpeaks()
         {
             _currentNpc = Hero.OneToOneConversationHero;
+            _responseReady = false;
             MBTextManager.SetTextVariable(ResponseVar, "...", false);
 
             var affirmative = new TextObject("{=ImmersiveAI_Send}Send").ToString();
@@ -75,17 +91,25 @@ namespace ImmersiveAI
                 new TextObject("{=ImmersiveAI_Prompt}What do you say?").ToString(),
                 string.Empty, true, true, affirmative, negative,
                 new Action<string>(OnPlayerInputSubmitted),
-                new Action(() => { }),
+                new Action(OnPlayerInputCancelled),
                 false, null, "", "");
 
             InformationManager.ShowTextInquiry(inquiry, false);
+        }
+
+        private void OnPlayerInputCancelled()
+        {
+            // Player closed the box without sending; resolve the await loop so they aren't stuck.
+            MBTextManager.SetTextVariable(ResponseVar, "(You decide to say nothing.)", false);
+            _responseReady = true;
         }
 
         private void OnPlayerInputSubmitted(string input)
         {
             if (string.IsNullOrWhiteSpace(input) || _currentNpc == null)
             {
-                MBTextManager.SetTextVariable(ResponseVar, "...", false);
+                MBTextManager.SetTextVariable(ResponseVar, "(You decide to say nothing.)", false);
+                _responseReady = true;
                 return;
             }
 
@@ -129,7 +153,11 @@ namespace ImmersiveAI
 
                 _memoryStore.Save(memory);
 
-                MainThreadDispatcher.Enqueue(() => MBTextManager.SetTextVariable(ResponseVar, reply, false));
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    MBTextManager.SetTextVariable(ResponseVar, reply, false);
+                    _responseReady = true;
+                });
             }
             catch (Exception ex)
             {
@@ -138,6 +166,7 @@ namespace ImmersiveAI
                 {
                     MBTextManager.SetTextVariable(ResponseVar, "(...I cannot find the words. " + message + ")", false);
                     InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + message));
+                    _responseReady = true;
                 });
             }
         }
