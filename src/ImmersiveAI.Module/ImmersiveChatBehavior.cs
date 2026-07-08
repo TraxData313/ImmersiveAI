@@ -24,6 +24,13 @@ namespace ImmersiveAI
     {
         private const string ResponseVar = "IMMERSIVEAI_RESPONSE";
         private const string RecapVar = "IMMERSIVEAI_RECAP";
+        private const string InfoVar = "IMMERSIVEAI_INFO";     // read-only views (deep memory, history)
+        private const string UpdateVar = "IMMERSIVEAI_UPDATE";  // outcome of a manual memory update
+
+        // A manual "reflect now" is deliberate and aggressive: it folds all but the last couple of
+        // turns into deep memory, so it actually produces a summary/facts even for a short chat
+        // (the automatic keep count of 15 would leave a short conversation untouched).
+        private const int ManualReflectKeepRecentTurns = 2;
 
         private readonly ModConfig _config;
         private readonly IChatClient _client;
@@ -41,6 +48,9 @@ namespace ImmersiveAI
         // Same idea for the opening recap: false while the greeting is being generated, true once
         // it (or an error fallback) is ready to show. Only used when EnableConversationRecap is on.
         private volatile bool _recapReady = true;
+
+        // Same hold-until-ready flag for a manually requested memory update (compression on demand).
+        private volatile bool _updateReady = true;
 
         // The greeting the NPC just delivered this conversation, fed into the first reply's prompt so
         // it doesn't greet twice. Not persisted to memory; consumed once, then cleared.
@@ -95,9 +105,37 @@ namespace ImmersiveAI
             starter.AddPlayerLine("immersiveai_say", "immersiveai_input", "immersiveai_await",
                 "{=ImmersiveAI_Say}Say something...", null, OnPlayerSpeaks, 110);
 
+            // --- Utility options (interim; the Milestone 2 chat window replaces these) ---
+
+            // Ask her to reflect now: compress/refactor memory on demand instead of waiting for the
+            // automatic trigger. Uses the same hold-until-ready wait loop as a normal reply.
+            starter.AddPlayerLine("immersiveai_update", "immersiveai_input", "immersiveai_updating",
+                "{=ImmersiveAI_Update}Reflect on all we have shared, and settle it into your memory. [Immersive AI]",
+                null, OnMemoryUpdateRequested, 108);
+            starter.AddDialogLine("immersiveai_update_done", "immersiveai_updating", "immersiveai_input",
+                "{=!}{" + UpdateVar + "}", () => _updateReady, null);
+            starter.AddDialogLine("immersiveai_update_wait", "immersiveai_updating", "immersiveai_update_hold",
+                "{=ImmersiveAI_Reflecting}(reflects on all you have shared...)", () => !_updateReady, null);
+            starter.AddPlayerLine("immersiveai_update_hold", "immersiveai_update_hold", "immersiveai_updating",
+                "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
+
+            // Show her current deep memory (rolling summary) and memorized facts.
+            starter.AddPlayerLine("immersiveai_deepmem", "immersiveai_input", "immersiveai_deepmem_out",
+                "{=ImmersiveAI_DeepMemory}What do you hold of me in your deeper memory? [Immersive AI]",
+                null, OnShowDeepMemory, 107);
+            starter.AddDialogLine("immersiveai_deepmem_line", "immersiveai_deepmem_out", "immersiveai_input",
+                "{=!}{" + InfoVar + "}", null, null);
+
+            // Show the full verbatim conversation still held in recent memory.
+            starter.AddPlayerLine("immersiveai_history", "immersiveai_input", "immersiveai_history_out",
+                "{=ImmersiveAI_History}Recount for me everything we have spoken of. [Immersive AI]",
+                null, OnShowConversation, 106);
+            starter.AddDialogLine("immersiveai_history_line", "immersiveai_history_out", "immersiveai_input",
+                "{=!}{" + InfoVar + "}", null, null);
+
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
             starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "close_window",
-                "{=ImmersiveAI_Done}Farewell.", null, null, 109);
+                "{=ImmersiveAI_Done}Farewell.", null, null, 100);
 
             // Await state, reply is in -> show it and return to the menu.
             // Registered before the "still thinking" line so it wins when the condition holds.
@@ -182,6 +220,139 @@ namespace ImmersiveAI
             }
         }
 
+        // "Reflect on all we have shared" -> compress/refactor memory now instead of waiting for the
+        // automatic trigger. Async, with the same hold-until-ready wait loop as a reply.
+        private void OnMemoryUpdateRequested()
+        {
+            _updateReady = false;
+            MBTextManager.SetTextVariable(UpdateVar, "...", false);
+
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) { _updateReady = true; return; }
+
+            _ = UpdateMemoryAsync(npc);
+        }
+
+        private async Task UpdateMemoryAsync(Hero npc)
+        {
+            try
+            {
+                var memory = _memoryStore.Load(npc.StringId);
+                memory.NpcName = npc.Name?.ToString() ?? "Unknown";
+
+                // Keep only the last couple of turns verbatim and fold the rest into deep memory, so
+                // a deliberate reflection always builds a summary when there is anything to reflect on.
+                var keepMostRecent = Math.Min(ManualReflectKeepRecentTurns, memory.RecentTurns.Count);
+
+                var didCompress = await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName)
+                    .ConfigureAwait(false);
+
+                string outcome;
+                if (didCompress)
+                {
+                    _memoryStore.Save(memory);
+                    outcome = "(I have turned it all over in my mind, and set what matters into memory.)";
+                }
+                else
+                {
+                    outcome = "(There is too little between us yet to settle into memory.)";
+                }
+
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    MBTextManager.SetTextVariable(UpdateVar, outcome, false);
+                    _updateReady = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    MBTextManager.SetTextVariable(UpdateVar, "(...my thoughts scatter. " + message + ")", false);
+                    InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + message));
+                    _updateReady = true;
+                });
+            }
+        }
+
+        // "What do you hold of me in your deeper memory?" -> shows the rolling summary + known facts.
+        private void OnShowDeepMemory()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+
+            var memory = _memoryStore.Load(npc.StringId);
+
+            var sb = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(memory.Summary))
+                sb.AppendLine(memory.Summary.Trim());
+            else
+                sb.AppendLine("(Nothing has yet settled into my deeper memory of you.)");
+
+            if (memory.KnownFacts.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("What I hold as true:");
+                foreach (var fact in memory.KnownFacts)
+                    sb.AppendLine("- " + fact);
+            }
+
+            var name = npc.Name?.ToString() ?? "Unknown";
+            ShowScrollPopup(name + " — deeper memory", sb.ToString().Trim());
+            MBTextManager.SetTextVariable(InfoVar, "(She shares what she holds of you.)", false);
+        }
+
+        // "Recount everything we have spoken of" -> shows the verbatim recent turns (and notes that
+        // older exchanges now live only in the summary).
+        private void OnShowConversation()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+
+            var memory = _memoryStore.Load(npc.StringId);
+            var npcName = npc.Name?.ToString() ?? "I";
+            var playerName = Hero.MainHero?.Name?.ToString() ?? "You";
+
+            var sb = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(memory.Summary))
+            {
+                sb.AppendLine("(Earlier days, now held only in memory: " + memory.Summary.Trim() + ")");
+                sb.AppendLine();
+            }
+
+            if (memory.RecentTurns.Count == 0)
+            {
+                sb.AppendLine("(We have not yet spoken.)");
+            }
+            else
+            {
+                foreach (var turn in memory.RecentTurns)
+                {
+                    sb.AppendLine(playerName + ": " + turn.PlayerLine);
+                    sb.AppendLine(npcName + ": " + turn.NpcLine);
+                    sb.AppendLine();
+                }
+            }
+
+            ShowScrollPopup(npcName + " — all we have spoken", sb.ToString().Trim());
+            MBTextManager.SetTextVariable(InfoVar, "(She recounts it all for you.)", false);
+        }
+
+        // Shows read-only text in the game's scrollable inquiry pop-up, which handles long content
+        // the native conversation panel cannot. Interim until the Milestone 2 chat window.
+        private static void ShowScrollPopup(string title, string body)
+        {
+            var close = GameTexts.FindText("str_ok", null)?.ToString() ?? "OK";
+            var data = new InquiryData(
+                title, body, true, false, close, null,
+                new Action(() => { }), null,
+                "", 0f, (Action?)null,
+                (Func<ValueTuple<bool, string>>?)null,
+                (Func<ValueTuple<bool, string>>?)null);
+            InformationManager.ShowInquiry(data, false, false);
+        }
+
         private void OnPlayerInputCancelled()
         {
             // Player closed the box without sending; resolve the await loop so they aren't stuck.
@@ -239,7 +410,7 @@ namespace ImmersiveAI
                         _config.KeepRecentDaysAfterCompression,
                         _config.MinRecentMemoryTokensAfterCompression);
 
-                    try { await _compressor.CompressAsync(memory, keepMostRecent).ConfigureAwait(false); }
+                    try { await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false); }
                     catch { /* compression is best-effort */ }
                 }
 

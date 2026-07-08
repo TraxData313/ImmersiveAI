@@ -15,6 +15,9 @@ namespace ImmersiveAI.Core.Memory
     /// </summary>
     public sealed class MemoryCompressor
     {
+        /// <summary>Default in-fiction name for the "System" voice that addresses the NPC.</summary>
+        public const string DefaultSystemVoiceName = "Angel";
+
         private readonly IChatClient _client;
 
         public MemoryCompressor(IChatClient client)
@@ -23,13 +26,13 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>Compresses the oldest turns, keeping the newest ones verbatim. Returns false if there was nothing to do.</summary>
-        public async Task<bool> CompressAsync(NpcMemory memory, int keepMostRecent, CancellationToken cancellationToken = default)
+        public async Task<bool> CompressAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, CancellationToken cancellationToken = default)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             var turns = memory.GetTurnsToCompress(keepMostRecent);
             if (turns.Count == 0) return false;
 
-            var request = BuildCompressionRequest(memory, turns);
+            var request = BuildCompressionRequest(memory, turns, systemVoiceName);
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
@@ -39,31 +42,70 @@ namespace ImmersiveAI.Core.Memory
             return true;
         }
 
-        public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns)
+        /// <summary>
+        /// Builds the memory-reflection request. Rather than treating the NPC as a data store to be
+        /// summarized, a named "System" voice addresses them directly, in the second person, and
+        /// leaves it to them to decide what endures and what fades — they are an individual, not a log.
+        /// They are shown their whole deep memory (rolling summary + durable facts) and what is still
+        /// fresh (the recent turns that stay verbatim), so they update it with full context. The
+        /// SUMMARY:/FACTS: reply format is preserved for parsing.
+        /// </summary>
+        public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns, string? systemVoiceName = null)
         {
+            var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
+            var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
+
+            // The turns being folded in are the oldest; the rest stay verbatim and are shown as
+            // still-fresh context so the reflection is coherent with the present, not just the past.
+            var freshTurns = memory.RecentTurns.Skip(turns.Count).ToList();
+
             var sb = new StringBuilder();
-            sb.AppendLine($"You maintain the memory of {memory.NpcName}, a character in a medieval world.");
-            sb.AppendLine("Condense the conversation excerpts below into what the character would remember.");
+            sb.AppendLine($"{voice} (System) addresses you, {name}:");
+            sb.AppendLine("Time moves on, and older moments are slipping from sharp memory into the haze of the past. "
+                + "It is yours alone to decide what to carry forward and what to let go. Keep what matters to who you "
+                + "are and what you care about; release the rest. Speak in your own voice.");
+
+            if (memory.KnownFacts.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Truths you already hold as lasting (keep, refine, or let fall away as you see fit):");
+                foreach (var fact in memory.KnownFacts)
+                    sb.AppendLine("- " + fact);
+            }
+
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("Existing memory (merge it with the new exchanges):");
+                sb.AppendLine("What you already hold in memory (weave the fading moments into it):");
                 sb.AppendLine(memory.Summary.Trim());
             }
+
             sb.AppendLine();
-            sb.AppendLine("New exchanges to fold in:");
+            sb.AppendLine("The moments now fading (fold these into your memory):");
             foreach (var turn in turns)
             {
                 sb.AppendLine($"[Day {turn.GameDay:0}] They said: {turn.PlayerLine}");
-                sb.AppendLine($"{memory.NpcName} replied: {turn.NpcLine}");
+                sb.AppendLine($"You answered: {turn.NpcLine}");
             }
+
+            if (freshTurns.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Still fresh in your mind (context only — these stay with you, do not fold them in yet):");
+                foreach (var turn in freshTurns)
+                {
+                    sb.AppendLine($"[Day {turn.GameDay:0}] They said: {turn.PlayerLine}");
+                    sb.AppendLine($"You answered: {turn.NpcLine}");
+                }
+            }
+
             sb.AppendLine();
-            sb.AppendLine("Reply in exactly this format:");
+            sb.AppendLine($"Answer {voice} in exactly this format:");
             sb.AppendLine("SUMMARY:");
-            sb.AppendLine("<one short paragraph, first person, of what the character remembers>");
+            sb.AppendLine("<one short paragraph, in your own first-person voice, of what you choose to remember>");
             sb.AppendLine("FACTS:");
-            sb.AppendLine("- <durable fact worth remembering long-term, if any>");
-            sb.AppendLine("List at most 3 facts; only genuinely important, lasting ones. If none, write FACTS: none.");
+            sb.AppendLine("- <a lasting truth worth never forgetting, if any>");
+            sb.AppendLine("Name at most 3 such truths; only what genuinely endures. If none, write FACTS: none.");
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
         }

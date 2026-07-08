@@ -25,6 +25,11 @@ namespace ImmersiveAI
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
         public bool EnableConversationRecap { get; set; } = true;
 
+        /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
+        /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
+        /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>
+        public string SystemVoiceName { get; set; } = "Angel";
+
         /// <summary>How many verbatim turns an NPC keeps before old ones are compressed into the summary.</summary>
         public int MaxRecentTurns { get; set; } = 30;
 
@@ -85,6 +90,8 @@ namespace ImmersiveAI
 
         public void Normalize()
         {
+            if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
             if (MaxRecentTurns <= 0) MaxRecentTurns = 30;
             if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 15;
             if (MaxRecentDays <= 0) MaxRecentDays = 30;

@@ -57,19 +57,54 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public async Task CompressAsync_RequestContainsPriorSummaryAndTurns()
+    public async Task CompressAsync_ShowsWholeDeepMemoryPlusFadingAndFreshTurns()
     {
         var client = new FakeChatClient { Response = "SUMMARY:\nok" };
         var memory = MemoryWithTurns(6);
         memory.Summary = "Old friends from the north.";
+        memory.KnownFacts.Add("Vulgrim rules Sargot");
 
         await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
 
         var prompt = client.LastRequest![0].Content;
+        // Whole deep memory is visible so they can update it with full context.
         Assert.Contains("Old friends from the north.", prompt);
+        Assert.Contains("Vulgrim rules Sargot", prompt);
+        // Oldest turns are the ones being folded in.
+        Assert.Contains("The moments now fading", prompt);
         Assert.Contains("p0", prompt);
         Assert.Contains("p3", prompt);
-        Assert.DoesNotContain("p4", prompt); // kept verbatim, not compressed
+        // The kept turns are shown as still-fresh context, not folded in.
+        Assert.Contains("Still fresh in your mind", prompt);
+        Assert.Contains("p4", prompt);
+        Assert.Contains("p5", prompt);
+    }
+
+    [Fact]
+    public async Task CompressAsync_AddressesNpcAsIndividualViaNamedSystemVoice()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(6);
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: "Muse");
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.Contains("Muse (System) addresses you, Gafnir:", prompt);
+        Assert.Contains("what to carry forward and what to let go", prompt);
+        Assert.Contains("Answer Muse", prompt);
+        // Kept the machine-readable contract the parser depends on.
+        Assert.Contains("SUMMARY:", prompt);
+        Assert.Contains("FACTS:", prompt);
+    }
+
+    [Fact]
+    public void BuildCompressionRequest_DefaultsSystemVoiceToAngel()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
+
+        Assert.Contains("Angel (System) addresses you, Gafnir:", prompt);
     }
 
     [Fact]
