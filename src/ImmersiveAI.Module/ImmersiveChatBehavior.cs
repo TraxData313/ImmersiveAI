@@ -135,8 +135,8 @@ namespace ImmersiveAI
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
                 var messages = _promptBuilder.Build(persona, memory, scene, playerName, playerInput);
-                var reply = (await _client.CompleteAsync(messages).ConfigureAwait(false))?.Trim();
-                if (string.IsNullOrEmpty(reply)) reply = "...";
+                var rawReply = await _client.CompleteAsync(messages).ConfigureAwait(false);
+                var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
                 memory.AddTurn(new ConversationTurn
                 {
@@ -145,9 +145,20 @@ namespace ImmersiveAI
                     GameDay = CampaignTime.Now.ToDays,
                 });
 
-                if (memory.NeedsCompression(_config.MaxRecentTurns))
+                var currentGameDay = CampaignTime.Now.ToDays;
+                if (memory.NeedsCompression(
+                    _config.MaxRecentTurns,
+                    currentGameDay,
+                    _config.MaxRecentDays,
+                    _config.MaxRecentMemoryTokens))
                 {
-                    try { await _compressor.CompressAsync(memory, _config.KeepRecentTurnsAfterCompression).ConfigureAwait(false); }
+                    var keepMostRecent = memory.GetKeepMostRecentForCompression(
+                        _config.KeepRecentTurnsAfterCompression,
+                        currentGameDay,
+                        _config.KeepRecentDaysAfterCompression,
+                        _config.MinRecentMemoryTokensAfterCompression);
+
+                    try { await _compressor.CompressAsync(memory, keepMostRecent).ConfigureAwait(false); }
                     catch { /* compression is best-effort */ }
                 }
 

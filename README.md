@@ -34,13 +34,23 @@ Key Core concepts:
 - `IChatClient` â€” backend abstraction; Anthropic/OpenAI-compatible implementations live
   in the Module layer.
 
+Memory token settings are configured as percentages of the selected model's context window:
+
+- `MaxRecentMemoryPercent`: default `10`; compression starts when verbatim recent memory exceeds this share.
+- `MinRecentMemoryPercentAfterCompression`: default `5`; compression shrinks verbatim recent memory toward this share.
+- The raw `MaxRecentMemoryTokens` and `MinRecentMemoryTokensAfterCompression` values are derived from those percentages and the active model profile.
+
 ## User TODOs
 
-- [ ] Increase verbatim memory limits: max to 30 turns/days, falling back to 15 turns/days after compression (updating `MaxRecentTurns` and `KeepRecentTurnsAfterCompression` defaults/settings).
-- [ ] Implement model-specific token-based limits (min/max limits) and trigger compression based on token counts (using similar compression logic).
+- [x] Increase verbatim memory limits: max to 30 turns/days, falling back to 15 turns/days after compression (updating `MaxRecentTurns`, `MaxRecentDays`, `KeepRecentTurnsAfterCompression`, and `KeepRecentDaysAfterCompression` defaults/settings).
+- [x] Implement model-specific token-based limits (min/max limits) and trigger compression based on token counts (using similar compression logic).
+- [ ] Check why in the config MaxRecentMemoryTokens is set to 12800, I thought they were 128k, if it is 12800 then gets divided by the MaxRecentMemoryPercent which is 10% it will shrink it down too much to 1280 - need to be 128k*0.1 = 12.8k
+- [ ] Add a popup when the LLM is ready with its responce so that I dont click Next Next until it is ready
+- [ ] When I initiate a chat with an NPC can he/she give me a summary of what importaint she remenbers and of our last chat in a few sentences
 - [ ] Implement relationship changes (increase/decrease relationship standing based on LLM response/conversation content, similar to ChatAI mod).
 - [ ] Implement NPC tool-use capabilities to fetch relevant data dynamically on demand from the campaign world (e.g. so they don't forget/hallucinate family members' names, location info, faction status).
 - [ ] Append the NPC's first name to memory and prompt file IDs/filenames (e.g., `lord_7_13_1` -> `lord_7_13_1_Gunjadrid`) for easier identification, excluding second names.
+
 
 ## Roadmap
 

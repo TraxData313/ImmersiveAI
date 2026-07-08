@@ -4,3 +4,4 @@ obj/
 .vs/
 .idea/
 TestResults/
+.nuget-test-appdata/

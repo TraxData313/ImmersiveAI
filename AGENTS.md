@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-Guidance for Claude Code when working in this repository.
+Guidance for Codex when working in this repository.
 
 ## What this is
 
@@ -20,7 +20,7 @@ The two problems it exists to fix, in priority order:
 ## Who does what
 
 The user (Anton) is an AI engineer acting as **product owner / manager** — he directs
-priorities and playtests. Claude is the **developer** — designs and writes the code. Anton
+priorities and playtests. Codex is the **developer** — designs and writes the code. Anton
 has not built mods before, so explain Bannerlord-specific mechanics when they come up.
 
 ## Repository layout
@@ -59,7 +59,7 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
-- **Anthropic is the default backend**, model `claude-opus-4-8`. Clients use raw `HttpClient`
+- **Anthropic is the default backend**, model `Codex-opus-4-8`. Clients use raw `HttpClient`
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
 - **Async LLM calls never touch UI directly.** Background results are queued via
   `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`.
@@ -112,7 +112,7 @@ briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2
 ## Roadmap
 
 - [x] M0: repo, Core memory engine, module skeleton that loads in game
-- [x] M1: memory + anti-repetition + Claude/OpenAI backends + in-game conversation
+- [x] M1: memory + anti-repetition + Codex/OpenAI backends + in-game conversation
 - [ ] M2: custom Gauntlet chat window (scrollable history, portrait, streaming)
 - [ ] M3: MCM in-game settings screen; streaming responses
 - [ ] M4: "living world" — tool-use so NPCs pull relevant game info on demand ("info getter"),
@@ -121,7 +121,7 @@ briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2
 ## Conventions
 
 - Match the surrounding code style; keep comments about *constraints/intent*, not narration.
-- End git commit messages with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+- End git commit messages with `Co-Authored-By: Codex Fable 5 <noreply@anthropic.com>`.
 - The user commits from GitHub Desktop too — write descriptive commit messages, expect a
   shared history. Closing VS Code / Explorer windows on the repo may be needed before folder
   renames on Windows.

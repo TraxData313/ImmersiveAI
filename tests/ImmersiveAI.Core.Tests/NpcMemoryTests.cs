@@ -30,6 +30,49 @@ public class NpcMemoryTests
     }
 
     [Fact]
+    public void NeedsCompression_WhenOldestTurnExceedsRecentDayWindow()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(Turn("old", "old reply", day: 9));
+        memory.AddTurn(Turn("new", "new reply", day: 20));
+
+        Assert.False(memory.NeedsCompression(maxRecentTurns: 30, currentGameDay: 20, maxRecentDays: 11, maxRecentMemoryTokens: 1000));
+        Assert.True(memory.NeedsCompression(maxRecentTurns: 30, currentGameDay: 20, maxRecentDays: 10, maxRecentMemoryTokens: 1000));
+    }
+
+    [Fact]
+    public void NeedsCompression_WhenRecentTurnEstimateExceedsTokenLimit()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(Turn(new string('p', 100), new string('n', 100)));
+
+        Assert.False(memory.NeedsCompression(maxRecentTurns: 30, currentGameDay: 1, maxRecentDays: 30, maxRecentMemoryTokens: 1000));
+        Assert.True(memory.NeedsCompression(maxRecentTurns: 30, currentGameDay: 1, maxRecentDays: 30, maxRecentMemoryTokens: 10));
+    }
+
+    [Fact]
+    public void GetKeepMostRecentForCompression_AppliesTurnDayAndTokenTargets()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(Turn("old", "old reply", day: 1));
+        memory.AddTurn(Turn("middle", "middle reply", day: 10));
+        memory.AddTurn(Turn("new", "new reply", day: 20));
+        memory.AddTurn(Turn("newer", "newer reply", day: 21));
+
+        Assert.Equal(2, memory.GetKeepMostRecentForCompression(
+            keepRecentTurns: 3,
+            currentGameDay: 21,
+            keepRecentDays: 5,
+            minRecentMemoryTokensAfterCompression: 1000));
+
+        Assert.Equal(0, memory.GetKeepMostRecentForCompression(
+            keepRecentTurns: 3,
+            currentGameDay: 21,
+            keepRecentDays: 5,
+            minRecentMemoryTokensAfterCompression: 1));
+    }
+
+    [Fact]
     public void GetTurnsToCompress_ReturnsOldestKeepingNewest()
     {
         var memory = new NpcMemory();

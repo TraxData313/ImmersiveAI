@@ -36,6 +36,49 @@ namespace ImmersiveAI.Core.Memory
             return RecentTurns.Count > maxRecentTurns;
         }
 
+        /// <summary>True when older turns should be compressed by turn count, age, or estimated token pressure.</summary>
+        public bool NeedsCompression(int maxRecentTurns, double currentGameDay, int maxRecentDays, int maxRecentMemoryTokens)
+        {
+            return NeedsCompression(maxRecentTurns)
+                || HasTurnsOlderThan(currentGameDay, maxRecentDays)
+                || MemoryTokenEstimator.EstimateRecentTurnsTokens(RecentTurns) > maxRecentMemoryTokens;
+        }
+
+        public int GetKeepMostRecentForCompression(
+            int keepRecentTurns,
+            double currentGameDay,
+            int keepRecentDays,
+            int minRecentMemoryTokensAfterCompression)
+        {
+            if (keepRecentTurns < 0) throw new ArgumentOutOfRangeException(nameof(keepRecentTurns));
+            if (keepRecentDays < 0) throw new ArgumentOutOfRangeException(nameof(keepRecentDays));
+            if (minRecentMemoryTokensAfterCompression < 0) throw new ArgumentOutOfRangeException(nameof(minRecentMemoryTokensAfterCompression));
+
+            var keepCount = Math.Min(RecentTurns.Count, keepRecentTurns);
+
+            if (keepRecentDays > 0)
+            {
+                var cutoffDay = currentGameDay - keepRecentDays;
+                var turnsInsideWindow = RecentTurns.Count(t => t.GameDay >= cutoffDay);
+                keepCount = Math.Min(keepCount, turnsInsideWindow);
+            }
+
+            if (minRecentMemoryTokensAfterCompression > 0)
+            {
+                while (keepCount > 0 && MemoryTokenEstimator.EstimateRecentTurnsTokens(RecentTurns.Skip(RecentTurns.Count - keepCount)) > minRecentMemoryTokensAfterCompression)
+                    keepCount--;
+            }
+
+            return keepCount;
+        }
+
+        private bool HasTurnsOlderThan(double currentGameDay, int maxRecentDays)
+        {
+            if (maxRecentDays <= 0 || RecentTurns.Count == 0) return false;
+            var cutoffDay = currentGameDay - maxRecentDays;
+            return RecentTurns.Any(t => t.GameDay < cutoffDay);
+        }
+
         /// <summary>The oldest turns that should be folded into the summary, keeping the newest ones verbatim.</summary>
         public IReadOnlyList<ConversationTurn> GetTurnsToCompress(int keepMostRecent)
         {

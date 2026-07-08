@@ -22,10 +22,28 @@ namespace ImmersiveAI
         public int MaxTokens { get; set; } = 400;
 
         /// <summary>How many verbatim turns an NPC keeps before old ones are compressed into the summary.</summary>
-        public int MaxRecentTurns { get; set; } = 12;
+        public int MaxRecentTurns { get; set; } = 30;
 
         /// <summary>How many of the newest turns stay verbatim after a compression pass.</summary>
-        public int KeepRecentTurnsAfterCompression { get; set; } = 6;
+        public int KeepRecentTurnsAfterCompression { get; set; } = 15;
+
+        /// <summary>How many in-game days of verbatim turns an NPC keeps before old ones are compressed.</summary>
+        public int MaxRecentDays { get; set; } = 30;
+
+        /// <summary>How many in-game days of newest turns stay verbatim after a compression pass.</summary>
+        public int KeepRecentDaysAfterCompression { get; set; } = 15;
+
+        /// <summary>Percent of the selected model's context window allowed for verbatim recent memory before compression starts.</summary>
+        public int MaxRecentMemoryPercent { get; set; } = 10;
+
+        /// <summary>Percent of the selected model's context window kept verbatim after compression.</summary>
+        public int MinRecentMemoryPercentAfterCompression { get; set; } = 5;
+
+        /// <summary>Estimated recent-memory token ceiling, derived from MaxRecentMemoryPercent and the selected model.</summary>
+        public int MaxRecentMemoryTokens { get; set; } = 0;
+
+        /// <summary>Estimated recent-memory token target after compression, derived from MinRecentMemoryPercentAfterCompression and the selected model.</summary>
+        public int MinRecentMemoryTokensAfterCompression { get; set; } = 0;
 
         public static string ConfigDirectory =>
             Path.Combine(
@@ -41,10 +59,16 @@ namespace ImmersiveAI
                 if (File.Exists(ConfigFilePath))
                 {
                     var loaded = JsonConvert.DeserializeObject<ModConfig>(File.ReadAllText(ConfigFilePath));
-                    if (loaded != null) return loaded;
+                    if (loaded != null)
+                    {
+                        loaded.Normalize();
+                        File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(loaded, Formatting.Indented));
+                        return loaded;
+                    }
                 }
 
                 var fresh = new ModConfig();
+                fresh.Normalize();
                 Directory.CreateDirectory(ConfigDirectory);
                 File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(fresh, Formatting.Indented));
                 return fresh;
@@ -53,6 +77,45 @@ namespace ImmersiveAI
             {
                 return new ModConfig();
             }
+        }
+
+        public void Normalize()
+        {
+            if (MaxRecentTurns <= 0) MaxRecentTurns = 30;
+            if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 15;
+            if (MaxRecentDays <= 0) MaxRecentDays = 30;
+            if (KeepRecentDaysAfterCompression <= 0) KeepRecentDaysAfterCompression = 15;
+
+            var profile = MemoryTokenProfile.Resolve(this);
+            if (MaxRecentMemoryPercent <= 0) MaxRecentMemoryPercent = profile.DefaultMaxRecentMemoryPercent;
+            if (MinRecentMemoryPercentAfterCompression <= 0)
+                MinRecentMemoryPercentAfterCompression = profile.DefaultMinRecentMemoryPercentAfterCompression;
+
+            MaxRecentMemoryPercent = Clamp(
+                MaxRecentMemoryPercent,
+                MemorySettingsMetadata.MinMemoryPercent,
+                MemorySettingsMetadata.MaxMemoryPercent);
+
+            MinRecentMemoryPercentAfterCompression = Clamp(
+                MinRecentMemoryPercentAfterCompression,
+                MemorySettingsMetadata.MinMemoryPercent,
+                MemorySettingsMetadata.MaxMemoryPercent);
+
+            if (MinRecentMemoryPercentAfterCompression >= MaxRecentMemoryPercent)
+                MinRecentMemoryPercentAfterCompression = Math.Max(
+                    MemorySettingsMetadata.MinMemoryPercent,
+                    MaxRecentMemoryPercent / 2);
+
+            MaxRecentMemoryTokens = profile.GetMaxRecentMemoryTokens(MaxRecentMemoryPercent);
+            MinRecentMemoryTokensAfterCompression =
+                profile.GetMinRecentMemoryTokensAfterCompression(MinRecentMemoryPercentAfterCompression);
+        }
+
+        private static int Clamp(int value, int min, int max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
         }
     }
 }
