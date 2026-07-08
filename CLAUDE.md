@@ -89,8 +89,18 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits.
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
-- `npcs\<stringId>.txt` — per-NPC instructions.
-- `memory\<stringId>.json` — persisted NpcMemory per NPC.
+- `NPCs\<stringId>_<FirstName>\` — one folder per NPC (e.g. `NPCs\lord_7_13_1_Gunjadrid\`).
+  The folder name embeds the first name for readability; identity is still the stringId. Holds:
+  - `memories.json` — persisted NpcMemory for that NPC.
+  - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
+  - future per-NPC files go here too.
+- `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
+
+The folder layout, path resolution, and the one-time migration from the old flat
+`memory\<id>.json` / `npcs\<id>.txt` files are owned by `src\ImmersiveAI.Module\NpcPaths.cs`.
+**If you change the layout or file names, update `NpcPaths` (including its `RuntimeReadmeText`
+and the migration in `EnsureMigrated`) and these runtime-files sections in README.md /
+CLAUDE.md / AGENTS.md together.**
 
 ## In-game feature (current)
 
@@ -101,22 +111,10 @@ Errors surface as a top-left "Immersive AI: ..." message.
 Known caveat: the "considers your words..." → reply transition can outrun a slow LLM call and
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.
 
-## User TODOs
-
-- [x] Increase verbatim memory limits: max to 30 turns/days, falling back to 15 turns/days after compression (updating `MaxRecentTurns` and `KeepRecentTurnsAfterCompression` defaults/settings).
-- [ ] Implement model-specific token-based limits (min/max limits) and trigger compression based on token counts (using similar compression logic).
-- [ ] Implement relationship changes (increase/decrease relationship standing based on LLM response/conversation content, similar to ChatAI mod).
-- [ ] Implement NPC tool-use capabilities to fetch relevant data dynamically on demand from the campaign world (e.g. so they don't forget/hallucinate family members' names, location info, faction status).
-- [ ] Append the NPC's first name to memory and prompt file IDs/filenames (e.g., `lord_7_13_1` -> `lord_7_13_1_Gunjadrid`) for easier identification, excluding second names.
-
-## Roadmap
-
-- [x] M0: repo, Core memory engine, module skeleton that loads in game
-- [x] M1: memory + anti-repetition + Claude/OpenAI backends + in-game conversation
-- [ ] M2: custom Gauntlet chat window (scrollable history, portrait, streaming)
-- [ ] M3: MCM in-game settings screen; streaming responses
-- [ ] M4: "living world" — tool-use so NPCs pull relevant game info on demand ("info getter"),
-      NPC actions, gossip between NPCs, world-event awareness
+## Work flow for the TASKs
+- Get the taks you work on from TASKS_TODO.md
+- When dove move it to the end of TASKS_DONE.md, rename it if it changed or is badly formatted and add a done ts at the end (YYYY.MM.DD HH.MM.SS)
+- When done with changed and tested them, recompile so the mod is rebuild automaticaly in C:\Users\Trax\Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI - dont ask the user to rebuild
 
 ## Conventions
 

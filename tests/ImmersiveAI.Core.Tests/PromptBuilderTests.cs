@@ -33,6 +33,27 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_TagsRememberedPlayerLineWithPlaceAndTime_ButNotTheLiveInput()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn
+        {
+            PlayerLine = "Hail, Gafnir",
+            NpcLine = "Hail, stranger.",
+            Place = "Sargot",
+            CalradiaTime = "1084.02.15 14.30",
+        });
+
+        var messages = new PromptBuilder().Build(Persona(), memory, "In Sargot.", "Vulgrim", "Will you ride with me?");
+
+        // Remembered player line carries the "[place, time]" tag...
+        Assert.Equal("[Sargot, 1084.02.15 14.30] Hail, Gafnir", messages[1].Content);
+        // ...the NPC's reply is untouched, and so is the live input (its context is in the system prompt).
+        Assert.Equal("Hail, stranger.", messages[2].Content);
+        Assert.Equal("Will you ride with me?", messages[3].Content);
+    }
+
+    [Fact]
     public void SystemPrompt_ContainsPersonaMemoryAndScene()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
@@ -47,7 +68,7 @@ public class PromptBuilderTests
         Assert.Contains("You fought beside Vulgrim at Omor.", system);
         Assert.Contains("Vulgrim rules Sargot", system);
         Assert.Contains("You distrust Imperial nobility.", system);
-        Assert.Contains("never mention being an AI", system);
+        Assert.Contains("Speak naturally", system);
     }
 
     [Fact]
@@ -80,8 +101,8 @@ public class PromptBuilderTests
         var last = messages[^1];
         Assert.Equal(ChatRole.User, last.Role);
         Assert.Contains("Vulgrim", last.Content);
-        Assert.Contains("last spoke about", last.Content);
-        Assert.DoesNotContain("first time", last.Content);
+        Assert.Contains("again to talk", last.Content);
+        Assert.DoesNotContain("never spoken", last.Content);
     }
 
     [Fact]
@@ -93,7 +114,7 @@ public class PromptBuilderTests
         Assert.Equal(2, messages.Count);
         var directive = messages[^1].Content;
         Assert.Contains("never spoken", directive);
-        Assert.Contains("first time", directive);
-        Assert.DoesNotContain("last spoke about", directive);
+        Assert.Contains("conversation starter", directive);
+        Assert.DoesNotContain("again to talk", directive);
     }
 }

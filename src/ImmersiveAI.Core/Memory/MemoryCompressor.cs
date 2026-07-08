@@ -84,7 +84,7 @@ namespace ImmersiveAI.Core.Memory
             sb.AppendLine("The moments now fading (fold these into your memory):");
             foreach (var turn in turns)
             {
-                sb.AppendLine($"[Day {turn.GameDay:0}] They said: {turn.PlayerLine}");
+                sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
                 sb.AppendLine($"You answered: {turn.NpcLine}");
             }
 
@@ -94,7 +94,7 @@ namespace ImmersiveAI.Core.Memory
                 sb.AppendLine("Still fresh in your mind (context only — these stay with you, do not fold them in yet):");
                 foreach (var turn in freshTurns)
                 {
-                    sb.AppendLine($"[Day {turn.GameDay:0}] They said: {turn.PlayerLine}");
+                    sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
                     sb.AppendLine($"You answered: {turn.NpcLine}");
                 }
             }
@@ -108,6 +108,16 @@ namespace ImmersiveAI.Core.Memory
             sb.AppendLine("Name at most 3 such truths; only what genuinely endures. If none, write FACTS: none.");
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+        }
+
+        /// <summary>A short "where and when" label for a turn: place and/or Calradia time if recorded,
+        /// otherwise the campaign day it was saved with (older turns predate place/time tracking).</summary>
+        private static string TurnStamp(ConversationTurn turn)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
+            if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
+            return parts.Count == 0 ? $"Day {turn.GameDay:0}" : string.Join(", ", parts);
         }
 
         public static CompressionResult ParseResponse(string response)

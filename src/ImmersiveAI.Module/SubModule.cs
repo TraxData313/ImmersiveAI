@@ -15,6 +15,9 @@ namespace ImmersiveAI
             if (gameStarterObject is CampaignGameStarter starter)
             {
                 var config = ModConfig.LoadOrCreate();
+                // Reorganize any old flat-layout files into per-NPC folders up front, so the
+                // Configs folder is migrated on load rather than piecemeal as NPCs are talked to.
+                NpcPaths.MigrateAll();
                 var behavior = new ImmersiveChatBehavior(config);
                 starter.AddBehavior(behavior);
                 behavior.AddDialogs(starter);

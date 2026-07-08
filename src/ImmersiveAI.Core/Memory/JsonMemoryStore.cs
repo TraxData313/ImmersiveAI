@@ -27,30 +27,49 @@ namespace ImmersiveAI.Core.Memory
 
         public NpcMemory Load(string npcId)
         {
-            var path = GetMemoryFilePath(npcId);
-            if (!File.Exists(path))
-                return new NpcMemory { NpcId = npcId };
-
-            var json = File.ReadAllText(path);
-            var memory = JsonConvert.DeserializeObject<NpcMemory>(json);
-            return memory ?? new NpcMemory { NpcId = npcId };
+            return LoadFrom(GetMemoryFilePath(npcId), npcId);
         }
 
         public void Save(NpcMemory memory)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             if (string.IsNullOrWhiteSpace(memory.NpcId)) throw new ArgumentException("NpcId required.", nameof(memory));
+            SaveTo(GetMemoryFilePath(memory.NpcId), memory);
+        }
 
-            Directory.CreateDirectory(_rootFolder);
-            var path = GetMemoryFilePath(memory.NpcId);
+        /// <summary>
+        /// Loads a memory from an explicit file path, so callers that organize files in a
+        /// custom layout (e.g. one folder per NPC) control the path instead of the id-derived
+        /// default. Returns a fresh memory (tagged with <paramref name="npcId"/>) if absent.
+        /// </summary>
+        public NpcMemory LoadFrom(string filePath, string npcId)
+        {
+            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("File path required.", nameof(filePath));
+            if (!File.Exists(filePath))
+                return new NpcMemory { NpcId = npcId };
+
+            var json = File.ReadAllText(filePath);
+            var memory = JsonConvert.DeserializeObject<NpcMemory>(json);
+            return memory ?? new NpcMemory { NpcId = npcId };
+        }
+
+        /// <summary>Saves a memory to an explicit file path, creating the folder and writing atomically.</summary>
+        public void SaveTo(string filePath, NpcMemory memory)
+        {
+            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("File path required.", nameof(filePath));
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            if (string.IsNullOrWhiteSpace(memory.NpcId)) throw new ArgumentException("NpcId required.", nameof(memory));
+
+            var folder = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
             var json = JsonConvert.SerializeObject(memory, Formatting.Indented);
 
-            var tempPath = path + ".tmp";
+            var tempPath = filePath + ".tmp";
             File.WriteAllText(tempPath, json);
-            if (File.Exists(path))
-                File.Replace(tempPath, path, destinationBackupFileName: null);
+            if (File.Exists(filePath))
+                File.Replace(tempPath, filePath, destinationBackupFileName: null);
             else
-                File.Move(tempPath, path);
+                File.Move(tempPath, filePath);
         }
 
         internal static string SanitizeFileName(string name)

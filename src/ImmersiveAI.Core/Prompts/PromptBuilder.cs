@@ -30,12 +30,25 @@ namespace ImmersiveAI.Core.Prompts
 
             foreach (var turn in memory.RecentTurns)
             {
-                messages.Add(ChatMessage.User(turn.PlayerLine));
+                messages.Add(ChatMessage.User(FormatRememberedPlayerLine(turn)));
                 messages.Add(ChatMessage.Assistant(turn.NpcLine));
             }
 
             messages.Add(ChatMessage.User(playerInput));
             return messages;
+        }
+
+        /// <summary>Prefixes a remembered player line with a "[place, time]" tag when the turn carries
+        /// them, so the NPC recalls when and where each thing was said. Older turns without that data
+        /// (or the live line) are left untouched.</summary>
+        private static string FormatRememberedPlayerLine(ConversationTurn turn)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
+            if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
+            return parts.Count == 0
+                ? turn.PlayerLine
+                : "[" + string.Join(", ", parts) + "] " + turn.PlayerLine;
         }
 
         /// <summary>
@@ -57,7 +70,7 @@ namespace ImmersiveAI.Core.Prompts
 
             foreach (var turn in memory.RecentTurns)
             {
-                messages.Add(ChatMessage.User(turn.PlayerLine));
+                messages.Add(ChatMessage.User(FormatRememberedPlayerLine(turn)));
                 messages.Add(ChatMessage.Assistant(turn.NpcLine));
             }
 
@@ -74,22 +87,17 @@ namespace ImmersiveAI.Core.Prompts
         {
             if (!HasRememberedHistory(memory))
             {
-                return $"[{playerName} approaches you. You have never spoken with them before. In character, "
-                     + "greet them naturally in one or two sentences as someone you are meeting for the first "
-                     + "time. Do not pretend to remember anything about them.]";
+                return $"[{playerName} approaches you and greets you. You have never spoken with them before. Greet them with a suitable conversation starter.]";
             }
 
-            return $"[{playerName} approaches you again to talk. Before they speak, greet them in character and "
-                 + "briefly remind them of who they are to you and what you last spoke about, in 2-4 sentences. "
-                 + "Draw only on what you actually remember above; do not invent shared history. Address them "
-                 + "directly, warmly or coldly as befits your relationship.]";
+            return $"[{playerName} approaches you again to talk and greets you. Greet them.";
         }
 
         private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName, string? openingLine = null)
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"You are {persona.Name}, a character in the medieval world of Calradia (Mount & Blade II: Bannerlord).");
+            sb.AppendLine($"You are {persona.Name}, an individual in the medieval world of Calradia (Mount & Blade II: Bannerlord).");
             if (!string.IsNullOrWhiteSpace(persona.RoleDescription))
                 sb.AppendLine(persona.RoleDescription.Trim());
             if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
@@ -106,7 +114,10 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine($"What you remember of earlier dealings with {playerName}:");
+                var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
+                    ? string.Empty
+                    : $" (as you last reflected on it, {memory.SummaryAsOf.Trim()}; time has passed since, and things may have changed)";
+                sb.AppendLine($"What you remember of earlier dealings with {playerName}{asOf}:");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
@@ -128,10 +139,10 @@ namespace ImmersiveAI.Core.Prompts
 
             sb.AppendLine();
             sb.AppendLine("Rules:");
-            sb.AppendLine("- Stay in character at all times; never mention being an AI or a game.");
+            // sb.AppendLine("- Stay in character at all times; never mention being an AI or a game.");
             sb.AppendLine("- Speak naturally in 1-4 sentences unless a longer tale is truly called for.");
-            sb.AppendLine("- Vary your wording; never open two replies the same way.");
-            sb.AppendLine("- Ground replies in what you actually remember and know; do not invent shared history.");
+            // sb.AppendLine("- Vary your wording; never open two replies the same way.");
+            // sb.AppendLine("- Ground replies in what you actually remember and know; do not invent shared history.");
 
             if (!string.IsNullOrWhiteSpace(persona.CustomInstructions))
             {

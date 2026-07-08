@@ -21,6 +21,11 @@ namespace ImmersiveAI.Core.Memory
         public string Summary { get; set; } = string.Empty;
         public List<string> KnownFacts { get; set; } = new List<string>();
 
+        /// <summary>Human-readable Calradia timestamp of when the Summary was last regrouped
+        /// (set by the game layer at compression time — Core has no game clock). Lets the NPC and
+        /// the player see that deep memories reflect a past moment and may be out of date.</summary>
+        public string SummaryAsOf { get; set; } = string.Empty;
+
         public double LastConversationGameDay { get; set; } = -1;
 
         public void AddTurn(ConversationTurn turn)

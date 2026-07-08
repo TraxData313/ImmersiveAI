@@ -27,11 +27,6 @@ namespace ImmersiveAI
         private const string InfoVar = "IMMERSIVEAI_INFO";     // read-only views (deep memory, history)
         private const string UpdateVar = "IMMERSIVEAI_UPDATE";  // outcome of a manual memory update
 
-        // A manual "reflect now" is deliberate and aggressive: it folds all but the last couple of
-        // turns into deep memory, so it actually produces a summary/facts even for a short chat
-        // (the automatic keep count of 15 would leave a short conversation untouched).
-        private const int ManualReflectKeepRecentTurns = 2;
-
         private readonly ModConfig _config;
         private readonly IChatClient _client;
         private readonly JsonMemoryStore _memoryStore;
@@ -60,8 +55,23 @@ namespace ImmersiveAI
         {
             _config = config;
             _client = ChatClientFactory.Create(config);
-            _memoryStore = new JsonMemoryStore(System.IO.Path.Combine(ModConfig.ConfigDirectory, "memory"));
+            // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
+            // harmless base for the id-derived default API, which this behavior no longer uses.
+            _memoryStore = new JsonMemoryStore(NpcPaths.NpcsRoot);
             _compressor = new MemoryCompressor(_client);
+        }
+
+        // Loads this NPC's memory from its own folder, migrating old flat-layout files forward first.
+        private NpcMemory LoadMemory(Hero npc)
+        {
+            NpcPaths.EnsureMigrated(npc);
+            return _memoryStore.LoadFrom(NpcPaths.MemoryFile(npc), npc.StringId);
+        }
+
+        // Persists this NPC's memory into its own folder.
+        private void SaveMemory(Hero npc, NpcMemory memory)
+        {
+            _memoryStore.SaveTo(NpcPaths.MemoryFile(npc), memory);
         }
 
         public override void RegisterEvents() { }
@@ -237,12 +247,18 @@ namespace ImmersiveAI
         {
             try
             {
-                var memory = _memoryStore.Load(npc.StringId);
+                var memory = LoadMemory(npc);
                 memory.NpcName = npc.Name?.ToString() ?? "Unknown";
 
-                // Keep only the last couple of turns verbatim and fold the rest into deep memory, so
-                // a deliberate reflection always builds a summary when there is anything to reflect on.
-                var keepMostRecent = Math.Min(ManualReflectKeepRecentTurns, memory.RecentTurns.Count);
+                // Keep the same recent window an automatic compression would leave behind — governed by
+                // KeepRecentTurnsAfterCompression and the token budget from MinRecentMemoryPercentAfterCompression
+                // — instead of the old hardcoded "keep 2". Age is not applied here (keepRecentDays: 0) so a
+                // deliberate reconcile always retains a solid window of recent turns, however spread out in time.
+                var keepMostRecent = memory.GetKeepMostRecentForCompression(
+                    _config.KeepRecentTurnsAfterCompression,
+                    currentGameDay: 0,
+                    keepRecentDays: 0,
+                    _config.MinRecentMemoryTokensAfterCompression);
 
                 var didCompress = await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName)
                     .ConfigureAwait(false);
@@ -250,12 +266,13 @@ namespace ImmersiveAI
                 string outcome;
                 if (didCompress)
                 {
-                    _memoryStore.Save(memory);
+                    memory.SummaryAsOf = FormatCalradiaNow();
+                    SaveMemory(npc, memory);
                     outcome = "(I have turned it all over in my mind, and set what matters into memory.)";
                 }
                 else
                 {
-                    outcome = "(There is too little between us yet to settle into memory.)";
+                    outcome = "(All we have shared is still fresh in my mind; nothing yet needs settling into the deeper past.)";
                 }
 
                 MainThreadDispatcher.Enqueue(() =>
@@ -282,9 +299,14 @@ namespace ImmersiveAI
             var npc = Hero.OneToOneConversationHero;
             if (npc == null) return;
 
-            var memory = _memoryStore.Load(npc.StringId);
+            var memory = LoadMemory(npc);
 
             var sb = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(memory.SummaryAsOf))
+            {
+                sb.AppendLine("Deep memories as of " + memory.SummaryAsOf.Trim());
+                sb.AppendLine();
+            }
             if (!string.IsNullOrWhiteSpace(memory.Summary))
                 sb.AppendLine(memory.Summary.Trim());
             else
@@ -310,7 +332,7 @@ namespace ImmersiveAI
             var npc = Hero.OneToOneConversationHero;
             if (npc == null) return;
 
-            var memory = _memoryStore.Load(npc.StringId);
+            var memory = LoadMemory(npc);
             var npcName = npc.Name?.ToString() ?? "I";
             var playerName = Hero.MainHero?.Name?.ToString() ?? "You";
 
@@ -395,6 +417,8 @@ namespace ImmersiveAI
                     PlayerLine = playerInput,
                     NpcLine = reply,
                     GameDay = CampaignTime.Now.ToDays,
+                    CalradiaTime = FormatCalradiaNow(),
+                    Place = FormatPlaceNow(npc),
                 });
 
                 var currentGameDay = CampaignTime.Now.ToDays;
@@ -410,11 +434,15 @@ namespace ImmersiveAI
                         _config.KeepRecentDaysAfterCompression,
                         _config.MinRecentMemoryTokensAfterCompression);
 
-                    try { await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false); }
+                    try
+                    {
+                        if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
+                            memory.SummaryAsOf = FormatCalradiaNow();
+                    }
                     catch { /* compression is best-effort */ }
                 }
 
-                _memoryStore.Save(memory);
+                SaveMemory(npc, memory);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -438,14 +466,13 @@ namespace ImmersiveAI
         // user's prompt-file instructions folded in, the scene line, and the player's name.
         private ChatContext BuildContext(Hero npc)
         {
-            var npcId = npc.StringId;
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
-            var memory = _memoryStore.Load(npcId);
+            var memory = LoadMemory(npc);
             memory.NpcName = npcName;
 
             var persona = PersonaBuilder.Build(npc);
-            persona.CustomInstructions = CombineInstructions(npcId, npcName);
+            persona.CustomInstructions = CombineInstructions(npc);
 
             var scene = BuildSceneContext(npc);
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
@@ -469,26 +496,54 @@ namespace ImmersiveAI
             public string PlayerName { get; }
         }
 
-        private static string CombineInstructions(string npcId, string npcName)
+        private static string CombineInstructions(Hero npc)
         {
             var global = PromptFiles.LoadGlobalPrompt();
-            var npcSpecific = PromptFiles.LoadNpcPrompt(npcId, npcName);
+            var npcSpecific = PromptFiles.LoadNpcPrompt(NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
             var sb = new StringBuilder();
             if (global.Length > 0) sb.AppendLine(global);
             if (npcSpecific.Length > 0) sb.AppendLine(npcSpecific);
             return sb.ToString().Trim();
         }
 
+        // A human-readable Calradia timestamp for stamping when an NPC last regrouped her deep
+        // memories. Calradia years run 84 days (4 seasons of 21 days): the year comes from the
+        // game clock, season/day/time are derived from elapsed days/hours (same as vanilla).
+        private static readonly string[] CalradiaSeasons = { "Spring", "Summer", "Autumn", "Winter" };
+
+        private static string FormatCalradiaNow()
+        {
+            var now = CampaignTime.Now;
+            int year = now.GetYear;
+
+            int dayOfYear = (int)now.ToDays % 84;
+            if (dayOfYear < 0) dayOfYear += 84;
+            int season = dayOfYear / 21;             // 0..3
+            int dayOfSeason = dayOfYear % 21 + 1;    // 1..21
+
+            double totalHours = now.ToHours;
+            int hour = (int)(totalHours % 24);
+            if (hour < 0) hour += 24;
+            int minute = (int)((totalHours - Math.Floor(totalHours)) * 60);
+
+            return $"{year:0000}.{season + 1:00}.{dayOfSeason:00} {hour:00}.{minute:00} " +
+                   $"({CalradiaSeasons[season]} {dayOfSeason}, Year {year})";
+        }
+
+        // Short label for where the NPC currently is: the settlement name, or a field note.
+        // Used both to stamp conversation turns and to build the live scene context.
+        private static string FormatPlaceNow(Hero npc)
+        {
+            var settlement = npc.CurrentSettlement ?? Settlement.CurrentSettlement;
+            var name = settlement?.Name?.ToString() ?? string.Empty;
+            return name.Trim().Length == 0 ? "the open field" : name;
+        }
+
         private static string BuildSceneContext(Hero npc)
         {
             var sb = new StringBuilder();
-            var settlement = npc.CurrentSettlement ?? Settlement.CurrentSettlement;
-            if (settlement != null)
-                sb.Append("You are in " + settlement.Name + ". ");
-            else
-                sb.Append("You are out in the field. ");
-
-            sb.Append("The season is " + CampaignTime.Now.GetSeasonOfYear + ".");
+            sb.Append("You are in " + FormatPlaceNow(npc) + ". ");
+            sb.Append("It is " + FormatCalradiaNow() + ".");
             return sb.ToString();
         }
     }

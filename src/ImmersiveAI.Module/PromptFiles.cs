@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace ImmersiveAI
 {
@@ -13,13 +12,15 @@ namespace ImmersiveAI
     ///
     /// Location (freely editable, no admin rights needed):
     ///   Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\global_prompt.txt
-    ///   Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\npcs\&lt;npcId&gt;.txt
+    ///   Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\NPCs\&lt;id&gt;_&lt;FirstName&gt;\custom_instructions.txt
+    ///
+    /// Per-NPC prompt paths are owned by <see cref="NpcPaths"/>; this class only reads/creates the
+    /// file at a path it's handed and strips comment lines.
     /// </summary>
     public static class PromptFiles
     {
         public static string RootDirectory => ModConfig.ConfigDirectory;
         public static string GlobalPromptPath => Path.Combine(RootDirectory, "global_prompt.txt");
-        private static string NpcDirectory => Path.Combine(RootDirectory, "npcs");
 
         private const string GlobalTemplate =
 @"# Immersive AI - Global Prompt
@@ -46,13 +47,14 @@ namespace ImmersiveAI
             }
         }
 
-        /// <summary>Reads a per-NPC prompt file, creating a commented template on first run. Returns the text with comment lines stripped.</summary>
-        public static string LoadNpcPrompt(string npcId, string npcName)
+        /// <summary>Reads the per-NPC prompt file at the given path (owned by <see cref="NpcPaths"/>),
+        /// creating a commented template on first run. Returns the text with comment lines stripped.</summary>
+        public static string LoadNpcPrompt(string path, string npcName)
         {
             try
             {
-                Directory.CreateDirectory(NpcDirectory);
-                var path = Path.Combine(NpcDirectory, Sanitize(npcId) + ".txt");
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
                 if (!File.Exists(path))
                 {
                     var template =
@@ -84,15 +86,6 @@ $@"# Immersive AI - Custom instructions for {npcName}
                     return !t.StartsWith("#") && !t.StartsWith("//");
                 });
             return string.Join("\n", kept).Trim();
-        }
-
-        private static string Sanitize(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name)) return "_";
-            var invalid = Path.GetInvalidFileNameChars();
-            var sb = new StringBuilder();
-            foreach (var c in name) sb.Append(invalid.Contains(c) ? '_' : c);
-            return sb.ToString();
         }
     }
 }

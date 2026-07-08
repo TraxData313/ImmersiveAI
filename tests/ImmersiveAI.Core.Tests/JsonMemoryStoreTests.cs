@@ -56,6 +56,33 @@ public class JsonMemoryStoreTests : IDisposable
     }
 
     [Fact]
+    public void SaveToThenLoadFrom_UsesExplicitPathAndCreatesFolder()
+    {
+        var store = new JsonMemoryStore(_tempDir);
+        var path = Path.Combine(_tempDir, "NPCs", "lord_7_13_1_Gunjadrid", "memories.json");
+        var memory = new NpcMemory { NpcId = "lord_7_13_1", NpcName = "Gunjadrid", Summary = "kept" };
+
+        store.SaveTo(path, memory);
+
+        Assert.True(File.Exists(path));
+        var loaded = store.LoadFrom(path, "lord_7_13_1");
+        Assert.Equal("kept", loaded.Summary);
+        Assert.Equal("Gunjadrid", loaded.NpcName);
+    }
+
+    [Fact]
+    public void LoadFrom_WhenNoFile_ReturnsFreshMemoryWithId()
+    {
+        var store = new JsonMemoryStore(_tempDir);
+        var path = Path.Combine(_tempDir, "NPCs", "lord_1_Absent", "memories.json");
+
+        var memory = store.LoadFrom(path, "lord_1");
+
+        Assert.Equal("lord_1", memory.NpcId);
+        Assert.Empty(memory.RecentTurns);
+    }
+
+    [Fact]
     public void NpcIdsWithInvalidPathChars_AreSanitizedToValidFileNames()
     {
         var store = new JsonMemoryStore(_tempDir);
