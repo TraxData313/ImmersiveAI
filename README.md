@@ -34,13 +34,21 @@ Key Core concepts:
 - `IChatClient` â€” backend abstraction; Anthropic/OpenAI-compatible implementations live
   in the Module layer.
 
+## User TODOs
+
+- [ ] Increase verbatim memory limits: max to 30 turns/days, falling back to 15 turns/days after compression (updating `MaxRecentTurns` and `KeepRecentTurnsAfterCompression` defaults/settings).
+- [ ] Implement model-specific token-based limits (min/max limits) and trigger compression based on token counts (using similar compression logic).
+- [ ] Implement relationship changes (increase/decrease relationship standing based on LLM response/conversation content, similar to ChatAI mod).
+- [ ] Implement NPC tool-use capabilities to fetch relevant data dynamically on demand from the campaign world (e.g. so they don't forget/hallucinate family members' names, location info, faction status).
+- [ ] Append the NPC's first name to memory and prompt file IDs/filenames (e.g., `lord_7_13_1` -> `lord_7_13_1_Gunjadrid`) for easier identification, excluding second names.
+
 ## Roadmap
 
 - [x] M0: Repo, solution, memory engine core, module skeleton that loads in game
-- [ ] M1: Memory & anti-repetition â€” talk to an NPC in game with layered memory end to end
+- [x] M1: Memory & anti-repetition — talk to an NPC in game with layered memory end to end
 - [ ] M2: Real chat UI (custom Gauntlet screen: history, portraits, streaming)
 - [ ] M3: Claude/Anthropic backend with streaming; settings via MCM
-- [ ] M4: Living world â€” NPC actions, gossip between NPCs, world-event awareness
+- [ ] M4: Living world — NPC actions, gossip between NPCs, world-event awareness
 
 ## Build & test
 
