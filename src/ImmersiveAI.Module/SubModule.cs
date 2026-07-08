@@ -1,3 +1,4 @@
+using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
@@ -6,15 +7,35 @@ namespace ImmersiveAI
 {
     public class SubModule : MBSubModuleBase
     {
-        protected override void OnSubModuleLoad()
+        private bool _announced;
+
+        protected override void OnGameStart(Game game, IGameStarter gameStarterObject)
         {
-            base.OnSubModuleLoad();
+            base.OnGameStart(game, gameStarterObject);
+            if (gameStarterObject is CampaignGameStarter starter)
+            {
+                var config = ModConfig.LoadOrCreate();
+                var behavior = new ImmersiveChatBehavior(config);
+                starter.AddBehavior(behavior);
+                behavior.AddDialogs(starter);
+            }
         }
 
         protected override void OnBeforeInitialModuleScreenSetAsRoot()
         {
             base.OnBeforeInitialModuleScreenSetAsRoot();
-            InformationManager.DisplayMessage(new InformationMessage("Immersive AI loaded."));
+            if (!_announced)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI loaded."));
+                _announced = true;
+            }
+        }
+
+        protected override void OnApplicationTick(float dt)
+        {
+            base.OnApplicationTick(dt);
+            // Drain UI updates queued by background LLM calls.
+            MainThreadDispatcher.Drain();
         }
     }
 }
