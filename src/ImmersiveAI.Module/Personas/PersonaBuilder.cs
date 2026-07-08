@@ -1,10 +1,10 @@
 using System;
 using System.Text;
-using LivingCalradia.Core.Prompts;
+using ImmersiveAI.Core.Prompts;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 
-namespace LivingCalradia.Personas
+namespace ImmersiveAI.Personas
 {
     /// <summary>
     /// Builds a lean persona from live game data. Deliberately small: the goal is a
@@ -14,7 +14,7 @@ namespace LivingCalradia.Personas
     public static class PersonaBuilder
     {
         // Deterministically assigned per NPC so every character keeps a distinct,
-        // stable voice across sessions — a primary anti-repetition lever.
+        // stable voice across sessions â€” a primary anti-repetition lever.
         private static readonly string[] SpeechStyles =
         {
             "Terse and blunt; short sentences, dry wit, no flattery.",

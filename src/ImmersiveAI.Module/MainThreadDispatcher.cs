@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 
-namespace LivingCalradia
+namespace ImmersiveAI
 {
     /// <summary>
     /// LLM calls complete on background threads, but TaleWorlds UI (inquiries, messages)

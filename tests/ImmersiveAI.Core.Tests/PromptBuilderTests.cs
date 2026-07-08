@@ -1,8 +1,8 @@
-using LivingCalradia.Core.Llm;
-using LivingCalradia.Core.Memory;
-using LivingCalradia.Core.Prompts;
+using ImmersiveAI.Core.Llm;
+using ImmersiveAI.Core.Memory;
+using ImmersiveAI.Core.Prompts;
 
-namespace LivingCalradia.Core.Tests;
+namespace ImmersiveAI.Core.Tests;
 
 public class PromptBuilderTests
 {

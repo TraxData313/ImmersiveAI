@@ -2,7 +2,7 @@ using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 
-namespace LivingCalradia
+namespace ImmersiveAI
 {
     public class SubModule : MBSubModuleBase
     {
@@ -14,7 +14,7 @@ namespace LivingCalradia
         protected override void OnBeforeInitialModuleScreenSetAsRoot()
         {
             base.OnBeforeInitialModuleScreenSetAsRoot();
-            InformationManager.DisplayMessage(new InformationMessage("Living Calradia loaded."));
+            InformationManager.DisplayMessage(new InformationMessage("Immersive AI loaded."));
         }
     }
 }

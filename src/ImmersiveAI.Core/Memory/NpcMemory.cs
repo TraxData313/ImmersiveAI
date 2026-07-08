@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LivingCalradia.Core.Memory
+namespace ImmersiveAI.Core.Memory
 {
     /// <summary>
     /// Long-term memory for one NPC. Three layers:

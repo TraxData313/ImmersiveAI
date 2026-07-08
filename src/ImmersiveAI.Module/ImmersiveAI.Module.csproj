@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <RootNamespace>LivingCalradia</RootNamespace>
-    <AssemblyName>LivingCalradia</AssemblyName>
+    <RootNamespace>ImmersiveAI</RootNamespace>
+    <AssemblyName>ImmersiveAI</AssemblyName>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
@@ -13,7 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LivingCalradia.Core\LivingCalradia.Core.csproj" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImmersiveAI.Core\ImmersiveAI.Core.csproj" />
   </ItemGroup>
 
   <!-- Game assemblies are referenced from the local install and never copied to output -->

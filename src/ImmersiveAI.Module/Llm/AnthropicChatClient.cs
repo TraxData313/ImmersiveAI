@@ -6,14 +6,14 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LivingCalradia.Core.Llm;
+using ImmersiveAI.Core.Llm;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace LivingCalradia.Llm
+namespace ImmersiveAI.Llm
 {
     /// <summary>
-    /// Anthropic Messages API client (raw HTTP — the official SDK requires modern .NET,
+    /// Anthropic Messages API client (raw HTTP â€” the official SDK requires modern .NET,
     /// and Bannerlord runs mods on .NET Framework 4.7.2).
     /// </summary>
     public sealed class AnthropicChatClient : IChatClient

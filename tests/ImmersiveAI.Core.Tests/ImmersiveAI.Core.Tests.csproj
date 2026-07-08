@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\LivingCalradia.Core\LivingCalradia.Core.csproj" />
+    <ProjectReference Include="..\..\src\ImmersiveAI.Core\ImmersiveAI.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,17 +1,17 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CDB8D8D4-0EFC-4393-BCD3-7CAA005147AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivingCalradia.Core", "src\LivingCalradia.Core\LivingCalradia.Core.csproj", "{340F478D-0B2C-44E8-A770-B5AE3C68FFC7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmersiveAI.Core", "src\ImmersiveAI.Core\ImmersiveAI.Core.csproj", "{340F478D-0B2C-44E8-A770-B5AE3C68FFC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivingCalradia.Module", "src\LivingCalradia.Module\LivingCalradia.Module.csproj", "{E27F2493-984C-4AE8-9FA6-77F7A5B72614}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmersiveAI.Module", "src\ImmersiveAI.Module\ImmersiveAI.Module.csproj", "{E27F2493-984C-4AE8-9FA6-77F7A5B72614}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9E119AC2-E3EC-420A-9922-D02ADCAF130E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LivingCalradia.Core.Tests", "tests\LivingCalradia.Core.Tests\LivingCalradia.Core.Tests.csproj", "{D9654D20-ABBE-410C-A5B6-2B89FB128F5B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmersiveAI.Core.Tests", "tests\ImmersiveAI.Core.Tests\ImmersiveAI.Core.Tests.csproj", "{D9654D20-ABBE-410C-A5B6-2B89FB128F5B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

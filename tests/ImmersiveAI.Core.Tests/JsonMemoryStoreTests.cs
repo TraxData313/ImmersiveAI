@@ -1,10 +1,10 @@
-using LivingCalradia.Core.Memory;
+using ImmersiveAI.Core.Memory;
 
-namespace LivingCalradia.Core.Tests;
+namespace ImmersiveAI.Core.Tests;
 
 public class JsonMemoryStoreTests : IDisposable
 {
-    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), "LivingCalradiaTests", Guid.NewGuid().ToString("N"));
+    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), "ImmersiveAITests", Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {

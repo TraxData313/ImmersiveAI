@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/BUTR/Bannerlord.XmlSchemas/master/SubModule.xsd">
-  <Id value="LivingCalradia" />
-  <Name value="Living Calradia" />
+  <Id value="ImmersiveAI" />
+  <Name value="Immersive AI" />
   <Version value="v0.1.0" />
   <DefaultModule value="false" />
   <ModuleCategory value="Singleplayer" />
@@ -20,9 +20,9 @@
   </DependedModuleMetadatas>
   <SubModules>
     <SubModule>
-      <Name value="Living Calradia" />
-      <DLLName value="LivingCalradia.dll" />
-      <SubModuleClassType value="LivingCalradia.SubModule" />
+      <Name value="Immersive AI" />
+      <DLLName value="ImmersiveAI.dll" />
+      <SubModuleClassType value="ImmersiveAI.SubModule" />
       <Tags />
     </SubModule>
   </SubModules>

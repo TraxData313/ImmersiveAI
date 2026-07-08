@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 
-namespace LivingCalradia
+namespace ImmersiveAI
 {
     /// <summary>
     /// Mod configuration, stored as JSON under the Bannerlord Documents config folder.
@@ -30,7 +30,7 @@ namespace LivingCalradia
         public static string ConfigDirectory =>
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "Mount and Blade II Bannerlord", "Configs", "LivingCalradia");
+                "Mount and Blade II Bannerlord", "Configs", "ImmersiveAI");
 
         public static string ConfigFilePath => Path.Combine(ConfigDirectory, "config.json");
 

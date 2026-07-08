@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 
-namespace LivingCalradia.Core.Memory
+namespace ImmersiveAI.Core.Memory
 {
     /// <summary>
     /// Persists one NpcMemory per NPC as JSON under a root folder

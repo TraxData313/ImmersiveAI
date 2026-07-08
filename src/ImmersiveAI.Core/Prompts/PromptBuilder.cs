@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using LivingCalradia.Core.Llm;
-using LivingCalradia.Core.Memory;
+using ImmersiveAI.Core.Llm;
+using ImmersiveAI.Core.Memory;
 
-namespace LivingCalradia.Core.Prompts
+namespace ImmersiveAI.Core.Prompts
 {
     /// <summary>
     /// Builds a proper multi-turn message list for the LLM:

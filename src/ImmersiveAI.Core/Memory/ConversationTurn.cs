@@ -1,6 +1,6 @@
 using System;
 
-namespace LivingCalradia.Core.Memory
+namespace ImmersiveAI.Core.Memory
 {
     /// <summary>One player line and the NPC's reply, stamped with in-game time.</summary>
     public sealed class ConversationTurn

@@ -1,7 +1,7 @@
-using LivingCalradia.Core.Llm;
-using LivingCalradia.Core.Memory;
+using ImmersiveAI.Core.Llm;
+using ImmersiveAI.Core.Memory;
 
-namespace LivingCalradia.Core.Tests;
+namespace ImmersiveAI.Core.Tests;
 
 public class MemoryCompressorTests
 {

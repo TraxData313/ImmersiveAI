@@ -6,11 +6,11 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LivingCalradia.Core.Llm;
+using ImmersiveAI.Core.Llm;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace LivingCalradia.Llm
+namespace ImmersiveAI.Llm
 {
     /// <summary>OpenAI chat-completions client (raw HTTP, .NET Framework compatible).</summary>
     public sealed class OpenAIChatClient : IChatClient

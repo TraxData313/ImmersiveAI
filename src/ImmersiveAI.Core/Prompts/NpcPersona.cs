@@ -1,4 +1,4 @@
-namespace LivingCalradia.Core.Prompts
+namespace ImmersiveAI.Core.Prompts
 {
     /// <summary>
     /// Everything that makes one NPC sound different from another.

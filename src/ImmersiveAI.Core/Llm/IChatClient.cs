@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LivingCalradia.Core.Llm
+namespace ImmersiveAI.Core.Llm
 {
     /// <summary>
     /// Abstraction over an LLM backend. Implementations (Anthropic, OpenAI-compatible, local)

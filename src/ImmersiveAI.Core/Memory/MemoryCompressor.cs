@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LivingCalradia.Core.Llm;
+using ImmersiveAI.Core.Llm;
 
-namespace LivingCalradia.Core.Memory
+namespace ImmersiveAI.Core.Memory
 {
     /// <summary>
     /// Folds an NPC's oldest conversation turns into the rolling summary and distills
@@ -35,7 +35,7 @@ namespace LivingCalradia.Core.Memory
             var parsed = ParseResponse(response);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary, turns.Count, parsed.Facts);
+            memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Facts);
             return true;
         }
 

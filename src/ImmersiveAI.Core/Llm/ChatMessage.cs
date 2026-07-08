@@ -1,6 +1,6 @@
 using System;
 
-namespace LivingCalradia.Core.Llm
+namespace ImmersiveAI.Core.Llm
 {
     public enum ChatRole
     {
