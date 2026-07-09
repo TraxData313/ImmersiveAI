@@ -134,20 +134,14 @@ namespace ImmersiveAI.Core.Memory
             sb.AppendLine();
             sb.AppendLine("The moments now fading (fold these into your memory):");
             foreach (var turn in turns)
-            {
-                sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
-                sb.AppendLine($"You answered: {turn.NpcLine}");
-            }
+                AppendReflectedTurn(sb, turn, voice);
 
             if (freshTurns.Count > 0)
             {
                 sb.AppendLine();
                 sb.AppendLine("Still fresh in your mind (context only — these stay with you, do not fold them in yet):");
                 foreach (var turn in freshTurns)
-                {
-                    sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
-                    sb.AppendLine($"You answered: {turn.NpcLine}");
-                }
+                    AppendReflectedTurn(sb, turn, voice);
             }
 
             sb.AppendLine();
@@ -218,10 +212,7 @@ namespace ImmersiveAI.Core.Memory
                 sb.AppendLine();
                 sb.AppendLine("Older moments now fading (fold these into your memory):");
                 foreach (var turn in turnsToFold)
-                {
-                    sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
-                    sb.AppendLine($"You answered: {turn.NpcLine}");
-                }
+                    AppendReflectedTurn(sb, turn, voice);
             }
 
             if (freshTurns.Count > 0)
@@ -229,10 +220,7 @@ namespace ImmersiveAI.Core.Memory
                 sb.AppendLine();
                 sb.AppendLine("Still fresh in your mind (these remain with you — draw on them, but they are not fading yet):");
                 foreach (var turn in freshTurns)
-                {
-                    sb.AppendLine($"[{TurnStamp(turn)}] They said: {turn.PlayerLine}");
-                    sb.AppendLine($"You answered: {turn.NpcLine}");
-                }
+                    AppendReflectedTurn(sb, turn, voice);
             }
 
             sb.AppendLine();
@@ -253,6 +241,16 @@ namespace ImmersiveAI.Core.Memory
             }
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+        }
+
+        // Renders one remembered turn into the reflection transcript, attributing the incoming line to whoever
+        // spoke it — the player ("They") or the Angel (by name) — so a folded-in Angel exchange is never
+        // mistaken in the summary for something the player said.
+        private static void AppendReflectedTurn(StringBuilder sb, ConversationTurn turn, string voice)
+        {
+            var speaker = turn.IsFromAngel ? voice : "They";
+            sb.AppendLine($"[{TurnStamp(turn)}] {speaker} said: {turn.PlayerLine}");
+            sb.AppendLine($"You answered: {turn.NpcLine}");
         }
 
         /// <summary>A short "where and when" label for a turn: place and/or Calradia time if recorded,

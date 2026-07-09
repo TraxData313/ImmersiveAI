@@ -139,7 +139,11 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
-  `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts; default on).
+  `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts; default on),
+  `EnableNpcInitiatedChats` + `DailyInitiationRate` + `ShowInitiationTestButton` (NPCs reaching out to
+  the player on their own; the rate is the daily ceiling for a *maxed* bond — actual chance scales by how
+  often you talk and how far the standing is from 0, so a fresh game stays quiet; ~1.5 lets the closest
+  bonds write daily; the test button forces one on demand from the free-chat menu).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\<stringId>_<FirstName>\` — one folder per NPC (e.g. `NPCs\lord_7_13_1_Gunjadrid\`).
@@ -181,6 +185,48 @@ at the cost of one extra short call per turn.
 
 Known caveat: the "considers your words..." → reply transition can outrun a slow LLM call and
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.
+
+**NPCs reaching out on their own.** The first way the NPCs *act* instead of only answering. Each hour
+(`OnHourlyTick`), for every NPC the player has a history with who is **co-located** with them right now
+(`IsCoLocated` — in the player's party, or the same settlement; distant NPCs are the future *letter*
+system, see TASKS_TODO), we roll that NPC's own bond-scaled chance to reach out. The per-NPC daily chance
+is `InitiationScorer.DailyChance` = `DailyInitiationRate × frequency × closeness × recency`: `frequency`
+saturates at `FrequencyFullAt` lifetime turns (`NpcMemory.StoryRichness` = lifetime `TotalTurns`, floored
+at surviving turns for old saves), `closeness` = a small floor
+(`InitiationScorer.ClosenessFloor`) plus |relation|/100 (love *or* enmity pulls hardest; a neutral bond
+you actually spend time with stays quiet, not silent — the floor keeps the feature observable),
+`recency` decays with days since the last talk. So a fresh game stays quiet and a
+devoted, frequent bond may write nearly daily; `DailyInitiationRate` is the ceiling for a maxed bond. The
+daily chance is spread as an independent hourly Bernoulli (÷24); if several are moved in one hour,
+`InitiationPlanner.PickWeightedIndex` breaks the tie by pull. Firing only happens at *safe* moments
+(`IsSafeToInitiate`/`InitiationBlockReason`: on the map, not in a scene/battle or a *non-settlement*
+encounter, not already talking — being **inside a settlement is fine**, that's where co-located NPCs are).
+A stuck-in-flight watchdog (`_initiationInFlightSince`, 3 min) self-heals a lost offer so one mishap can't
+silence the feature.
+
+When one is moved, the reaching-out plays out as **real Angel↔NPC turns recorded in her memory** — nothing
+hidden from her or from the player on inspect. The Angel is a first-class speaker in the same history stream:
+`ConversationTurn.Speaker` marks a turn as the Angel's (`ConversationTurn.AngelSpeaker`), and
+`PromptBuilder.AppendRememberedTurns` replays those framed in the Angel's voice (`AngelFrame`), so she
+re-reads her own past truthfully. The beats: (1) `PromptBuilder.BuildAngelPrompt` with
+`PromptBuilder.ReachOutDesireLine` asks — privately, yes/no (`InitiationParser.WantsToReachOut`) — whether
+she wishes to go to the player; her answer is recorded via `AppendAngelTurn`. (2) On yes, the player gets a
+faced portrait toast (`NotifyWithFace` / `MBInformationManager.AddQuickInformation`) leading an
+`InformationManager.ShowInquiry` that pauses while up (`PauseOnInitiationOffer`, default true; set false for
+non-pausing). (3) The approach is narrated *after* the choice (`DeliverApproachAsync` with
+`PromptBuilder.ApproachLine`): **Receive them** → the Angel narrates a glad welcome and she speaks her
+greeting (a recorded Angel turn — no weaving needed, so she never repeats it), the conversation opens
+(`CampaignMapConversation.OpenConversation`) and falls into the talk loop; **Not now** → the Angel narrates
+that the player is too busy just now and she answers in her own voice (recorded, shown back with her face) —
+a lived moment, not a cold "you were refused". Two LLM calls per fired offer; she can always choose silence.
+`MemoryCompressor` renders Angel turns attributed to the voice (not "They") so summaries stay truthful.
+Toggle with `EnableNpcInitiatedChats`. Nothing about the schedule is persisted (stateless hourly rolls), so
+save/load is a non-issue. Two `[Immersive AI • test]` free-chat options
+(gated by `ShowInitiationTestButton`): `OnDebugForceReachOut` forces the NPC just spoken with to reach out
+right after parting; `OnShowInitiationOdds` dumps, for every history NPC, whether they are co-located now
+and their computed daily/hourly chance — the go-to answer for "why is it quiet?" (usually: no one
+co-located, or near-neutral standings). The proper right-side portrait map-notice is a TODO (needs a custom
+Gauntlet notification VM/prefab + Harmony).
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

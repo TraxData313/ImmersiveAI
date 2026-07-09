@@ -21,6 +21,11 @@ namespace ImmersiveAI.Core.Memory
         public string Summary { get; set; } = string.Empty;
         public List<string> KnownFacts { get; set; } = new List<string>();
 
+        /// <summary>Lifetime count of exchanges ever shared with the player, never reduced by
+        /// compression (RecentTurns is trimmed, this is not). It is the measure of how rich a shared
+        /// story this NPC has — used to weight who is more likely to reach out to the player.</summary>
+        public int TotalTurns { get; set; }
+
         /// <summary>Human-readable Calradia timestamp of when the Summary was last regrouped
         /// (set by the game layer at compression time — Core has no game clock). Lets the NPC and
         /// the player see that deep memories reflect a past moment and may be out of date.</summary>
@@ -28,10 +33,16 @@ namespace ImmersiveAI.Core.Memory
 
         public double LastConversationGameDay { get; set; } = -1;
 
+        /// <summary>How rich the shared story with the player is, for weighting who reaches out. Uses the
+        /// lifetime turn count, but never falls below what is still held verbatim — so memories saved before
+        /// <see cref="TotalTurns"/> existed (where it loads as 0) still weigh in by their surviving turns.</summary>
+        public int StoryRichness => Math.Max(TotalTurns, RecentTurns.Count);
+
         public void AddTurn(ConversationTurn turn)
         {
             if (turn == null) throw new ArgumentNullException(nameof(turn));
             RecentTurns.Add(turn);
+            TotalTurns++;
             LastConversationGameDay = turn.GameDay;
         }
 

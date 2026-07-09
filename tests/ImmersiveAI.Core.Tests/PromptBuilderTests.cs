@@ -33,6 +33,74 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void BuildAngelPrompt_FramesTheAngelLineInTheConfiguredVoice()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn { PlayerLine = "Hail, Gafnir", NpcLine = "Hail, stranger." });
+
+        var line = PromptBuilder.ReachOutDesireLine("Vulgrim");
+        var messages = new PromptBuilder().BuildAngelPrompt(Persona(), memory, "In the tavern.", "Vulgrim", line, "Seraph");
+
+        // System, the one remembered player turn (user+assistant), then the Angel's line as the last user turn.
+        Assert.Equal(4, messages.Count);
+        Assert.Equal(ChatRole.User, messages[3].Role);
+        Assert.Contains("Seraph speaks softly into your mind", messages[3].Content); // framed in the voice
+        Assert.Contains("yes or no", messages[3].Content);                            // the desire line's ask
+    }
+
+    [Fact]
+    public void ApproachLine_ReflectsWhetherThePlayerWelcomedThem()
+    {
+        var welcomed = PromptBuilder.ApproachLine("Vulgrim", welcomed: true);
+        var busy = PromptBuilder.ApproachLine("Vulgrim", welcomed: false);
+
+        Assert.Contains("gladly", welcomed);      // the player turns to them warmly
+        Assert.Contains("apologetic", busy);      // the player is too caught up just now
+        Assert.NotEqual(welcomed, busy);
+    }
+
+    [Fact]
+    public void Build_ReplaysARememberedAngelTurnFramedInTheVoice_NotAsThePlayer()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = "Do you wish to seek Vulgrim out?",
+            NpcLine = "Yes — I have missed them.",
+        });
+
+        var messages = new PromptBuilder().Build(Persona(), memory, "In the tavern.", "Vulgrim", "I am here.", voiceName: "Seraph");
+
+        // system, [Angel line framed as user], [NPC answer as assistant], [player input as user].
+        Assert.Equal(4, messages.Count);
+        Assert.Equal(ChatRole.User, messages[1].Role);
+        Assert.Contains("Seraph speaks softly into your mind", messages[1].Content);
+        Assert.Contains("Do you wish to seek Vulgrim out?", messages[1].Content);
+        Assert.Equal(ChatRole.Assistant, messages[2].Role);
+        Assert.Equal("Yes — I have missed them.", messages[2].Content);
+    }
+
+    [Fact]
+    public void Build_WeavesAnEphemeralRecapGreetingIntoHistory_AsAStageThenAssistantTurn()
+    {
+        var memory = new NpcMemory(); // no prior turns
+
+        var messages = new PromptBuilder().Build(
+            Persona(), memory, "In the tavern.", "Vulgrim", "I am well, and you?",
+            openingLine: "How do you fare today?");
+
+        // system, [stage as user], [opening as assistant], [player's reply as user] — valid alternation.
+        Assert.Equal(4, messages.Count);
+        Assert.Equal(ChatRole.User, messages[1].Role);
+        Assert.Contains("came to you", messages[1].Content);
+        Assert.Equal(ChatRole.Assistant, messages[2].Role);
+        Assert.Equal("How do you fare today?", messages[2].Content);
+        Assert.Equal(ChatRole.User, messages[3].Role);
+        Assert.Equal("I am well, and you?", messages[3].Content);
+    }
+
+    [Fact]
     public void Build_TagsRememberedPlayerLineWithPlaceAndTime_ButNotTheLiveInput()
     {
         var memory = new NpcMemory();

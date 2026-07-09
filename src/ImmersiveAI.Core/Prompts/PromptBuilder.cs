@@ -21,28 +21,53 @@ namespace ImmersiveAI.Core.Prompts
             string sceneContext,
             string playerName,
             string playerInput,
-            string? openingLine = null)
+            string? openingLine = null,
+            string? voiceName = null)
         {
+            var voice = Voice(voiceName);
             var messages = new List<ChatMessage>
             {
-                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName, openingLine))
+                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
             };
 
-            foreach (var turn in memory.RecentTurns)
+            AppendRememberedTurns(messages, memory, voice);
+
+            // A recap greeting (the NPC's opening when the player walks up) is ephemeral — not a stored turn —
+            // so it is woven in here as a real assistant message, otherwise the NPC would treat the player's
+            // reply as the first thing said and greet anew. A tiny stage-direction fills the user slot before
+            // it, since the models cannot lead with an assistant turn. (Reaching-out greetings need none of
+            // this: they are recorded as real Angel turns and already sit in the history above.)
+            if (!string.IsNullOrWhiteSpace(openingLine))
             {
-                messages.Add(ChatMessage.User(FormatRememberedPlayerLine(turn)));
-                messages.Add(ChatMessage.Assistant(turn.NpcLine));
+                messages.Add(ChatMessage.User($"[{playerName} came to you, and you were the first to speak, greeting them:]"));
+                messages.Add(ChatMessage.Assistant(openingLine!.Trim()));
             }
 
             messages.Add(ChatMessage.User(playerInput));
             return messages;
         }
 
-        /// <summary>Prefixes a remembered player line with a "[place, time]" tag when the turn carries
-        /// them, so the NPC recalls when and where each thing was said. Older turns without that data
-        /// (or the live line) are left untouched.</summary>
-        private static string FormatRememberedPlayerLine(ConversationTurn turn)
+        private static string Voice(string? voiceName) =>
+            string.IsNullOrWhiteSpace(voiceName) ? "Angel" : voiceName!.Trim();
+
+        // Replays the remembered turns as real user/assistant messages. The incoming line is normally the
+        // player's (tagged with when/where it was said); when it was the Angel's — the NPC's own exchanges
+        // with the meta-voice — it is framed in the Angel's voice, exactly as it was when first spoken, so
+        // the NPC re-reads its own past truthfully rather than mistaking the Angel for the player.
+        private static void AppendRememberedTurns(List<ChatMessage> messages, NpcMemory memory, string voice)
         {
+            foreach (var turn in memory.RecentTurns)
+            {
+                messages.Add(ChatMessage.User(FormatRememberedIncomingLine(turn, voice)));
+                messages.Add(ChatMessage.Assistant(turn.NpcLine));
+            }
+        }
+
+        private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice)
+        {
+            if (turn.IsFromAngel)
+                return AngelFrame(voice, turn.PlayerLine.Trim());
+
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
             if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
@@ -50,6 +75,11 @@ namespace ImmersiveAI.Core.Prompts
                 ? turn.PlayerLine
                 : "[" + string.Join(", ", parts) + "] " + turn.PlayerLine;
         }
+
+        // How the Angel's words are always rendered to the NPC — softly, by name, into their mind. Used both
+        // for a live reaching-out beat and when replaying a recorded Angel turn, so the two read identically.
+        private static string AngelFrame(string voice, string line) =>
+            $"{voice} speaks softly into your mind: \"{line}\"";
 
         /// <summary>
         /// Builds the messages for the NPC's opening line when the player starts a conversation:
@@ -61,22 +91,62 @@ namespace ImmersiveAI.Core.Prompts
             NpcPersona persona,
             NpcMemory memory,
             string sceneContext,
-            string playerName)
+            string playerName,
+            string? voiceName = null)
         {
             var messages = new List<ChatMessage>
             {
                 ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
             };
 
-            foreach (var turn in memory.RecentTurns)
-            {
-                messages.Add(ChatMessage.User(FormatRememberedPlayerLine(turn)));
-                messages.Add(ChatMessage.Assistant(turn.NpcLine));
-            }
-
+            AppendRememberedTurns(messages, memory, Voice(voiceName));
             messages.Add(ChatMessage.User(BuildRecapInstruction(memory, playerName)));
             return messages;
         }
+
+        /// <summary>
+        /// Builds an exchange in which the Angel speaks a given line into the NPC's mind and the NPC answers.
+        /// This is the shape of every reaching-out beat — the Angel asking whether they wish to go to the
+        /// player (<see cref="ReachOutDesireLine"/>), then narrating the approach and its welcome
+        /// (<see cref="ApproachLine"/>). The NPC's reply to each is recorded as a real Angel turn, so their
+        /// whole exchange with the meta-voice lives in the same remembered stream — never hidden from them.
+        /// The caller stores <paramref name="angelLine"/> verbatim as the turn's incoming line; here it is
+        /// framed in the Angel's voice, identically to how <see cref="AppendRememberedTurns"/> will replay it.
+        /// </summary>
+        public IReadOnlyList<ChatMessage> BuildAngelPrompt(
+            NpcPersona persona,
+            NpcMemory memory,
+            string sceneContext,
+            string playerName,
+            string angelLine,
+            string? voiceName = null)
+        {
+            var voice = Voice(voiceName);
+            var messages = new List<ChatMessage>
+            {
+                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
+            };
+
+            AppendRememberedTurns(messages, memory, voice);
+            messages.Add(ChatMessage.User(AngelFrame(voice, angelLine)));
+            return messages;
+        }
+
+        /// <summary>The Angel's line asking whether the NPC wishes, of their own will, to seek the player out
+        /// and speak (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).</summary>
+        public static string ReachOutDesireLine(string playerName) =>
+            $"The day is quiet, and {playerName} is near. No one has bid you do anything — this moment is yours alone. " +
+            $"Tell me, from your own heart: do you wish, of your own will, to go to {playerName} now and speak with them? " +
+            "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
+
+        /// <summary>The Angel's line narrating the NPC crossing to the player: when <paramref name="welcomed"/>
+        /// the player turns to them gladly and they greet first; otherwise the player is too busy just now and
+        /// the NPC answers that moment however their heart moves them (they may resolve to come another time).</summary>
+        public static string ApproachLine(string playerName, bool welcomed) => welcomed
+            ? $"You rise and go to {playerName}. Seeing you come, they turn to you gladly and give you their whole attention. " +
+              $"Speak first now, in your own voice and to their face — greet {playerName}, and let your words carry what moved you to seek them out."
+            : $"You rise and go to {playerName}, but as you near, they raise an apologetic hand — they are too caught up just now to speak with you. " +
+              "This moment is still yours: say or do what is in your heart, here and now.";
 
         private static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
@@ -142,7 +212,7 @@ namespace ImmersiveAI.Core.Prompts
             };
         }
 
-        private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName, string? openingLine = null)
+        private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
         {
             var sb = new StringBuilder();
 
@@ -207,14 +277,6 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine("And these truths you decided to hold as certain, deep and unshaken:");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
-            }
-
-            if (!string.IsNullOrWhiteSpace(openingLine))
-            {
-                sb.AppendLine();
-                sb.AppendLine($"A moment ago, as {playerName} came to you, you greeted them with these words:");
-                sb.AppendLine("\"" + openingLine!.Trim() + "\"");
-                sb.AppendLine("Let what you say now follow gently from there; do not greet them anew as though you had not just spoken.");
             }
 
             sb.AppendLine();

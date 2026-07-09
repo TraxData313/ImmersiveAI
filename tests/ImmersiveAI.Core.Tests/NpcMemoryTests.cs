@@ -20,6 +20,33 @@ public class NpcMemoryTests
     }
 
     [Fact]
+    public void TotalTurns_CountsEveryExchangeAndSurvivesCompression()
+    {
+        var memory = new NpcMemory();
+        for (int i = 0; i < 5; i++) memory.AddTurn(Turn($"p{i}", $"n{i}"));
+
+        Assert.Equal(5, memory.TotalTurns);
+
+        // Folding the three oldest turns into the summary trims RecentTurns but not the lifetime count.
+        memory.ApplyCompression("summary", consumedTurnCount: 3);
+
+        Assert.Equal(2, memory.RecentTurns.Count);
+        Assert.Equal(5, memory.TotalTurns);
+        Assert.Equal(5, memory.StoryRichness);
+    }
+
+    [Fact]
+    public void StoryRichness_FallsBackToSurvivingTurns_ForMemoriesSavedBeforeTotalTurnsExisted()
+    {
+        // An old save loads TotalTurns as 0; richness must still reflect the turns it kept verbatim.
+        var memory = new NpcMemory { TotalTurns = 0 };
+        memory.RecentTurns.Add(Turn("a", "b"));
+        memory.RecentTurns.Add(Turn("c", "d"));
+
+        Assert.Equal(2, memory.StoryRichness);
+    }
+
+    [Fact]
     public void NeedsCompression_OnlyWhenOverThreshold()
     {
         var memory = new NpcMemory();

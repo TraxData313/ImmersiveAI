@@ -30,6 +30,31 @@ namespace ImmersiveAI
         /// (clamped to -100..100). Set false to leave relations untouched by conversation.</summary>
         public bool EnableRelationshipChanges { get; set; } = true;
 
+        /// <summary>When true, NPCs who are in the same place as the player may reach out to them of their
+        /// own accord: each such NPC's daily chance is scaled by how close the bond is (see
+        /// <see cref="DailyInitiationRate"/>), and if one is moved to, they are privately asked whether they
+        /// truly wish to — and only then does the player get a ransom-style offer to receive them or not.</summary>
+        public bool EnableNpcInitiatedChats { get; set; } = true;
+
+        /// <summary>The daily reaching-out chance for a FULL-BLOWN bond — someone the player speaks with
+        /// often and holds at a strong standing (love or enmity). Every actual NPC's chance is this scaled
+        /// down by how much they talk and how far their standing is from indifference, so a fresh game stays
+        /// quiet while a devoted, frequent companion may write nearly every day. 0.3 ≈ a maxed bond reaching
+        /// out ~30% of days; raise toward ~1.5 to let the closest bonds write daily. 0 disables it (as does
+        /// <see cref="EnableNpcInitiatedChats"/>). Clamped to a sane ceiling in <see cref="Normalize"/>.</summary>
+        public double DailyInitiationRate { get; set; } = 0.3;
+
+        /// <summary>When true, the accept/reject offer that appears when an NPC reaches out pauses the game
+        /// while it is up, so the player can always stop and decide (otherwise, at fast-forward the moment
+        /// can slip by). Set false to let time keep flowing while the offer waits. The eventual right-side
+        /// portrait map-notice (a future UI task) will make this moot.</summary>
+        public bool PauseOnInitiationOffer { get; set; } = true;
+
+        /// <summary>When true, a "[Immersive AI • test]" option appears in the free-chat menu that makes the
+        /// NPC you are speaking with reach out to you right after you part — a way to exercise the
+        /// initiation flow on demand instead of waiting on the daily odds. Set false to hide it.</summary>
+        public bool ShowInitiationTestButton { get; set; } = true;
+
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
         /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>
@@ -96,6 +121,11 @@ namespace ImmersiveAI
         public void Normalize()
         {
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
+            // Keep the daily rate non-negative and under one-per-hour, so a fat-fingered value can't have
+            // every NPC hammering the player. 24 is already far more than anyone would want.
+            if (DailyInitiationRate < 0 || double.IsNaN(DailyInitiationRate)) DailyInitiationRate = 0;
+            if (DailyInitiationRate > 24) DailyInitiationRate = 24;
 
             if (MaxRecentTurns <= 0) MaxRecentTurns = 30;
             if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 15;

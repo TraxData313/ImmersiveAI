@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ImmersiveAI.Core.Initiation;
 using ImmersiveAI.Core.Llm;
 using ImmersiveAI.Core.Memory;
 using ImmersiveAI.Core.Prompts;
@@ -10,9 +13,13 @@ using ImmersiveAI.Personas;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.Conversation;
+using TaleWorlds.CampaignSystem.Encounters;
+using TaleWorlds.CampaignSystem.GameState;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
+using TaleWorlds.MountAndBlade;
 
 namespace ImmersiveAI
 {
@@ -27,6 +34,7 @@ namespace ImmersiveAI
         private const string RecapVar = "IMMERSIVEAI_RECAP";
         private const string InfoVar = "IMMERSIVEAI_INFO";     // read-only views (deep memory, history)
         private const string UpdateVar = "IMMERSIVEAI_UPDATE";  // outcome of a manual memory update
+        private const string ThinkingVar = "IMMERSIVEAI_THINKING"; // NPC's last line, held while the player types
 
         private readonly ModConfig _config;
         private readonly IChatClient _client;
@@ -52,10 +60,32 @@ namespace ImmersiveAI
         // it doesn't greet twice. Not persisted to memory; consumed once, then cleared.
         private volatile string? _lastGreeting;
 
+        // The NPC's most recent spoken line this conversation (reply or greeting). Kept so that while
+        // the player composes their next message the conversation panel can keep showing it — re-readable,
+        // useful for long replies — instead of a bare "(considers your words...)". Updated on every line.
+        private volatile string? _lastNpcLine;
+
         // The environmental facts (when/where/who) captured when the player opened this chat. Written
         // to current_situation_info.txt and reused as the scene context for every turn of this
         // conversation, so what the player inspects on disk is exactly what the NPC's prompt carries.
         private volatile string? _currentSituation;
+
+        // --- NPC-initiated conversations (them reaching out to the player of their own accord) ---
+
+        private readonly Random _rng = new Random();
+
+        // True from the moment an offer is being prepared until it is resolved (accepted, declined by the
+        // player, or declined by the NPC herself), so two initiations never overlap. The timestamp lets an
+        // hourly tick self-heal the flag if an offer is ever lost without resolving (see OnHourlyTick).
+        private volatile bool _initiationInFlight;
+        private DateTime _initiationInFlightSince;
+
+        // True while a forced (NPC-initiated) conversation is opening: it lets our dialog intercept the
+        // conversation root so she opens with her own words, and is cleared once she has spoken.
+        private volatile bool _pendingInitiation;
+
+        // The NPC behind the pending offer (their opening words are generated only once the player accepts).
+        private Hero? _initiationNpc;
 
         public ImmersiveChatBehavior(ModConfig config)
         {
@@ -107,13 +137,29 @@ namespace ImmersiveAI
             catch { /* best-effort; never block a conversation on saving the self */ }
         }
 
-        public override void RegisterEvents() { }
+        public override void RegisterEvents()
+        {
+            // Each hour, give the NPCs co-located with the player their small, bond-scaled chance to reach out.
+            CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);
+        }
+
         public override void SyncData(IDataStore dataStore) { }
 
         public void AddDialogs(CampaignGameStarter starter)
         {
             MBTextManager.SetTextVariable(ResponseVar, " ", false);
             MBTextManager.SetTextVariable(RecapVar, " ", false);
+
+            // When an NPC has sought the player out, we force a conversation and she opens it herself.
+            // These lines fire only during such a forced initiation (guarded by _pendingInitiation) and a
+            // high priority lets them win the conversation root over the vanilla greeting; ordinary
+            // conversations never see them. Her opening words are already in hand, shown via RecapVar.
+            starter.AddDialogLine("immersiveai_init_open", "start", "immersiveai_input",
+                "{=!}{" + RecapVar + "}", () => _pendingInitiation && _recapReady, OnInitiationDelivered, 200);
+            starter.AddDialogLine("immersiveai_init_hold", "start", "immersiveai_init_wait",
+                "{=ImmersiveAI_Recall}(gathers their thoughts...)", () => _pendingInitiation && !_recapReady, null, 200);
+            starter.AddPlayerLine("immersiveai_init_holdwait", "immersiveai_init_wait", "start",
+                "{=ImmersiveAI_Wait}(wait for them to answer)", () => _pendingInitiation, null, 200);
 
             // Enter the free-chat flow from the normal conversation hub. When recap is enabled we
             // pause on a greeting state first (and kick off the recap); otherwise we drop straight
@@ -192,6 +238,24 @@ namespace ImmersiveAI
             starter.AddDialogLine("immersiveai_history_line", "immersiveai_history_out", "immersiveai_input",
                 "{=!}{" + InfoVar + "}", null, null);
 
+            // Test lever: end this chat and have the very person you were speaking with reach out to you a
+            // breath later — a way to exercise the whole initiation flow without waiting on the daily odds.
+            if (_config.ShowInitiationTestButton)
+            {
+                starter.AddPlayerLine("immersiveai_test_reach", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestReach}Let us part now. [Immersive AI • test — trigger them to reach out to you]",
+                    null, OnDebugForceReachOut, 95);
+
+                // Diagnostic: show, for every NPC the player has a history with, whether they are co-located
+                // right now and their computed daily chance of reaching out — so it is clear why the world is
+                // quiet (usually: no one is co-located, or standings are near neutral).
+                starter.AddPlayerLine("immersiveai_test_odds", "immersiveai_input", "immersiveai_test_odds_out",
+                    "{=ImmersiveAI_TestOdds}Show me who might seek me out, and how likely. [Immersive AI • test]",
+                    null, OnShowInitiationOdds, 94);
+                starter.AddDialogLine("immersiveai_test_odds_line", "immersiveai_test_odds_out", "immersiveai_input",
+                    "{=!}{" + InfoVar + "}", null, null);
+            }
+
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
             starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "close_window",
                 "{=ImmersiveAI_Done}Farewell.", null, null, 100);
@@ -201,9 +265,10 @@ namespace ImmersiveAI
             starter.AddDialogLine("immersiveai_reply", "immersiveai_await", "immersiveai_input",
                 "{=!}{" + ResponseVar + "}", () => _responseReady, null);
 
-            // Await state, still waiting -> show a holding line and offer to wait more.
+            // Await state, still waiting -> keep the NPC's last line on screen (re-readable while the
+            // player types) with a gentle note that they are considering, instead of a bare holding line.
             starter.AddDialogLine("immersiveai_thinking", "immersiveai_await", "immersiveai_wait",
-                "{=ImmersiveAI_Thinking}(considers your words...)", () => !_responseReady, null);
+                "{=!}{" + ThinkingVar + "}", () => !_responseReady, null);
 
             // Re-checks the await state; loops until the reply arrives.
             starter.AddPlayerLine("immersiveai_wait", "immersiveai_wait", "immersiveai_await",
@@ -215,6 +280,8 @@ namespace ImmersiveAI
             _currentNpc = Hero.OneToOneConversationHero;
             _responseReady = false;
             MBTextManager.SetTextVariable(ResponseVar, "...", false);
+            // Hold the NPC's last line on screen while the player composes, so a long reply stays readable.
+            MBTextManager.SetTextVariable(ThinkingVar, BuildThinkingText(), false);
 
             var affirmative = new TextObject("{=ImmersiveAI_Send}Send").ToString();
             var negative = GameTexts.FindText("str_cancel", null)?.ToString() ?? "Cancel";
@@ -227,6 +294,16 @@ namespace ImmersiveAI
                 false, null, "", "");
 
             InformationManager.ShowTextInquiry(inquiry, false);
+        }
+
+        // While the player composes their reply, keep the NPC's last line on screen (so a long message
+        // can still be read) with a gentle note that they are considering. Falls back to just the note
+        // when the NPC has not yet said anything this conversation.
+        private string BuildThinkingText()
+        {
+            var hint = new TextObject("{=ImmersiveAI_Thinking}(considers your words...)").ToString();
+            var last = _lastNpcLine;
+            return string.IsNullOrWhiteSpace(last) ? hint : last.Trim() + "\n\n" + hint;
         }
 
         // Runs the moment the player picks "Speak freely" (before the greet state is shown), so the
@@ -283,7 +360,7 @@ namespace ImmersiveAI
             try
             {
                 var ctx = BuildContext(npc);
-                var messages = _promptBuilder.BuildRecap(ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName);
+                var messages = _promptBuilder.BuildRecap(ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, _config.SystemVoiceName);
                 var rawReply = await _client.CompleteAsync(messages).ConfigureAwait(false);
                 var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
@@ -292,6 +369,7 @@ namespace ImmersiveAI
                 // It is remembered just long enough to give the NPC's first reply context (see
                 // RespondAsync), so the NPC doesn't greet the player twice.
                 _lastGreeting = greeting;
+                _lastNpcLine = greeting;
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -302,6 +380,7 @@ namespace ImmersiveAI
             catch (Exception ex)
             {
                 var message = ex.Message;
+                _lastNpcLine = "(...they turn to face you.)";
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     // Fall back to a neutral opening so the player can still speak.
@@ -403,7 +482,7 @@ namespace ImmersiveAI
 
             var ctx = BuildContext(npc);
             var messages = _promptBuilder.Build(
-                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting);
+                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting, _config.SystemVoiceName);
 
             var name = npc.Name?.ToString() ?? "Unknown";
             var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
@@ -487,6 +566,7 @@ namespace ImmersiveAI
             var memory = LoadMemory(npc);
             var npcName = npc.Name?.ToString() ?? "I";
             var playerName = Hero.MainHero?.Name?.ToString() ?? "You";
+            var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
 
             var sb = new StringBuilder();
             if (!string.IsNullOrWhiteSpace(memory.Summary))
@@ -503,7 +583,8 @@ namespace ImmersiveAI
             {
                 foreach (var turn in memory.RecentTurns)
                 {
-                    sb.AppendLine(playerName + ": " + turn.PlayerLine);
+                    // The Angel's own exchanges with the NPC are shown too, labelled by voice — nothing hidden.
+                    sb.AppendLine((turn.IsFromAngel ? voice : playerName) + ": " + turn.PlayerLine);
                     sb.AppendLine(npcName + ": " + turn.NpcLine);
                     sb.AppendLine();
                 }
@@ -560,9 +641,11 @@ namespace ImmersiveAI
                 var opening = _lastGreeting;
                 _lastGreeting = null;
 
-                var messages = _promptBuilder.Build(ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, opening);
+                var messages = _promptBuilder.Build(
+                    ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, opening, _config.SystemVoiceName);
                 var rawReply = await _client.CompleteAsync(messages).ConfigureAwait(false);
                 var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
+                _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
 
                 // Then ask her, in a separate breath, how that exchange moved her heart — one number, in
                 // her own voice (the Angel asking privately). Isolating the question makes it reliable even
@@ -628,6 +711,7 @@ namespace ImmersiveAI
             catch (Exception ex)
             {
                 var message = ex.Message;
+                _lastNpcLine = "(...I cannot find the words. " + message + ")";
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     MBTextManager.SetTextVariable(ResponseVar, "(...I cannot find the words. " + message + ")", false);
@@ -684,9 +768,504 @@ namespace ImmersiveAI
             }
         }
 
+        // ============================ NPC-initiated conversations ============================
+        //
+        // The first way the NPCs act on the world instead of only answering it. Each hour, every NPC the
+        // player has a history with who is co-located rolls their own bond-scaled chance to reach out (see
+        // PickInitiatingNpcForThisHour); when one is moved, we ask HER — privately, in the Angel's voice —
+        // whether she truly wishes to, and only then does the player get the offer.
+
+        private void OnHourlyTick()
+        {
+            if (!_config.EnableNpcInitiatedChats) return;
+
+            // Self-heal a stuck in-flight flag: if an offer was ever lost (e.g. dismissed by a scene change
+            // without its callback firing), a single mishap must never silence the whole feature forever.
+            if (_initiationInFlight && (DateTime.UtcNow - _initiationInFlightSince) > TimeSpan.FromMinutes(3))
+                _initiationInFlight = false;
+
+            if (_initiationInFlight) return;
+            if (!IsSafeToInitiate()) return;
+
+            var npc = PickInitiatingNpcForThisHour();
+            if (npc == null) return;
+
+            MarkInitiationInFlight();
+            _ = BeginInitiationAsync(npc);
+        }
+
+        private void MarkInitiationInFlight()
+        {
+            _initiationInFlight = true;
+            _initiationInFlightSince = DateTime.UtcNow;
+        }
+
+        // Reach out only at a calm campaign moment. Empty string means "clear"; otherwise a short reason
+        // (surfaced in the test odds view so "why is it quiet?" is answerable). Being IN a settlement is
+        // fine — that is exactly where co-located NPCs are — so only a NON-settlement encounter (a field
+        // battle setup) blocks; a settlement visit does not.
+        private static string InitiationBlockReason()
+        {
+            try
+            {
+                if (Campaign.Current == null) return "no campaign";
+                if (Mission.Current != null) return "in a scene or battle";
+                if (!(Game.Current?.GameStateManager?.ActiveState is MapState)) return "not on the map";
+
+                var player = Hero.MainHero;
+                if (player == null || !player.IsAlive) return "no living player";
+                if (player.IsPrisoner) return "you are a captive";
+
+                bool inSettlement = player.CurrentSettlement != null;
+                if (PlayerEncounter.Current != null && !inSettlement) return "in an encounter";
+
+                var conv = Campaign.Current.ConversationManager;
+                if ((conv != null && conv.IsConversationInProgress) || Hero.OneToOneConversationHero != null)
+                    return "already in a conversation";
+
+                return string.Empty;
+            }
+            catch (Exception ex) { return "error: " + ex.Message; }
+        }
+
+        private static bool IsSafeToInitiate() => InitiationBlockReason().Length == 0;
+
+        // Rolls each co-located NPC's own bond-scaled hourly chance to reach out this hour, and returns one
+        // who is moved to (weighted by pull if more than one is, in the same hour). Only NPCs the player has
+        // actually built a history with — and who are in the same place right now, so the talk is naturally
+        // face-to-face — are considered. Returns null when no one reaches out this hour.
+        private Hero? PickInitiatingNpcForThisHour()
+        {
+            try
+            {
+                var root = NpcPaths.NpcsRoot;
+                if (!Directory.Exists(root)) return null;
+
+                double nowDay = CampaignTime.Now.ToDays;
+                var moved = new List<Hero>();
+                var pulls = new List<double>();
+
+                foreach (var folder in Directory.GetDirectories(root))
+                {
+                    var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
+                    if (!File.Exists(memFile)) continue;
+
+                    NpcMemory memory;
+                    try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
+                    catch { continue; }
+
+                    if (string.IsNullOrWhiteSpace(memory.NpcId) || memory.StoryRichness <= 0) continue;
+
+                    var hero = FindAliveHero(memory.NpcId);
+                    if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner) continue;
+                    if (!IsCoLocated(hero)) continue;
+
+                    double daysSince = memory.LastConversationGameDay >= 0
+                        ? Math.Max(0, nowDay - memory.LastConversationGameDay)
+                        : 0;
+                    double dailyChance = InitiationScorer.DailyChance(
+                        _config.DailyInitiationRate, memory.StoryRichness, GetStanding(hero), daysSince);
+                    if (dailyChance <= 0) continue;
+
+                    // Independent hourly Bernoulli trial for this soul; the daily chance spread over the day.
+                    if (_rng.NextDouble() < dailyChance / 24.0)
+                    {
+                        moved.Add(hero);
+                        pulls.Add(dailyChance);
+                    }
+                }
+
+                if (moved.Count == 0) return null;
+                if (moved.Count == 1) return moved[0];
+
+                int idx = InitiationPlanner.PickWeightedIndex(pulls, _rng.NextDouble());
+                return idx >= 0 ? moved[idx] : moved[0];
+            }
+            catch { return null; }
+        }
+
+        private static Hero? FindAliveHero(string stringId)
+        {
+            try { return Hero.AllAliveHeroes.FirstOrDefault(h => h.StringId == stringId); }
+            catch { return null; }
+        }
+
+        // "Same place" as the player: travelling in the player's own party (companions, family), or present
+        // in the same settlement the player is currently in. This keeps a reached-out conversation naturally
+        // face-to-face — sending word across the map is the letter system (a future feature), not this.
+        private static bool IsCoLocated(Hero npc)
+        {
+            try
+            {
+                var main = MobileParty.MainParty;
+                if (main == null) return false;
+
+                if (npc.PartyBelongedTo == main) return true;
+
+                var playerSettlement = Hero.MainHero?.CurrentSettlement ?? main.CurrentSettlement;
+                var npcSettlement = npc.CurrentSettlement ?? npc.PartyBelongedTo?.CurrentSettlement;
+                return playerSettlement != null && npcSettlement != null && playerSettlement == npcSettlement;
+            }
+            catch { return false; }
+        }
+
+        // The reaching-out as beats the NPC actually lives and remembers, never hidden from them. First the
+        // Angel asks — privately, in their voice — whether they wish to go to the player at all, and their
+        // yes/no is recorded as a real Angel turn. Only on a yes is the player offered the choice; the
+        // approach itself (welcomed, or too busy) is narrated and answered afterward, once the player has
+        // decided — see DeliverApproachAsync via OnInitiationAccepted / OnInitiationDeclinedByPlayer.
+        private async Task BeginInitiationAsync(Hero npc)
+        {
+            try
+            {
+                // Capture the situation now and reuse it for the beats to come; the offer pauses the game,
+                // so the moment does not drift between the asking and the answering.
+                var situation = SafeBuildSituation(npc);
+                var ctx = BuildContext(npc, situation);
+
+                // The Angel asks whether they even wish to reach out; their answer becomes a recorded turn.
+                var desireLine = PromptBuilder.ReachOutDesireLine(ctx.PlayerName);
+                var desireMsgs = _promptBuilder.BuildAngelPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
+                var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
+                var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
+
+                AppendAngelTurn(npc, desireLine, desireAnswer);
+
+                if (!InitiationParser.WantsToReachOut(desireAnswer)) { PassOnInitiation(npc); return; }
+
+                // They wish to. Offer the moment to the player; the approach is narrated once they decide.
+                MainThreadDispatcher.Enqueue(() => ShowInitiationOffer(npc, situation));
+            }
+            catch
+            {
+                // A failed asking simply means no one reaches out this hour; never surface it to the player.
+                _initiationInFlight = false;
+            }
+        }
+
+        // Records one Angel↔NPC exchange as a real turn in the NPC's memory, so their whole dialogue with the
+        // meta-voice lives in the same remembered, inspectable stream as their talks with the player. The
+        // Angel's line is stored verbatim (framed in their voice only when replayed). Best-effort: bookkeeping
+        // must never throw into a tick or a UI callback.
+        private void AppendAngelTurn(Hero npc, string angelLine, string npcReply)
+        {
+            try
+            {
+                var memory = LoadMemory(npc);
+                memory.NpcName = npc.Name?.ToString() ?? memory.NpcName;
+                memory.AddTurn(new ConversationTurn
+                {
+                    Speaker = ConversationTurn.AngelSpeaker,
+                    PlayerLine = angelLine,
+                    NpcLine = npcReply,
+                    GameDay = CampaignTime.Now.ToDays,
+                    CalradiaTime = SituationBuilder.Timestamp(),
+                    Place = SituationBuilder.Place(npc),
+                });
+                SaveMemory(npc, memory);
+            }
+            catch { /* best-effort */ }
+        }
+
+        // The NPC weighed reaching out and let the moment pass. The player asked to still be told, so a
+        // quiet, faced notice lets them know she considered it. Clears the in-flight flag.
+        private void PassOnInitiation(Hero npc)
+        {
+            var name = npc.Name?.ToString() ?? "Someone";
+            var they = npc.IsFemale ? "she" : "he";
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                NotifyWithFace(npc, $"{name} considered reaching out to you, but {they} let the moment pass.");
+                _initiationInFlight = false;
+            });
+        }
+
+        private static string SafeBuildSituation(Hero npc)
+        {
+            try { return SituationBuilder.Build(npc, Hero.MainHero); }
+            catch { return string.Empty; }
+        }
+
+        // The ransom-style offer: an NPC has sought the player out. Receive them (open the conversation) or
+        // send them away (which they remember). Pauses like a ransom broker's offer so it is a real choice.
+        // Runs on the game thread. Only a brief LLM call separates this from the safe fire-time check, so we
+        // simply present it; the engine queues the inquiry if some other blocking UI happens to be up.
+        private void ShowInitiationOffer(Hero npc, string situation)
+        {
+            try
+            {
+                _initiationNpc = npc;
+                _currentSituation = situation;
+
+                var name = npc.Name?.ToString() ?? "Someone";
+                var them = npc.IsFemale ? "her" : "him";
+
+                // A faced toast first (their portrait is the icon), then the choice itself.
+                NotifyWithFace(npc, $"{name} has sought you out, wishing to speak with you.");
+
+                var title = new TextObject("{=ImmersiveAI_InitTitle}A message reaches you").ToString();
+                var body = $"{name} has sent word that they wish to speak with you, and would come to you now. Will you receive {them}?";
+                var accept = new TextObject("{=ImmersiveAI_InitAccept}Receive them").ToString();
+                var decline = new TextObject("{=ImmersiveAI_InitDecline}Not now").ToString();
+
+                var data = new InquiryData(
+                    title, body, true, true, accept, decline,
+                    new Action(OnInitiationAccepted), new Action(OnInitiationDeclinedByPlayer),
+                    "", 0f, (Action?)null,
+                    (Func<ValueTuple<bool, string>>?)null,
+                    (Func<ValueTuple<bool, string>>?)null);
+
+                // Pause while the offer is up (config default) so a decision is never lost to fast-forward;
+                // a soft right-side portrait notice that needs no pause is the future UI task.
+                InformationManager.ShowInquiry(data, pauseGameActiveState: _config.PauseOnInitiationOffer);
+            }
+            catch (Exception ex)
+            {
+                _initiationInFlight = false;
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+        }
+
+        // The player chose to receive them: open the real conversation and, now that they are welcomed, let
+        // the Angel narrate the approach and the NPC speak their own greeting into it (DeliverApproachAsync),
+        // which the root dialog lines show first before the talk loop. The greeting is a recorded Angel turn,
+        // so nothing needs weaving and the NPC will not repeat it.
+        private void OnInitiationAccepted()
+        {
+            var npc = _initiationNpc;
+            if (npc == null) { _initiationInFlight = false; return; }
+
+            try
+            {
+                _currentNpc = npc;
+                _lastGreeting = null;   // the reaching-out greeting is a real turn, not a woven-in opening
+                _recapReady = false;    // it is generated now, with the "gathers their thoughts..." hold
+                _responseReady = true;
+                _pendingInitiation = true;
+                MBTextManager.SetTextVariable(RecapVar, "...", false);
+
+                // Persist the situation snapshot for inspection, exactly as opening a chat normally would.
+                PersistSituation(npc, _currentSituation);
+
+                OpenConversationWith(npc);
+                _ = DeliverApproachAsync(npc, welcomed: true);
+                // _initiationInFlight is cleared when the greeting is delivered (OnInitiationDelivered).
+            }
+            catch (Exception ex)
+            {
+                _pendingInitiation = false;
+                _initiationInFlight = false;
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+        }
+
+        // The player was too busy just now. Rather than a cold "you were refused", the NPC lives it: the
+        // Angel narrates the closed door and they answer it in their own voice (DeliverApproachAsync), which
+        // is recorded and shown back with their face. No conversation opens.
+        private void OnInitiationDeclinedByPlayer()
+        {
+            var npc = _initiationNpc;
+            _pendingInitiation = false;
+            if (npc == null) { _initiationInFlight = false; return; }
+
+            _ = DeliverApproachAsync(npc, welcomed: false);
+        }
+
+        // Narrates the NPC's approach to the player — welcomed, so they greet and the talk loop begins; or
+        // turned away for now, so they answer the moment and it passes — and records their reply as a real
+        // Angel turn either way. Runs after the player's choice, so the approach truthfully reflects it.
+        private async Task DeliverApproachAsync(Hero npc, bool welcomed)
+        {
+            try
+            {
+                var ctx = BuildContext(npc, _currentSituation);
+                var approachLine = PromptBuilder.ApproachLine(ctx.PlayerName, welcomed);
+                var messages = _promptBuilder.BuildAngelPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, approachLine, _config.SystemVoiceName);
+                var raw = await _client.CompleteAsync(messages).ConfigureAwait(false);
+                var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
+
+                AppendAngelTurn(npc, approachLine, npcLine);
+
+                if (welcomed)
+                {
+                    // Her greeting into the welcome; show it, and the conversation falls into the talk loop.
+                    MainThreadDispatcher.Enqueue(() =>
+                    {
+                        _lastNpcLine = npcLine;
+                        MBTextManager.SetTextVariable(RecapVar, npcLine, false);
+                        _recapReady = true;
+                    });
+                }
+                else
+                {
+                    // She met a closed door and answered in her own voice; show that with her face. Done.
+                    MainThreadDispatcher.Enqueue(() =>
+                    {
+                        var name = npc.Name?.ToString() ?? "They";
+                        NotifyWithFace(npc, $"{name}: “{npcLine}”");
+                        _initiationInFlight = false;
+                    });
+                }
+            }
+            catch
+            {
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    if (welcomed)
+                    {
+                        MBTextManager.SetTextVariable(RecapVar, "(...they gather themselves.)", false);
+                        _recapReady = true;
+                    }
+                    else
+                    {
+                        _initiationInFlight = false;
+                    }
+                });
+            }
+        }
+
+        // Writes the situation snapshot to the NPC's folder (mirrors PrepareChat's file write) so what the
+        // player can inspect on disk matches what an initiated conversation's prompt carries.
+        private static void PersistSituation(Hero npc, string? situation)
+        {
+            if (string.IsNullOrWhiteSpace(situation)) return;
+            try
+            {
+                NpcPaths.EnsureMigrated(npc);
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                File.WriteAllText(NpcPaths.SituationFile(npc), situation);
+            }
+            catch { /* best-effort; a disk hiccup must never block the conversation */ }
+        }
+
+        // Forces a face-to-face conversation with a hero who may be anywhere in the world (they have "come
+        // to you"). Their party — or their settlement's — carries the conversation; falls back to the
+        // player's party only so the engine always has a valid party to hang the scene on.
+        private static void OpenConversationWith(Hero npc)
+        {
+            var playerData = new ConversationCharacterData(
+                CharacterObject.PlayerCharacter, PartyBase.MainParty,
+                false, false, false, false, false, false);
+
+            var party = npc.PartyBelongedTo?.Party
+                        ?? npc.CurrentSettlement?.Party
+                        ?? PartyBase.MainParty;
+
+            var npcData = new ConversationCharacterData(
+                npc.CharacterObject, party,
+                false, false, false, false, false, false);
+
+            CampaignMapConversation.OpenConversation(playerData, npcData);
+        }
+
+        // She has spoken her opening; drop the interception so the rest of the conversation is ordinary.
+        private void OnInitiationDelivered()
+        {
+            _pendingInitiation = false;
+            _initiationInFlight = false;
+        }
+
+        // Test lever: forces the NPC just spoken with to reach out immediately, bypassing the daily odds and
+        // the co-location roll (they were, by definition, right here). The conversation is closing as this
+        // runs; the asking is async, so by the time the offer surfaces the player is back on the map.
+        private void OnDebugForceReachOut()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null || _initiationInFlight) return;
+
+            MarkInitiationInFlight();
+            _ = BeginInitiationAsync(npc);
+        }
+
+        // Diagnostic dump: for every NPC the player has a history with, the pieces that decide whether they
+        // reach out — co-located now?, standing, shared richness, days since last spoken, and the resulting
+        // daily/hourly chance. Makes "why is it quiet?" answerable at a glance (co-location and near-neutral
+        // standings are the usual reasons). Only shown when the test button is enabled.
+        private void OnShowInitiationOdds()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Reaching-out odds (DailyInitiationRate = {_config.DailyInitiationRate:0.##}).");
+            sb.AppendLine("Only NPCs you have a history with AND who are in the same place can seek you out.");
+
+            var block = InitiationBlockReason();
+            sb.AppendLine($"Right now: {(block.Length == 0 ? "clear to receive offers" : "BLOCKED — " + block)}"
+                          + (_initiationInFlight ? "; an offer is in flight" : "") + ".");
+            sb.AppendLine();
+
+            try
+            {
+                var root = NpcPaths.NpcsRoot;
+                double nowDay = CampaignTime.Now.ToDays;
+                int shown = 0;
+
+                if (Directory.Exists(root))
+                {
+                    foreach (var folder in Directory.GetDirectories(root))
+                    {
+                        var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
+                        if (!File.Exists(memFile)) continue;
+
+                        NpcMemory memory;
+                        try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
+                        catch { continue; }
+                        if (string.IsNullOrWhiteSpace(memory.NpcId)) continue;
+
+                        var hero = FindAliveHero(memory.NpcId);
+                        var name = hero?.Name?.ToString() ?? memory.NpcName;
+                        if (string.IsNullOrWhiteSpace(name)) name = memory.NpcId;
+
+                        if (hero == null) { sb.AppendLine($"• {name}: not found in the world (dead or away)."); shown++; continue; }
+
+                        bool coLocated = IsCoLocated(hero);
+                        int relation = GetStanding(hero);
+                        double daysSince = memory.LastConversationGameDay >= 0
+                            ? Math.Max(0, nowDay - memory.LastConversationGameDay) : 0;
+                        double daily = InitiationScorer.DailyChance(
+                            _config.DailyInitiationRate, memory.StoryRichness, relation, daysSince);
+
+                        sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (needs a letter)")}, " +
+                                      $"standing {relation}, richness {memory.StoryRichness}, last spoke {daysSince:0.#}d ago");
+                        sb.AppendLine($"    → {(coLocated ? daily * 100 : 0):0.0}% chance/day" +
+                                      (coLocated ? $"  (~{daily / 24.0 * 100:0.00}%/hour)" : "  (0 until co-located)"));
+                        shown++;
+                    }
+                }
+
+                if (shown == 0)
+                    sb.AppendLine("(You have no NPC history yet — speak with someone first.)");
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine("(Could not read the odds: " + ex.Message + ")");
+            }
+
+            ShowScrollPopup("Who might seek you out", sb.ToString().Trim());
+            MBTextManager.SetTextVariable(InfoVar, "(You weigh who might come to you.)", false);
+        }
+
+        // A notification banner carrying the NPC's own portrait as its face — the same faced toast the game
+        // uses when a character has something to say. Falls back to a plain message if the portrait toast is
+        // unavailable for any reason. Must run on the game thread.
+        private static void NotifyWithFace(Hero npc, string message)
+        {
+            try
+            {
+                MBInformationManager.AddQuickInformation(
+                    new TextObject(message), 0, npc?.CharacterObject, null, string.Empty);
+            }
+            catch
+            {
+                InformationManager.DisplayMessage(new InformationMessage(message));
+            }
+        }
+
         // Everything an LLM call for this NPC needs: loaded memory (name set), persona with the
-        // user's prompt-file instructions folded in, the scene line, and the player's name.
-        private ChatContext BuildContext(Hero npc)
+        // user's prompt-file instructions folded in, the scene line, and the player's name. An explicit
+        // sceneOverride lets a background flow (an NPC reaching out) pin the exact situation it captured,
+        // rather than falling back to the cached-or-rebuilt one used by an open chat.
+        private ChatContext BuildContext(Hero npc, string? sceneOverride = null)
         {
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
@@ -702,11 +1281,13 @@ namespace ImmersiveAI
             // The NPC's own evolving self-concept (authored by them during reflection), from its own file.
             persona.SelfConcept = LoadSelf(npc);
 
-            // Reuse the situation snapshot captured when the chat opened; rebuild it if this context is
-            // requested outside a normal chat-open flow (e.g. inspecting the prompt directly).
-            var scene = string.IsNullOrWhiteSpace(_currentSituation)
-                ? SituationBuilder.Build(npc, Hero.MainHero)
-                : _currentSituation!;
+            // Prefer an explicit override (the situation a background flow captured); else reuse the
+            // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).
+            var scene = !string.IsNullOrWhiteSpace(sceneOverride)
+                ? sceneOverride!
+                : string.IsNullOrWhiteSpace(_currentSituation)
+                    ? SituationBuilder.Build(npc, Hero.MainHero)
+                    : _currentSituation!;
 
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
