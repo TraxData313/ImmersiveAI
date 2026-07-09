@@ -1397,6 +1397,21 @@ namespace ImmersiveAI
 
                 if (shown == 0)
                     sb.AppendLine("(You have no NPC history yet — speak with someone first.)");
+
+                // Letters currently on the road, so a courier mid-journey is visible, not a mystery.
+                var onRoad = _letterBag?.Letters;
+                if (onRoad != null && onRoad.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("Letters on the road:");
+                    foreach (var letter in onRoad.OrderBy(l => l.ArriveGameDay))
+                    {
+                        double daysLeft = Math.Max(0, letter.ArriveGameDay - nowDay);
+                        sb.AppendLine(letter.ToPlayer
+                            ? $"• From {letter.NpcName} (written at {letter.SentFrom}) — arrives in ~{daysLeft:0.#}d."
+                            : $"• Your letter to {letter.NpcName} — reaches them in ~{daysLeft:0.#}d.");
+                    }
+                }
             }
             catch (Exception ex)
             {
