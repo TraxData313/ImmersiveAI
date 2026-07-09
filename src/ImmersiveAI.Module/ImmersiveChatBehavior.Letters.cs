@@ -376,8 +376,51 @@ namespace ImmersiveAI
 
         // ------------------------------ the player writes ------------------------------
 
-        // The text box for the player's letter; used both for writing back and for the courier menu.
+        // Writing a letter opens in two beats: first the correspondence so far (so her last words are
+        // before your eyes as you answer — like rereading a letter before taking up the quill), then
+        // the text box itself. With no past letters, the quill comes directly.
         private void OpenLetterComposer(Hero npc)
+        {
+            var name = npc.Name?.ToString() ?? "them";
+            var recent = ReadRecentCorrespondence(npc);
+            if (recent.Length == 0) { OpenLetterTextBox(npc); return; }
+
+            var data = new InquiryData(
+                $"Letters between you and {name}", recent, true, true,
+                new TextObject("{=ImmersiveAI_LetterQuill}Take up the quill").ToString(),
+                GameTexts.FindText("str_cancel", null)?.ToString() ?? "Cancel",
+                new Action(() => OpenLetterTextBox(npc)), new Action(() => { }),
+                "", 0f, (Action?)null,
+                (Func<ValueTuple<bool, string>>?)null,
+                (Func<ValueTuple<bool, string>>?)null);
+            InformationManager.ShowInquiry(data, false);
+        }
+
+        // The tail of the correspondence log, sized for the scrollable inquiry window. The full
+        // record always remains in letters.txt in her folder.
+        private static string ReadRecentCorrespondence(Hero npc)
+        {
+            try
+            {
+                var path = NpcPaths.CorrespondenceFile(npc);
+                if (!File.Exists(path)) return string.Empty;
+                var text = File.ReadAllText(path).Trim();
+                if (text.Length == 0) return string.Empty;
+
+                const int maxChars = 4000;
+                if (text.Length > maxChars)
+                {
+                    var tail = text.Substring(text.Length - maxChars);
+                    int entryStart = tail.IndexOf("\n[", StringComparison.Ordinal);
+                    if (entryStart >= 0) tail = tail.Substring(entryStart + 1);
+                    text = "(…the earlier letters lie in her folder, in letters.txt…)\n\n" + tail;
+                }
+                return text;
+            }
+            catch { return string.Empty; }
+        }
+
+        private void OpenLetterTextBox(Hero npc)
         {
             var name = npc.Name?.ToString() ?? "them";
             var send = new TextObject("{=ImmersiveAI_LetterSend}Send").ToString();
@@ -501,10 +544,12 @@ namespace ImmersiveAI
         {
             try
             {
-                var elements = new List<InquiryElement>();
-                var root = NpcPaths.CampaignRoot;
-                double nowDay = CampaignTime.Now.ToDays;
+                // Everyone with a real history first, then everyone the player has at least met —
+                // the search box makes the long list navigable, encyclopedia-style.
+                var historyIds = new HashSet<string>(StringComparer.Ordinal);
+                var candidates = new List<Hero>();
 
+                var root = NpcPaths.CampaignRoot;
                 if (Directory.Exists(root))
                 {
                     foreach (var folder in Directory.GetDirectories(root))
@@ -517,30 +562,49 @@ namespace ImmersiveAI
                         catch { continue; }
                         if (string.IsNullOrWhiteSpace(memory.NpcId) || memory.StoryRichness <= 0) continue;
 
-                        var hero = FindAliveHero(memory.NpcId);
-                        if (hero == null || hero == Hero.MainHero || !hero.IsAlive) continue;
-
-                        var name = hero.Name?.ToString() ?? memory.NpcName;
-                        double distance = HeroDistanceFromPlayer(hero);
-                        double travelDays = LetterCourier.TravelDays(distance);
-
-                        bool here = IsCoLocated(hero);
-                        bool courierBusy = _letterBag != null && _letterBag.HasInFlightWith(hero.StringId);
-
-                        string hint =
-                            here ? $"{name} is here with you — go and speak instead."
-                            : courierBusy ? $"A courier already rides between you and {name}; wait for word."
-                            : $"{Whereabouts(hero)} — a letter would ride some {travelDays:0.#} days.";
-
-                        var portrait = SafePortrait(hero);
-                        elements.Add(new InquiryElement(hero, name, portrait, !here && !courierBusy, hint));
+                        var known = FindAliveHero(memory.NpcId);
+                        if (known == null || known == Hero.MainHero || !known.IsAlive) continue;
+                        if (historyIds.Add(known.StringId)) candidates.Add(known);
                     }
+                }
+
+                var acquaintances = new List<Hero>();
+                try
+                {
+                    foreach (var h in Hero.AllAliveHeroes)
+                    {
+                        if (h == null || h == Hero.MainHero || h.IsChild) continue;
+                        if (!h.HasMet || historyIds.Contains(h.StringId)) continue;
+                        acquaintances.Add(h);
+                    }
+                }
+                catch { /* the history list alone still serves */ }
+                candidates.AddRange(acquaintances.OrderBy(h => h.Name?.ToString(), StringComparer.OrdinalIgnoreCase));
+
+                var elements = new List<InquiryElement>();
+                foreach (var hero in candidates.Take(150))
+                {
+                    var name = hero.Name?.ToString() ?? "someone";
+                    double travelDays = LetterCourier.TravelDays(HeroDistanceFromPlayer(hero));
+
+                    bool knowsYou = historyIds.Contains(hero.StringId);
+                    bool here = IsCoLocated(hero);
+                    bool courierBusy = _letterBag != null && _letterBag.HasInFlightWith(hero.StringId);
+
+                    string hint =
+                        here ? $"{name} is here with you — go and speak instead."
+                        : courierBusy ? $"A courier already rides between you and {name}; wait for word."
+                        : $"{Whereabouts(hero)} — a letter would ride some {travelDays:0.#} days." +
+                          (knowsYou ? string.Empty : " You know each other only in passing.");
+
+                    var portrait = SafePortrait(hero);
+                    elements.Add(new InquiryElement(hero, name, portrait, !here && !courierBusy, hint));
                 }
 
                 if (elements.Count == 0)
                 {
                     InformationManager.DisplayMessage(new InformationMessage(
-                        "There is no one who knows you well enough to write to — speak with people first.",
+                        "There is no one you know to write to — meet people first.",
                         InitiationLogColor));
                     return;
                 }
@@ -556,7 +620,8 @@ namespace ImmersiveAI
                         var hero = picked?.FirstOrDefault()?.Identifier as Hero;
                         if (hero != null) OpenLetterComposer(hero);
                     },
-                    null);
+                    null,
+                    "", isSeachAvailable: true);
 
                 MBInformationManager.ShowMultiSelectionInquiry(data, true);
             }
