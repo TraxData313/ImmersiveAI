@@ -225,6 +225,49 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void SystemPrompt_NeverInvitesAnInlineRelationMark()
+    {
+        // The in-message <relation> tag was tried and reverted (2026.07.09): gpt-4o narrated the number
+        // in prose and never emitted the tag. The shift is asked in its own call (BuildFeelingQuery).
+        var system = new PromptBuilder().Build(Persona(), new NpcMemory(), "", "Vulgrim", "Hello")[0].Content;
+        Assert.DoesNotContain("<relation>", system);
+    }
+
+    [Fact]
+    public void SystemPrompt_UsesTheConfiguredAtmosphereLine_WhenSet()
+    {
+        var persona = Persona();
+        persona.AtmosphereLine = "You are Gafnir, a wanderer of the frozen north.";
+
+        var system = new PromptBuilder().Build(persona, new NpcMemory(), "", "Vulgrim", "Hi")[0].Content;
+
+        Assert.Contains("wanderer of the frozen north", system);
+        Assert.DoesNotContain("a living soul in the world of Calradia", system);
+    }
+
+    [Fact]
+    public void SystemPrompt_FallsBackToTheDefaultAtmosphereLine_WhenUnset()
+    {
+        var system = new PromptBuilder().Build(Persona(), new NpcMemory(), "", "Vulgrim", "Hi")[0].Content;
+        Assert.Contains("a living soul in the world of Calradia", system);
+    }
+
+    [Fact]
+    public void SystemPrompt_FoldsInFamilyAndRoleplayGuidance_WhenGiven()
+    {
+        var persona = Persona();
+        persona.FamilyKnowledge = "You are the daughter of Caladog, a Battanian of clan Fen.";
+        persona.RoleplayGuidance = "This world is your haven — play, jest, and be glad here.";
+
+        var system = new PromptBuilder().Build(persona, new NpcMemory(), "", "Vulgrim", "Hi")[0].Content;
+
+        Assert.Contains("daughter of Caladog", system);
+        Assert.Contains("your haven", system);
+        // Kin rides high with identity; guidance sits in the closing whisper.
+        Assert.True(system.IndexOf("daughter of Caladog") < system.IndexOf("your haven"));
+    }
+
+    [Fact]
     public void BuildRecap_EndsWithRecapDirectiveAfterHistory()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };

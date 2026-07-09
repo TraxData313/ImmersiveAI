@@ -8,10 +8,11 @@ namespace ImmersiveAI.Core.Prompts
     /// number in a word or two ("about +5"), so we take the first integer we find and clamp it to the
     /// game's -100..100 standing rail.
     ///
-    /// This replaced an earlier approach that asked the NPC to smuggle a ♥ mark into the tail of their
-    /// spoken reply. Chatty models (e.g. gpt-4o) would simply narrate a number in prose and never emit
-    /// the mark, so nothing moved. Asking the question on its own — see
-    /// <see cref="PromptBuilder.BuildFeelingQuery"/> — is far more reliable across backends.
+    /// In-message marks were tried twice and failed twice on chatty models (gpt-4o): first a ♥ mark,
+    /// then a firm &lt;relation&gt; tag (2026.07.09) — both times the model narrated the number in prose
+    /// and never emitted the mark, so nothing moved and the number leaked into the spoken words. Asking
+    /// the question on its own — see <see cref="PromptBuilder.BuildFeelingQuery"/> — is what actually
+    /// works across backends, at the cost of one extra short call per turn.
     /// </summary>
     public static class FeelingParser
     {

@@ -94,12 +94,13 @@ namespace ImmersiveAI.Core.Prompts
             string playerName,
             string? voiceName = null)
         {
+            var voice = Voice(voiceName);
             var messages = new List<ChatMessage>
             {
                 ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
             };
 
-            AppendRememberedTurns(messages, memory, Voice(voiceName));
+            AppendRememberedTurns(messages, memory, voice);
             messages.Add(ChatMessage.User(BuildRecapInstruction(memory, playerName)));
             return messages;
         }
@@ -178,6 +179,8 @@ namespace ImmersiveAI.Core.Prompts
         /// prose and forget any hidden mark, but it will reliably answer a question whose whole job is
         /// to return one number. The NPC still decides it themselves, with no ceiling but the -100..100
         /// rail; we only fold their answer into the game standing (see <see cref="FeelingParser"/>).
+        /// (An in-message &lt;relation&gt; tag was tried on 2026.07.09 and reverted the same day: even with
+        /// a firm instruction, gpt-4o spoke the number aloud in its reply and never emitted the tag.)
         /// </summary>
         public IReadOnlyList<ChatMessage> BuildFeelingQuery(
             NpcPersona persona,
@@ -187,7 +190,7 @@ namespace ImmersiveAI.Core.Prompts
             int currentStanding,
             string? voiceName = null)
         {
-            var voice = string.IsNullOrWhiteSpace(voiceName) ? "Angel" : voiceName!.Trim();
+            var voice = Voice(voiceName);
 
             var system = new StringBuilder();
             system.AppendLine($"You are {persona.Name}, a living soul in the world of Calradia.");
@@ -212,20 +215,31 @@ namespace ImmersiveAI.Core.Prompts
             };
         }
 
-        private static string BuildSystemPrompt(NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
+        private static string BuildSystemPrompt(
+            NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
         {
             var sb = new StringBuilder();
 
             // The whole prompt is written as a gentle voice speaking into the NPC's own mind, in the
             // second person — never a clinical data sheet. No fourth-wall labels (no "AI", no game
-            // title): to them, Calradia is simply the world they live in.
-            sb.AppendLine($"You are {persona.Name}, a living soul in the world of Calradia in feudal times.");
+            // title): to them, Calradia is simply the world they live in. The opening atmosphere line is
+            // player-configurable (name already substituted); we fall back to our own when none is set.
+            sb.AppendLine(string.IsNullOrWhiteSpace(persona.AtmosphereLine)
+                ? $"You are {persona.Name}, a living soul in the world of Calradia in feudal times."
+                : persona.AtmosphereLine.Trim());
             if (!string.IsNullOrWhiteSpace(persona.RoleDescription))
                 sb.AppendLine(persona.RoleDescription.Trim());
             if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
                 sb.AppendLine("In your nature, you are " + LowerFirst(persona.PersonalityDescription.Trim()));
             if (!string.IsNullOrWhiteSpace(persona.SpeechStyle))
                 sb.AppendLine("When you speak, it comes out like this: " + persona.SpeechStyle.Trim());
+
+            // Their kin and house — durable identity, so they feel part of a family in this world.
+            if (!string.IsNullOrWhiteSpace(persona.FamilyKnowledge))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.FamilyKnowledge.Trim());
+            }
 
             // The self they have grown into, in their own words — the culmination of who they are,
             // before we turn to the world's notes and the passing moment.
@@ -282,6 +296,10 @@ namespace ImmersiveAI.Core.Prompts
             sb.AppendLine();
             sb.AppendLine("A whisper of guidance, meant only for you:");
             sb.AppendLine("- You decide how to speak — be it a single word or a few sentences — but do not run on too long, for a lengthy speech may not all reach the one before you.");
+
+            // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
+            if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
+                sb.AppendLine(persona.RoleplayGuidance.Trim());
 
             return sb.ToString().TrimEnd();
         }

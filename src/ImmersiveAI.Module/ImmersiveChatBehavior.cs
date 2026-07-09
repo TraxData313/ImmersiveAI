@@ -375,6 +375,7 @@ namespace ImmersiveAI
                 {
                     MBTextManager.SetTextVariable(RecapVar, greeting, false);
                     _recapReady = true;
+                    NotifyReplyReady(npc); // the greeting is ready; save the player guessing at "gathers their thoughts..."
                 });
             }
             catch (Exception ex)
@@ -482,7 +483,8 @@ namespace ImmersiveAI
 
             var ctx = BuildContext(npc);
             var messages = _promptBuilder.Build(
-                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting, _config.SystemVoiceName);
+                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting,
+                _config.SystemVoiceName);
 
             var name = npc.Name?.ToString() ?? "Unknown";
             var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
@@ -495,8 +497,39 @@ namespace ImmersiveAI
                 sb.AppendLine();
             }
 
-            ShowScrollPopup(name + " — the full prompt she receives", sb.ToString().Trim());
-            MBTextManager.SetTextVariable(InfoVar, "(She lets you see the whole of her mind.)", false);
+            var full = sb.ToString().Trim();
+
+            // The in-game popup can clip a long prompt (persona + family + guidance + situation + memory can
+            // run long), so the complete text is also written to a file in her folder — the reliable way to
+            // read exactly what she sees, uncut.
+            var savedPath = TrySaveFullPrompt(npc, full);
+            var header = savedPath == null
+                ? string.Empty
+                : "(The complete, uncut text is saved to this file — open it to read all of it:\n"
+                  + savedPath + ")\n\n";
+
+            ShowScrollPopup(name + " — the full prompt she receives", header + full);
+            MBTextManager.SetTextVariable(InfoVar, savedPath == null
+                ? "(She lets you see the whole of her mind.)"
+                : "(She lets you see the whole of her mind — saved uncut to " + Path.GetFileName(savedPath) + " in her folder.)",
+                false);
+        }
+
+        // Writes the full raw prompt to a file in the NPC's folder so the player can read every word she
+        // receives without the in-game popup clipping it. Overwritten on each reveal; best-effort.
+        private const string FullPromptFileName = "full_prompt_snapshot.txt";
+
+        private static string? TrySaveFullPrompt(Hero npc, string text)
+        {
+            try
+            {
+                NpcPaths.EnsureMigrated(npc);
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                var path = Path.Combine(NpcPaths.NpcFolder(npc), FullPromptFileName);
+                File.WriteAllText(path, text);
+                return path;
+            }
+            catch { return null; }
         }
 
         // Human-readable speaker label for each message in the raw-prompt view. The underlying LLM roles
@@ -649,8 +682,9 @@ namespace ImmersiveAI
 
                 // Then ask her, in a separate breath, how that exchange moved her heart — one number, in
                 // her own voice (the Angel asking privately). Isolating the question makes it reliable even
-                // for chattier models that would never smuggle a mark into a spoken reply. Best-effort: if
-                // she cannot weigh it now, her standing simply holds and the reply is untouched.
+                // for chattier models that would never emit a mark inside a spoken reply (an in-message
+                // <relation> tag was tried and reverted on 2026.07.09: gpt-4o just spoke the number in prose
+                // and nothing moved). Best-effort: if she cannot weigh it now, her standing simply holds.
                 int feltShift = 0;
                 if (_config.EnableRelationshipChanges)
                 {
@@ -699,13 +733,20 @@ namespace ImmersiveAI
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
+                    MBTextManager.SetTextVariable(ResponseVar, reply, false);
+                    _responseReady = true;
+
                     // Fold the felt shift into the real standing on the game thread (state + UI), after
-                    // the reply is stored, so a hiccup here never eats the words she just spoke.
+                    // the reply is shown, so a hiccup here never eats the words she just spoke. Its own
+                    // colored line is logged too, so a relation move can be read back from the message log.
                     if (feltShift != 0)
                         ApplyRelationShift(npc, feltShift);
 
-                    MBTextManager.SetTextVariable(ResponseVar, reply, false);
-                    _responseReady = true;
+                    // A short "has answered" ping so the player isn't clicking "(wait...)" and guessing —
+                    // deliberately brief (like the opening "gathers their thoughts" beat) so it never covers
+                    // the reply in the box. The full reply goes to the message log only if the player opts in.
+                    NotifyReplyReady(npc);
+                    LogConversationLine(npc, reply);
                 });
             }
             catch (Exception ex)
@@ -766,6 +807,36 @@ namespace ImmersiveAI
             {
                 InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
             }
+        }
+
+        // A soft notice that an NPC's reply (or opening greeting) is ready, so the player need not keep
+        // clicking "(wait for them to answer)" and guessing. Goes to the message log too. Best-effort.
+        private static readonly Color ReplyReadyColor = new Color(0.72f, 0.82f, 0.98f, 1f);   // soft sky
+        private static readonly Color ConversationLogColor = new Color(0.86f, 0.86f, 0.90f, 1f); // gentle grey
+
+        private void NotifyReplyReady(Hero npc)
+        {
+            if (!_config.NotifyWhenReplyReady) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                InformationManager.DisplayMessage(new InformationMessage($"{name} has answered.", ReplyReadyColor));
+            }
+            catch { /* the notice is a nicety; never let it break a turn */ }
+        }
+
+        // Optionally writes an NPC's spoken line to the message log (opt-in via ShowConversationInMessageLog,
+        // default off — it also flashes a full-width banner that can cover the reply box, so it is only for
+        // players who want the whole exchange readable from the log key). Best-effort.
+        private void LogConversationLine(Hero npc, string line)
+        {
+            if (!_config.ShowConversationInMessageLog) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                InformationManager.DisplayMessage(new InformationMessage($"{name}: {line}", ConversationLogColor));
+            }
+            catch { /* best-effort */ }
         }
 
         // ============================ NPC-initiated conversations ============================
@@ -1283,6 +1354,11 @@ namespace ImmersiveAI
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
             // The NPC's own evolving self-concept (authored by them during reflection), from its own file.
             persona.SelfConcept = LoadSelf(npc);
+            // The player-configurable atmosphere line and roleplay guidance (tokens resolved here), and the
+            // NPC's kin and house — all folded into the prompt so the world's feel and their family carry.
+            persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
+            persona.RoleplayGuidance = ApplyTokens(_config.RoleplayGuidance, npcName);
+            persona.FamilyKnowledge = FamilyBuilder.Build(npc);
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).
@@ -1295,6 +1371,15 @@ namespace ImmersiveAI
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
             return new ChatContext(memory, persona, scene, playerName);
+        }
+
+        // Resolves the {name} / {voice} tokens a player may use in the configurable atmosphere line and
+        // roleplay guidance. A blank template stays blank (the prompt then falls back to its own default).
+        private string ApplyTokens(string template, string npcName)
+        {
+            if (string.IsNullOrWhiteSpace(template)) return string.Empty;
+            var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
+            return template.Replace("{name}", npcName ?? "Unknown").Replace("{voice}", voice);
         }
 
         private readonly struct ChatContext

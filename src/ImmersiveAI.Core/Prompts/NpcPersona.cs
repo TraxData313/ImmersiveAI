@@ -8,6 +8,22 @@ namespace ImmersiveAI.Core.Prompts
     {
         public string Name { get; set; } = string.Empty;
 
+        /// <summary>The opening identity/atmosphere line, e.g. "You are Aurelia, a living soul in the world
+        /// of Calradia in feudal times." Player-configurable (name already substituted by the game layer);
+        /// when empty <see cref="PromptBuilder"/> falls back to its own default. Lets the storyteller set the
+        /// whole atmosphere from the config file.</summary>
+        public string AtmosphereLine { get; set; } = string.Empty;
+
+        /// <summary>Optional, player-authored guidance on tone and spirit — how the world feels, an invitation
+        /// to roleplay and enjoy it — offered gently as freedom, never a command. Folded into the closing
+        /// "whisper of guidance". Empty by default (the game layer fills it from config).</summary>
+        public string RoleplayGuidance { get; set; } = string.Empty;
+
+        /// <summary>The NPC's kin and house, in their own second-person recollection (parents, spouse,
+        /// children with ages, clan and its people). Durable identity, folded in on every chat so they feel
+        /// part of a family in this world. Built by the game layer from live Hero data.</summary>
+        public string FamilyKnowledge { get; set; } = string.Empty;
+
         /// <summary>Role and standing, e.g. "Vlandian lord, ruler of Sargot, at war with the Empire".</summary>
         public string RoleDescription { get; set; } = string.Empty;
 

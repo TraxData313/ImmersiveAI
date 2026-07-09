@@ -24,7 +24,7 @@ Mental model: **Core = pure, unit-tested logic; Module = Bannerlord glue.** Talk
 calls the LLM → reply shown in the conversation panel, memory saved and compressed when it grows.
 
 You usually only need to open:
-- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` (Module), `MemoryCompressor` (Core).
+- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module).
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
@@ -139,7 +139,11 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
-  `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts; default on),
+  `AtmosphereLine` (the configurable opening identity line, supports `{name}`) + `RoleplayGuidance`
+  (world-wide tone/roleplay guidance, offered as freedom), `NotifyWhenReplyReady` (short "has answered"
+  ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),
+  `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts via a second, isolated
+  feeling call; default on),
   `EnableNpcInitiatedChats` + `DailyInitiationRate` + `ShowInitiationTestButton` (NPCs reaching out to
   the player on their own; the rate is the daily ceiling for a *maxed* bond — actual chance scales by how
   often you talk and how far the standing is from 0, so a fresh game stays quiet; ~1.5 lets the closest
@@ -178,10 +182,20 @@ person — how that moment moved their heart, expecting only a single signed num
 `FeelingParser.ParseShift` reads it and `ChangeRelationAction` folds it into the real game relation
 (clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
 feel). A colored message reports what moved. Toggle with `EnableRelationshipChanges`.
-Why a separate call: an earlier design asked the NPC to smuggle the number into the tail of their
-reply, but chatty/weaker models (e.g. gpt-4o) just narrate a number in prose and never emit the mark,
-so nothing moved. A question whose whole job is to return one number is reliable across backends —
-at the cost of one extra short call per turn.
+Why a separate call — **settled twice, don't retry in-message marks**: both a ♥ tail-mark (early) and a
+firm `<relation>±N</relation>` tag (tried and reverted the same day, 2026.07.09) failed on gpt-4o — the
+model narrates the number in prose inside the spoken reply and never emits the mark, so nothing moves
+AND the number leaks into her words. A question whose whole job is to return one number is reliable
+across backends — at the cost of one extra short call per turn. gpt-4o is the backend Anton actively
+plays on, so cross-backend reliability wins over the single-call elegance.
+
+When a reply or opening recap is ready, a short "<Name> has answered." notice fires
+(`NotifyWhenReplyReady`, default on) so the player isn't left clicking "(wait for them to answer)" and
+guessing — kept brief so it never covers the reply in the box. Optionally each full spoken reply can also
+be written to the message log (`ShowConversationInMessageLog`, default **off** — it flashes a full-width
+banner that can cover the box, so it is only for players who want the whole exchange readable from the
+log key). "Reveal the whole of your mind" dumps the exact message list she receives and also writes it
+uncut to `full_prompt_snapshot.txt` in her folder, since the in-game popup can clip a long prompt.
 
 Known caveat: the "considers your words..." → reply transition can outrun a slow LLM call and
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.

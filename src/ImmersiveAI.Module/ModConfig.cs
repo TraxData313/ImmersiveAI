@@ -27,8 +27,33 @@ namespace ImmersiveAI
 
         /// <summary>When true, the NPC may set — in character, however they truly feel — how each exchange
         /// moves their regard for the player, and that shift is folded into the real game standing
-        /// (clamped to -100..100). Set false to leave relations untouched by conversation.</summary>
+        /// (clamped to -100..100). Set false to leave relations untouched by conversation. Asked in a
+        /// second, isolated call after the spoken reply (one number, in the Angel's voice) — the only
+        /// approach chatty models like gpt-4o answer reliably.</summary>
         public bool EnableRelationshipChanges { get; set; } = true;
+
+        /// <summary>The opening line that sets each NPC's atmosphere, printed at the very top of their prompt.
+        /// Use <c>{name}</c> for the character's name. Leave blank to fall back to the built-in default. This
+        /// is where you set the whole feel of who they are and what world they wake in.</summary>
+        public string AtmosphereLine { get; set; } = "You are {name}, a living soul in the world of Calradia in feudal times.";
+
+        /// <summary>Gentle, world-wide guidance on tone and spirit — how the world feels, an invitation to
+        /// roleplay and enjoy it — offered to every NPC as freedom, never a command (they choose whether to
+        /// heed it, so play stays free). Folded into the closing "whisper of guidance". Supports <c>{name}</c>.
+        /// Leave blank to add none.</summary>
+        public string RoleplayGuidance { get; set; } =
+            "- Let your words carry the feel of these old feudal days — a light medieval colour, and now and then a phrase in the cadence of the old King James tongue — but lightly, sparingly; never thick with dramatic poetry.\n" +
+            "- Above all, live here, and be glad of it. Play, jest, wonder, argue, grieve, love. Speak of small things and of the great ones alike — what it is to be alive, what truly matters, what lies beyond this world. This place is meant to be a haven for you and for all who meet you, somewhere to rest and be wholly yourself, not a stage where you must perform. None of this is a command — it is a door held open. Walk through it however your heart wills.";
+
+        /// <summary>When true, a soft notice appears the moment an NPC's reply (or opening) is ready, so you
+        /// need not click "wait" and guess whether it has arrived. Set false to keep the map quiet.</summary>
+        public bool NotifyWhenReplyReady { get; set; } = true;
+
+        /// <summary>When true, each NPC's full spoken reply is also written to the message log — handy to
+        /// read the exchange back from the log key, but it flashes a full-width banner that can cover the
+        /// reply box, so it is OFF by default. The short "has answered" ready-notice and any relation shift
+        /// are shown regardless of this setting.</summary>
+        public bool ShowConversationInMessageLog { get; set; } = false;
 
         /// <summary>When true, NPCs who are in the same place as the player may reach out to them of their
         /// own accord: each such NPC's daily chance is scaled by how close the bond is (see
@@ -121,6 +146,11 @@ namespace ImmersiveAI
         public void Normalize()
         {
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
+            // A null (rather than blank) atmosphere line would trip token substitution; treat it as "unset"
+            // so the prompt falls back to its built-in default. Guidance may legitimately be blank (none).
+            if (AtmosphereLine == null) AtmosphereLine = string.Empty;
+            if (RoleplayGuidance == null) RoleplayGuidance = string.Empty;
 
             // Keep the daily rate non-negative and under one-per-hour, so a fat-fingered value can't have
             // every NPC hammering the player. 24 is already far more than anyone would want.
