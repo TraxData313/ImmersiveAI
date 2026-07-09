@@ -1246,19 +1246,22 @@ namespace ImmersiveAI
         }
 
         // A notification banner carrying the NPC's own portrait as its face — the same faced toast the game
-        // uses when a character has something to say. Falls back to a plain message if the portrait toast is
-        // unavailable for any reason. Must run on the game thread.
+        // uses when a character has something to say — AND a copy in the persistent message log, so a moment
+        // that flashes past can still be read back later (the log the player scrolls through). Must run on
+        // the game thread.
+        private static readonly Color InitiationLogColor = new Color(0.80f, 0.78f, 0.95f, 1f); // soft, Angel-lit
+
         private static void NotifyWithFace(Hero npc, string message)
         {
+            // The lasting copy first, so even if the faced toast throws the words are never lost.
+            InformationManager.DisplayMessage(new InformationMessage(message, InitiationLogColor));
+
             try
             {
                 MBInformationManager.AddQuickInformation(
                     new TextObject(message), 0, npc?.CharacterObject, null, string.Empty);
             }
-            catch
-            {
-                InformationManager.DisplayMessage(new InformationMessage(message));
-            }
+            catch { /* the toast is a nicety; the logged line above is the reliable record */ }
         }
 
         // Everything an LLM call for this NPC needs: loaded memory (name set), persona with the
