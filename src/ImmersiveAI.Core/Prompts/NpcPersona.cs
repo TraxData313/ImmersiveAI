@@ -49,5 +49,10 @@ namespace ImmersiveAI.Core.Prompts
         /// <summary>Optional user-authored extra instructions for THIS NPC (per-NPC prompt file).
         /// Shown near the top as "About you:".</summary>
         public string CustomInstructions { get; set; } = string.Empty;
+
+        /// <summary>True when this NPC can reach into the world's memory mid-thought (the recall
+        /// tools are on offer — see the game layer's WorldRecall). Adds a whisper telling them to
+        /// trust what surfaces over invention.</summary>
+        public bool CanRecallWorld { get; set; }
     }
 }

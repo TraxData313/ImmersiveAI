@@ -28,7 +28,7 @@ namespace ImmersiveAI
     /// turn: text input -> LLM (with persona + layered memory + prompt files) -> reply
     /// shown inside the conversation panel. Memory is compressed and persisted per NPC.
     /// </summary>
-    public class ImmersiveChatBehavior : CampaignBehaviorBase
+    public partial class ImmersiveChatBehavior : CampaignBehaviorBase
     {
         private const string ResponseVar = "IMMERSIVEAI_RESPONSE";
         private const string RecapVar = "IMMERSIVEAI_RECAP";
@@ -103,6 +103,25 @@ namespace ImmersiveAI
             _memoryStore = new JsonMemoryStore(NpcPaths.NpcsRoot);
             _compressor = new MemoryCompressor(_client);
         }
+
+        // One spoken completion that may reach for the world's memory along the way (the recall
+        // tools, resolved from live campaign data on the game thread). Every spoken path goes
+        // through here; short utility calls (the feeling number, the yes/no of a reaching-out)
+        // stay on plain CompleteAsync, where a recall would only slow the answer down.
+        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc)
+        {
+            if (!CanRecallWorld())
+                return _client.CompleteAsync(messages);
+
+            return ToolLoopRunner.RunAsync(
+                _client, messages, Tools.WorldRecall.Tools,
+                call => Tools.WorldRecall.ResolveAsync(call, npc),
+                _config.MaxRecallsPerReply);
+        }
+
+        // The gift is real only when it is both enabled and the backend can carry tools.
+        private bool CanRecallWorld() =>
+            _config.EnableWorldRecall && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
 
         // Loads this NPC's memory from its own folder, migrating old flat-layout files forward first.
         private NpcMemory LoadMemory(Hero npc)
@@ -193,6 +212,9 @@ namespace ImmersiveAI
                 Clan.PlayerClan?.Name?.ToString() ?? "(unknown)",
                 CampaignTime.Now.ToString());
             NpcPaths.EnsureRuntimeReadme();
+
+            // The campaign's folder is known now, so the letters still on the road can be picked up.
+            LoadLetterBag();
         }
 
         public void AddDialogs(CampaignGameStarter starter)
@@ -296,6 +318,12 @@ namespace ImmersiveAI
                     "{=ImmersiveAI_TestReach}Let us part now. [Immersive AI • test — trigger them to reach out to you]",
                     null, OnDebugForceReachOut, 95);
 
+                // Same lever for the letter flow: after parting, this very NPC weighs writing to you
+                // (co-located, so the letter arrives within hours — the whole loop is testable at once).
+                starter.AddPlayerLine("immersiveai_test_letter", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestLetter}Let us part now. [Immersive AI • test — trigger them to write you a letter]",
+                    () => _config.EnableLetters, OnDebugForceLetter, 93);
+
                 // Diagnostic: show, for every NPC the player has a history with, whether they are co-located
                 // right now and their computed daily chance of reaching out — so it is clear why the world is
                 // quiet (usually: no one is co-located, or standings are near neutral).
@@ -323,6 +351,9 @@ namespace ImmersiveAI
             // Re-checks the await state; loops until the reply arrives.
             starter.AddPlayerLine("immersiveai_wait", "immersiveai_wait", "immersiveai_await",
                 "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
+
+            // Letters: a courier can be hired wherever there are walls and roads.
+            AddLetterMenus(starter);
         }
 
         private void OnPlayerSpeaks()
@@ -411,7 +442,7 @@ namespace ImmersiveAI
             {
                 var ctx = BuildContext(npc);
                 var messages = _promptBuilder.BuildRecap(ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, _config.SystemVoiceName);
-                var rawReply = await _client.CompleteAsync(messages).ConfigureAwait(false);
+                var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
                 // The greeting is an opening recap, not a player-initiated exchange, so it is not
@@ -726,7 +757,7 @@ namespace ImmersiveAI
 
                 var messages = _promptBuilder.Build(
                     ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, opening, _config.SystemVoiceName);
-                var rawReply = await _client.CompleteAsync(messages).ConfigureAwait(false);
+                var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
                 _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
 
@@ -898,6 +929,10 @@ namespace ImmersiveAI
 
         private void OnHourlyTick()
         {
+            // Letters tick on their own leg, independent of face-to-face initiations.
+            try { OnLettersHourlyTick(); }
+            catch { /* the post must never take down the hour */ }
+
             if (!_config.EnableNpcInitiatedChats) return;
 
             // Self-heal a stuck in-flight flag: if an offer was ever lost (e.g. dismissed by a scene change
@@ -1013,7 +1048,7 @@ namespace ImmersiveAI
 
         // "Same place" as the player: travelling in the player's own party (companions, family), or present
         // in the same settlement the player is currently in. This keeps a reached-out conversation naturally
-        // face-to-face — sending word across the map is the letter system (a future feature), not this.
+        // face-to-face — anyone farther away writes instead (the letter flow in the Letters partial).
         private static bool IsCoLocated(Hero npc)
         {
             try
@@ -1204,7 +1239,7 @@ namespace ImmersiveAI
                 var approachLine = PromptBuilder.ApproachLine(ctx.PlayerName, welcomed);
                 var messages = _promptBuilder.BuildAngelPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, approachLine, _config.SystemVoiceName);
-                var raw = await _client.CompleteAsync(messages).ConfigureAwait(false);
+                var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
                 AppendAngelTurn(npc, approachLine, npcLine);
@@ -1346,10 +1381,16 @@ namespace ImmersiveAI
                         double daily = InitiationScorer.DailyChance(
                             _config.DailyInitiationRate, memory.StoryRichness, relation, daysSince);
 
-                        sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (needs a letter)")}, " +
+                        sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
                                       $"standing {relation}, richness {memory.StoryRichness}, last spoke {daysSince:0.#}d ago");
-                        sb.AppendLine($"    → {(coLocated ? daily * 100 : 0):0.0}% chance/day" +
-                                      (coLocated ? $"  (~{daily / 24.0 * 100:0.00}%/hour)" : "  (0 until co-located)"));
+                        if (coLocated)
+                            sb.AppendLine($"    → {daily * 100:0.0}% chance/day to seek you out  (~{daily / 24.0 * 100:0.00}%/hour)");
+                        else
+                        {
+                            double letterDaily = _config.EnableLetters ? daily * Core.Letters.LetterCourier.WriteRateFactor : 0;
+                            sb.AppendLine($"    → {letterDaily * 100:0.0}% chance/day to write to you" +
+                                          (_config.EnableLetters ? "" : " (letters disabled)"));
+                        }
                         shown++;
                     }
                 }
@@ -1409,6 +1450,8 @@ namespace ImmersiveAI
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
             persona.RoleplayGuidance = ApplyTokens(_config.RoleplayGuidance, npcName);
             persona.FamilyKnowledge = FamilyBuilder.Build(npc);
+            // The whisper about the gift of recall is offered only when the tools truly ride along.
+            persona.CanRecallWorld = CanRecallWorld();
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

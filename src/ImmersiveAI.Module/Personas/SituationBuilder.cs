@@ -105,19 +105,27 @@ namespace ImmersiveAI.Personas
         /// is saved to current_situation_info.txt and folded into the prompt.
         /// </summary>
         public static string Build(Hero speaker, Hero partner, ModConfig? config = null)
+            => Build(speaker, partner, config, apart: false);
+
+        /// <summary>Same situation block, but with <paramref name="apart"/> true the partner is NOT
+        /// here: the scene opens on the speaker alone and the partner is described as someone far
+        /// away and on their mind — the framing a letter is written or read in.</summary>
+        public static string Build(Hero speaker, Hero partner, ModConfig? config, bool apart)
         {
             var sb = new StringBuilder();
             var name = Name(speaker);
 
             // The approach: who comes to them, when, and where — the opening breath of the scene.
             string approach;
-            if (partner == null)
+            if (partner == null || apart)
                 approach = $"This moment finds you, {name}";
             else if (partner == Hero.MainHero)
                 approach = $"{Name(partner)} comes to you, {name}";
             else
                 approach = $"{Name(partner)} comes to speak with you, {name}";
             sb.AppendLine($"{approach}. It is {TimeOfDay()} — {Timestamp()} — and you are {PlaceDescription(speaker)}.");
+            if (partner != null && apart)
+                sb.AppendLine($"{Name(partner)} is not here — they are far from you now, and the road between you is long.");
 
             // Who they are, gently recalled to them.
             var self = DescribeSelf(speaker);

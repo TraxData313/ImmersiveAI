@@ -1,0 +1,598 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using ImmersiveAI.Core.Initiation;
+using ImmersiveAI.Core.Letters;
+using ImmersiveAI.Core.Memory;
+using ImmersiveAI.Core.Prompts;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.GameMenus;
+using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.Core;
+using TaleWorlds.Core.ImageIdentifiers;
+using TaleWorlds.Library;
+using TaleWorlds.Localization;
+using TaleWorlds.MountAndBlade;
+
+namespace ImmersiveAI
+{
+    /// <summary>
+    /// Letters — how the bond crosses the map. Face-to-face reaching-out (the initiation flow in the
+    /// main file) needs the NPC co-located with the player; this is the other half of that coin: an
+    /// NPC far away may WRITE instead, at half their reaching-out chance, and the letter travels real
+    /// in-game days with the distance (see Core's <see cref="LetterCourier"/>). The player can write
+    /// too, from any town, castle, or village menu, and an NPC who receives a letter may answer once.
+    ///
+    /// Every beat is lived and remembered: the Angel asks whether they wish to write (recorded), the
+    /// letter itself is a recorded Angel turn, and reading the player's letter enters their memory
+    /// even if they let it lie unanswered. Letters on the road persist in the campaign's
+    /// _letters.json (they must survive save/load — unlike a live conversation, a letter is a
+    /// promise), and each NPC folder keeps a human-readable letters.txt of the whole correspondence.
+    /// </summary>
+    public partial class ImmersiveChatBehavior
+    {
+        // The campaign's letters still on the road. Loaded once the campaign id is resolved
+        // (OnSessionLaunched); null until then, which simply means "no post today".
+        private LetterBag? _letterBag;
+
+        // One letter-writing LLM job at a time, with the same self-heal timestamp pattern as the
+        // initiation flow, so a lost task can never silence the post forever.
+        private volatile bool _letterWorkInFlight;
+        private DateTime _letterWorkSince;
+
+        private void LoadLetterBag()
+        {
+            try { _letterBag = LetterBag.LoadFrom(NpcPaths.LettersFile); }
+            catch { _letterBag = new LetterBag(); }
+        }
+
+        private void SaveLetterBag()
+        {
+            try { _letterBag?.SaveTo(NpcPaths.LettersFile); }
+            catch { /* best-effort; the bag stays live in memory for this session */ }
+        }
+
+        // ------------------------------ the hourly post ------------------------------
+
+        private void OnLettersHourlyTick()
+        {
+            if (!_config.EnableLetters || _letterBag == null || Campaign.Current == null) return;
+
+            if (_letterWorkInFlight && (DateTime.UtcNow - _letterWorkSince) > TimeSpan.FromMinutes(3))
+                _letterWorkInFlight = false;
+
+            DeliverDueLetters();
+            MaybeStartNpcLetter();
+        }
+
+        // Hands over every letter whose road has run out — at most one per direction per hour, so
+        // arrivals never stack into a wall of inquiries.
+        private void DeliverDueLetters()
+        {
+            var due = _letterBag!.Due(CampaignTime.Now.ToDays);
+            if (due.Count == 0) return;
+
+            var toPlayer = due.FirstOrDefault(l => l.ToPlayer);
+            if (toPlayer != null && IsSafeForLetterUi())
+            {
+                _letterBag.Remove(toPlayer.Id);
+                SaveLetterBag();
+                PresentLetterToPlayer(toPlayer);
+            }
+
+            var toNpc = due.FirstOrDefault(l => !l.ToPlayer);
+            if (toNpc != null && !_letterWorkInFlight)
+            {
+                _letterBag.Remove(toNpc.Id);
+                SaveLetterBag();
+                MarkLetterWorkInFlight();
+                _ = AnswerPlayerLetterAsync(toNpc);
+            }
+        }
+
+        private void MarkLetterWorkInFlight()
+        {
+            _letterWorkInFlight = true;
+            _letterWorkSince = DateTime.UtcNow;
+        }
+
+        // A letter can find the player in a settlement or on the road alike; it only waits out a
+        // battle or an open conversation, so the reading is never shoved into a fight.
+        private static bool IsSafeForLetterUi()
+        {
+            try
+            {
+                if (Campaign.Current == null || Mission.Current != null) return false;
+                var player = Hero.MainHero;
+                if (player == null || !player.IsAlive) return false;
+                var conv = Campaign.Current.ConversationManager;
+                return (conv == null || !conv.IsConversationInProgress) && Hero.OneToOneConversationHero == null;
+            }
+            catch { return false; }
+        }
+
+        // Rolls each DISTANT NPC's chance to sit down and write this hour — the mirror of
+        // PickInitiatingNpcForThisHour, for everyone that picker skips as not co-located. Writing is
+        // rarer than crossing a room (LetterCourier.WriteRateFactor), and one courier per bond keeps
+        // correspondence a conversation rather than a flood.
+        private void MaybeStartNpcLetter()
+        {
+            if (_letterWorkInFlight) return;
+
+            try
+            {
+                var root = NpcPaths.CampaignRoot;
+                if (!Directory.Exists(root)) return;
+
+                double nowDay = CampaignTime.Now.ToDays;
+                var moved = new List<Hero>();
+                var pulls = new List<double>();
+
+                foreach (var folder in Directory.GetDirectories(root))
+                {
+                    var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
+                    if (!File.Exists(memFile)) continue;
+
+                    NpcMemory memory;
+                    try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
+                    catch { continue; }
+
+                    if (string.IsNullOrWhiteSpace(memory.NpcId) || memory.StoryRichness <= 0) continue;
+                    if (_letterBag!.HasInFlightWith(memory.NpcId)) continue;
+
+                    var hero = FindAliveHero(memory.NpcId);
+                    if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner) continue;
+                    if (IsCoLocated(hero)) continue; // near enough to walk over — that is the other flow
+
+                    double daysSince = memory.LastConversationGameDay >= 0
+                        ? Math.Max(0, nowDay - memory.LastConversationGameDay)
+                        : 0;
+                    double dailyChance = LetterCourier.WriteRateFactor * InitiationScorer.DailyChance(
+                        _config.DailyInitiationRate, memory.StoryRichness, GetStanding(hero), daysSince);
+                    if (dailyChance <= 0) continue;
+
+                    if (_rng.NextDouble() < dailyChance / 24.0)
+                    {
+                        moved.Add(hero);
+                        pulls.Add(dailyChance);
+                    }
+                }
+
+                if (moved.Count == 0) return;
+                int idx = moved.Count == 1 ? 0 : InitiationPlanner.PickWeightedIndex(pulls, _rng.NextDouble());
+                var writer = idx >= 0 ? moved[idx] : moved[0];
+
+                MarkLetterWorkInFlight();
+                _ = BeginNpcLetterAsync(writer);
+            }
+            catch { /* a quiet hour; never let the post break the tick */ }
+        }
+
+        // ------------------------------ the NPC writes ------------------------------
+
+        // The two beats of writing, both recorded as real Angel turns: the Angel asks whether they
+        // wish to write at all (they may decline in peace), and on a yes invites the letter itself —
+        // composed with the full self (persona, memory, situation-apart, even the gift of recall).
+        private async Task BeginNpcLetterAsync(Hero npc)
+        {
+            try
+            {
+                var situation = SafeBuildApartSituation(npc);
+                var ctx = BuildContext(npc, situation);
+
+                var desireLine = PromptBuilder.WriteLetterDesireLine(ctx.PlayerName);
+                var desireMsgs = _promptBuilder.BuildAngelPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
+                var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
+                var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
+
+                AppendAngelTurn(npc, desireLine, desireAnswer);
+
+                if (!InitiationParser.WantsToReachOut(desireAnswer)) { _letterWorkInFlight = false; return; }
+
+                // They wish to. The letter is written with everything they are — and the writing is
+                // itself a remembered moment (the compose line and the letter, as an Angel turn).
+                var composeCtx = BuildContext(npc, situation);
+                var composeLine = PromptBuilder.ComposeLetterLine(ctx.PlayerName);
+                var composeMsgs = _promptBuilder.BuildAngelPrompt(
+                    composeCtx.Persona, composeCtx.Memory, composeCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
+                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
+                var body = CleanLetterBody(bodyRaw);
+                if (body.Length == 0) { _letterWorkInFlight = false; return; }
+
+                AppendAngelTurn(npc, composeLine, body);
+
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    QueueLetter(npc, body, toPlayer: true, isReply: false);
+                    _letterWorkInFlight = false;
+                });
+            }
+            catch
+            {
+                // A letter that would not come simply was not written this hour.
+                _letterWorkInFlight = false;
+            }
+        }
+
+        private string SafeBuildApartSituation(Hero npc)
+        {
+            try { return Personas.SituationBuilder.Build(npc, Hero.MainHero, _config, apart: true); }
+            catch { return string.Empty; }
+        }
+
+        // Models sometimes hand a letter back wrapped in quotes or a stage direction; keep only the page.
+        private static string CleanLetterBody(string? raw)
+        {
+            var body = (raw ?? string.Empty).Trim();
+            if (body.Length >= 2 && (body[0] == '"' && body[body.Length - 1] == '"'
+                                  || body[0] == '“' && body[body.Length - 1] == '”'))
+                body = body.Substring(1, body.Length - 2).Trim();
+            return body;
+        }
+
+        // Queues one letter onto the road (travel time from the real map distance between the two
+        // ends right now), saves the bag, and writes the human-readable correspondence log.
+        private void QueueLetter(Hero npc, string body, bool toPlayer, bool isReply)
+        {
+            if (_letterBag == null) return;
+
+            double distance = HeroDistanceFromPlayer(npc);
+            double travelDays = LetterCourier.TravelDays(distance);
+            double now = CampaignTime.Now.ToDays;
+
+            var letter = new Letter
+            {
+                NpcId = npc.StringId,
+                NpcName = npc.Name?.ToString() ?? "Unknown",
+                ToPlayer = toPlayer,
+                Body = body,
+                SentGameDay = now,
+                ArriveGameDay = now + travelDays,
+                IsReply = isReply,
+                SentFrom = toPlayer ? Personas.SituationBuilder.Place(npc) : Personas.SituationBuilder.Place(Hero.MainHero),
+            };
+
+            _letterBag.Add(letter);
+            SaveLetterBag();
+            AppendCorrespondenceLog(npc, letter);
+
+            if (!toPlayer)
+            {
+                var name = letter.NpcName;
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"Your letter to {name} is away — a courier rides, some {travelDays:0.#} days on the road.",
+                    InitiationLogColor));
+            }
+        }
+
+        // Map distance between the NPC and the player right now; negative when a position cannot be
+        // read (the courier then assumes a middling road rather than a doorstep).
+        private static double HeroDistanceFromPlayer(Hero npc)
+        {
+            try
+            {
+                var main = MobileParty.MainParty;
+                if (main == null || npc == null) return -1;
+
+                if (npc.CurrentSettlement != null)
+                    return npc.CurrentSettlement.Position.Distance(main.Position);
+                if (npc.PartyBelongedTo != null)
+                    return npc.PartyBelongedTo.Position.Distance(main.Position);
+                return -1;
+            }
+            catch { return -1; }
+        }
+
+        // The plain-text record of the whole correspondence, one entry per letter, in the NPC's own
+        // folder — nothing about the bond is ever hidden from the player who goes looking.
+        private void AppendCorrespondenceLog(Hero npc, Letter letter)
+        {
+            try
+            {
+                NpcPaths.EnsureMigrated(npc);
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+
+                var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
+                var from = letter.ToPlayer ? letter.NpcName : playerName;
+                var to = letter.ToPlayer ? playerName : letter.NpcName;
+                double days = letter.ArriveGameDay - letter.SentGameDay;
+
+                var entry =
+                    $"[{Personas.SituationBuilder.Timestamp()}] {from} writes to {to}" +
+                    $" (from {letter.SentFrom}, ~{days:0.#} days on the road):" + Environment.NewLine +
+                    letter.Body + Environment.NewLine + Environment.NewLine;
+
+                File.AppendAllText(NpcPaths.CorrespondenceFile(npc), entry);
+            }
+            catch { /* the log is a nicety; the letter itself is already safe */ }
+        }
+
+        private void AppendCorrespondenceNote(Hero npc, string note)
+        {
+            try
+            {
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                File.AppendAllText(NpcPaths.CorrespondenceFile(npc),
+                    $"[{Personas.SituationBuilder.Timestamp()}] {note}" + Environment.NewLine + Environment.NewLine);
+            }
+            catch { /* best-effort */ }
+        }
+
+        // ------------------------------ a letter arrives for the player ------------------------------
+
+        private void PresentLetterToPlayer(Letter letter)
+        {
+            try
+            {
+                var npc = FindAliveHero(letter.NpcId);
+                var name = string.IsNullOrWhiteSpace(letter.NpcName) ? "Someone" : letter.NpcName;
+
+                if (npc != null)
+                    NotifyWithFace(npc, $"A letter from {name} has reached you.");
+                else
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"A letter from {name} has reached you.", InitiationLogColor));
+
+                double daysOnRoad = Math.Max(0, CampaignTime.Now.ToDays - letter.SentGameDay);
+                var provenance = $"Written at {letter.SentFrom}, some {daysOnRoad:0.#} days past." +
+                                 (npc == null ? " The hand that wrote it is gone from this world; these words are what remains." : string.Empty);
+
+                var title = $"A letter from {name}";
+                var body = provenance + "\n\n" + letter.Body;
+
+                // Write back only while there is still someone to answer.
+                if (npc != null)
+                {
+                    var data = new InquiryData(
+                        title, body, true, true,
+                        new TextObject("{=ImmersiveAI_LetterReply}Write back").ToString(),
+                        new TextObject("{=ImmersiveAI_LetterAside}Set it aside").ToString(),
+                        new Action(() => OpenLetterComposer(npc)), new Action(() => { }),
+                        "", 0f, (Action?)null,
+                        (Func<ValueTuple<bool, string>>?)null,
+                        (Func<ValueTuple<bool, string>>?)null);
+                    InformationManager.ShowInquiry(data, pauseGameActiveState: _config.PauseOnInitiationOffer);
+                }
+                else
+                {
+                    var data = new InquiryData(
+                        title, body, true, false,
+                        new TextObject("{=ImmersiveAI_LetterKeep}Take it to heart").ToString(), null,
+                        new Action(() => { }), null,
+                        "", 0f, (Action?)null,
+                        (Func<ValueTuple<bool, string>>?)null,
+                        (Func<ValueTuple<bool, string>>?)null);
+                    InformationManager.ShowInquiry(data, pauseGameActiveState: _config.PauseOnInitiationOffer);
+                }
+            }
+            catch (Exception ex)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+        }
+
+        // ------------------------------ the player writes ------------------------------
+
+        // The text box for the player's letter; used both for writing back and for the courier menu.
+        private void OpenLetterComposer(Hero npc)
+        {
+            var name = npc.Name?.ToString() ?? "them";
+            var send = new TextObject("{=ImmersiveAI_LetterSend}Send").ToString();
+            var cancel = GameTexts.FindText("str_cancel", null)?.ToString() ?? "Cancel";
+
+            var inquiry = new TextInquiryData(
+                $"Your letter to {name}",
+                string.Empty, true, true, send, cancel,
+                new Action<string>(text => OnPlayerLetterComposed(npc, text)),
+                new Action(() => { }),
+                false, null, "", "");
+
+            InformationManager.ShowTextInquiry(inquiry, false);
+        }
+
+        private void OnPlayerLetterComposed(Hero npc, string text)
+        {
+            var body = (text ?? string.Empty).Trim();
+            if (body.Length == 0) return;
+
+            if (_letterBag != null && _letterBag.HasInFlightWith(npc.StringId))
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"A courier already rides between you and {npc.Name}; wait for word.", InitiationLogColor));
+                return;
+            }
+
+            QueueLetter(npc, body, toPlayer: false, isReply: false);
+        }
+
+        // ------------------------------ a letter arrives for the NPC ------------------------------
+
+        // The player's words reach their hands. Reading is a recorded moment whether or not they
+        // answer (the letter's text lives inside the Angel's line); on a yes they compose the reply
+        // with their full self, and it rides back — once per letter received, so correspondence stays
+        // a chain of real choices.
+        private async Task AnswerPlayerLetterAsync(Letter letter)
+        {
+            Hero? npc = null;
+            try
+            {
+                npc = FindAliveHero(letter.NpcId);
+                if (npc == null)
+                {
+                    MainThreadDispatcher.Enqueue(() =>
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"Word returns that your letter to {letter.NpcName} could never be delivered.",
+                            InitiationLogColor));
+                        _letterWorkInFlight = false;
+                    });
+                    return;
+                }
+
+                var situation = SafeBuildApartSituation(npc);
+                var ctx = BuildContext(npc, situation);
+
+                var readLine = PromptBuilder.AnswerLetterDesireLine(ctx.PlayerName, letter.Body);
+                var readMsgs = _promptBuilder.BuildAngelPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, readLine, _config.SystemVoiceName);
+                var desireRaw = await _client.CompleteAsync(readMsgs).ConfigureAwait(false);
+                var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
+
+                AppendAngelTurn(npc, readLine, desireAnswer);
+
+                if (!InitiationParser.WantsToReachOut(desireAnswer))
+                {
+                    var heldNpc = npc;
+                    MainThreadDispatcher.Enqueue(() =>
+                    {
+                        AppendCorrespondenceNote(heldNpc, $"({heldNpc.Name} read the letter, and let it lie unanswered.)");
+                        _letterWorkInFlight = false;
+                    });
+                    return;
+                }
+
+                var replyCtx = BuildContext(npc, situation);
+                var composeLine = PromptBuilder.ComposeReplyLine(ctx.PlayerName);
+                var composeMsgs = _promptBuilder.BuildAngelPrompt(
+                    replyCtx.Persona, replyCtx.Memory, replyCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
+                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
+                var body = CleanLetterBody(bodyRaw);
+
+                AppendAngelTurn(npc, composeLine, body.Length == 0 ? "..." : body);
+
+                var writer = npc;
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    if (body.Length > 0) QueueLetter(writer, body, toPlayer: true, isReply: true);
+                    _letterWorkInFlight = false;
+                });
+            }
+            catch
+            {
+                _letterWorkInFlight = false;
+            }
+        }
+
+        // ------------------------------ the courier menu ------------------------------
+
+        // "Send a letter" wherever there are walls and roads — town, castle, and village menus. The
+        // recipient list is everyone this campaign has a real history with; whoever is standing in
+        // the same place is pointed back to their own face.
+        private void AddLetterMenus(CampaignGameStarter starter)
+        {
+            foreach (var menuId in new[] { "town", "castle", "village" })
+            {
+                starter.AddGameMenuOption(menuId, "immersiveai_send_letter_" + menuId,
+                    "{=ImmersiveAI_SendLetter}Send a letter by courier [Immersive AI]",
+                    OnLetterMenuCondition, _ => OnChooseLetterRecipient(), false, -1, false, null);
+            }
+        }
+
+        private bool OnLetterMenuCondition(MenuCallbackArgs args)
+        {
+            args.optionLeaveType = GameMenuOption.LeaveType.Conversation;
+            return _config.EnableLetters;
+        }
+
+        private void OnChooseLetterRecipient()
+        {
+            try
+            {
+                var elements = new List<InquiryElement>();
+                var root = NpcPaths.CampaignRoot;
+                double nowDay = CampaignTime.Now.ToDays;
+
+                if (Directory.Exists(root))
+                {
+                    foreach (var folder in Directory.GetDirectories(root))
+                    {
+                        var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
+                        if (!File.Exists(memFile)) continue;
+
+                        NpcMemory memory;
+                        try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
+                        catch { continue; }
+                        if (string.IsNullOrWhiteSpace(memory.NpcId) || memory.StoryRichness <= 0) continue;
+
+                        var hero = FindAliveHero(memory.NpcId);
+                        if (hero == null || hero == Hero.MainHero || !hero.IsAlive) continue;
+
+                        var name = hero.Name?.ToString() ?? memory.NpcName;
+                        double distance = HeroDistanceFromPlayer(hero);
+                        double travelDays = LetterCourier.TravelDays(distance);
+
+                        bool here = IsCoLocated(hero);
+                        bool courierBusy = _letterBag != null && _letterBag.HasInFlightWith(hero.StringId);
+
+                        string hint =
+                            here ? $"{name} is here with you — go and speak instead."
+                            : courierBusy ? $"A courier already rides between you and {name}; wait for word."
+                            : $"{Whereabouts(hero)} — a letter would ride some {travelDays:0.#} days.";
+
+                        var portrait = SafePortrait(hero);
+                        elements.Add(new InquiryElement(hero, name, portrait, !here && !courierBusy, hint));
+                    }
+                }
+
+                if (elements.Count == 0)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        "There is no one who knows you well enough to write to — speak with people first.",
+                        InitiationLogColor));
+                    return;
+                }
+
+                var data = new MultiSelectionInquiryData(
+                    new TextObject("{=ImmersiveAI_LetterTo}To whom will you write?").ToString(),
+                    new TextObject("{=ImmersiveAI_LetterToDesc}A courier will carry your letter across the map; the farther they are, the longer the road.").ToString(),
+                    elements, true, 1, 1,
+                    new TextObject("{=ImmersiveAI_LetterWrite}Write").ToString(),
+                    GameTexts.FindText("str_cancel", null)?.ToString() ?? "Cancel",
+                    picked =>
+                    {
+                        var hero = picked?.FirstOrDefault()?.Identifier as Hero;
+                        if (hero != null) OpenLetterComposer(hero);
+                    },
+                    null);
+
+                MBInformationManager.ShowMultiSelectionInquiry(data, true);
+            }
+            catch (Exception ex)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+        }
+
+        private static string Whereabouts(Hero h)
+        {
+            try
+            {
+                if (h.CurrentSettlement != null) return $"Last word places them at {h.CurrentSettlement.Name}";
+                if (h.PartyBelongedTo != null) return "They ride with their party";
+                return "Their whereabouts are uncertain";
+            }
+            catch { return "Their whereabouts are uncertain"; }
+        }
+
+        private static ImageIdentifier? SafePortrait(Hero h)
+        {
+            try { return new CharacterImageIdentifier(CharacterCode.CreateFrom(h.CharacterObject)); }
+            catch { return null; }
+        }
+
+        // Test lever: the NPC just spoken with weighs writing to the player the moment they part —
+        // co-located, so the letter lands within hours and the whole loop can be seen end to end.
+        private void OnDebugForceLetter()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null || _letterWorkInFlight || _letterBag == null) return;
+            if (_letterBag.HasInFlightWith(npc.StringId)) return;
+
+            MarkLetterWorkInFlight();
+            _ = BeginNpcLetterAsync(npc);
+        }
+    }
+}

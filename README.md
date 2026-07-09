@@ -61,8 +61,17 @@ Key Core concepts:
   `MaxWorldTidings`, `MaxLocalRumors`.
 - `MemoryCompressor` â€” the reflection: the Angel invites the NPC to settle their memory and,
   if they wish, revise who they have become.
+- `ToolLoopRunner` / `WorldRecall` â€” the gift of recall: mid-reply, an NPC can reach into the
+  world's memory (native LLM tool calls on both backends) for live campaign truth about a person,
+  place, clan, or realm â€” family names, who holds a town, which realms are at war â€” instead of
+  hallucinating it. Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
+- `LetterBag` / `LetterCourier` â€” letters: an NPC far away may write to you (at half their
+  reaching-out chance), and you can send letters from any town, castle, or village menu. Letters
+  travel real in-game days with the map distance, survive save/load, and the NPC who receives one
+  may write back once â€” every letter is remembered, and logged per NPC in `letters.txt`.
+  Config: `EnableLetters`.
 - `IChatClient` â€” backend abstraction; Anthropic/OpenAI-compatible implementations live
-  in the Module layer.
+  in the Module layer (both also speak native tool use via `IToolChatClient`).
 
 Memory token settings are configured as percentages of the selected model's context window:
 

@@ -40,6 +40,8 @@ namespace ImmersiveAI
         public const string CustomInstructionsFileName = "custom_instructions.txt";
         public const string SituationFileName = "current_situation_info.txt";
         public const string SelfFileName = "self.txt";
+        public const string CorrespondenceFileName = "letters.txt";
+        public const string LettersFileName = "_letters.json";
 
         public const string CampaignFolderPrefix = "campaign_";
         public const string CampaignLabelFileName = "_campaign.txt";
@@ -91,6 +93,13 @@ namespace ImmersiveAI
         public static string SituationFile(Hero npc) => Path.Combine(NpcFolder(npc), SituationFileName);
 
         public static string SelfFile(Hero npc) => Path.Combine(NpcFolder(npc), SelfFileName);
+
+        /// <summary>The human-readable log of every letter carried between this NPC and the player.</summary>
+        public static string CorrespondenceFile(Hero npc) => Path.Combine(NpcFolder(npc), CorrespondenceFileName);
+
+        /// <summary>The campaign's letters-on-the-road file (see Core's LetterBag): letters travel in
+        /// real in-game days and must survive save/load, so they persist beside the NPC folders.</summary>
+        public static string LettersFile => Path.Combine(CampaignRoot, LettersFileName);
 
         /// <summary>The NPC's first name only (second names excluded), for the folder label. Falls back
         /// to the first token of the full name, then to the raw id.</summary>
@@ -298,6 +307,13 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
                             own first-person voice) when they reflect - not by you. It grows over
                             time and is folded into their prompt as 'Who you have become'. Safe to
                             read; you may edit it, but the next reflection may rewrite it.
+  letters.txt             - a plain log of every letter carried between you and this NPC, in both
+                            directions. Read-only record; the letters themselves also live in the
+                            NPC's memory.
+
+A _letters.json in the campaign folder holds the letters currently ON THE ROAD (sent but
+not yet arrived). Deleting it loses those letters mid-journey; the ones already delivered
+are safe in each NPC's memory and letters.txt.
 
 You can delete an NPC's whole folder to reset that character, or delete a whole
 campaign_<id> folder to reset every memory of a playthrough you no longer keep.

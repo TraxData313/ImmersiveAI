@@ -25,9 +25,11 @@ calls the LLM → reply shown in the conversation panel, memory saved and compre
 
 You usually only need to open:
 - **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `TidingsBuilder` (Module), `MemoryCompressor` (Core).
-- **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module).
+- **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
+- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the four world-lookup tools) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
+- **Letters** → `LetterBag` / `LetterCourier` (Core, queue + travel math) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows).
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
 Always `dotnet test` after touching Core. Don't crack open the decompiled ChatAi reference unless
@@ -56,14 +58,18 @@ booting up.
 
 ```
 src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-tested
-  Llm/                    IChatClient abstraction + ChatMessage (no HTTP, no game deps)
+  Llm/                    IChatClient/IToolChatClient + ChatMessage/ChatResult, ToolDefinition/
+                          ToolCall, ToolLoopRunner (the recall loop; no HTTP, no game deps)
+  Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
   Memory/                 NpcMemory (3-layer per-person), NpcSelf (general self-concept),
                           ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self)
-  Prompts/                PromptBuilder (multi-turn message assembly), NpcPersona
+  Prompts/                PromptBuilder (multi-turn message assembly + Angel letter lines), NpcPersona
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
-  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient), factory
+  ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
+  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
+  Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
@@ -92,8 +98,17 @@ TaleWorlds API usage patterns, never copy from it.
   traits. Distinct voices + relevant-only context are the levers against repetition.
 - **Anthropic is the default backend**, model `claude-opus-4-8`. Clients use raw `HttpClient`
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
+  Both clients also implement `IToolChatClient` (native tool/function calling — the recall);
+  plain `IChatClient` stays the base so test fakes and simple calls remain untouched. Once a
+  history holds tool calls, both APIs require the tool definitions to keep riding along; the
+  final spoken-only round is forced with `tool_choice: none`, never by dropping the definitions.
 - **Async LLM calls never touch UI directly.** Background results are queued via
-  `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`.
+  `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`. Tool resolution
+  (`WorldRecall`) reads campaign state the same way: marshaled to the game thread via the
+  dispatcher + a `TaskCompletionSource`, with a timeout that answers an honest blank.
+- **This game version's map positions are `CampaignVec2 Position`** on `Settlement`/`MobileParty`
+  (`Position2D` is gone); distances via `.Distance()`/`.DistanceSquared()`. When an API looks
+  missing, probe the real DLLs with ilspycmd (see the decompiling memory note).
 
 ## Voice & tone — the guiding vision
 
@@ -150,7 +165,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   bonds write daily; the test button forces one on demand from the free-chat menu),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world happenings — wars, falls of
   realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
-  game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors).
+  game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
+  `EnableWorldRecall` + `MaxRecallsPerReply` (the gift of recall — NPCs fetching live campaign truth
+  about people/places/clans/realms mid-reply via native tool calls; default on, 3 rounds),
+  `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
+  menu in settlements; default on).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
@@ -173,7 +192,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
     into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
+  - `letters.txt` — human-readable log of every letter carried between the player and this NPC,
+    both directions, including "(read and let lie unanswered)" notes. Append-only record.
   - future per-NPC files go here too.
+- `NPCs\campaign_<id>\_letters.json` — the letters currently ON THE ROAD for that campaign
+  (Core `LetterBag`; letters travel real in-game days and must survive save/load). Delivered
+  letters leave this file — they live on in NPC memory and `letters.txt`.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 
 The folder layout, path resolution, and the one-time migration from the old flat
@@ -271,6 +295,41 @@ settlement. `PlayerMeetLordLogEntry` is excluded (it importance-spams every clan
 `TidingsFormatter` (Core, unit-tested); the block is appended by `SituationBuilder.Build` (which now takes
 the `ModConfig`), so it reaches every path — live chat, NPC-initiated flows, `current_situation_info.txt`,
 and the prompt inspector. Config: `EnableWorldTidings`, `MaxWorldTidings`, `MaxLocalRumors`.
+
+**The gift of recall (NPC tool-use).** Mid-reply, an NPC can reach into the world's memory instead of
+hallucinating: four native tools (`Tools\WorldRecall` — `recall_person`, `recall_place`, `recall_clan`,
+`recall_realm`) look up live campaign truth — kin and house, whereabouts (phrased as hearsay, "last word
+places them at…"), who holds a town, which realms are at war — and hand it back as gentle second-person
+remembrance. The loop is Core's `ToolLoopRunner` (complete → resolve → repeat, unit-tested): the final
+round keeps sending the definitions but sets `tool_choice: none`, so the turn always ends in words; a
+failed lookup returns an honest "Nothing surfaces…" so the model owns not knowing instead of inventing.
+Both clients implement `IToolChatClient` (Anthropic `tool_use` blocks / OpenAI function calls — this is
+NOT the in-message-mark problem: native tool calling is a first-class API channel on both backends, which
+is exactly why it's reliable where inline text marks were not). Resolution runs on the game thread
+(dispatcher + TCS, 15s timeout). Every spoken path goes through `CompleteSpokenAsync` — replies, recaps,
+approach beats, letter composition; short utility calls (feeling number, yes/no desires) stay plain. The
+NPC gets one whisper line about the gift only when the tools truly ride along (`NpcPersona.CanRecallWorld`).
+Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
+
+**Letters — the bond crosses the map.** The mirror of reaching-out for everyone `IsCoLocated` skips:
+each hour, distant NPCs with history roll `LetterCourier.WriteRateFactor` (0.5) × their reaching-out
+chance; one moved soul is asked by the Angel — privately, yes/no, recorded — whether they wish to write,
+and on a yes composes the letter with their full self (persona, memory, the situation built *apart*
+via `SituationBuilder.Build(..., apart: true)`, and the gift of recall). The letter rides real in-game
+days by map distance (Core `LetterCourier`: 150 units/day, 0.25–10 day rails) and persists across
+save/load in `campaign_<id>\_letters.json` (Core `LetterBag`, atomic writes) — a letter is a promise,
+unlike a live chat. Arrival: faced toast + pausing inquiry, "Write back" (opens the composer popup) or
+"Set it aside"; a letter whose writer died en route still arrives, marked so, with no write-back. The
+player can also send first: a "Send a letter by courier" option in every town/castle/village menu lists
+everyone with history (portraits; co-located people are disabled with "go and speak instead"; one courier
+per bond at a time). When the player's letter reaches the NPC, *reading it is a recorded moment* (the body
+lives inside the Angel's line, so it enters memory even if they let it lie), and they may answer at most
+once per letter — correspondence is a chain of choices, not an echo. Undeliverable (recipient dead) comes
+back as a quiet notice. All beats are Angel turns in `memories.json`; each NPC folder keeps a plain
+`letters.txt` of the whole correspondence. One letter LLM job at a time (3-min self-heal watchdog), at
+most one delivery per direction per hour. Test lever: "[test — trigger them to write you a letter]"
+(co-located → lands in ~6 game-hours). The odds view shows distant NPCs' letter chance. Config:
+`EnableLetters`.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

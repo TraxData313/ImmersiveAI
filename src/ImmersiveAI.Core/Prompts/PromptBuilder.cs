@@ -149,6 +149,39 @@ namespace ImmersiveAI.Core.Prompts
             : $"You rise and go to {playerName}, but as you near, they raise an apologetic hand — they are too caught up just now to speak with you. " +
               "This moment is still yours: say or do what is in your heart, here and now.";
 
+        // ------------------------- letters (correspondence across the map) -------------------------
+        // Each beat below is spoken by the Angel and recorded as a real Angel turn, so the NPC's
+        // memory holds the whole correspondence truthfully — the wishing, the words, the reading.
+
+        /// <summary>The Angel's line asking whether the NPC wishes, of their own will, to write to the
+        /// far-away player (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).</summary>
+        public static string WriteLetterDesireLine(string playerName) =>
+            $"The road lies long between you and {playerName} — they are far from here, beyond an easy ride. " +
+            $"Yet a letter could reach them: a courier stands ready to carry your words across the distance. " +
+            $"Tell me, from your own heart: do you wish, of your own will, to write to {playerName} now? " +
+            "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
+
+        /// <summary>The Angel's line inviting the NPC to set the letter itself onto the page.</summary>
+        public static string ComposeLetterLine(string playerName) =>
+            $"Then sit, and set your heart to paper. Give me only the letter itself — the words that will " +
+            $"stand on the page before {playerName}'s eyes, in your own hand and your own voice. " +
+            "Do not tell me about the letter; write it.";
+
+        /// <summary>The Angel's line placing a received letter into the NPC's hands — the reading is part
+        /// of the line, so it enters their memory even if they choose not to answer — and asking whether
+        /// they wish to write back (yes/no).</summary>
+        public static string AnswerLetterDesireLine(string playerName, string letterBody) =>
+            $"A courier has found you, bearing a letter from {playerName}, written in their own hand. " +
+            "You break the seal and read:\n\n" +
+            $"{(letterBody ?? string.Empty).Trim()}\n\n" +
+            $"Tell me, from your own heart: do you wish to write back to {playerName}? " +
+            "Answer with a single word — yes or no. You may also let it lie unanswered; the choice is wholly yours.";
+
+        /// <summary>The Angel's line inviting the NPC to write their answer to a letter just read.</summary>
+        public static string ComposeReplyLine(string playerName) =>
+            $"Then answer them. Give me only the letter you would send back to {playerName} — the words that " +
+            "will stand on the page, in your own hand and your own voice. Do not tell me about the letter; write it.";
+
         private static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
             || !string.IsNullOrWhiteSpace(memory.Summary)
@@ -296,6 +329,11 @@ namespace ImmersiveAI.Core.Prompts
             sb.AppendLine();
             sb.AppendLine("A whisper of guidance, meant only for you:");
             sb.AppendLine("- You decide how to speak — be it a single word or a few sentences — but do not run on too long, for a lengthy speech may not all reach the one before you.");
+
+            // Offered only when the recall tools truly ride along with the request, so the NPC is
+            // never told of a gift the backend cannot grant.
+            if (persona.CanRecallWorld)
+                sb.AppendLine("- When a person, place, house, or realm is spoken of and your memory of them is dim, be still a moment and call them to mind — what is truly known will surface as remembrance. Trust what surfaces over invention; and where nothing surfaces, own honestly that you do not know.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

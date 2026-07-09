@@ -34,13 +34,17 @@ Leave your fingerprints and pick it back up like a friend returning, not a stran
 
 ```
 src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-tested
-  Llm/                    IChatClient abstraction + ChatMessage (no HTTP, no game deps)
+  Llm/                    IChatClient/IToolChatClient + ChatMessage/ChatResult, ToolDefinition/
+                          ToolCall, ToolLoopRunner (the recall loop; no HTTP, no game deps)
+  Letters/                Letter, LetterBag (queue + persistence), LetterCourier (travel math)
   Memory/                 NpcMemory (3-layer), ConversationTurn, JsonMemoryStore, MemoryCompressor
-  Prompts/                PromptBuilder (multi-turn message assembly), NpcPersona
+  Prompts/                PromptBuilder (multi-turn message assembly + letter lines), NpcPersona
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
-  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient), factory
+  ImmersiveChatBehavior.Letters.cs  partial: the letter flows (NPC writes, player writes, arrivals)
+  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
+  Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits)
@@ -98,7 +102,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `NotifyWhenReplyReady` + `ShowConversationInMessageLog`, `EnableRelationshipChanges` (relation shifts
   via a second, isolated feeling call), `EnableNpcInitiatedChats` (+ related initiation knobs),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
-  folded into the situation).
+  folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
+  campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
@@ -119,7 +124,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
     into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
+  - `letters.txt` — human-readable log of all letters carried between the player and this NPC.
   - future per-NPC files go here too.
+- `NPCs\campaign_<id>\_letters.json` — letters currently on the road (Core `LetterBag`); they
+  travel real in-game days by distance and must survive save/load.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 
 The folder layout, path resolution, and the one-time migration from the old flat
@@ -133,6 +141,14 @@ CLAUDE.md / AGENTS.md together.**
 Talking to any hero shows a **"Speak freely with me. [Immersive AI]"** dialog option →
 "Say something..." → a text popup → the reply appears in the conversation panel and loops.
 Errors surface as a top-left "Immersive AI: ..." message.
+
+NPCs also act on their own: co-located ones may reach out for a face-to-face talk (bond-scaled
+hourly rolls); distant ones may WRITE — letters travel real in-game days by map distance,
+persist in `_letters.json`, and the player can send letters from town/castle/village menus
+("Send a letter by courier"), with the NPC answering at most once per letter. Mid-reply, NPCs
+can also reach into the world's memory (native tool calls via `WorldRecall`) for live campaign
+truth about people, places, clans, and realms, instead of hallucinating. See CLAUDE.md for the
+full design of both.
 
 Known caveat: the "considers your words..." → reply transition can outrun a slow LLM call and
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.

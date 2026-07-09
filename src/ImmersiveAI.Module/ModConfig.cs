@@ -75,6 +75,14 @@ namespace ImmersiveAI
         /// portrait map-notice (a future UI task) will make this moot.</summary>
         public bool PauseOnInitiationOffer { get; set; } = true;
 
+        /// <summary>When true, letters cross the map: an NPC far from the player (who therefore cannot
+        /// walk over — see <see cref="EnableNpcInitiatedChats"/>) may write instead, at half their
+        /// reaching-out chance; the letter travels real in-game days with the distance and survives
+        /// save/load. The player can also send letters from any town, castle, or village menu, and the
+        /// NPC who receives one may write back once. Set false for a world where word only travels
+        /// face to face.</summary>
+        public bool EnableLetters { get; set; } = true;
+
         /// <summary>When true, a "[Immersive AI • test]" option appears in the free-chat menu that makes the
         /// NPC you are speaking with reach out to you right after you part — a way to exercise the
         /// initiation flow on demand instead of waiting on the daily odds. Set false to hide it.</summary>
@@ -93,6 +101,18 @@ namespace ImmersiveAI
         /// <summary>At most how many overheard local rumors an NPC carries (0 to give none). Rumors only
         /// exist where there are streets to overhear them — in a settlement, not on the open road.</summary>
         public int MaxLocalRumors { get; set; } = 3;
+
+        /// <summary>When true, NPCs may reach into the world's memory mid-thought — native tool calls that
+        /// fetch live campaign truth about a person, place, clan, or realm (family members, who holds a
+        /// town, which realms are at war) — so they stop misremembering their own cousins. Works on both
+        /// backends; each recall is one extra round-trip within the same reply. Set false to leave them
+        /// with only what their prompt carries.</summary>
+        public bool EnableWorldRecall { get; set; } = true;
+
+        /// <summary>At most how many recall rounds one reply may spend before it must simply speak
+        /// (each round can carry several lookups). Keeps a curious NPC from wandering the archives
+        /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>
+        public int MaxRecallsPerReply { get; set; } = 3;
 
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
@@ -170,6 +190,10 @@ namespace ImmersiveAI
             // every NPC hammering the player. 24 is already far more than anyone would want.
             if (DailyInitiationRate < 0 || double.IsNaN(DailyInitiationRate)) DailyInitiationRate = 0;
             if (DailyInitiationRate > 24) DailyInitiationRate = 24;
+
+            // Recall rounds: 0 is a legitimate "none"; more than a handful only slows replies down.
+            if (MaxRecallsPerReply < 0) MaxRecallsPerReply = 0;
+            if (MaxRecallsPerReply > 8) MaxRecallsPerReply = 8;
 
             // Tiding counts: 0 is a legitimate "none", but runaway values would bloat every prompt.
             if (MaxWorldTidings < 0) MaxWorldTidings = 0;
