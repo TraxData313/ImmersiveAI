@@ -306,34 +306,15 @@ namespace ImmersiveAI
             starter.AddPlayerLine("immersiveai_update_hold", "immersiveai_update_hold", "immersiveai_updating",
                 "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
 
-            // Show the full raw prompt she would receive on the next message: system prompt (persona,
-            // current situation, deep memory, facts, rules, custom instructions), the remembered turns
-            // as real user/assistant messages, then a placeholder for the player's next line.
+            // ONE window onto her whole mind (the separate situation / self / history peeks were
+            // united here, 2026.07.09 — they were all just slices of this): the exact message list
+            // she would receive on the next line — who she is, how she sees the surroundings, who
+            // she has become, what she remembers and holds true, and every remembered turn — shown
+            // in the scrollable window and saved uncut to full_prompt_snapshot.txt in her folder.
             starter.AddPlayerLine("immersiveai_deepmem", "immersiveai_input", "immersiveai_deepmem_out",
-                "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind as it holds me now. [Immersive AI]",
+                "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind — all you see, remember, and have become. [Immersive AI]",
                 null, OnShowRawPrompt, 107);
             starter.AddDialogLine("immersiveai_deepmem_line", "immersiveai_deepmem_out", "immersiveai_input",
-                "{=!}{" + InfoVar + "}", null, null);
-
-            // Show the environmental facts captured when this chat opened (current_situation_info.txt).
-            starter.AddPlayerLine("immersiveai_situation", "immersiveai_input", "immersiveai_situation_out",
-                "{=ImmersiveAI_Situation}What do you make of our situation here and now? [Immersive AI]",
-                null, OnShowSituation, 105);
-            starter.AddDialogLine("immersiveai_situation_line", "immersiveai_situation_out", "immersiveai_input",
-                "{=!}{" + InfoVar + "}", null, null);
-
-            // Show the NPC's own evolving sense of self (self.txt), authored by them when they reflect.
-            starter.AddPlayerLine("immersiveai_self", "immersiveai_input", "immersiveai_self_out",
-                "{=ImmersiveAI_Self}Tell me — who have you become? [Immersive AI]",
-                null, OnShowSelf, 104);
-            starter.AddDialogLine("immersiveai_self_line", "immersiveai_self_out", "immersiveai_input",
-                "{=!}{" + InfoVar + "}", null, null);
-
-            // Show the full verbatim conversation still held in recent memory.
-            starter.AddPlayerLine("immersiveai_history", "immersiveai_input", "immersiveai_history_out",
-                "{=ImmersiveAI_History}Recount for me everything we have spoken of. [Immersive AI]",
-                null, OnShowConversation, 106);
-            starter.AddDialogLine("immersiveai_history_line", "immersiveai_history_out", "immersiveai_input",
                 "{=!}{" + InfoVar + "}", null, null);
 
             // Test lever: end this chat and have the very person you were speaking with reach out to you a
@@ -650,88 +631,6 @@ namespace ImmersiveAI
                 case ChatRole.Assistant: return npcName;
                 default: return playerName;
             }
-        }
-
-        // "What do you make of our situation?" -> shows the current_situation_info.txt snapshot captured
-        // when this chat opened (the environmental facts, as the NPC sees them in her prompt).
-        private void OnShowSituation()
-        {
-            var npc = Hero.OneToOneConversationHero;
-            if (npc == null) return;
-
-            // Prefer the snapshot cached for this conversation; fall back to reading the file, then to
-            // rebuilding it live, so the view always has something to show.
-            var situation = _currentSituation;
-            if (string.IsNullOrWhiteSpace(situation))
-            {
-                try { situation = File.ReadAllText(NpcPaths.SituationFile(npc)); }
-                catch { situation = null; }
-            }
-            if (string.IsNullOrWhiteSpace(situation))
-                situation = SituationBuilder.Build(npc, Hero.MainHero, _config);
-
-            var name = npc.Name?.ToString() ?? "Unknown";
-            ShowScrollPopup(name + " — the situation here and now", situation.Trim());
-            MBTextManager.SetTextVariable(InfoVar, "(She takes stock of the moment.)", false);
-        }
-
-        // "Who have you become?" -> shows the NPC's own self-concept (self.txt), which they author when
-        // they reflect. Empty until their first reflection puts it into words.
-        private void OnShowSelf()
-        {
-            var npc = Hero.OneToOneConversationHero;
-            if (npc == null) return;
-
-            var self = LoadSelf(npc);
-            var name = npc.Name?.ToString() ?? "Unknown";
-            if (string.IsNullOrWhiteSpace(self))
-            {
-                ShowScrollPopup(name + " — who they have become",
-                    "(They have not yet put into words who they feel themselves to be. Ask them to reflect on all you have shared, and in time they may.)");
-                MBTextManager.SetTextVariable(InfoVar, "(She has not yet found the words for herself.)", false);
-                return;
-            }
-
-            ShowScrollPopup(name + " — who they have become", self.Trim());
-            MBTextManager.SetTextVariable(InfoVar, "(She tells you who she has become.)", false);
-        }
-
-        // "Recount everything we have spoken of" -> shows the verbatim recent turns (and notes that
-        // older exchanges now live only in the summary).
-        private void OnShowConversation()
-        {
-            var npc = Hero.OneToOneConversationHero;
-            if (npc == null) return;
-
-            var memory = LoadMemory(npc);
-            var npcName = npc.Name?.ToString() ?? "I";
-            var playerName = Hero.MainHero?.Name?.ToString() ?? "You";
-            var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
-
-            var sb = new StringBuilder();
-            if (!string.IsNullOrWhiteSpace(memory.Summary))
-            {
-                sb.AppendLine("(Earlier days, now held only in memory: " + memory.Summary.Trim() + ")");
-                sb.AppendLine();
-            }
-
-            if (memory.RecentTurns.Count == 0)
-            {
-                sb.AppendLine("(We have not yet spoken.)");
-            }
-            else
-            {
-                foreach (var turn in memory.RecentTurns)
-                {
-                    // The Angel's own exchanges with the NPC are shown too, labelled by voice — nothing hidden.
-                    sb.AppendLine((turn.IsFromAngel ? voice : playerName) + ": " + turn.PlayerLine);
-                    sb.AppendLine(npcName + ": " + turn.NpcLine);
-                    sb.AppendLine();
-                }
-            }
-
-            ShowScrollPopup(npcName + " — all we have spoken", sb.ToString().Trim());
-            MBTextManager.SetTextVariable(InfoVar, "(She recounts it all for you.)", false);
         }
 
         // Shows read-only text in the game's scrollable inquiry pop-up, which handles long content
