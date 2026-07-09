@@ -96,16 +96,25 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
   `AtmosphereLine` + `RoleplayGuidance` (configurable opening line + world-wide tone/roleplay guidance),
   `NotifyWhenReplyReady` + `ShowConversationInMessageLog`, `EnableRelationshipChanges` (relation shifts
-  via a second, isolated feeling call), `EnableNpcInitiatedChats` (+ related initiation knobs).
+  via a second, isolated feeling call), `EnableNpcInitiatedChats` (+ related initiation knobs),
+  `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
+  folded into the situation).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
-- `NPCs\<stringId>_<FirstName>\` — one folder per NPC (e.g. `NPCs\lord_7_13_1_Gunjadrid\`).
+- `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
+  campaigns, so memories are scoped by a campaign id minted once by `ImmersiveChatBehavior` and
+  persisted inside the save via `SyncData` (`Campaign.UniqueGameId` changes on every save, so it
+  can't be used). New campaigns get `campaign_<8hex>_<PlayerFirstName>`; pre-scoping saves all
+  resolve to the fixed `campaign_legacy` and their flat NPC folders are adopted into it on first
+  load. A `_campaign.txt` label (character, clan, last played) is rewritten each session.
+- `NPCs\campaign_<id>\<stringId>_<FirstName>\` — one folder per NPC (e.g. `lord_7_13_1_Gunjadrid\`).
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
-  - `current_situation_info.txt` — environmental facts (when/where/who) snapshot, rewritten
-    every time the player opens a chat; built by `SituationBuilder` relative to the party the
-    NPC speaks with, written as a gentle second-person narration and folded into her prompt.
+  - `current_situation_info.txt` — environmental facts (when/where/who) snapshot plus recent
+    world tidings & local rumors (`TidingsBuilder`), rewritten every time the player opens a
+    chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as a
+    gentle second-person narration and folded into her prompt.
   - `self.txt` — the NPC's OWN evolving sense of self (`NpcSelf`), written by them in first
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded

@@ -87,6 +87,13 @@ namespace ImmersiveAI
         // The NPC behind the pending offer (their opening words are generated only once the player accepts).
         private Hero? _initiationNpc;
 
+        // This campaign's identity, persisted INSIDE the save (SyncData) so every save of one
+        // playthrough reopens the same NPC memory folder — hero string ids repeat across campaigns,
+        // so without this a new game's Gunjadrid would remember a world that never happened to her.
+        // Minted once (new game, or first load of a pre-scoping save → the fixed legacy id) and
+        // stable for the campaign's whole life. See NpcPaths for the folder layout.
+        private string _campaignId = string.Empty;
+
         public ImmersiveChatBehavior(ModConfig config)
         {
             _config = config;
@@ -141,9 +148,52 @@ namespace ImmersiveAI
         {
             // Each hour, give the NPCs co-located with the player their small, bond-scaled chance to reach out.
             CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);
+
+            // Resolve which campaign's memory folder is on stage before any NPC file is touched.
+            // OnGameLoaded fires after SyncData has read the persisted id; OnSessionLaunched fires
+            // for new games too (after character creation, so the player's name is known).
+            CampaignEvents.OnGameLoadedEvent.AddNonSerializedListener(this, OnGameLoaded);
+            CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);
         }
 
-        public override void SyncData(IDataStore dataStore) { }
+        public override void SyncData(IDataStore dataStore)
+        {
+            dataStore.SyncData("ImmersiveAI_CampaignId", ref _campaignId);
+        }
+
+        // A loaded save either carries its campaign id already, or predates campaign scoping — in
+        // which case it gets the fixed legacy id, and the flat pre-scoping NPC folders (the shared
+        // pool every old save drew from) are adopted into campaign_legacy. Because EVERY old save
+        // maps to that same id, the move can never strand memories, even if the player loads an
+        // old save, plays, and quits without saving.
+        private void OnGameLoaded(CampaignGameStarter starter)
+        {
+            bool preScoping = string.IsNullOrEmpty(_campaignId);
+            if (preScoping) _campaignId = NpcPaths.LegacyCampaignId;
+
+            NpcPaths.ActiveCampaignId = _campaignId;
+
+            if (preScoping)
+            {
+                NpcPaths.AdoptLegacyIntoActiveCampaign();
+                NpcPaths.MigrateAll(); // ancient flat memory\ / npcs\ files, now campaign-scoped
+            }
+        }
+
+        // New campaigns mint a fresh id here (nothing to adopt — a new world starts unremembered);
+        // loaded ones already resolved in OnGameLoaded. Either way, refresh the human-readable label.
+        private void OnSessionLaunched(CampaignGameStarter starter)
+        {
+            if (string.IsNullOrEmpty(_campaignId))
+                _campaignId = NpcPaths.MintCampaignId(Hero.MainHero != null ? NpcPaths.FirstNameOf(Hero.MainHero) : string.Empty);
+
+            NpcPaths.ActiveCampaignId = _campaignId;
+            NpcPaths.WriteCampaignLabel(
+                Hero.MainHero?.Name?.ToString() ?? "(unknown)",
+                Clan.PlayerClan?.Name?.ToString() ?? "(unknown)",
+                CampaignTime.Now.ToString());
+            NpcPaths.EnsureRuntimeReadme();
+        }
 
         public void AddDialogs(CampaignGameStarter starter)
         {
@@ -342,7 +392,7 @@ namespace ImmersiveAI
 
             try
             {
-                var situation = SituationBuilder.Build(npc, Hero.MainHero);
+                var situation = SituationBuilder.Build(npc, Hero.MainHero, _config);
                 _currentSituation = situation;
                 NpcPaths.EnsureMigrated(npc);
                 Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
@@ -561,7 +611,7 @@ namespace ImmersiveAI
                 catch { situation = null; }
             }
             if (string.IsNullOrWhiteSpace(situation))
-                situation = SituationBuilder.Build(npc, Hero.MainHero);
+                situation = SituationBuilder.Build(npc, Hero.MainHero, _config);
 
             var name = npc.Name?.ToString() ?? "Unknown";
             ShowScrollPopup(name + " — the situation here and now", situation.Trim());
@@ -909,7 +959,7 @@ namespace ImmersiveAI
         {
             try
             {
-                var root = NpcPaths.NpcsRoot;
+                var root = NpcPaths.CampaignRoot;
                 if (!Directory.Exists(root)) return null;
 
                 double nowDay = CampaignTime.Now.ToDays;
@@ -1052,9 +1102,9 @@ namespace ImmersiveAI
             });
         }
 
-        private static string SafeBuildSituation(Hero npc)
+        private string SafeBuildSituation(Hero npc)
         {
-            try { return SituationBuilder.Build(npc, Hero.MainHero); }
+            try { return SituationBuilder.Build(npc, Hero.MainHero, _config); }
             catch { return string.Empty; }
         }
 
@@ -1267,7 +1317,7 @@ namespace ImmersiveAI
 
             try
             {
-                var root = NpcPaths.NpcsRoot;
+                var root = NpcPaths.CampaignRoot;
                 double nowDay = CampaignTime.Now.ToDays;
                 int shown = 0;
 
@@ -1365,7 +1415,7 @@ namespace ImmersiveAI
             var scene = !string.IsNullOrWhiteSpace(sceneOverride)
                 ? sceneOverride!
                 : string.IsNullOrWhiteSpace(_currentSituation)
-                    ? SituationBuilder.Build(npc, Hero.MainHero)
+                    ? SituationBuilder.Build(npc, Hero.MainHero, _config)
                     : _currentSituation!;
 
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";

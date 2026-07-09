@@ -8,15 +8,24 @@ using TaleWorlds.CampaignSystem;
 namespace ImmersiveAI
 {
     /// <summary>
-    /// Owns the on-disk layout of per-NPC runtime files. Everything an NPC accumulates lives in
-    /// its own folder so it is easy to find and inspect by hand:
+    /// Owns the on-disk layout of per-NPC runtime files. Memories are scoped per CAMPAIGN
+    /// (one playthrough = one world), because Hero string ids repeat across campaigns —
+    /// lord_7_13_1 is "the same" Gunjadrid in every new game, and without scoping she would
+    /// greet a fresh playthrough with memories of a world that never happened there:
     ///
-    ///   Configs\ImmersiveAI\NPCs\&lt;stringId&gt;_&lt;FirstName&gt;\
+    ///   Configs\ImmersiveAI\NPCs\campaign_&lt;campaignId&gt;\&lt;stringId&gt;_&lt;FirstName&gt;\
     ///       memories.json           - the persisted NpcMemory (was memory\&lt;stringId&gt;.json)
     ///       custom_instructions.txt - per-NPC prompt (was npcs\&lt;stringId&gt;.txt)
     ///       &lt;future per-NPC files go here too&gt;
     ///
-    /// The folder name embeds the NPC's first name for readability, but identity is the stringId:
+    /// The campaign id is minted by ImmersiveChatBehavior and persisted INSIDE the save via
+    /// SyncData, so every save of one campaign reopens the same folder. (The game's own
+    /// Campaign.UniqueGameId is useless here — it changes on every save.) Saves from before
+    /// this scoping carry no id and all resolve to the fixed <see cref="LegacyCampaignId"/>,
+    /// which is exactly the behavior they always had (one shared pool) and guarantees the
+    /// adoption move can never orphan memories, even if the player loads but never saves.
+    ///
+    /// The NPC folder name embeds the first name for readability, but identity is the stringId:
     /// the folder path is derived deterministically from (stringId, firstName), and both are always
     /// available at every call site (we hold the live Hero). Old flat files are migrated in place the
     /// first time an NPC is touched, so existing memories are never wiped.
@@ -32,8 +41,34 @@ namespace ImmersiveAI
         public const string SituationFileName = "current_situation_info.txt";
         public const string SelfFileName = "self.txt";
 
-        /// <summary>Root that holds one subfolder per NPC.</summary>
+        public const string CampaignFolderPrefix = "campaign_";
+        public const string CampaignLabelFileName = "_campaign.txt";
+
+        /// <summary>The fixed id every pre-scoping save resolves to (they always shared one pool).</summary>
+        public const string LegacyCampaignId = "legacy";
+
+        /// <summary>The campaign whose world is on stage. Set by ImmersiveChatBehavior from the id
+        /// persisted in the save (or minted for it) before any NPC file is touched. Empty only
+        /// outside a campaign; then paths fall back to the unscoped root, which never happens
+        /// during actual play.</summary>
+        public static string ActiveCampaignId { get; set; } = string.Empty;
+
+        /// <summary>Umbrella root that holds one campaign_&lt;id&gt; subfolder per playthrough.</summary>
         public static string NpcsRoot => Path.Combine(ModConfig.ConfigDirectory, "NPCs");
+
+        /// <summary>Root for the active campaign's NPC folders.</summary>
+        public static string CampaignRoot => string.IsNullOrEmpty(ActiveCampaignId)
+            ? NpcsRoot
+            : Path.Combine(NpcsRoot, CampaignFolderPrefix + ActiveCampaignId);
+
+        /// <summary>A fresh campaign id: short random token + the player's first name for
+        /// human-readable folder names (identity is the whole string, name included).</summary>
+        public static string MintCampaignId(string playerFirstName)
+        {
+            var id = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var fn = Sanitize(playerFirstName);
+            return (fn.Length > 0 && fn != "_") ? id + "_" + fn : id;
+        }
 
         // Legacy flat layout (pre-restructure), kept only so it can be migrated forward.
         private static string LegacyMemoryDir => Path.Combine(ModConfig.ConfigDirectory, "memory");
@@ -46,7 +81,7 @@ namespace ImmersiveAI
             var folderName = Sanitize(npcId);
             var fn = Sanitize(firstName);
             if (fn.Length > 0 && fn != "_") folderName += "_" + fn;
-            return Path.Combine(NpcsRoot, folderName);
+            return Path.Combine(CampaignRoot, folderName);
         }
 
         public static string MemoryFile(Hero npc) => Path.Combine(NpcFolder(npc), MemoryFileName);
@@ -75,9 +110,63 @@ namespace ImmersiveAI
         /// any IO failure is swallowed so a chat is never blocked by housekeeping.
         /// </summary>
         /// <summary>
+        /// Moves any pre-campaign-scoping NPC folders (directly under NPCs\, no campaign_ prefix)
+        /// into the active campaign's folder. Only ever called when the active campaign is the
+        /// legacy one — those folders were the shared pool of every pre-scoping save, which is
+        /// exactly what campaign_legacy is. Per-folder best-effort and idempotent: a folder that
+        /// fails to move (open handle, etc.) is left in place for the next load to retry.
+        /// </summary>
+        public static void AdoptLegacyIntoActiveCampaign()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(ActiveCampaignId) || !Directory.Exists(NpcsRoot)) return;
+
+                foreach (var dir in Directory.GetDirectories(NpcsRoot))
+                {
+                    var name = Path.GetFileName(dir);
+                    if (string.IsNullOrEmpty(name)
+                        || name.StartsWith(CampaignFolderPrefix, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        Directory.CreateDirectory(CampaignRoot);
+                        var dest = Path.Combine(CampaignRoot, name);
+                        if (!Directory.Exists(dest)) Directory.Move(dir, dest);
+                    }
+                    catch { /* leave it; the next load retries and lazy EnsureMigrated still finds it */ }
+                }
+            }
+            catch { /* best-effort housekeeping */ }
+        }
+
+        /// <summary>Writes a small human-readable label into the active campaign's folder so the
+        /// user browsing NPCs\ can tell which playthrough is which. Rewritten every session, so
+        /// "last played" stays fresh.</summary>
+        public static void WriteCampaignLabel(string characterName, string clanName, string gameDate)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(ActiveCampaignId)) return;
+                Directory.CreateDirectory(CampaignRoot);
+
+                var text =
+                    "This folder holds the NPC memories of ONE campaign (one playthrough)." + Environment.NewLine +
+                    "Character:   " + characterName + Environment.NewLine +
+                    "Clan:        " + clanName + Environment.NewLine +
+                    "Last played: " + DateTime.Now.ToString("yyyy.MM.dd HH:mm") +
+                    " (in-game: " + gameDate + ")" + Environment.NewLine;
+                File.WriteAllText(Path.Combine(CampaignRoot, CampaignLabelFileName), text);
+            }
+            catch { /* best-effort */ }
+        }
+
+        /// <summary>
         /// Eagerly migrates ALL existing flat-layout files into per-NPC folders, using the NpcName
         /// stored inside each memories JSON to derive the folder's first-name suffix (no live Hero
-        /// needed). Called once on save-load so the folder reorganizes immediately instead of only
+        /// needed). Called once on save-load (after the campaign id is resolved, so folders land
+        /// under the right campaign) so the Configs folder reorganizes immediately instead of only
         /// when the player happens to talk to each NPC. Best-effort and idempotent.
         /// </summary>
         public static void MigrateAll()
@@ -168,15 +257,16 @@ namespace ImmersiveAI
             try { File.Delete(oldPath); } catch { /* leave orphan; new file is authoritative */ }
         }
 
-        /// <summary>Drops a short human-readable README in the NPCs root the first time, so the user
-        /// (who edits these files by hand) understands the layout.</summary>
+        /// <summary>Drops a short human-readable README in the NPCs root, so the user (who edits
+        /// these files by hand) understands the layout. Rewritten whenever the text here changes,
+        /// since the file is auto-authored, not the user's.</summary>
         public static void EnsureRuntimeReadme()
         {
             try
             {
                 Directory.CreateDirectory(NpcsRoot);
                 var readmePath = Path.Combine(NpcsRoot, "_README.txt");
-                if (!File.Exists(readmePath))
+                if (!File.Exists(readmePath) || File.ReadAllText(readmePath) != RuntimeReadmeText)
                     File.WriteAllText(readmePath, RuntimeReadmeText);
             }
             catch { /* best-effort */ }
@@ -186,8 +276,14 @@ namespace ImmersiveAI
 @"Immersive AI - per-NPC files
 ============================
 
-Each NPC has one folder here, named <stringId>_<FirstName> (e.g. lord_7_13_1_Gunjadrid).
-Inside each folder:
+Each CAMPAIGN (one playthrough) has one folder here, named campaign_<id> — the id is
+stored inside that campaign's save files, so the same world always reopens the same
+folder and two playthroughs never share memories (the 'same' lord in a new game is a
+stranger again). campaign_legacy holds everything from before this scoping; saves made
+back then all open it. A _campaign.txt inside names the character it belongs to.
+
+Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
+(e.g. lord_7_13_1_Gunjadrid). Inside each NPC folder:
 
   memories.json           - everything the NPC remembers of you (recent turns, rolling
                             summary, known facts). Safe to read; edit only if you know the
@@ -203,7 +299,8 @@ Inside each folder:
                             time and is folded into their prompt as 'Who you have become'. Safe to
                             read; you may edit it, but the next reflection may rewrite it.
 
-You can delete an NPC's whole folder to reset that character.
+You can delete an NPC's whole folder to reset that character, or delete a whole
+campaign_<id> folder to reset every memory of a playthrough you no longer keep.
 ";
 
         private static string Sanitize(string name)

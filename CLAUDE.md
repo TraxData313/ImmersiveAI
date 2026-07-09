@@ -24,7 +24,7 @@ Mental model: **Core = pure, unit-tested logic; Module = Bannerlord glue.** Talk
 calls the LLM → reply shown in the conversation panel, memory saved and compressed when it grows.
 
 You usually only need to open:
-- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` (Module), `MemoryCompressor` (Core).
+- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `TidingsBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module).
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
@@ -147,16 +147,28 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableNpcInitiatedChats` + `DailyInitiationRate` + `ShowInitiationTestButton` (NPCs reaching out to
   the player on their own; the rate is the daily ceiling for a *maxed* bond — actual chance scales by how
   often you talk and how far the standing is from 0, so a fresh game stays quiet; ~1.5 lets the closest
-  bonds write daily; the test button forces one on demand from the free-chat menu).
+  bonds write daily; the test button forces one on demand from the free-chat menu),
+  `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world happenings — wars, falls of
+  realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
+  game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
-- `NPCs\<stringId>_<FirstName>\` — one folder per NPC (e.g. `NPCs\lord_7_13_1_Gunjadrid\`).
+- `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
+  campaigns (lord_7_13_1 is "the same" Gunjadrid in every new game), so memories are scoped by a
+  campaign id minted once by `ImmersiveChatBehavior` and persisted *inside the save* via `SyncData`
+  (`Campaign.UniqueGameId` is useless — it changes on every save). New campaigns get
+  `campaign_<8hex>_<PlayerFirstName>`; every save from before this scoping resolves to the fixed
+  `campaign_legacy` (they always shared one pool, so the adoption move can never orphan memories,
+  even on load-without-save). A `_campaign.txt` label inside (character, clan, last played) is
+  rewritten each session. Deleting a campaign folder resets that playthrough's memories.
+- `NPCs\campaign_<id>\<stringId>_<FirstName>\` — one folder per NPC (e.g. `lord_7_13_1_Gunjadrid\`).
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
-  - `current_situation_info.txt` — environmental facts (when/where/who) snapshot, rewritten
-    every time the player opens a chat; built by `SituationBuilder` relative to the party the
-    NPC speaks with, written as a gentle second-person narration and folded into her prompt.
+  - `current_situation_info.txt` — environmental facts (when/where/who) snapshot plus recent world
+    tidings and local rumors (see `TidingsBuilder` below), rewritten every time the player opens a
+    chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as a gentle
+    second-person narration and folded into her prompt.
   - `self.txt` — the NPC's OWN evolving sense of self (`NpcSelf`), written by them in first
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
@@ -241,6 +253,24 @@ right after parting; `OnShowInitiationOdds` dumps, for every history NPC, whethe
 and their computed daily/hourly chance — the go-to answer for "why is it quiet?" (usually: no one
 co-located, or near-neutral standings). The proper right-side portrait map-notice is a TODO (needs a custom
 Gauntlet notification VM/prefab + Harmony).
+
+**Tidings & the talk of the town.** Every NPC's situation now carries what has lately happened in the
+world as far as it would have reached their ears, plus what the common folk are whispering where they
+stand — so a lord can bring up the war declared yesterday or congratulate the player on a tournament,
+unprompted. Source is the game's own `Campaign.Current.LogEntryHistory` (the very stream vanilla lords
+draw their "congratulations on winning the tournament" remarks from). `TidingsBuilder` (Module) walks the
+recent entries (≤21 days, bounded scan) and scores each by the game's own relevance judgments —
+`GetConversationScoreAndComment(npc, …)` (the vanilla per-hero score, called with `findString:false` so it
+never mutates conversation state — do NOT use `LogEntryHistory.GetRelevantComment`, it consumes
+`LastExaminedLogEntryID` and steals vanilla remarks) and `GetImportanceForClan` for both clans — topped
+with a small editorial baseline for news that travels on its own (wars/peace, kingdoms destroyed,
+settlements taken, notable deaths/marriages, the player's tournament wins). Facts are rendered with the
+entries' own `GetNotificationText()`/`GetEncyclopediaText()` sentences (markup stripped). Gossip uses the
+entries' `GetAsRumor(settlement, …)` lines — TaleWorlds' pre-written commoner-voiced rumors, only inside a
+settlement. `PlayerMeetLordLogEntry` is excluded (it importance-spams every clan). Prose shaping lives in
+`TidingsFormatter` (Core, unit-tested); the block is appended by `SituationBuilder.Build` (which now takes
+the `ModConfig`), so it reaches every path — live chat, NPC-initiated flows, `current_situation_info.txt`,
+and the prompt inspector. Config: `EnableWorldTidings`, `MaxWorldTidings`, `MaxLocalRumors`.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

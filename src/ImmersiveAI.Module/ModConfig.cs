@@ -80,6 +80,20 @@ namespace ImmersiveAI
         /// initiation flow on demand instead of waiting on the daily odds. Set false to hide it.</summary>
         public bool ShowInitiationTestButton { get; set; } = true;
 
+        /// <summary>When true, each NPC's situation carries tidings of the world's recent happenings —
+        /// wars declared and ended, towns changing hands, deaths, weddings, tournament wins — drawn from
+        /// the same campaign log vanilla lords remark from, filtered to what would plausibly have reached
+        /// that NPC's ears, plus the talk of the town where they stand. Set false for NPCs who know only
+        /// what they have lived and been told.</summary>
+        public bool EnableWorldTidings { get; set; } = true;
+
+        /// <summary>At most how many recent happenings are recounted to an NPC (0 to give none).</summary>
+        public int MaxWorldTidings { get; set; } = 6;
+
+        /// <summary>At most how many overheard local rumors an NPC carries (0 to give none). Rumors only
+        /// exist where there are streets to overhear them — in a settlement, not on the open road.</summary>
+        public int MaxLocalRumors { get; set; } = 3;
+
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
         /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>
@@ -156,6 +170,12 @@ namespace ImmersiveAI
             // every NPC hammering the player. 24 is already far more than anyone would want.
             if (DailyInitiationRate < 0 || double.IsNaN(DailyInitiationRate)) DailyInitiationRate = 0;
             if (DailyInitiationRate > 24) DailyInitiationRate = 24;
+
+            // Tiding counts: 0 is a legitimate "none", but runaway values would bloat every prompt.
+            if (MaxWorldTidings < 0) MaxWorldTidings = 0;
+            if (MaxWorldTidings > 20) MaxWorldTidings = 20;
+            if (MaxLocalRumors < 0) MaxLocalRumors = 0;
+            if (MaxLocalRumors > 10) MaxLocalRumors = 10;
 
             if (MaxRecentTurns <= 0) MaxRecentTurns = 30;
             if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 15;

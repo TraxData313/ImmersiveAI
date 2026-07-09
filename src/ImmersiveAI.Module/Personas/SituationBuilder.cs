@@ -100,9 +100,11 @@ namespace ImmersiveAI.Personas
         /// The full "current situation" — written as a gentle voice speaking softly into the speaker's
         /// mind, in the second person, never a clinical data sheet: when and where this moment finds
         /// them, who they are, and who has come to speak with them (standing and war/peace felt toward
-        /// that partner). This is what is saved to current_situation_info.txt and folded into the prompt.
+        /// that partner), and what has lately happened in the world around them (tidings and the talk of
+        /// the town — see <see cref="TidingsBuilder"/>, gated by <paramref name="config"/>). This is what
+        /// is saved to current_situation_info.txt and folded into the prompt.
         /// </summary>
-        public static string Build(Hero speaker, Hero partner)
+        public static string Build(Hero speaker, Hero partner, ModConfig? config = null)
         {
             var sb = new StringBuilder();
             var name = Name(speaker);
@@ -133,6 +135,19 @@ namespace ImmersiveAI.Personas
                 {
                     sb.AppendLine();
                     sb.AppendLine(them);
+                }
+            }
+
+            // What has lately happened in the world, as far as it would have reached them (best-effort;
+            // a null config — e.g. an older caller — keeps the defaults rather than losing the tidings).
+            if (config == null || config.EnableWorldTidings)
+            {
+                var tidings = TidingsBuilder.Build(
+                    speaker, partner, config?.MaxWorldTidings ?? 6, config?.MaxLocalRumors ?? 3);
+                if (tidings.Length > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine(tidings);
                 }
             }
 

@@ -15,9 +15,11 @@ namespace ImmersiveAI
             if (gameStarterObject is CampaignGameStarter starter)
             {
                 var config = ModConfig.LoadOrCreate();
-                // Reorganize any old flat-layout files into per-NPC folders up front, so the
-                // Configs folder is migrated on load rather than piecemeal as NPCs are talked to.
-                NpcPaths.MigrateAll();
+                // Which campaign's memory folder is on stage isn't known until the save's id is
+                // read (or minted) in the behavior's load/session hooks; clear any id left over
+                // from a previous session so nothing can write into the wrong campaign meanwhile.
+                // Migration of old flat-layout files also runs there, once the id is resolved.
+                NpcPaths.ActiveCampaignId = string.Empty;
                 var behavior = new ImmersiveChatBehavior(config);
                 starter.AddBehavior(behavior);
                 behavior.AddDialogs(starter);

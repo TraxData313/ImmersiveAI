@@ -54,6 +54,11 @@ Key Core concepts:
 - `PromptBuilder` / `SituationBuilder` â€” assemble the whole prompt in the second-person Angel
   voice: who they are, their self, the world's notes, the current situation, and their memory,
   followed by real user/assistant message history.
+- `TidingsBuilder` / `TidingsFormatter` â€” fold the world's recent happenings (wars, falls of
+  realms, towns changing hands, deaths, weddings, tournament wins) and the talk of the town into
+  each NPC's situation, drawn from the game's own campaign log â€” so they can bring up the news
+  unprompted, like vanilla lords congratulating a tournament win. Config: `EnableWorldTidings`,
+  `MaxWorldTidings`, `MaxLocalRumors`.
 - `MemoryCompressor` â€” the reflection: the Angel invites the NPC to settle their memory and,
   if they wish, revise who they have become.
 - `IChatClient` â€” backend abstraction; Anthropic/OpenAI-compatible implementations live
