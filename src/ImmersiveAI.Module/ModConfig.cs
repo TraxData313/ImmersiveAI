@@ -71,9 +71,16 @@ namespace ImmersiveAI
 
         /// <summary>When true, the accept/reject offer that appears when an NPC reaches out pauses the game
         /// while it is up, so the player can always stop and decide (otherwise, at fast-forward the moment
-        /// can slip by). Set false to let time keep flowing while the offer waits. The eventual right-side
-        /// portrait map-notice (a future UI task) will make this moot.</summary>
+        /// can slip by). With the map notice on (see <see cref="UseMapNoticeForInitiations"/>) this only
+        /// applies to the final choice after clicking the notice — the parked notice itself never pauses.</summary>
         public bool PauseOnInitiationOffer { get; set; } = true;
+
+        /// <summary>When true, an NPC reaching out appears as a persistent, non-pausing notice in the
+        /// right-side map stack — like a ransom or marriage offer, but wearing the NPC's own portrait —
+        /// and the accept/decline choice opens when you click it. The offer waits up to two in-game days,
+        /// then quietly lapses. Falls back to the direct popup if the notice UI cannot be prepared.
+        /// Set false to always get the direct popup.</summary>
+        public bool UseMapNoticeForInitiations { get; set; } = true;
 
         /// <summary>When true, letters cross the map: an NPC far from the player (who therefore cannot
         /// walk over — see <see cref="EnableNpcInitiatedChats"/>) may write instead, at half their

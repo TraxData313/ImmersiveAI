@@ -20,5 +20,12 @@ $outDir = Join-Path $repoRoot "src\ImmersiveAI.Module\bin\$Configuration"
 Copy-Item (Join-Path $outDir "ImmersiveAI.dll") $binDir -Force
 Copy-Item (Join-Path $outDir "ImmersiveAI.Core.dll") $binDir -Force
 Copy-Item (Join-Path $outDir "Newtonsoft.Json.dll") $binDir -Force -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $outDir "0Harmony.dll") $binDir -Force -ErrorAction SilentlyContinue
+
+# GUI assets (prefab overrides such as the portrait map notice) ride along with the module.
+$guiSource = Join-Path $repoRoot "module\GUI"
+if (Test-Path $guiSource) {
+    Copy-Item $guiSource (Join-Path $moduleDir "GUI") -Recurse -Force
+}
 
 Write-Host "Deployed to $moduleDir"

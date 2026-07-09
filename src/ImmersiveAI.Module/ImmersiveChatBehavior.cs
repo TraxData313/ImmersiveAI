@@ -94,8 +94,34 @@ namespace ImmersiveAI
         // stable for the campaign's whole life. See NpcPaths for the folder layout.
         private string _campaignId = string.Empty;
 
+        // The live behavior instance, for the map-notice UI types (which the game constructs
+        // reflectively and cannot be handed a reference) to reach back into. One campaign, one
+        // behavior; re-assigned on every game start.
+        internal static ImmersiveChatBehavior? Current;
+
+        // NPC-initiated offers parked as right-side map notices, awaiting the player's click:
+        // stringId → (game day offered, the situation captured when she decided to come).
+        // Deliberately not persisted — after a load the notice invalidates itself and the moment
+        // simply passes, like a knock unanswered.
+        private readonly Dictionary<string, PendingNotice> _pendingNotices = new Dictionary<string, PendingNotice>();
+
+        private readonly struct PendingNotice
+        {
+            public PendingNotice(double offeredGameDay, string situation)
+            {
+                OfferedGameDay = offeredGameDay;
+                Situation = situation;
+            }
+            public double OfferedGameDay { get; }
+            public string Situation { get; }
+        }
+
+        // How long a parked notice waits before the moment passes on its own.
+        private const double NoticeLifetimeDays = 2.0;
+
         public ImmersiveChatBehavior(ModConfig config)
         {
+            Current = this;
             _config = config;
             _client = ChatClientFactory.Create(config);
             // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
@@ -772,7 +798,7 @@ namespace ImmersiveAI
                     try
                     {
                         var feelingMessages = _promptBuilder.BuildFeelingQuery(
-                            ctx.Persona, ctx.PlayerName, playerInput, reply, GetStanding(npc), _config.SystemVoiceName);
+                            ctx.Persona, ctx.PlayerName, playerInput, reply, _config.SystemVoiceName);
                         var feelingRaw = await _client.CompleteAsync(feelingMessages).ConfigureAwait(false);
                         feltShift = FeelingParser.ParseShift(feelingRaw) ?? 0;
                     }
@@ -857,9 +883,11 @@ namespace ImmersiveAI
         }
 
         // Folds the NPC's own felt shift into the real game standing. They set it themselves, in
-        // character, with no ceiling but the -100..100 rail of the relation itself; we just add it to
-        // where they stand and tell the player plainly what moved. Must run on the game thread (touches
-        // campaign state and UI); RespondAsync calls it from inside the main-thread dispatch. Best-effort.
+        // character, and what the player is shown is the FELT number — how much the moment moved that
+        // heart — even when the standing is already pinned at the -100..100 rail (a soul at the deepest
+        // love can still be warmed; the rail just has nowhere left to move, like ChatAi's impact line).
+        // Must run on the game thread (touches campaign state and UI); RespondAsync calls it from
+        // inside the main-thread dispatch. Best-effort.
         private void ApplyRelationShift(Hero npc, int shift)
         {
             try
@@ -870,18 +898,18 @@ namespace ImmersiveAI
                 int before = npc.GetRelation(player);
                 int target = Math.Max(-100, Math.Min(100, before + shift));
                 int applied = target - before;
-                if (applied == 0) return; // already pinned to that rail; nothing left to give
 
                 // affectRelatives false: this is one heart's private movement, not a house-wide verdict.
                 // showQuickNotification false: we show our own, gentler line below instead of the stock one.
-                ChangeRelationAction.ApplyPlayerRelation(npc, applied, affectRelatives: false, showQuickNotification: false);
+                if (applied != 0)
+                    ChangeRelationAction.ApplyPlayerRelation(npc, applied, affectRelatives: false, showQuickNotification: false);
 
                 int after = npc.GetRelation(player);
                 var name = npc.Name?.ToString() ?? "They";
-                var verb = applied > 0 ? "warms to you" : "cools toward you";
-                var sign = applied > 0 ? "+" : string.Empty;
-                var text = $"{name} {verb} ({sign}{applied}) — now {PersonaBuilder.DescribeRelation(after)} ({after}).";
-                var color = applied > 0 ? new Color(0.45f, 0.85f, 0.45f, 1f) : new Color(0.9f, 0.45f, 0.45f, 1f);
+                var verb = shift > 0 ? "warms to you" : "cools toward you";
+                var sign = shift > 0 ? "+" : string.Empty;
+                var text = $"{name} {verb} ({sign}{shift}) — now {PersonaBuilder.DescribeRelation(after)} ({after}).";
+                var color = shift > 0 ? new Color(0.45f, 0.85f, 0.45f, 1f) : new Color(0.9f, 0.45f, 0.45f, 1f);
                 InformationManager.DisplayMessage(new InformationMessage(text, color));
             }
             catch (Exception ex)
@@ -940,6 +968,9 @@ namespace ImmersiveAI
             if (_initiationInFlight && (DateTime.UtcNow - _initiationInFlightSince) > TimeSpan.FromMinutes(3))
                 _initiationInFlight = false;
 
+            // Let parked offers whose moment has passed lapse (their notice removes itself too).
+            PruneExpiredNotices();
+
             if (_initiationInFlight) return;
             if (!IsSafeToInitiate()) return;
 
@@ -954,6 +985,20 @@ namespace ImmersiveAI
         {
             _initiationInFlight = true;
             _initiationInFlightSince = DateTime.UtcNow;
+        }
+
+        private void PruneExpiredNotices()
+        {
+            try
+            {
+                double nowDay = CampaignTime.Now.ToDays;
+                var expired = _pendingNotices
+                    .Where(p => nowDay - p.Value.OfferedGameDay >= NoticeLifetimeDays)
+                    .Select(p => p.Key)
+                    .ToList();
+                foreach (var id in expired) _pendingNotices.Remove(id);
+            }
+            catch { /* housekeeping */ }
         }
 
         // Reach out only at a calm campaign moment. Empty string means "clear"; otherwise a short reason
@@ -1015,6 +1060,7 @@ namespace ImmersiveAI
                     var hero = FindAliveHero(memory.NpcId);
                     if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner) continue;
                     if (!IsCoLocated(hero)) continue;
+                    if (_pendingNotices.ContainsKey(hero.StringId)) continue; // already knocking
 
                     double daysSince = memory.LastConversationGameDay >= 0
                         ? Math.Max(0, nowDay - memory.LastConversationGameDay)
@@ -1143,11 +1189,46 @@ namespace ImmersiveAI
             catch { return string.Empty; }
         }
 
-        // The ransom-style offer: an NPC has sought the player out. Receive them (open the conversation) or
-        // send them away (which they remember). Pauses like a ransom broker's offer so it is a real choice.
-        // Runs on the game thread. Only a brief LLM call separates this from the safe fire-time check, so we
-        // simply present it; the engine queues the inquiry if some other blocking UI happens to be up.
+        // An NPC has sought the player out. The preferred shape is the ransom-style right-side map
+        // notice — persistent, non-pausing, wearing her own portrait — which parks the offer until
+        // the player clicks it (ShowInitiationInquiry then presents the real choice). When the
+        // notice UI is unavailable (Harmony failed, or turned off in config), the choice inquiry
+        // is shown directly, as it always was. Runs on the game thread.
         private void ShowInitiationOffer(Hero npc, string situation)
+        {
+            try
+            {
+                var name = npc.Name?.ToString() ?? "Someone";
+
+                // A faced toast either way — the flash that something is happening; the notice or
+                // inquiry is the lasting thing.
+                NotifyWithFace(npc, $"{name} has sought you out, wishing to speak with you.");
+
+                if (_config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied)
+                {
+                    _pendingNotices[npc.StringId] = new PendingNotice(CampaignTime.Now.ToDays, situation);
+                    Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
+                        new UI.ImmersiveChatMapNotification(npc,
+                            new TextObject("{=!}" + name + " wishes to speak with you.")));
+
+                    // The offer now waits in the notice stack; the LLM work is done, so the flag
+                    // frees up (several souls may knock at once — each notice stands on its own).
+                    _initiationInFlight = false;
+                    return;
+                }
+
+                ShowInitiationInquiry(npc, situation);
+            }
+            catch (Exception ex)
+            {
+                _initiationInFlight = false;
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+        }
+
+        // The accept/decline inquiry itself — reached by clicking the map notice, or directly when
+        // the notice UI is unavailable. Pauses like a ransom broker's offer so it is a real choice.
+        private void ShowInitiationInquiry(Hero npc, string situation)
         {
             try
             {
@@ -1156,9 +1237,6 @@ namespace ImmersiveAI
 
                 var name = npc.Name?.ToString() ?? "Someone";
                 var them = npc.IsFemale ? "her" : "him";
-
-                // A faced toast first (their portrait is the icon), then the choice itself.
-                NotifyWithFace(npc, $"{name} has sought you out, wishing to speak with you.");
 
                 var title = new TextObject("{=ImmersiveAI_InitTitle}A message reaches you").ToString();
                 var body = $"{name} has sent word that they wish to speak with you, and would come to you now. Will you receive {them}?";
@@ -1172,8 +1250,8 @@ namespace ImmersiveAI
                     (Func<ValueTuple<bool, string>>?)null,
                     (Func<ValueTuple<bool, string>>?)null);
 
-                // Pause while the offer is up (config default) so a decision is never lost to fast-forward;
-                // a soft right-side portrait notice that needs no pause is the future UI task.
+                // Pause while the choice is up (config default) so a decision is never lost to
+                // fast-forward — the parked notice itself never pauses; only this final choice does.
                 InformationManager.ShowInquiry(data, pauseGameActiveState: _config.PauseOnInitiationOffer);
             }
             catch (Exception ex)
@@ -1181,6 +1259,40 @@ namespace ImmersiveAI
                 _initiationInFlight = false;
                 InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
             }
+        }
+
+        // ---- Bridges for the map-notice UI types (constructed by the game, no reference to us) ----
+
+        /// <summary>Whether the parked offer behind a map notice still stands (it expires after
+        /// <see cref="NoticeLifetimeDays"/>, and does not survive a reload — the moment passes).</summary>
+        internal static bool IsNoticeStillAlive(Hero npc)
+        {
+            var self = Current;
+            if (self == null || npc == null) return false;
+            return self._pendingNotices.TryGetValue(npc.StringId, out var pending)
+                && CampaignTime.Now.ToDays - pending.OfferedGameDay < NoticeLifetimeDays;
+        }
+
+        /// <summary>The player clicked the notice: unpark the offer and present the real choice.</summary>
+        internal static void OnMapNoticeInspected(Hero npc)
+        {
+            var self = Current;
+            if (self == null || npc == null) return;
+
+            if (!self._pendingNotices.TryGetValue(npc.StringId, out var pending)) return;
+            self._pendingNotices.Remove(npc.StringId);
+
+            self.MarkInitiationInFlight();
+            self.ShowInitiationInquiry(npc, pending.Situation);
+        }
+
+        /// <summary>The notice went away uninspected (dismissed with X, expired, or invalidated) —
+        /// the offer quietly lapses; she is not told of a closed door she never reached.</summary>
+        internal static void OnMapNoticeDismissed(Hero? npc)
+        {
+            var self = Current;
+            if (self == null || npc == null) return;
+            self._pendingNotices.Remove(npc.StringId);
         }
 
         // The player chose to receive them: open the real conversation and, now that they are welcomed, let

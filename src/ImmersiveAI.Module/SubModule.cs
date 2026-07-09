@@ -9,6 +9,15 @@ namespace ImmersiveAI
     {
         private bool _announced;
 
+        protected override void OnSubModuleLoad()
+        {
+            base.OnSubModuleLoad();
+            // The one Harmony patch: registers our portrait map-notice type with the map's
+            // notification VM (a public game API; nothing vanilla is altered). If it fails,
+            // MapNoticePatch.Applied stays false and offers fall back to the direct popup.
+            UI.MapNoticePatch.TryApply();
+        }
+
         protected override void OnGameStart(Game game, IGameStarter gameStarterObject)
         {
             base.OnGameStart(game, gameStarterObject);

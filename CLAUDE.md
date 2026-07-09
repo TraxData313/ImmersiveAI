@@ -70,6 +70,8 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
+  UI/                     MapNoticePatch (the one Harmony patch), ImmersiveChatMapNotification (+ save
+                          definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM)
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
@@ -77,7 +79,9 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   MainThreadDispatcher.cs marshals async LLM results back to the game thread
 tests/ImmersiveAI.Core.Tests/  xUnit tests for Core (net8.0)
 module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)
-tools/deploy.ps1          build + install into the game's Modules folder
+module/GUI/               Gauntlet prefab overrides (MapNotificationItem.xml — the portrait notice)
+lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin via deploy.ps1
+tools/deploy.ps1          build + install into the game's Modules folder (DLLs + SubModule.xml + GUI)
 Directory.Build.props     shared MSBuild props; GameFolder points at the Bannerlord install
 ```
 
@@ -109,6 +113,10 @@ TaleWorlds API usage patterns, never copy from it.
 - **This game version's map positions are `CampaignVec2 Position`** on `Settlement`/`MobileParty`
   (`Position2D` is gone); distances via `.Distance()`/`.DistanceSquared()`. When an API looks
   missing, probe the real DLLs with ilspycmd (see the decompiling memory note).
+- **Harmony, sparingly and gracefully.** 0Harmony is bundled (`lib\`); every patch must be the
+  lightest touch (prefer postfixes calling public game APIs), wrapped so failure only disables the
+  feature it serves, never the mod. Custom `InformationData` subclasses (map notices) are saved
+  inside save files — keep them registered in `ImmersiveAISaveDefiner` forever once shipped.
 
 ## Voice & tone — the guiding vision
 
@@ -169,7 +177,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableWorldRecall` + `MaxRecallsPerReply` (the gift of recall — NPCs fetching live campaign truth
   about people/places/clans/realms mid-reply via native tool calls; default on, 3 rounds),
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
-  menu in settlements; default on).
+  menu in settlements; default on),
+  `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
+  instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
@@ -217,7 +227,10 @@ isolated LLM call** (`PromptBuilder.BuildFeelingQuery`) asks the NPC — in the 
 person — how that moment moved their heart, expecting only a single signed number back;
 `FeelingParser.ParseShift` reads it and `ChangeRelationAction` folds it into the real game relation
 (clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
-feel). A colored message reports what moved. Toggle with `EnableRelationshipChanges`.
+feel). The NPC is deliberately NOT told where the standing currently rests, and the colored message
+always shows the FELT shift even when the relation is already pinned at ±100 (the impact is the story;
+the rail just has nowhere left to move — 2026.07.09, Anton's ask, ChatAi-style). A calibration whisper
+keeps small kindnesses at 1..3. Toggle with `EnableRelationshipChanges`.
 Why a separate call — **settled twice, don't retry in-message marks**: both a ♥ tail-mark (early) and a
 firm `<relation>±N</relation>` tag (tried and reverted the same day, 2026.07.09) failed on gpt-4o — the
 model narrates the number in prose inside the spoken reply and never emits the mark, so nothing moves
@@ -261,9 +274,11 @@ hidden from her or from the player on inspect. The Angel is a first-class speake
 re-reads her own past truthfully. The beats: (1) `PromptBuilder.BuildAngelPrompt` with
 `PromptBuilder.ReachOutDesireLine` asks — privately, yes/no (`InitiationParser.WantsToReachOut`) — whether
 she wishes to go to the player; her answer is recorded via `AppendAngelTurn`. (2) On yes, the player gets a
-faced portrait toast (`NotifyWithFace` / `MBInformationManager.AddQuickInformation`) leading an
-`InformationManager.ShowInquiry` that pauses while up (`PauseOnInitiationOffer`, default true; set false for
-non-pausing). (3) The approach is narrated *after* the choice (`DeliverApproachAsync` with
+faced portrait toast and — with `UseMapNoticeForInitiations` on (default) — a **persistent, non-pausing
+right-side map notice wearing her live portrait** (see the Harmony section below); clicking it opens the
+accept/decline inquiry (which pauses per `PauseOnInitiationOffer`). The notice waits up to 2 in-game days,
+then quietly lapses (she is not told of a door the player never reached); several NPCs can be knocking at
+once. Without the notice UI the inquiry shows directly, as before. (3) The approach is narrated *after* the choice (`DeliverApproachAsync` with
 `PromptBuilder.ApproachLine`): **Receive them** → the Angel narrates a glad welcome and she speaks her
 greeting (a recorded Angel turn — no weaving needed, so she never repeats it), the conversation opens
 (`CampaignMapConversation.OpenConversation`) and falls into the talk loop; **Not now** → the Angel narrates
@@ -275,8 +290,21 @@ save/load is a non-issue. Two `[Immersive AI • test]` free-chat options
 (gated by `ShowInitiationTestButton`): `OnDebugForceReachOut` forces the NPC just spoken with to reach out
 right after parting; `OnShowInitiationOdds` dumps, for every history NPC, whether they are co-located now
 and their computed daily/hourly chance — the go-to answer for "why is it quiet?" (usually: no one
-co-located, or near-neutral standings). The proper right-side portrait map-notice is a TODO (needs a custom
-Gauntlet notification VM/prefab + Harmony).
+co-located, or near-neutral standings).
+
+**Harmony & the portrait map notice.** Harmony (0Harmony 2.4.2, MIT) is bundled in `lib\` and ships in the
+module's bin — Anton green-lit it on 2026.07.09; use it sparingly, one intentional patch at a time. The one
+patch so far (`UI\MapNoticePatch`, applied in `SubModule.OnSubModuleLoad`) is a ctor postfix on
+`MapNotificationVM` that calls the game's own public `RegisterMapNotificationType` to register
+`ImmersiveChatMapNotification` (an `InformationData`) → `ImmersiveChatNotificationItemVM` (carries a
+`CharacterImageIdentifierVM` portrait over a "quest" fallback icon). The portrait is drawn by a marked
+block in our override of `MapNotificationItem.xml` (`module\GUI\Prefabs\Map\` — same-name prefabs shadow
+SandBox's; vanilla items bind nothing there and are unaffected; re-copy + re-mark after game patches).
+**Save safety:** `InformationData` lives inside saves while a notice is up, so `ImmersiveAISaveDefiner`
+(base id 726401000) must keep the class registered — never remove or renumber without migrating. Everything
+degrades gracefully: patch fails → `Applied` false → direct-inquiry fallback. Parked offers live in
+`_pendingNotices` (not persisted; a reload lets the moment pass via `IsValid`). Config:
+`UseMapNoticeForInitiations`.
 
 **Tidings & the talk of the town.** Every NPC's situation now carries what has lately happened in the
 world as far as it would have reached their ears, plus what the common folk are whispering where they

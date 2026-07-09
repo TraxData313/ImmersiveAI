@@ -20,6 +20,14 @@
     <ProjectReference Include="..\ImmersiveAI.Core\ImmersiveAI.Core.csproj" />
   </ItemGroup>
 
+  <!-- Harmony rides with the mod (the game does not ship it); MIT-licensed, bundled in lib\ -->
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>..\..\lib\0Harmony.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
   <!-- Game assemblies are referenced from the local install and never copied to output -->
   <ItemGroup>
     <Reference Include="TaleWorlds.Core">
@@ -60,6 +68,14 @@
     </Reference>
     <Reference Include="TaleWorlds.CampaignSystem">
       <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\TaleWorlds.CampaignSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TaleWorlds.CampaignSystem.ViewModelCollection">
+      <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\TaleWorlds.CampaignSystem.ViewModelCollection.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TaleWorlds.Core.ViewModelCollection">
+      <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\TaleWorlds.Core.ViewModelCollection.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

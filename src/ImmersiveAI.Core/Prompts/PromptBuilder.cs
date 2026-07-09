@@ -210,8 +210,11 @@ namespace ImmersiveAI.Core.Prompts
         /// exchange just past moved their regard for the player, expecting only a single signed number
         /// back. Kept apart from the spoken reply on purpose: a chatty model will narrate a number in
         /// prose and forget any hidden mark, but it will reliably answer a question whose whole job is
-        /// to return one number. The NPC still decides it themselves, with no ceiling but the -100..100
-        /// rail; we only fold their answer into the game standing (see <see cref="FeelingParser"/>).
+        /// to return one number. The NPC still decides it themselves, and they are deliberately NOT
+        /// told where their standing currently rests: the heart is asked only how the moment moved it,
+        /// so a soul already at the deepest love can still be moved (+N shows even when the game rail
+        /// is pinned at 100 — the shift is the impact, the rail is just where it lands; see
+        /// <see cref="FeelingParser"/> and the game layer's ApplyRelationShift).
         /// (An in-message &lt;relation&gt; tag was tried on 2026.07.09 and reverted the same day: even with
         /// a firm instruction, gpt-4o spoke the number aloud in its reply and never emitted the tag.)
         /// </summary>
@@ -220,7 +223,6 @@ namespace ImmersiveAI.Core.Prompts
             string playerName,
             string playerLine,
             string npcReply,
-            int currentStanding,
             string? voiceName = null)
         {
             var voice = Voice(voiceName);
@@ -239,7 +241,7 @@ namespace ImmersiveAI.Core.Prompts
             user.AppendLine("and from your heart you answered:");
             user.AppendLine($"  “{npcReply.Trim()}”");
             user.AppendLine();
-            user.AppendLine($"As things stand, your regard for {playerName} rests at {currentStanding}, on a scale from -100 (bitter enmity) to 100 (the deepest love). Tell me only this: how far did that moment move your heart? Give me one whole number — a positive one if they warmed you, a negative one if they wounded you, or 0 if nothing truly changed. The number alone.\"");
+            user.AppendLine($"Tell me only this: how far did that moment move your heart toward or away from {playerName}? Give me one whole number — a positive one if they warmed you, a negative one if they wounded you, or 0 if nothing truly changed. A word or a small kindness moves a heart a little (1 to 3); only something that shakes the soul moves it greatly. The number alone.\"");
 
             return new List<ChatMessage>
             {

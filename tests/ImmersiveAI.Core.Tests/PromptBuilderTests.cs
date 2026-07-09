@@ -194,10 +194,10 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void BuildFeelingQuery_AsksForOneNumber_WithTheExchangeAndStanding()
+    public void BuildFeelingQuery_AsksForOneNumber_WithTheExchange()
     {
         var messages = new PromptBuilder().BuildFeelingQuery(
-            Persona(), "Vulgrim", "You honor me.", "The honor is mine.", 32, "Angel");
+            Persona(), "Vulgrim", "You honor me.", "The honor is mine.", "Angel");
 
         // A tight two-message call: the Angel's framing, then the question.
         Assert.Equal(2, messages.Count);
@@ -208,18 +208,29 @@ public class PromptBuilderTests
         Assert.Contains("Angel", messages[0].Content);
         Assert.Contains("single whole number", messages[0].Content);
 
-        // The question carries the exchange, the current standing, and the -100..100 rail.
+        // The question carries the exchange and asks only for the movement.
         Assert.Contains("You honor me.", messages[1].Content);
         Assert.Contains("The honor is mine.", messages[1].Content);
-        Assert.Contains("32", messages[1].Content);
         Assert.Contains("Vulgrim", messages[1].Content);
+    }
+
+    [Fact]
+    public void BuildFeelingQuery_NeverRevealsTheCurrentStanding()
+    {
+        // The heart is asked only how the moment moved it — never where it currently rests — so a
+        // soul already at the deepest love can still be moved, and the shown shift is the impact.
+        var messages = new PromptBuilder().BuildFeelingQuery(
+            Persona(), "Vulgrim", "Hail.", "Well met.", "Angel");
+
+        Assert.DoesNotContain("your regard for", messages[1].Content);
+        Assert.DoesNotContain("rests at", messages[1].Content);
     }
 
     [Fact]
     public void BuildFeelingQuery_DefaultsTheVoiceName_WhenNoneGiven()
     {
         var messages = new PromptBuilder().BuildFeelingQuery(
-            Persona(), "Vulgrim", "Hail.", "Well met.", 0, voiceName: null);
+            Persona(), "Vulgrim", "Hail.", "Well met.", voiceName: null);
 
         Assert.Contains("Angel", messages[0].Content);
     }

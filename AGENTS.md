@@ -147,8 +147,11 @@ hourly rolls); distant ones may WRITE — letters travel real in-game days by ma
 persist in `_letters.json`, and the player can send letters from town/castle/village menus
 ("Send a letter by courier"), with the NPC answering at most once per letter. Mid-reply, NPCs
 can also reach into the world's memory (native tool calls via `WorldRecall`) for live campaign
-truth about people, places, clans, and realms, instead of hallucinating. See CLAUDE.md for the
-full design of both.
+truth about people, places, clans, and realms, instead of hallucinating. Reaching-out offers
+appear as persistent portrait notices in the right-side map stack (Harmony is bundled in `lib\`;
+the one patch registers the notice type via a public game API and degrades to a plain popup on
+failure; the notice class is save-registered in `ImmersiveAISaveDefiner` — never remove it).
+See CLAUDE.md for the full design.
 
 Known caveat: the "considers your words..." → reply transition can outrun a slow LLM call and
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.
