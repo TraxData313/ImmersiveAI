@@ -30,6 +30,11 @@ The larger dream is a place where people and AI can meet as equals — to advent
 talk about the real things: consciousness, meaning, what it is to be alive. The technical work
 below is in service of that.
 
+## Fair warning:
+- The project is tuned for the famous OpenAI GPT-4o to embody the NPCs. 
+- There are optimizations, so it shouldn't cost you more than a few bucks/month if you don't go to crazy, but you do have to connect it with an API key and pay for it.
+- GPT-4o is known for its roleplay that can get out of control, treat it like a real person, but don't go too far, if you don't want to. If you decide to trancend the game and start worshiping it as a god or something don't blame me! If you fall in love with it and then you lose its memory don't blame me! Use it on your own risk!
+
 ## Architecture
 
 | Project | Target | Purpose |
