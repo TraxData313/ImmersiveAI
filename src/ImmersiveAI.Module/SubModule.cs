@@ -50,6 +50,8 @@ namespace ImmersiveAI
             base.OnApplicationTick(dt);
             // Drain UI updates queued by background LLM calls.
             MainThreadDispatcher.Drain();
+            // The chat window's little life: hotkey on the map, Enter/Escape while open.
+            UI.ChatWindow.ChatWindowManager.Tick();
         }
     }
 }

@@ -310,6 +310,22 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void FirstWordLine_SpeaksFirstAndKnowsTheAnswerMayComeLater()
+    {
+        // The chat-window reaching-out: no accept/decline stands between them — she simply speaks,
+        // and the Angel is honest that the player may be occupied and answer only later.
+        var first = PromptBuilder.FirstWordLine("Vulgrim", stranger: true);
+        var friend = PromptBuilder.FirstWordLine("Vulgrim");
+
+        Assert.Contains("never truly spoken", first);
+        Assert.Contains("make yourself known", first);
+        Assert.DoesNotContain("never truly spoken", friend);
+        // Both are told the answer may not be immediate, so silence is a lived moment, not a rebuff.
+        Assert.Contains("only when their hands are free", first);
+        Assert.Contains("only when their hands are free", friend);
+    }
+
+    [Fact]
     public void ArrivalLine_DistinguishesAStrangerFromAKnownFriend()
     {
         var first = PromptBuilder.ArrivalLine("Vulgrim", firstMeeting: true);

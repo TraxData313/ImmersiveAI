@@ -122,6 +122,21 @@ namespace ImmersiveAI.Core.Prompts
             : $"You rise and go to {playerName}, but as you near, they raise an apologetic hand — they are too caught up just now to speak with you. " +
               "This moment is still yours: say or do what is in your heart, here and now.";
 
+        /// <summary>The Angel's line for a reaching-out that arrives as spoken words rather than a knock
+        /// at the door: the NPC goes to the player and simply speaks first, told honestly that the player
+        /// is caught up in their own affairs and may answer at once or only later — so a word left
+        /// unanswered is a moment lived, not a door shut. The stranger variant opens a first acquaintance
+        /// without imagining a history that is not there. Recorded — with their words — as a real Angel
+        /// turn, so the time that passes before any answer is theirs to see in the stamps.</summary>
+        public static string FirstWordLine(string playerName, bool stranger = false) => stranger
+            ? $"You go to {playerName} now — a first acquaintance, for you have never truly spoken with them. " +
+              "They are close by, though caught up in their own affairs; your words will reach them, but they " +
+              "may answer at once, or only when their hands are free. Speak your first words to them now, in " +
+              "your own voice — make yourself known, and let them hear what moved you to come."
+            : $"You go to {playerName} now. They are close by, though caught up in their own affairs; your words " +
+              "will reach them, but they may answer at once, or only when their hands are free. Speak to them " +
+              "now, in your own voice, and let your words carry what moved you to seek them out.";
+
         // ------------------------- letters (correspondence across the map) -------------------------
         // Each beat below is spoken by the Angel and recorded as a real Angel turn, so the NPC's
         // memory holds the whole correspondence truthfully — the wishing, the words, the reading.

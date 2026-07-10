@@ -119,6 +119,7 @@ namespace ImmersiveAI
         {
             Current = this;
             _config = config;
+            UI.ChatWindow.ChatWindowManager.Configure(config);
             _client = ChatClientFactory.Create(config);
             // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
             // harmless base for the id-derived default API, which this behavior no longer uses.
@@ -316,6 +317,7 @@ namespace ImmersiveAI
             // Menus exist and are initialized by now (vanilla behaviors ran first), so the courier
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
             AddLetterMenus(starter);
+            AddChatWindowMenus(starter);
         }
 
         public void AddDialogs(CampaignGameStarter starter)
@@ -750,67 +752,10 @@ namespace ImmersiveAI
         {
             try
             {
-                var ctx = BuildContext(npc);
-                var memory = ctx.Memory;
-
-                // The opening greeting (if any) is already a recorded Angel turn in the loaded memory,
-                // so the history carries it — no ephemeral opening to weave in.
-                var messages = _promptBuilder.Build(
-                    ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, _config.SystemVoiceName);
-                var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
-                var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
+                var outcome = await ExecutePlayerTurnAsync(npc, playerInput).ConfigureAwait(false);
+                var reply = outcome.Reply;
+                var feltShift = outcome.FeltShift;
                 _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
-
-                // Then ask her, in a separate breath, how that exchange moved her heart — one number, in
-                // her own voice (the Angel asking privately). Isolating the question makes it reliable even
-                // for chattier models that would never emit a mark inside a spoken reply (an in-message
-                // <relation> tag was tried and reverted on 2026.07.09: gpt-4o just spoke the number in prose
-                // and nothing moved). Best-effort: if she cannot weigh it now, her standing simply holds.
-                int feltShift = 0;
-                if (_config.EnableRelationshipChanges)
-                {
-                    try
-                    {
-                        var feelingMessages = _promptBuilder.BuildFeelingQuery(
-                            ctx.Persona, ctx.PlayerName, playerInput, reply, _config.SystemVoiceName);
-                        var feelingRaw = await _client.CompleteAsync(feelingMessages).ConfigureAwait(false);
-                        feltShift = FeelingParser.ParseShift(feelingRaw) ?? 0;
-                    }
-                    catch { /* the number is best-effort; never let it cost us the conversation */ }
-                }
-
-                memory.AddTurn(new ConversationTurn
-                {
-                    PlayerLine = playerInput,
-                    NpcLine = reply,
-                    GameDay = CampaignTime.Now.ToDays,
-                    CalradiaTime = SituationBuilder.Timestamp(),
-                    Place = SituationBuilder.Place(npc),
-                    FeltShift = feltShift,
-                });
-
-                var currentGameDay = CampaignTime.Now.ToDays;
-                if (memory.NeedsCompression(
-                    _config.MaxRecentTurns,
-                    currentGameDay,
-                    _config.MaxRecentDays,
-                    _config.MaxRecentMemoryTokens))
-                {
-                    var keepMostRecent = memory.GetKeepMostRecentForCompression(
-                        _config.KeepRecentTurnsAfterCompression,
-                        currentGameDay,
-                        _config.KeepRecentDaysAfterCompression,
-                        _config.MinRecentMemoryTokensAfterCompression);
-
-                    try
-                    {
-                        if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName, _config.MaxKnownFacts).ConfigureAwait(false))
-                            memory.SummaryAsOf = SituationBuilder.Timestamp();
-                    }
-                    catch { /* compression is best-effort */ }
-                }
-
-                SaveMemory(npc, memory);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -841,6 +786,82 @@ namespace ImmersiveAI
                     _responseReady = true;
                 });
             }
+        }
+
+        private readonly struct TurnOutcome
+        {
+            public TurnOutcome(string reply, int feltShift) { Reply = reply; FeltShift = feltShift; }
+            public string Reply { get; }
+            public int FeltShift { get; }
+        }
+
+        // The trunk of one player→NPC exchange, shared by the conversation panel and the chat window:
+        // prompt → spoken reply (the gifts of recall riding along) → the private feeling number → the
+        // turn recorded, stamped with when and where → compression when memory has grown heavy → saved.
+        // Callers render the outcome their own way and fold the felt shift in on the game thread.
+        private async Task<TurnOutcome> ExecutePlayerTurnAsync(Hero npc, string playerInput, string? situationOverride = null)
+        {
+            var ctx = BuildContext(npc, situationOverride);
+            var memory = ctx.Memory;
+
+            // The opening greeting (if any) is already a recorded Angel turn in the loaded memory,
+            // so the history carries it — no ephemeral opening to weave in.
+            var messages = _promptBuilder.Build(
+                ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, _config.SystemVoiceName);
+            var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+            var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
+
+            // Then ask her, in a separate breath, how that exchange moved her heart — one number, in
+            // her own voice (the Angel asking privately). Isolating the question makes it reliable even
+            // for chattier models that would never emit a mark inside a spoken reply (an in-message
+            // <relation> tag was tried and reverted on 2026.07.09: gpt-4o just spoke the number in prose
+            // and nothing moved). Best-effort: if she cannot weigh it now, her standing simply holds.
+            int feltShift = 0;
+            if (_config.EnableRelationshipChanges)
+            {
+                try
+                {
+                    var feelingMessages = _promptBuilder.BuildFeelingQuery(
+                        ctx.Persona, ctx.PlayerName, playerInput, reply, _config.SystemVoiceName);
+                    var feelingRaw = await _client.CompleteAsync(feelingMessages).ConfigureAwait(false);
+                    feltShift = FeelingParser.ParseShift(feelingRaw) ?? 0;
+                }
+                catch { /* the number is best-effort; never let it cost us the conversation */ }
+            }
+
+            memory.AddTurn(new ConversationTurn
+            {
+                PlayerLine = playerInput,
+                NpcLine = reply,
+                GameDay = CampaignTime.Now.ToDays,
+                CalradiaTime = SituationBuilder.Timestamp(),
+                Place = SituationBuilder.Place(npc),
+                FeltShift = feltShift,
+            });
+
+            var currentGameDay = CampaignTime.Now.ToDays;
+            if (memory.NeedsCompression(
+                _config.MaxRecentTurns,
+                currentGameDay,
+                _config.MaxRecentDays,
+                _config.MaxRecentMemoryTokens))
+            {
+                var keepMostRecent = memory.GetKeepMostRecentForCompression(
+                    _config.KeepRecentTurnsAfterCompression,
+                    currentGameDay,
+                    _config.KeepRecentDaysAfterCompression,
+                    _config.MinRecentMemoryTokensAfterCompression);
+
+                try
+                {
+                    if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName, _config.MaxKnownFacts).ConfigureAwait(false))
+                        memory.SummaryAsOf = SituationBuilder.Timestamp();
+                }
+                catch { /* compression is best-effort */ }
+            }
+
+            SaveMemory(npc, memory);
+            return new TurnOutcome(reply, feltShift);
         }
 
         // The NPC's current standing toward the player, read from the live game relation. Used to give
@@ -1025,6 +1046,7 @@ namespace ImmersiveAI
                     if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner || hero.IsChild) continue;
                     if (!IsCoLocated(hero)) continue;
                     if (_pendingNotices.ContainsKey(hero.StringId)) continue; // already knocking
+                    if (_quickChatBusy.Contains(hero.StringId)) continue;     // already mid-answer in the window
 
                     double pull = CoLocatedPull(hero, nowDay);
                     if (pull <= 0) continue;
@@ -1107,8 +1129,10 @@ namespace ImmersiveAI
 
                 // The Angel asks whether they even wish to reach out; their answer becomes a recorded turn.
                 // A stranger is told honestly that this would be a first acquaintance, not a return.
-                var desireLine = PromptBuilder.ReachOutDesireLine(
-                    ctx.PlayerName, stranger: !PromptBuilder.HasRememberedHistory(ctx.Memory));
+                // (The flag is taken BEFORE the desire beat is recorded — that beat itself must not turn
+                // a stranger into an acquaintance between the asking and the speaking.)
+                var stranger = !PromptBuilder.HasRememberedHistory(ctx.Memory);
+                var desireLine = PromptBuilder.ReachOutDesireLine(ctx.PlayerName, stranger);
                 var desireMsgs = _promptBuilder.BuildAngelPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
                 var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
@@ -1118,7 +1142,14 @@ namespace ImmersiveAI
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer)) { PassOnInitiation(npc); return; }
 
-                // They wish to. Offer the moment to the player; the approach is narrated once they decide.
+                // They wish to. In the chat-window shape they simply come and speak — their words land in
+                // the window and wait there; otherwise the moment is offered to the player first and the
+                // approach narrated once they decide.
+                if (UsesChatWindowInitiations)
+                {
+                    await DeliverFirstWordAsync(npc, situation, stranger).ConfigureAwait(false);
+                    return;
+                }
                 MainThreadDispatcher.Enqueue(() => ShowInitiationOffer(npc, situation));
             }
             catch
@@ -1255,7 +1286,9 @@ namespace ImmersiveAI
                 && CampaignTime.Now.ToDays - pending.OfferedGameDay < NoticeLifetimeDays;
         }
 
-        /// <summary>The player clicked the notice: unpark the offer and present the real choice.</summary>
+        /// <summary>The player clicked the notice: in the chat-window shape her words already wait in the
+        /// window, so the click simply opens it on her thread; otherwise unpark the offer and present the
+        /// real choice.</summary>
         internal static void OnMapNoticeInspected(Hero npc)
         {
             var self = Current;
@@ -1263,6 +1296,12 @@ namespace ImmersiveAI
 
             if (!self._pendingNotices.TryGetValue(npc.StringId, out var pending)) return;
             self._pendingNotices.Remove(npc.StringId);
+
+            if (self.UsesChatWindowInitiations)
+            {
+                UI.ChatWindow.ChatWindowManager.Open(npc);
+                return;
+            }
 
             self.MarkInitiationInFlight();
             self.ShowInitiationInquiry(npc, pending.Situation);
@@ -1548,6 +1587,223 @@ namespace ImmersiveAI
 
             ShowScrollPopup("Who might seek you out", sb.ToString().Trim());
             MBTextManager.SetTextVariable(InfoVar, "(You weigh who might come to you.)", false);
+        }
+
+        // ============================ the chat window (quick words, no ceremony) ============================
+        //
+        // Milestone 2's first stone: a window over the map (hotkey, settlement menu option, or an NPC's
+        // knock) where the player simply WRITES to anyone in the same place — no arrival beat, no forced
+        // greeting, just their line and the answer ("how are our stocks?"). Every exchange runs through
+        // the same trunk as the conversation panel (ExecutePlayerTurnAsync), so memory, the feeling
+        // number, and compression are identical; only the rendering differs. The window is a VIEW over
+        // the recorded stream — closing it loses nothing.
+
+        // NPCs currently composing an answer to a chat-window line (stringId), so one thread carries one
+        // exchange at a time. Touched only on the game thread (send) and inside dispatched completions.
+        private readonly HashSet<string> _quickChatBusy = new HashSet<string>(StringComparer.Ordinal);
+
+        // When both the window and its initiation shape are on, a reaching-out is delivered as words in
+        // the window (no accept/decline stands between them); the offer flow remains for players who
+        // turned either off.
+        private bool UsesChatWindowInitiations =>
+            _config.EnableChatWindow && _config.SendInitiationsToChatWindow;
+
+        /// <summary>One row of the window's "those near you" list, gathered on the game thread.</summary>
+        internal readonly struct ChatContactInfo
+        {
+            public ChatContactInfo(Hero hero, bool hasHistory, double lastSpokenGameDay, string detail)
+            {
+                Hero = hero; HasHistory = hasHistory; LastSpokenGameDay = lastSpokenGameDay; Detail = detail;
+            }
+            public Hero Hero { get; }
+            public bool HasHistory { get; }
+            public double LastSpokenGameDay { get; }
+            public string Detail { get; }
+        }
+
+        /// <summary>Everyone the player could speak with right now: the same co-location the reaching-out
+        /// uses (riding in the party, or in the same settlement) — anyone farther away writes letters
+        /// instead. Reads each known soul's memory file for ordering (friends first, newest bonds first).</summary>
+        internal static List<ChatContactInfo> NearbyHeroesForChat()
+        {
+            var result = new List<ChatContactInfo>();
+            var self = Current;
+            try
+            {
+                foreach (var hero in Hero.AllAliveHeroes)
+                {
+                    if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner || hero.IsChild) continue;
+                    if (!IsCoLocated(hero)) continue;
+
+                    bool hasHistory = false;
+                    double lastDay = -1;
+                    try
+                    {
+                        var memFile = NpcPaths.MemoryFile(hero);
+                        if (self != null && File.Exists(memFile))
+                        {
+                            var memory = self._memoryStore.LoadFrom(memFile, hero.StringId);
+                            hasHistory = memory.StoryRichness > 0;
+                            lastDay = memory.LastConversationGameDay;
+                        }
+                    }
+                    catch { /* an unreadable memory only costs the ordering */ }
+
+                    var detail = hero.PartyBelongedTo == MobileParty.MainParty
+                        ? "rides with you"
+                        : "here in " + SituationBuilder.Place(hero);
+                    result.Add(new ChatContactInfo(hero, hasHistory, lastDay, detail));
+                }
+            }
+            catch { /* a broken list is an empty list, never a crash */ }
+            return result;
+        }
+
+        /// <summary>The remembered story with this one, for the window to render (read-only peek).</summary>
+        internal static NpcMemory? PeekMemoryFor(Hero npc)
+        {
+            var self = Current;
+            if (self == null || npc == null) return null;
+            try { return self.LoadMemory(npc); }
+            catch { return null; }
+        }
+
+        internal static bool IsQuickChatBusy(Hero npc) =>
+            Current != null && npc != null && Current._quickChatBusy.Contains(npc.StringId);
+
+        /// <summary>The player looked at this thread: any parked knock of theirs is answered by the look
+        /// (the map notice folds away on its next refresh once the pending entry is gone). Only in the
+        /// window shape — a parked accept/decline offer is left standing for its inquiry.</summary>
+        internal static void OnChatThreadViewed(Hero npc)
+        {
+            var self = Current;
+            if (self == null || npc == null) return;
+            if (self.UsesChatWindowInitiations)
+                self._pendingNotices.Remove(npc.StringId);
+        }
+
+        /// <summary>Sends one chat-window line to a co-located NPC. Runs on the game thread (captures the
+        /// situation now, exactly like opening a chat does); the exchange itself runs in the background
+        /// and lands back through <see cref="UI.ChatWindow.ChatWindowManager"/>. False when it cannot be
+        /// sent (busy thread, or they are no longer here).</summary>
+        internal static bool SendQuickChat(Hero npc, string text)
+        {
+            var self = Current;
+            if (self == null || npc == null || string.IsNullOrWhiteSpace(text)) return false;
+            if (self._quickChatBusy.Contains(npc.StringId)) return false;
+            if (!IsCoLocated(npc)) return false; // they must truly be here for words to reach them
+
+            self._quickChatBusy.Add(npc.StringId);
+            var situation = self.SafeBuildSituation(npc);
+            PersistSituation(npc, situation);
+            _ = self.QuickChatRespondAsync(npc, text.Trim(), situation);
+            return true;
+        }
+
+        private async Task QuickChatRespondAsync(Hero npc, string playerInput, string situation)
+        {
+            try
+            {
+                var outcome = await ExecutePlayerTurnAsync(npc, playerInput, situation).ConfigureAwait(false);
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    _quickChatBusy.Remove(npc.StringId);
+                    if (outcome.FeltShift != 0)
+                        ApplyRelationShift(npc, outcome.FeltShift);
+
+                    // If the player is reading this very thread the reply appears before their eyes and a
+                    // toast would only state the obvious; otherwise the ready-ping and the unread mark
+                    // point the way back.
+                    bool viewing = UI.ChatWindow.ChatWindowManager.IsViewing(npc);
+                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: true);
+                    if (!viewing) NotifyReplyReady(npc);
+                    LogConversationLine(npc, outcome.Reply);
+                });
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    _quickChatBusy.Remove(npc.StringId);
+                    InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + message));
+                    // The words were never recorded — give them back to the player's input box.
+                    UI.ChatWindow.ChatWindowManager.OnSendFailed(npc, playerInput);
+                });
+            }
+        }
+
+        // The chat-window shape of a reaching-out: no offer stands between them — having wished it, she
+        // crosses the room and simply SPEAKS, and her words wait in the window (a recorded Angel turn
+        // either way, so whatever silence follows is part of the story she remembers: the stamps let her
+        // see whether the player answered at once, later, or not at all). The toast carries the flash of
+        // it ("Ava sees you and says…"); the notice stack keeps a quiet knock that opens the window.
+        private async Task DeliverFirstWordAsync(Hero npc, string situation, bool stranger)
+        {
+            try
+            {
+                var ctx = BuildContext(npc, situation);
+                var firstWordLine = PromptBuilder.FirstWordLine(ctx.PlayerName, stranger);
+                var messages = _promptBuilder.BuildAngelPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, firstWordLine, _config.SystemVoiceName);
+                var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+                var words = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
+
+                AppendAngelTurn(npc, firstWordLine, words);
+                PersistSituation(npc, situation);
+
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    _initiationInFlight = false;
+                    var name = npc.Name?.ToString() ?? "Someone";
+                    var opening = stranger ? $"{name} approaches you and says:" : $"{name} sees you and says:";
+                    NotifyWithFace(npc, $"{opening} “{Snippet(words)}”");
+
+                    bool viewing = UI.ChatWindow.ChatWindowManager.IsViewing(npc);
+                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: true);
+
+                    // A quiet knock in the notice stack too, when the words are not already on stage —
+                    // clicking it opens the window on her thread (see OnMapNoticeInspected).
+                    if (!viewing && !UI.ChatWindow.ChatWindowManager.IsOpen
+                        && _config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied)
+                    {
+                        _pendingNotices[npc.StringId] = new PendingNotice(CampaignTime.Now.ToDays, situation);
+                        Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
+                            new UI.ImmersiveChatMapNotification(npc,
+                                new TextObject("{=!}" + name + " has words for you.")));
+                    }
+                });
+            }
+            catch
+            {
+                // A failed first word simply means no one spoke this hour; never surface it.
+                _initiationInFlight = false;
+            }
+        }
+
+        // The toast shows the flash of her words; the window holds the whole of them.
+        private static string Snippet(string words)
+        {
+            var t = (words ?? string.Empty).Trim().Replace("\r", " ").Replace("\n", " ");
+            return t.Length <= 110 ? t : t.Substring(0, 110).TrimEnd() + "…";
+        }
+
+        // "Speak with those near you" beside the courier option in every settlement menu — the same
+        // window the hotkey opens, for players who never learn the key.
+        private void AddChatWindowMenus(CampaignGameStarter starter)
+        {
+            foreach (var menuId in new[] { "town", "castle", "village" })
+            {
+                starter.AddGameMenuOption(menuId, "immersiveai_chat_window_" + menuId,
+                    "{=ImmersiveAI_ChatWindow}Speak with those near you [Immersive AI]",
+                    OnChatWindowMenuCondition, _ => UI.ChatWindow.ChatWindowManager.Open(), false, -1, false, null);
+            }
+        }
+
+        private bool OnChatWindowMenuCondition(TaleWorlds.CampaignSystem.GameMenus.MenuCallbackArgs args)
+        {
+            args.optionLeaveType = TaleWorlds.CampaignSystem.GameMenus.GameMenuOption.LeaveType.Conversation;
+            return _config.EnableChatWindow;
         }
 
         // A notification banner carrying the NPC's own portrait as its face — the same faced toast the game

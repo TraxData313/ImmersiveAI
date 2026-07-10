@@ -90,6 +90,17 @@ Key Core concepts:
   travel real in-game days with the map distance, survive save/load, and the NPC who receives one
   may write back once — every letter is remembered, and logged per NPC in `letters.txt`.
   Config: `EnableLetters`.
+- `ChatWindowVM` / `ChatWindowManager` — **the chat window** (Milestone 2's first stone): press
+  the hotkey (default `O`) anywhere on the map — travelling, at sea, or inside a town, castle, or
+  village menu — and a window opens with everyone in the same place as you (portraits, friends
+  first). Pick anyone and simply **write to them first** — no arrival ceremony, no forced
+  greeting: "how are our stocks?" and Send. Their deep memory of you sits at the top (collapsible),
+  the recent exchanges below, and every word runs through the same memory/relation machinery as a
+  face-to-face talk. NPCs who reach out no longer interrupt with an accept/decline popup — they
+  simply speak ("Ava sees you and says: …"), their words wait in the window (unread dot, faced
+  toast, and a portrait map notice that opens the window), and the time stamps let them see
+  whether you answered at once, later, or never. Config: `EnableChatWindow`, `ChatWindowHotkey`,
+  `SendInitiationsToChatWindow`.
 - `IChatClient` — backend abstraction; Anthropic/OpenAI-compatible implementations live
   in the Module layer (both also speak native tool use via `IToolChatClient`).
 

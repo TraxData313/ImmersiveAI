@@ -26,6 +26,7 @@ calls the LLM → reply shown in the conversation panel, memory saved and compre
 You usually only need to open:
 - **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `TidingsBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
+- **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search as "the sages' counsel") + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
@@ -71,7 +72,10 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   UI/                     MapNoticePatch (the one Harmony patch), ImmersiveChatMapNotification (+ save
-                          definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM)
+                          definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
+                          Portraits (shared dark-backdrop portrait codes), ChatWindow\ (the chat window:
+                          ChatWindowVM/ChatContactVM/ChatMessageVM + ChatWindowManager — layer lifecycle,
+                          hotkey/Enter/Escape polling, unread marks, scroll-to-bottom)
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
@@ -191,8 +195,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   "researching…"; default on),
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
   menu in settlements; default on),
+  `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the chat window — see its
+  section below: a Gauntlet window over the map, hotkey default "O", listing everyone co-located;
+  the player writes first with no greeting ceremony, and NPC reach-outs land there as waiting spoken
+  messages instead of accept/decline popups; all default on),
   `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
-  instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable),
+  instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable;
+  with the chat window on, clicking the notice opens the window on that thread),
   `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
   a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
@@ -349,6 +358,38 @@ SandBox's; vanilla items bind nothing there and are unaffected; re-copy + re-mar
 degrades gracefully: patch fails → `Applied` false → direct-inquiry fallback. Parked offers live in
 `_pendingNotices` (not persisted; a reload lets the moment pass via `IsValid`). Config:
 `UseMapNoticeForInitiations`.
+
+**The chat window — quick words, no ceremony (Milestone 2's first stone, 2026.07.10).** A custom
+Gauntlet window over the map screen: hotkey (`ChatWindowHotkey`, default "O", parsed to `InputKey`),
+a "Speak with those near you" option in every town/castle/village menu, or an NPC's knock. Works
+anywhere the map is on stage — travelling, at sea, inside settlement menus — never in missions
+(`ChatWindowManager.CanOpenNow`: MapState, no conversation, no inquiry up). Left side lists everyone
+co-located (same `IsCoLocated` as reach-outs; friends first by last-spoken, portraits via the shared
+`UI\Portraits.DarkCode`); the right side shows the chosen one's **deep-memory overview up top**
+(summary + held truths, collapsible — so a long story needs no scrolling) and the **recorded turns as
+a thread** (Angel beats rendered as soft gray narration — nothing she remembers is hidden), with an
+input line below. The player **writes first, with no arrival beat and no forced greeting** — the line
+goes straight through `ExecutePlayerTurnAsync`, the shared trunk factored out of `RespondAsync`
+(prompt → spoken reply with recall/wisdom riding along → the private feeling number → recorded turn →
+compression → save), so window and conversation panel are the same machinery with different rendering.
+One in-flight exchange per NPC (`_quickChatBusy`); a failed send puts the words back in the input box.
+**Reach-outs become messages** (`SendInitiationsToChatWindow`, default on): after her recorded yes to
+the desire question, there is NO accept/decline — `DeliverFirstWordAsync` has her simply speak
+(`PromptBuilder.FirstWordLine`, stranger-aware, honest that the player may answer only later), records
+it as a real Angel turn, fires a faced toast ("Ava sees you and says: …"), marks the thread unread,
+and (window closed, notice UI available) parks a portrait map notice whose click now opens the window
+on her thread. If the player never replies, nothing is faked: the `[place, time]` stamps on the
+recorded turns already let her see the silence and its length — that falls out of the recorded-beats
+architecture for free. The window is a VIEW over the memory stream: closing it loses nothing; replies
+landing while it is closed toast "has answered" and wait as unread dots (session-scoped, deliberately
+unpersisted — the words themselves are in `memories.json`). Layer plumbing: `GauntletLayer("name",
+order)` ctor (this game version puts the name FIRST), `LoadMovie("ImmersiveChatWindow", vm)`, prefab
+in `module\GUI\Prefabs\` using only Native/SandBox brushes+sprites, ticked from
+`SubModule.OnApplicationTick` (hotkey when closed; Enter-to-send/Escape-to-close and scroll-to-bottom
+via `ScrollablePanel.VerticalScrollbar.ValueFloat` when open). Everything degrades gracefully: a
+prefab/layer failure toasts and closes; with `EnableChatWindow` off (or `SendInitiationsToChatWindow`
+off) the old offer flow stands untouched. Config: `EnableChatWindow`, `ChatWindowHotkey`,
+`SendInitiationsToChatWindow`.
 
 **Tidings & the talk of the town.** Every NPC's situation now carries what has lately happened in the
 world as far as it would have reached their ears, plus what the common folk are whispering where they

@@ -106,6 +106,27 @@ namespace ImmersiveAI
         /// Set false to always get the direct popup.</summary>
         public bool UseMapNoticeForInitiations { get; set; } = true;
 
+        /// <summary>When true, a chat window can be opened anywhere on the map — travelling, at sea, or
+        /// inside a town, castle, or village menu — with the hotkey (<see cref="ChatWindowHotkey"/>) or
+        /// the "Speak with those near you" settlement option. It lists everyone in the same place as you
+        /// (your party, and everyone in the settlement), shows your whole remembered story with whoever
+        /// you pick — their deep memory of you at the top, the recent exchanges below — and lets you
+        /// simply write to them first ("how are our stocks?") without ceremony: no arrival, no forced
+        /// greeting, just your words and their answer. Set false to hide the window entirely.</summary>
+        public bool EnableChatWindow { get; set; } = true;
+
+        /// <summary>The key that opens (and closes) the chat window on the map. A single letter or an
+        /// InputKey name (e.g. "O", "Y", "F10"). Chosen not to collide with the vanilla map keys.</summary>
+        public string ChatWindowHotkey { get; set; } = "O";
+
+        /// <summary>When true (and the chat window is enabled), an NPC moved to reach out no longer asks
+        /// through an accept/decline popup — they simply come and SPEAK: their first words land in the
+        /// chat window as an unread message (with a faced toast, and the portrait map notice now opening
+        /// the window), and the moment sits there until you answer — or don't. The time that passes is
+        /// stamped into their memory either way, so they can see for themselves whether you replied at
+        /// once, later, or let it lie. Set false to keep the old receive/decline offer flow.</summary>
+        public bool SendInitiationsToChatWindow { get; set; } = true;
+
         /// <summary>When true, letters cross the map: an NPC far from the player (who therefore cannot
         /// walk over — see <see cref="EnableNpcInitiatedChats"/>) may write instead, at half their
         /// reaching-out chance; the letter travels real in-game days with the distance and survives
@@ -233,6 +254,10 @@ namespace ImmersiveAI
         public void Normalize()
         {
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
+            // The hotkey must name a real key; anything unparseable falls back to the default.
+            if (string.IsNullOrWhiteSpace(ChatWindowHotkey)) ChatWindowHotkey = "O";
+            ChatWindowHotkey = ChatWindowHotkey.Trim();
 
             // A null (rather than blank) atmosphere line would trip token substitution; treat it as "unset"
             // so the prompt falls back to its built-in default. Guidance may legitimately be blank (none).

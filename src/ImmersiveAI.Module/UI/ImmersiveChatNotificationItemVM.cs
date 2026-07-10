@@ -55,7 +55,7 @@ namespace ImmersiveAI.UI
             {
                 if (data.Npc?.CharacterObject != null)
                 {
-                    CharacterImage = new CharacterImageIdentifierVM(DarkPortraitCode(data.Npc.CharacterObject));
+                    CharacterImage = new CharacterImageIdentifierVM(Portraits.DarkCode(data.Npc.CharacterObject));
                     HasCharacterImage = true;
                 }
             }
@@ -67,31 +67,6 @@ namespace ImmersiveAI.UI
                 ImmersiveChatBehavior.OnMapNoticeInspected(data.Npc);
                 ExecuteRemove();
             };
-        }
-
-        // The tableau tints the portrait backdrop with the code's Color1/Color2 (multiplayer uses
-        // team colors there); the plain CreateFrom leaves them white, which renders as the raw
-        // purple gradient. A muted near-black keeps the face lit and the circle quiet. Falls back
-        // to the plain code if any piece of the character cannot be read.
-        private static TaleWorlds.Core.CharacterCode DarkPortraitCode(TaleWorlds.CampaignSystem.CharacterObject character)
-        {
-            try
-            {
-                const uint backdrop = 0xFF17120DU; // ARGB: near-black with a warm cast
-                return CharacterCode.CreateFrom(
-                    character.Equipment?.CalculateEquipmentCode(),
-                    character.GetBodyProperties(character.Equipment),
-                    character.IsFemale,
-                    character.IsHero,
-                    backdrop,
-                    backdrop,
-                    character.DefaultFormationClass,
-                    character.Race);
-            }
-            catch
-            {
-                return CharacterCode.CreateFrom(character);
-            }
         }
 
         // The notice outlives its cause (the NPC died, the offer expired, a save was reloaded) —

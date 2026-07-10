@@ -105,6 +105,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
   campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters),
+  `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the map chat window:
+  write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
+  messages instead of accept/decline popups),
   `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
   `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
   replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls).
