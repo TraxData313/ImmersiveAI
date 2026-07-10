@@ -124,6 +124,12 @@ namespace ImmersiveAI
 
             try
             {
+                // The road toward the player can only hold so much at once: a social morning must not
+                // become an evening buried under arrivals (letters lag the mood by days — the cap, not
+                // the moment's socialness, is what protects the later, busier self). Replies invited
+                // by the player's own letters ride outside this gate.
+                if (_letterBag == null || _letterBag.InFlightToPlayerCount >= _config.MaxLettersInFlight) return;
+
                 var root = NpcPaths.CampaignRoot;
                 if (!Directory.Exists(root)) return;
 

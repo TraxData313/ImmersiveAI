@@ -103,16 +103,22 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `NotifyWhenReplyReady` + `ShowConversationInMessageLog`, `EnableRelationshipChanges` +
   `RelationshipChangesViaTool` (relation shifts — by default the NPC moves her own heart mid-reply via
   the `move_heart` native tool; the second, isolated feeling call is the fallback shape),
-  `EnableNpcInitiatedChats` (+ related initiation knobs),
+  `EnableNpcInitiatedChats` (+ related initiation knobs; `DailyInitiationRate` doubles as the
+  socialness number, live-edited by the on-map stepper — `ShowSocialnessControl`),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
-  campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters),
+  campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters)
+  + `MaxLettersInFlight` (cap on letters riding toward the player at once, default 3),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the map chat window:
   write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
   messages instead of accept/decline popups),
   `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
   `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
-  replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls).
+  replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls),
+  `NotifyOnMemoryRefactor` (soft notice when an NPC's compression reworks her deep memory),
+  `ModelContextWindows` (user-editable model → context-window dict the memory-percent settings
+  scale against; longest key contained in the model id wins), `DevMode` (default false: hides the
+  test levers, the raw-prompt inspector, and the chat window's deep-memory overview).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across

@@ -139,7 +139,10 @@ namespace ImmersiveAI.UI.ChatWindow
             var playerName = Hero.MainHero?.Name?.ToString() ?? "You";
             var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
 
-            OverviewText = BuildOverview(memory, npcName);
+            // Her deep memory laid bare is a developer's view (DevMode); players meet what she
+            // remembers the way people do — through what she says. No overview text means the
+            // whole block and its toggle stay off stage (HasOverview keys off this).
+            OverviewText = _config.DevMode ? BuildOverview(memory, npcName) : string.Empty;
 
             if (memory != null)
             {

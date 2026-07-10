@@ -75,7 +75,8 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
                           Portraits (shared dark-backdrop portrait codes), ChatWindow\ (the chat window:
                           ChatWindowVM/ChatContactVM/ChatMessageVM + ChatWindowManager — layer lifecycle,
-                          hotkey/Enter/Escape polling, unread marks, scroll-to-bottom)
+                          hotkey/Enter/Escape polling, unread marks, scroll-to-bottom), Socialness\
+                          (the on-map socialness stepper: SocialnessVM + SocialnessManager, mouse-only layer)
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
@@ -185,7 +186,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   or two a day; the pull floor (default 0.1) gives EVERY co-located soul — the whole party, everyone in
   town, even someone never spoken with — at least that fraction of a full bond's pull, so strangers can
   approach and begin a story, still capped by the same group total; the test button forces one on demand
-  from the free-chat menu),
+  from the free-chat menu — it also needs `DevMode` on now),
+  `ShowSocialnessControl` (the SOCIALNESS stepper on the map — `UI\Socialness\` + its prefab — the live
+  hand on `DailyInitiationRate`, 0–24 in quarter steps, lower-right above the army/time controls,
+  saving config.json as it changes; CLICK the label to unfold the explanation (hover proved shy on a
+  no-focus map layer — 2026.07.10 playtest — so hover is only the bonus path); the Core blend in `InitiationScorer.GroupHourlyChance` makes 24 mean "someone near IS
+  moved every hour" — the player's openness overriding faint bonds via an s² term that vanishes at
+  everyday rates, so old behavior is untouched below ~2/day; default on),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world happenings — wars, falls of
   realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
@@ -198,7 +205,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   + `ShowNpcActivity` (soft side notices of what an NPC is doing mid-thought — "remembering…",
   "researching…"; default on),
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
-  menu in settlements; default on),
+  menu in settlements; default on) + `MaxLettersInFlight` (at most this many letters ON THE ROAD toward
+  the player at once — letters lag the socialness mood by days, so the cap, not the moment's mood,
+  protects the later busier self; spontaneous writes only, player-invited replies ride free; default 3),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the chat window — see its
   section below: a Gauntlet window over the map, hotkey default "O", listing everyone co-located;
   the player writes first with no greeting ceremony, and NPC reach-outs land there as waiting spoken
@@ -211,7 +220,16 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
   `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
   their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
-  default 1500, never below `MaxTokens`).
+  default 1500, never below `MaxTokens`),
+  `NotifyOnMemoryRefactor` (a soft activity-style notice the moment an NPC's automatic compression
+  reworks her deep memory — "…turns over old memories of you, and settles them deeper"; default on),
+  `ModelContextWindows` (user-editable model → context-window dict — gpt-4o 128k, gpt-4.1 1M,
+  gpt-5.x 400k, claude 200k — that the `MaxRecentMemoryPercent` family scales against; longest key
+  contained in the model id wins, unknown models fall back to 128k, missing built-ins are re-added on
+  load; `MemoryTokenProfile.Resolve` reads it, so a new model is one config line, no redeploy),
+  `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
+  "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
+  panel in the chat window; set true when working on the mod — Anton keeps it true).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
@@ -363,7 +381,7 @@ a lived moment, not a cold "you were refused". Two LLM calls per fired offer; sh
 `MemoryCompressor` renders Angel turns attributed to the voice (not "They") so summaries stay truthful.
 Toggle with `EnableNpcInitiatedChats`. Nothing about the schedule is persisted (stateless hourly rolls), so
 save/load is a non-issue. Two `[Immersive AI • test]` free-chat options
-(gated by `ShowInitiationTestButton`): `OnDebugForceReachOut` forces the NPC just spoken with to reach out
+(gated by `DevMode` + `ShowInitiationTestButton`): `OnDebugForceReachOut` forces the NPC just spoken with to reach out
 right after parting; `OnShowInitiationOdds` dumps, for every history NPC, whether they are co-located now
 and their computed daily/hourly chance — the go-to answer for "why is it quiet?" (usually: no one
 co-located, or near-neutral standings).

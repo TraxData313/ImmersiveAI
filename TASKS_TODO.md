@@ -1,17 +1,11 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] Socialness control
-    I find myself going in and out adjusting this one so, make a socialness real time slider or number input that is always visible in the map where I can asjust from 0 to 24 my socialness right now (0 DND/very busy/uncocial=0% to receive message, 24 online/very social =guarantieed each hour an NPC will receive the invitation to chose whether to talk to me) - this basically controls the number we have right now in the settings. The letters since they come in time wont be a good idea, because i might feel social in the morning and set it to 24 but they will start coming in when im not social and overwhelm me, so I say we tap the incoming letters to 3 in flight and make a config setting for them that wont allow the NPC to write if there are 3 or more in flight. A good tooltip if possible explaining how the socialness control works.
 - [ ] letter widget/gui
     maybe we can add a second window like the one for chat for the letters (keep making sure the letters and chat hist are all sees in the full chat - i also want to see the letters between the messages in the normal chat window if there were letters in between)
 - [ ] "Send letter" in hero's encyclopedia
     Milestone 2 GUI, letters chapter: (a) a "Send letter" button on the encyclopedia hero page — needs swapping `EncyclopediaHeroPageVM` for a subclass (patch the page-VM factory) + overriding the big hero-page prefab to add the button; (b) a proper letter-writing screen — the native `TextInquiryData` box is single-line and small, so a custom Gauntlet layer with a multiline `EditableTextWidget`, the correspondence shown alongside as you write, and a wax-seal Send. The interim two-beat flow (correspondence window → text box, 2026.07.09) covers the need until then. Both fit the same custom-screen foundations as the Milestone 2 chat window — do them together. Or maybe add it in the letter widget/gui if ready by then
 - [ ] Mod Config:
     export the settings in the Mod menu (with the mod menu mod)
-- [ ] poput when they refactore their deep memories
-- [ ] GPT model change
-    make option to change the model from GPT 4o to 4.1, 5.1, 5.4, 5.5, setting something like a dict with theit token limits, so that out setting min max context% will work at different levels for the different models. The model should be changable from the config and if ready from the mod options menu
-- [ ] devmode 1/0
-    add devmode trigger, when 0 hide the dev options in the walk up to chat and hide the "about me" section the the new chat widget
+    MCM export — before I take a dependency on the Mod Configuration Menu mod: do you have MCM installed, and are you okay with it being a soft dependency? - yes and yes
 - [ ] Actions for the NPCs:
     NPCs that can ACT, not just know (found while mining ChatAi for the "what the NPC can interact with" task, 2026.07.10): ChatAi lets the LLM trigger real game actions via its NpcDecisionPlanner/AIActionEvaluator — travel to a settlement, patrol, join the player's party (or offer to for coin), accept a join offer, marry the player, give the player gold, start a spar/fight. The info half is done (recall_company + situation whispers); the acting half deserves its own design pass — likely the same native tool-call channel (an "act" tool family beside the recalls), each action gated and phrased to the NPC as a choice of their own will, never a command. Decide scope with Anton first: which actions, what limits, how consent/impossibility is narrated back.
 - [ ] discuss with Claude

@@ -85,16 +85,25 @@ namespace ImmersiveAI.Core.Initiation
         }
 
         /// <summary>
-        /// The probability that anyone at all reaches out during ONE HOUR: the day's expectation
-        /// (dailyRate × unionPull) spread over 24 hourly rolls, capped at 1. Rolled once per hour for the
-        /// whole group; the winner is then chosen by pull. Over a day this yields on average
-        /// dailyRate × unionPull reach-outs — 0 some days, 1 or occasionally 2 on others.
+        /// The probability that anyone at all reaches out during ONE HOUR. The rate doubles as the
+        /// player's SOCIALNESS (0–24, the map slider): at everyday rates it is the day's expectation
+        /// (dailyRate × unionPull) spread over 24 hourly rolls — bonds fully in charge, exactly
+        /// dailyRate/24 per hour when the bonds are full. As the rate climbs toward 24 the player's
+        /// own openness increasingly overrides how faint the bonds are (the s² blend below — felt
+        /// only at deliberately social settings, vanishing at everyday rates), until at 24 someone
+        /// IS moved every hour, however slight the pulls: "I am here and glad of company" is the
+        /// player's word, not the bonds'. Rolled once per hour for the whole group; the winner is
+        /// then chosen by pull. Zero eligible souls (unionPull 0) stays silent at any rate — an
+        /// empty room cannot knock.
         /// </summary>
         public static double GroupHourlyChance(double dailyRate, double unionPull)
         {
             if (dailyRate <= 0 || double.IsNaN(dailyRate) || unionPull <= 0) return 0;
 
-            double hourly = dailyRate * Math.Min(1.0, unionPull) / 24.0;
+            double s = Math.Min(1.0, dailyRate / 24.0);      // socialness in [0,1]
+            double up = Math.Min(1.0, unionPull);
+            double t = s * s;                                 // how much the player's openness overrides the bonds
+            double hourly = s * ((1.0 - t) * up + t);
             return hourly > 1 ? 1 : hourly;
         }
 
@@ -108,7 +117,9 @@ namespace ImmersiveAI.Core.Initiation
         {
             if (dailyRate <= 0 || double.IsNaN(dailyRate)) return 0;
 
-            double chance = dailyRate * Pull(storyRichness, relation, daysSinceLastTalk);
+            // Same math as the live schedule (including the socialness override at high rates),
+            // just for one soul standing alone, summed back to a day and read as a chance.
+            double chance = 24.0 * GroupHourlyChance(dailyRate, Pull(storyRichness, relation, daysSinceLastTalk));
             if (chance < 0) chance = 0;
             if (chance > 1) chance = 1;
             return chance;

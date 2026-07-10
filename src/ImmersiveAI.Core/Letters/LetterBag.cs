@@ -22,6 +22,14 @@ namespace ImmersiveAI.Core.Letters
                    .OrderBy(l => l.ArriveGameDay)
                    .ToList();
 
+        /// <summary>How many letters are riding TOWARD the player right now, across every writer.
+        /// Caps the world's spontaneous letter-writing (a morning of feeling social must not become
+        /// an evening buried in arrivals): when this reaches the configured ceiling, no new NPC
+        /// letter sets out until one lands. Replies the player invited, and the player's own
+        /// outgoing letters, are not counted.</summary>
+        public int InFlightToPlayerCount =>
+            Letters.Count(l => l != null && l.ToPlayer);
+
         /// <summary>True while any letter is on the road between the player and this NPC — one
         /// courier per bond keeps correspondence a conversation, not a flood.</summary>
         public bool HasInFlightWith(string npcId) =>

@@ -88,8 +88,10 @@ Key Core concepts:
 - `LetterBag` / `LetterCourier` — letters: an NPC far away may write to you (at half their
   reaching-out chance), and you can send letters from any town, castle, or village menu. Letters
   travel real in-game days with the map distance, survive save/load, and the NPC who receives one
-  may write back once — every letter is remembered, and logged per NPC in `letters.txt`.
-  Config: `EnableLetters`.
+  may write back once — every letter is remembered, and logged per NPC in `letters.txt`. At most
+  `MaxLettersInFlight` letters (default 3) may be on the road toward you at once — letters lag your
+  mood by days, so a social morning cannot bury a busy evening.
+  Config: `EnableLetters`, `MaxLettersInFlight`.
 - `ChatWindowVM` / `ChatWindowManager` — **the chat window** (Milestone 2's first stone): press
   the hotkey (default `O`) anywhere on the map — travelling, at sea, or inside a town, castle, or
   village menu — and a window opens with everyone in the same place as you (portraits, friends
@@ -101,6 +103,13 @@ Key Core concepts:
   toast, and a portrait map notice that opens the window), and the time stamps let them see
   whether you answered at once, later, or never. Config: `EnableChatWindow`, `ChatWindowHotkey`,
   `SendInitiationsToChatWindow`.
+- `SocialnessVM` / `SocialnessManager` — **the socialness control**: a small stepper that lives on
+  the campaign map (0–24) — the live hand on how often those near you are moved to come and speak.
+  0 leaves you in peace; 24 means someone seeks you out every hour, however slight the bonds; in
+  between, low numbers let the bonds decide and high numbers let your own openness carry the day.
+  Click the label for the full explanation. It edits and saves `DailyInitiationRate` in config.json
+  in quarter steps, and sits lower-right on the map, above the army and time controls.
+  Config: `ShowSocialnessControl`.
 - `IChatClient` — backend abstraction; Anthropic/OpenAI-compatible implementations live
   in the Module layer (both also speak native tool use via `IToolChatClient`).
 
@@ -109,6 +118,14 @@ Memory token settings are configured as percentages of the selected model's cont
 - `MaxRecentMemoryPercent`: default `10`; compression starts when verbatim recent memory exceeds this share.
 - `MinRecentMemoryPercentAfterCompression`: default `5`; compression shrinks verbatim recent memory toward this share.
 - The raw `MaxRecentMemoryTokens` and `MinRecentMemoryTokensAfterCompression` values are derived from those percentages and the active model profile.
+- The context window itself comes from the `ModelContextWindows` dict in config.json (gpt-4o 128k,
+  gpt-4.1 1M, gpt-5.x 400k, claude 200k; longest key contained in the model id wins, unknown models
+  fall back to 128k) — add a line there when a new model ships, no redeploy needed.
+
+Two more quality-of-life settings: `NotifyOnMemoryRefactor` (default on) shows a soft notice the
+moment an NPC reworks her deep memory of you, and `DevMode` (default **off**) reveals the developer
+levers — the `[Immersive AI • test]` options, the raw-prompt inspector, and the chat window's
+deep-memory overview — which players never see.
 
 
 ## Work flow for the TASKs

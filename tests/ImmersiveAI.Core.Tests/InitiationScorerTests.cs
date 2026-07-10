@@ -100,4 +100,40 @@ public class InitiationScorerTests
         Assert.Equal(0.0, InitiationScorer.GroupHourlyChance(0, 1.0), 5);
         Assert.Equal(0.0, InitiationScorer.GroupHourlyChance(0.777, 0), 5);
     }
+
+    [Fact]
+    public void GroupHourlyChance_FullSocialness_GuaranteesTheHour()
+    {
+        // The top of the socialness slider is the player's own word, not the bonds': at 24, someone
+        // near IS moved every hour, however faint the pull (a lone stranger at the 0.1 floor).
+        Assert.Equal(1.0, InitiationScorer.GroupHourlyChance(24.0, 0.1), 5);
+        Assert.Equal(1.0, InitiationScorer.GroupHourlyChance(24.0, 1.0), 5);
+
+        // But an empty room cannot knock, whatever the mood.
+        Assert.Equal(0.0, InitiationScorer.GroupHourlyChance(24.0, 0.0), 5);
+    }
+
+    [Fact]
+    public void GroupHourlyChance_SocialnessOverride_VanishesAtEverydayRates()
+    {
+        // At everyday rates the bonds stay fully in charge: the s² blend adds only rate³/24³ per
+        // hour, imperceptible at 1.5/day — the day's total stays ≈ rate × unionPull.
+        double up = 0.4;
+        double everyday = InitiationScorer.GroupHourlyChance(1.5, up) * 24.0;
+        Assert.Equal(1.5 * up, everyday, 1);
+
+        // Toward the top the player's openness increasingly carries the day: at 12 the same weak
+        // bonds are visited far more than the bonds alone would justify.
+        double social = InitiationScorer.GroupHourlyChance(12.0, up);
+        Assert.True(social > 12.0 * up / 24.0);
+
+        // And the whole stays monotonic in the rate — more social is never fewer visits.
+        double prev = 0;
+        for (double rate = 0; rate <= 24.0; rate += 0.5)
+        {
+            double hourly = InitiationScorer.GroupHourlyChance(rate, up);
+            Assert.True(hourly >= prev);
+            prev = hourly;
+        }
+    }
 }

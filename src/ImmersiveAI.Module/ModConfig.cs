@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
@@ -20,6 +21,21 @@ namespace ImmersiveAI
         public string OpenAIModel { get; set; } = "gpt-4o";
 
         public int MaxTokens { get; set; } = 400;
+
+        /// <summary>Developer mode. When false (the default, for players), the developer levers stay
+        /// out of sight: the "[Immersive AI • test]" options and the raw-prompt "Reveal the whole of
+        /// your mind" inspector in the face-to-face menu, and the deep-memory overview panel in the
+        /// chat window. The NPCs' inner life keeps running exactly the same underneath — this only
+        /// decides whether the machinery is on display. Set true when working on the mod.</summary>
+        public bool DevMode { get; set; } = false;
+
+        /// <summary>Known model context-window sizes, editable without touching code: the key is
+        /// matched against the configured model id (longest match wins, case-insensitive), and the
+        /// value is that model's context window in tokens — what the memory-percent settings
+        /// (<see cref="MaxRecentMemoryPercent"/> and friends) are a percentage OF, so the same "10%"
+        /// means more room on a larger model. Add a line here when a new model ships; anything
+        /// unmatched falls back to a conservative 128000.</summary>
+        public Dictionary<string, int> ModelContextWindows { get; set; } = DefaultModelContextWindows();
 
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
         /// compression: the rolling summary, her lasting truths, her sense of self). Kept apart from
@@ -81,15 +97,38 @@ namespace ImmersiveAI
         /// truly wish to — and only then does the player get a ransom-style offer to receive them or not.</summary>
         public bool EnableNpcInitiatedChats { get; set; } = true;
 
-        /// <summary>The expected number of reach-outs per day IN TOTAL, across every NPC together, when the
-        /// bonds are full — NOT a per-NPC chance, so it does not stack with each companion: at 0.3 the
-        /// player receives on average ~0.3 visits a day (most days none, some days one, rarely two) whether
-        /// one devoted friend rides along or ten; at 1.5, ~1.5 a day. Weak bonds scale the total below the
-        /// rate (how much you talk, how far the standing is from indifference, how recently you spoke), so a
-        /// fresh game stays quiet; who actually comes is chosen by the strength of each bond. 0 disables it
-        /// (as does <see cref="EnableNpcInitiatedChats"/>). Clamped to a sane ceiling in
-        /// <see cref="Normalize"/>.</summary>
+        /// <summary>The player's SOCIALNESS — how open they are to company, 0 to 24, adjustable live from
+        /// the little map control (<see cref="ShowSocialnessControl"/>). At everyday values it is the
+        /// expected number of reach-outs per day IN TOTAL, across every NPC together, when the bonds are
+        /// full — NOT a per-NPC chance, so it does not stack with each companion: at 0.3 the player
+        /// receives on average ~0.3 visits a day (most days none, some days one, rarely two) whether one
+        /// devoted friend rides along or ten; at 1.5, ~1.5 a day. Weak bonds scale the total below the
+        /// rate (how much you talk, how far the standing is from indifference, how recently you spoke), so
+        /// a fresh game stays quiet; who actually comes is chosen by the strength of each bond. Toward the
+        /// top of the range the player's own openness increasingly overrides faint bonds, until 24 means
+        /// someone near IS moved to come every hour. 0 disables it (as does
+        /// <see cref="EnableNpcInitiatedChats"/>). Clamped to [0,24] in <see cref="Normalize"/>.</summary>
         public double DailyInitiationRate { get; set; } = 0.3;
+
+        /// <summary>When true, a small "Socialness" control sits on the campaign map — the live hand on
+        /// <see cref="DailyInitiationRate"/>, 0 (leave me be) to 24 (glad of company every hour) —
+        /// with a hover explanation, saving itself into this config as it changes. Set false to hide
+        /// the control and adjust the rate only from this file.</summary>
+        public bool ShowSocialnessControl { get; set; } = true;
+
+        /// <summary>At most how many letters may be ON THE ROAD toward the player at once, across all
+        /// writers. Letters take in-game days to arrive, so a social morning must not turn into a
+        /// buried evening: when this many are already riding, no NPC starts another until one lands.
+        /// Replies the player invited with their own letters are not blocked (each of those is capped
+        /// at one per bond anyway). 0 stops NPCs from writing first at all. Clamped in
+        /// <see cref="Normalize"/>.</summary>
+        public int MaxLettersInFlight { get; set; } = 3;
+
+        /// <summary>When true, a soft notice tells you the moment an NPC quietly reworks her deep
+        /// memory of you — folding old exchanges into her rolling summary and rewriting the truths
+        /// she keeps — so the inner life is visible when it happens. Same gentle style as the
+        /// activity notices. Set false for her to tend her memory in silence.</summary>
+        public bool NotifyOnMemoryRefactor { get; set; } = true;
 
         /// <summary>A floor on every co-located soul's pull, so that EVERYONE near the player — the whole
         /// party, everyone in the same town, even someone never spoken with — carries at least this
@@ -225,6 +264,21 @@ namespace ImmersiveAI
         /// <summary>Estimated recent-memory token target after compression, derived from MinRecentMemoryPercentAfterCompression and the selected model.</summary>
         public int MinRecentMemoryTokensAfterCompression { get; set; } = 0;
 
+        /// <summary>The built-in model → context-window table. Longest key contained in the model id
+        /// wins, so "gpt-5.1" beats "gpt-5" for gpt-5.1-mini. Users edit/extend the copy in their
+        /// config.json; missing built-ins are re-added on load so new defaults reach old configs.</summary>
+        public static Dictionary<string, int> DefaultModelContextWindows() =>
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["gpt-4o"] = 128000,
+                ["gpt-4.1"] = 1000000,
+                ["gpt-5"] = 400000,
+                ["gpt-5.1"] = 400000,
+                ["gpt-5.4"] = 400000,
+                ["gpt-5.5"] = 400000,
+                ["claude"] = 200000,
+            };
+
         public static string ConfigDirectory =>
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
@@ -259,6 +313,19 @@ namespace ImmersiveAI
             }
         }
 
+        /// <summary>Writes the current values back to config.json (used by the live socialness
+        /// control, so a slider nudge survives the session). Best-effort: a failed save must never
+        /// cost more than the persistence itself.</summary>
+        public void Save()
+        {
+            try
+            {
+                Directory.CreateDirectory(ConfigDirectory);
+                File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(this, Formatting.Indented));
+            }
+            catch { /* the value still lives for this session */ }
+        }
+
         public void Normalize()
         {
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
@@ -280,6 +347,16 @@ namespace ImmersiveAI
             // The stranger's floor is a fraction of a full bond's pull; anything outside [0,1] is a typo.
             if (InitiationPullFloor < 0 || double.IsNaN(InitiationPullFloor)) InitiationPullFloor = 0;
             if (InitiationPullFloor > 1) InitiationPullFloor = 1;
+
+            // The road can only hold so many letters bound for one reader; anything above is a typo.
+            if (MaxLettersInFlight < 0) MaxLettersInFlight = 0;
+            if (MaxLettersInFlight > 20) MaxLettersInFlight = 20;
+
+            // The model table: never null, and every built-in entry present (so new defaults reach
+            // configs written before them); user edits to existing keys are honored as-is.
+            if (ModelContextWindows == null) ModelContextWindows = DefaultModelContextWindows();
+            foreach (var pair in DefaultModelContextWindows())
+                if (!ModelContextWindows.ContainsKey(pair.Key)) ModelContextWindows[pair.Key] = pair.Value;
 
             // Memory-writing budget: never below the spoken budget (that would make reflection the
             // narrowest voice she has), never runaway.

@@ -39,33 +39,36 @@ namespace ImmersiveAI
             return Math.Max(1, (int)Math.Round(contextTokens * (percent / 100.0)));
         }
 
+        /// <summary>What any model without a table entry is assumed to hold — deliberately the
+        /// smallest common window, so an unknown model is never over-promised memory room.</summary>
+        public const int FallbackContextTokens = 128000;
+
         public static MemoryTokenProfile Resolve(ModConfig config)
         {
             var backend = config?.Backend ?? "Anthropic";
-            var model = backend == "OpenAI"
+            var model = (backend == "OpenAI"
                 ? config?.OpenAIModel ?? ""
-                : config?.AnthropicModel ?? "";
+                : config?.AnthropicModel ?? "").ToLowerInvariant();
 
-            model = model.ToLowerInvariant();
-
-            if (backend == "OpenAI")
+            // The configured (user-editable) model table decides; the longest key contained in the
+            // model id wins, so "gpt-5.1" beats "gpt-5" for gpt-5.1-mini and "claude" catches every
+            // Anthropic id. Comparison is done here in lowercase so the table's comparer never
+            // matters, whatever JSON round-tripping did to it.
+            var table = config?.ModelContextWindows ?? ModConfig.DefaultModelContextWindows();
+            int best = 0;
+            int bestLength = -1;
+            foreach (var pair in table)
             {
-                if (model.Contains("4o") || model.Contains("gpt-5"))
-                    return new MemoryTokenProfile(128000);
-
-                return new MemoryTokenProfile(128000);
+                if (pair.Value <= 0 || string.IsNullOrWhiteSpace(pair.Key)) continue;
+                var key = pair.Key.Trim().ToLowerInvariant();
+                if (key.Length > bestLength && model.Contains(key))
+                {
+                    best = pair.Value;
+                    bestLength = key.Length;
+                }
             }
 
-            if (model.Contains("haiku"))
-                return new MemoryTokenProfile(200000);
-
-            if (model.Contains("sonnet"))
-                return new MemoryTokenProfile(200000);
-
-            if (model.Contains("opus"))
-                return new MemoryTokenProfile(200000);
-
-            return new MemoryTokenProfile(128000);
+            return new MemoryTokenProfile(best > 0 ? best : FallbackContextTokens);
         }
     }
 }

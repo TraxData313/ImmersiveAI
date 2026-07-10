@@ -52,6 +52,8 @@ namespace ImmersiveAI
             MainThreadDispatcher.Drain();
             // The chat window's little life: hotkey on the map, Enter/Escape while open.
             UI.ChatWindow.ChatWindowManager.Tick();
+            // The socialness control: appears with the map, folds away everywhere else.
+            UI.Socialness.SocialnessManager.Tick();
         }
     }
 }

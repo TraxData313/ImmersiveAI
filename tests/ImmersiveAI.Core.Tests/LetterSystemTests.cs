@@ -64,6 +64,21 @@ public class LetterSystemTests
     }
 
     [Fact]
+    public void InFlightToPlayerCount_CountsOnlyLettersRidingTowardThePlayer()
+    {
+        // The cap on spontaneous NPC letters gates on how many are bound FOR the player; the
+        // player's own outgoing letters must never spend that allowance.
+        var bag = new LetterBag();
+        Assert.Equal(0, bag.InFlightToPlayerCount);
+
+        bag.Add(MakeLetter("lord_1", arriveDay: 10));                  // NPC → player
+        bag.Add(MakeLetter("lord_2", arriveDay: 11));                  // NPC → player
+        bag.Add(MakeLetter("lord_3", arriveDay: 12, toPlayer: false)); // player → NPC
+
+        Assert.Equal(2, bag.InFlightToPlayerCount);
+    }
+
+    [Fact]
     public void SaveAndLoad_RoundTripsTheRoad()
     {
         var path = Path.Combine(Path.GetTempPath(), "immersiveai_tests", Guid.NewGuid().ToString("N"), "_letters.json");

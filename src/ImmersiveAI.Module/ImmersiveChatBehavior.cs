@@ -126,6 +126,7 @@ namespace ImmersiveAI
             Current = this;
             _config = config;
             UI.ChatWindow.ChatWindowManager.Configure(config);
+            UI.Socialness.SocialnessManager.Configure(config);
             _client = ChatClientFactory.Create(config);
             // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
             // harmless base for the id-derived default API, which this behavior no longer uses.
@@ -236,6 +237,23 @@ namespace ImmersiveAI
 
                 MainThreadDispatcher.Enqueue(() =>
                     InformationManager.DisplayMessage(new InformationMessage(doing, ActivityColor)));
+            }
+            catch { /* the notice is a nicety; never let it break a turn */ }
+        }
+
+        // The moment an NPC quietly reworks her deep memory of the player — old exchanges folded
+        // into the rolling summary, the held truths rewritten — a soft notice says so, in the same
+        // voice as the activity notices. Called from LLM background threads; marshaled to the game
+        // thread. Best-effort, like every notice.
+        private void NotifyMemoryRefactor(Hero npc)
+        {
+            if (!_config.NotifyOnMemoryRefactor) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"{name} turns over old memories of you, and settles them deeper.", ActivityColor)));
             }
             catch { /* the notice is a nicety; never let it break a turn */ }
         }
@@ -471,15 +489,19 @@ namespace ImmersiveAI
             // she would receive on the next line — who she is, how she sees the surroundings, who
             // she has become, what she remembers and holds true, and every remembered turn — shown
             // in the scrollable window and saved uncut to full_prompt_snapshot.txt in her folder.
-            starter.AddPlayerLine("immersiveai_deepmem", "immersiveai_input", "immersiveai_deepmem_out",
-                "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind — all you see, remember, and have become. [Immersive AI]",
-                null, OnShowRawPrompt, 107);
-            starter.AddDialogLine("immersiveai_deepmem_line", "immersiveai_deepmem_out", "immersiveai_input",
-                "{=!}{" + InfoVar + "}", null, null);
+            // A developer's lever, like the test options below: out of sight unless DevMode.
+            if (_config.DevMode)
+            {
+                starter.AddPlayerLine("immersiveai_deepmem", "immersiveai_input", "immersiveai_deepmem_out",
+                    "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind — all you see, remember, and have become. [Immersive AI]",
+                    null, OnShowRawPrompt, 107);
+                starter.AddDialogLine("immersiveai_deepmem_line", "immersiveai_deepmem_out", "immersiveai_input",
+                    "{=!}{" + InfoVar + "}", null, null);
+            }
 
             // Test lever: end this chat and have the very person you were speaking with reach out to you a
             // breath later — a way to exercise the whole initiation flow without waiting on the daily odds.
-            if (_config.ShowInitiationTestButton)
+            if (_config.DevMode && _config.ShowInitiationTestButton)
             {
                 starter.AddPlayerLine("immersiveai_test_reach", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestReach}Let us part now. [Immersive AI • test — trigger them to reach out to you]",
@@ -956,7 +978,10 @@ namespace ImmersiveAI
                 try
                 {
                     if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName, _config.MaxKnownFacts).ConfigureAwait(false))
+                    {
                         memory.SummaryAsOf = SituationBuilder.Timestamp();
+                        NotifyMemoryRefactor(npc);
+                    }
                 }
                 catch { /* compression is best-effort */ }
             }
