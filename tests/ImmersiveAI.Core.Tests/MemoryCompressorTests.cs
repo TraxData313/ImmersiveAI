@@ -143,6 +143,79 @@ public class MemoryCompressorTests
     }
 
     [Fact]
+    public async Task CompressAsync_RepliedFactsReplaceTheOldList_SoSheCanRefactorThem()
+    {
+        // The old merge-only behavior piled rewordings up forever; now the FACTS she returns
+        // ARE her truths (she is shown the whole list and asked to write it anew).
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS:\n- Vulgrim's castle feels like home" };
+        var memory = MemoryWithTurns(6);
+        memory.KnownFacts.Add("The warmth and hospitality of Vulgrim's castle create a sense of home");
+        memory.KnownFacts.Add("Vulgrim's castle is warm and hospitable");
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
+
+        var fact = Assert.Single(memory.KnownFacts);
+        Assert.Equal("Vulgrim's castle feels like home", fact);
+    }
+
+    [Fact]
+    public async Task CompressAsync_FactsNone_IsHerChoiceToReleaseThemAll()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS: none" };
+        var memory = MemoryWithTurns(6);
+        memory.KnownFacts.Add("a truth she has let go");
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
+
+        Assert.Empty(memory.KnownFacts);
+    }
+
+    [Fact]
+    public async Task CompressAsync_ReplyWithoutFactsSection_LeavesHerTruthsUntouched()
+    {
+        // A malformed reply (no FACTS section at all) must never wipe her memory.
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(6);
+        memory.KnownFacts.Add("a truth that must survive");
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
+
+        Assert.Equal(new[] { "a truth that must survive" }, memory.KnownFacts);
+    }
+
+    [Fact]
+    public async Task CompressAsync_TrimsRepliedFactsToTheBudget()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS:\n- f1\n- f2\n- f3" };
+        var memory = MemoryWithTurns(6);
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, maxFacts: 2);
+
+        Assert.Equal(new[] { "f1", "f2" }, memory.KnownFacts);
+    }
+
+    [Fact]
+    public void BuildCompressionRequest_AsksHerToWriteTruthsAnew_WithTheBudget()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildCompressionRequest(
+            memory, memory.RecentTurns, systemVoiceName: null, maxFacts: 7)[0].Content;
+
+        Assert.Contains("Write your truths anew", prompt);
+        Assert.Contains("at most 7", prompt);
+        Assert.Contains("falls away from you", prompt);
+    }
+
+    [Fact]
+    public void ParseResponse_ReportsWhetherAFactsSectionWasPresent()
+    {
+        Assert.True(MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS: none").HasFactsSection);
+        Assert.True(MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS:\n- f").HasFactsSection);
+        Assert.False(MemoryCompressor.ParseResponse("SUMMARY:\ns").HasFactsSection);
+    }
+
+    [Fact]
     public void BuildCompressionRequest_DefaultsSystemVoiceToAngel()
     {
         var memory = MemoryWithTurns(2);

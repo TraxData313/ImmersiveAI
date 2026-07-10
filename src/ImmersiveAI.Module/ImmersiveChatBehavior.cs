@@ -56,10 +56,6 @@ namespace ImmersiveAI
         // Same hold-until-ready flag for a manually requested memory update (compression on demand).
         private volatile bool _updateReady = true;
 
-        // The greeting the NPC just delivered this conversation, fed into the first reply's prompt so
-        // it doesn't greet twice. Not persisted to memory; consumed once, then cleared.
-        private volatile string? _lastGreeting;
-
         // The NPC's most recent spoken line this conversation (reply or greeting). Kept so that while
         // the player composes their next message the conversation panel can keep showing it — re-readable,
         // useful for long replies — instead of a bare "(considers your words...)". Updated on every line.
@@ -127,7 +123,9 @@ namespace ImmersiveAI
             // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
             // harmless base for the id-derived default API, which this behavior no longer uses.
             _memoryStore = new JsonMemoryStore(NpcPaths.NpcsRoot);
-            _compressor = new MemoryCompressor(_client);
+            // Memory writing gets its own, roomier output budget: a rolling summary of a long story
+            // plus a full list of truths plus a sense of self cannot breathe inside a spoken-reply cap.
+            _compressor = new MemoryCompressor(ChatClientFactory.Create(config, config.MaxMemoryWriteTokens));
         }
 
         // One spoken completion that may reach for the world's memory along the way (the recall
@@ -241,6 +239,10 @@ namespace ImmersiveAI
 
             // The campaign's folder is known now, so the letters still on the road can be picked up.
             LoadLetterBag();
+
+            // Menus exist and are initialized by now (vanilla behaviors ran first), so the courier
+            // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
+            AddLetterMenus(starter);
         }
 
         public void AddDialogs(CampaignGameStarter starter)
@@ -359,8 +361,9 @@ namespace ImmersiveAI
             starter.AddPlayerLine("immersiveai_wait", "immersiveai_wait", "immersiveai_await",
                 "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
 
-            // Letters: a courier can be hired wherever there are walls and roads.
-            AddLetterMenus(starter);
+            // (The courier menu options are added in OnSessionLaunched, not here: this runs at game
+            // start, when "town"/"castle"/"village" are only presumed placeholders — their real
+            // Initialize later would orphan options added this early.)
         }
 
         private void OnPlayerSpeaks()
@@ -399,7 +402,6 @@ namespace ImmersiveAI
         private void OnChatOpened()
         {
             _recapReady = false;
-            _lastGreeting = null;
             MBTextManager.SetTextVariable(RecapVar, "...", false);
 
             var npc = PrepareChat();
@@ -413,7 +415,6 @@ namespace ImmersiveAI
         // (that's the whole reason the file exists), we just drop straight into the say/leave menu.
         private void OnChatOpenedNoRecap()
         {
-            _lastGreeting = null;
             PrepareChat();
         }
 
@@ -448,15 +449,19 @@ namespace ImmersiveAI
             try
             {
                 var ctx = BuildContext(npc);
-                var messages = _promptBuilder.BuildRecap(ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, _config.SystemVoiceName);
+
+                // The player's visit is a real beat in her story: the Angel narrates the arrival and she
+                // speaks the greeting, and the whole exchange is recorded as an Angel turn — exactly like
+                // her own reaching-out and the letters. So her memory shows WHEN the player came to her,
+                // and the next reply needs no woven-in ephemeral opening (the turn is already history).
+                var arrivalLine = PromptBuilder.ArrivalLine(
+                    ctx.PlayerName, firstMeeting: !PromptBuilder.HasRememberedHistory(ctx.Memory));
+                var messages = _promptBuilder.BuildAngelPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
                 var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
-                // The greeting is an opening recap, not a player-initiated exchange, so it is not
-                // stored as a turn; the conversation memory only grows from real back-and-forth.
-                // It is remembered just long enough to give the NPC's first reply context (see
-                // RespondAsync), so the NPC doesn't greet the player twice.
-                _lastGreeting = greeting;
+                AppendAngelTurn(npc, arrivalLine, greeting);
                 _lastNpcLine = greeting;
 
                 MainThreadDispatcher.Enqueue(() =>
@@ -517,7 +522,7 @@ namespace ImmersiveAI
 
                 // Always reflect (rewrite the rolling summary and facts), even when nothing is old enough
                 // to fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
-                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self)
+                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self, _config.MaxKnownFacts)
                     .ConfigureAwait(false);
 
                 string outcome;
@@ -571,7 +576,7 @@ namespace ImmersiveAI
 
             var ctx = BuildContext(npc);
             var messages = _promptBuilder.Build(
-                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder, _lastGreeting,
+                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder,
                 _config.SystemVoiceName);
 
             var name = npc.Name?.ToString() ?? "Unknown";
@@ -675,13 +680,10 @@ namespace ImmersiveAI
                 var ctx = BuildContext(npc);
                 var memory = ctx.Memory;
 
-                // Consume the opening greeting once: it gives this first reply context, then is
-                // dropped so later turns lean on the real recorded history instead.
-                var opening = _lastGreeting;
-                _lastGreeting = null;
-
+                // The opening greeting (if any) is already a recorded Angel turn in the loaded memory,
+                // so the history carries it — no ephemeral opening to weave in.
                 var messages = _promptBuilder.Build(
-                    ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, opening, _config.SystemVoiceName);
+                    ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, _config.SystemVoiceName);
                 var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
                 _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
@@ -729,7 +731,7 @@ namespace ImmersiveAI
 
                     try
                     {
-                        if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
+                        if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName, _config.MaxKnownFacts).ConfigureAwait(false))
                             memory.SummaryAsOf = SituationBuilder.Timestamp();
                     }
                     catch { /* compression is best-effort */ }
@@ -930,10 +932,12 @@ namespace ImmersiveAI
 
         private static bool IsSafeToInitiate() => InitiationBlockReason().Length == 0;
 
-        // Rolls each co-located NPC's own bond-scaled hourly chance to reach out this hour, and returns one
-        // who is moved to (weighted by pull if more than one is, in the same hour). Only NPCs the player has
-        // actually built a history with — and who are in the same place right now, so the talk is naturally
-        // face-to-face — are considered. Returns null when no one reaches out this hour.
+        // One roll per hour for the WHOLE co-located group, so DailyInitiationRate stays the day's total
+        // across everyone (≈ rate × combined pull) instead of stacking per companion — five devoted friends
+        // share the visits rather than each bringing their own. If the hour fires, the one who comes is
+        // chosen weighted by pull. Only NPCs the player has actually built a history with — and who are in
+        // the same place right now, so the talk is naturally face-to-face — are considered. Returns null
+        // when no one reaches out this hour.
         private Hero? PickInitiatingNpcForThisHour()
         {
             try
@@ -942,7 +946,7 @@ namespace ImmersiveAI
                 if (!Directory.Exists(root)) return null;
 
                 double nowDay = CampaignTime.Now.ToDays;
-                var moved = new List<Hero>();
+                var eligible = new List<Hero>();
                 var pulls = new List<double>();
 
                 foreach (var folder in Directory.GetDirectories(root))
@@ -964,23 +968,21 @@ namespace ImmersiveAI
                     double daysSince = memory.LastConversationGameDay >= 0
                         ? Math.Max(0, nowDay - memory.LastConversationGameDay)
                         : 0;
-                    double dailyChance = InitiationScorer.DailyChance(
-                        _config.DailyInitiationRate, memory.StoryRichness, GetStanding(hero), daysSince);
-                    if (dailyChance <= 0) continue;
+                    double pull = InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince);
+                    if (pull <= 0) continue;
 
-                    // Independent hourly Bernoulli trial for this soul; the daily chance spread over the day.
-                    if (_rng.NextDouble() < dailyChance / 24.0)
-                    {
-                        moved.Add(hero);
-                        pulls.Add(dailyChance);
-                    }
+                    eligible.Add(hero);
+                    pulls.Add(pull);
                 }
 
-                if (moved.Count == 0) return null;
-                if (moved.Count == 1) return moved[0];
+                if (eligible.Count == 0) return null;
+
+                double hourly = InitiationScorer.GroupHourlyChance(
+                    _config.DailyInitiationRate, InitiationScorer.UnionPull(pulls));
+                if (_rng.NextDouble() >= hourly) return null;
 
                 int idx = InitiationPlanner.PickWeightedIndex(pulls, _rng.NextDouble());
-                return idx >= 0 ? moved[idx] : moved[0];
+                return idx >= 0 ? eligible[idx] : eligible[0];
             }
             catch { return null; }
         }
@@ -1206,7 +1208,6 @@ namespace ImmersiveAI
             try
             {
                 _currentNpc = npc;
-                _lastGreeting = null;   // the reaching-out greeting is a real turn, not a woven-in opening
                 _recapReady = false;    // it is generated now, with the "gathers their thoughts..." hold
                 _responseReady = true;
                 _pendingInitiation = true;
@@ -1353,7 +1354,7 @@ namespace ImmersiveAI
         private void OnShowInitiationOdds()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"Reaching-out odds (DailyInitiationRate = {_config.DailyInitiationRate:0.##}).");
+            sb.AppendLine($"Reaching-out odds (DailyInitiationRate = {_config.DailyInitiationRate:0.##} — the day's expected visits across EVERYONE together, when the bonds are full; all present NPCs share it by pull, it does not stack per person).");
             sb.AppendLine("Only NPCs you have a history with AND who are in the same place can seek you out.");
 
             var block = InitiationBlockReason();
@@ -1366,6 +1367,8 @@ namespace ImmersiveAI
                 var root = NpcPaths.CampaignRoot;
                 double nowDay = CampaignTime.Now.ToDays;
                 int shown = 0;
+                var herePulls = new List<double>();
+                var awayPulls = new List<double>();
 
                 if (Directory.Exists(root))
                 {
@@ -1389,17 +1392,19 @@ namespace ImmersiveAI
                         int relation = GetStanding(hero);
                         double daysSince = memory.LastConversationGameDay >= 0
                             ? Math.Max(0, nowDay - memory.LastConversationGameDay) : 0;
-                        double daily = InitiationScorer.DailyChance(
+                        double pull = InitiationScorer.Pull(memory.StoryRichness, relation, daysSince);
+                        double alone = InitiationScorer.DailyChance(
                             _config.DailyInitiationRate, memory.StoryRichness, relation, daysSince);
+                        (coLocated ? herePulls : awayPulls).Add(pull);
 
                         sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
                                       $"standing {relation}, richness {memory.StoryRichness}, last spoke {daysSince:0.#}d ago");
                         if (coLocated)
-                            sb.AppendLine($"    → {daily * 100:0.0}% chance/day to seek you out  (~{daily / 24.0 * 100:0.00}%/hour)");
+                            sb.AppendLine($"    → pull {pull * 100:0.0}% of a full bond (alone that would be ~{alone:0.00} visits/day; here it is their share of the group's total)");
                         else
                         {
-                            double letterDaily = _config.EnableLetters ? daily * Core.Letters.LetterCourier.WriteRateFactor : 0;
-                            sb.AppendLine($"    → {letterDaily * 100:0.0}% chance/day to write to you" +
+                            double letterAlone = _config.EnableLetters ? alone * Core.Letters.LetterCourier.WriteRateFactor : 0;
+                            sb.AppendLine($"    → pull {pull * 100:0.0}% of a full bond (alone ~{letterAlone:0.00} letters/day; shares the post with the others)" +
                                           (_config.EnableLetters ? "" : " (letters disabled)"));
                         }
                         shown++;
@@ -1408,6 +1413,17 @@ namespace ImmersiveAI
 
                 if (shown == 0)
                     sb.AppendLine("(You have no NPC history yet — speak with someone first.)");
+                else
+                {
+                    double hereTotal = _config.DailyInitiationRate * InitiationScorer.UnionPull(herePulls);
+                    double awayTotal = _config.EnableLetters
+                        ? Core.Letters.LetterCourier.WriteRateFactor * _config.DailyInitiationRate * InitiationScorer.UnionPull(awayPulls)
+                        : 0;
+                    sb.AppendLine();
+                    sb.AppendLine($"All together: ~{hereTotal:0.00} visits/day expected from those here" +
+                                  (hereTotal > 0.005 ? $" (about 1 every {(hereTotal > 0 ? 1.0 / hereTotal : 0):0.#} days)" : "") +
+                                  $", and ~{awayTotal:0.00} letters/day from those away.");
+                }
 
                 // Letters currently on the road, so a courier mid-journey is visible, not a mystery.
                 var onRoad = _letterBag?.Letters;

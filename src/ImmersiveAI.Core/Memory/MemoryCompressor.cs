@@ -19,6 +19,9 @@ namespace ImmersiveAI.Core.Memory
         /// mind. Never surfaced as "System" — the NPC is addressed as a living individual, not a log.</summary>
         public const string DefaultSystemVoiceName = "Angel";
 
+        /// <summary>How many lasting truths an NPC may carry when the caller does not say otherwise.</summary>
+        public const int DefaultMaxKnownFacts = 10;
+
         private readonly IChatClient _client;
 
         public MemoryCompressor(IChatClient client)
@@ -27,19 +30,19 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>Compresses the oldest turns, keeping the newest ones verbatim. Returns false if there was nothing to do.</summary>
-        public async Task<bool> CompressAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, CancellationToken cancellationToken = default)
+        public async Task<bool> CompressAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, int maxFacts = DefaultMaxKnownFacts, CancellationToken cancellationToken = default)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             var turns = memory.GetTurnsToCompress(keepMostRecent);
             if (turns.Count == 0) return false;
 
-            var request = BuildCompressionRequest(memory, turns, systemVoiceName);
+            var request = BuildCompressionRequest(memory, turns, systemVoiceName, maxFacts);
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Facts);
+            ApplyParsedFacts(memory, parsed, turns.Count, maxFacts);
             return true;
         }
 
@@ -51,7 +54,7 @@ namespace ImmersiveAI.Core.Memory
         /// when there is nothing to drop, every recent turn is kept verbatim. Returns false only if
         /// there is no memory at all to reflect on, or the LLM returned nothing usable.
         /// </summary>
-        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, NpcSelf? self = null, CancellationToken cancellationToken = default)
+        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, NpcSelf? self = null, int maxFacts = DefaultMaxKnownFacts, CancellationToken cancellationToken = default)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             if (keepMostRecent < 0) keepMostRecent = 0;
@@ -65,13 +68,13 @@ namespace ImmersiveAI.Core.Memory
 
             // When a self is supplied, the reflection also invites the NPC to look inward and, if they
             // wish, revise who they feel themselves to be — this is how their self-concept grows.
-            var request = BuildReflectionRequest(memory, turns, systemVoiceName, self?.Text);
+            var request = BuildReflectionRequest(memory, turns, systemVoiceName, self?.Text, maxFacts);
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Facts);
+            ApplyParsedFacts(memory, parsed, turns.Count, maxFacts);
 
             // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
             // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
@@ -79,6 +82,19 @@ namespace ImmersiveAI.Core.Memory
                 self.Text = parsed.Self!.Trim();
 
             return true;
+        }
+
+        // The NPC is shown her whole list of truths and asked to write anew all she chooses to keep —
+        // so when her reply carries a FACTS section, that list IS her truths now (replace, letting the
+        // unnamed ones fall away, trimmed to the budget). A reply with no FACTS section at all leaves
+        // her truths exactly as they were: a malformed answer must never cost her memory.
+        private static void ApplyParsedFacts(NpcMemory memory, CompressionResult parsed, int consumedTurnCount, int maxFacts)
+        {
+            if (maxFacts < 1) maxFacts = 1;
+            if (parsed.HasFactsSection)
+                memory.ApplyCompression(parsed.Summary!, consumedTurnCount, parsed.Facts.Take(maxFacts), replaceFacts: true);
+            else
+                memory.ApplyCompression(parsed.Summary!, consumedTurnCount);
         }
 
         /// <summary>
@@ -101,7 +117,7 @@ namespace ImmersiveAI.Core.Memory
         /// fresh (the recent turns that stay verbatim), so they update it with full context. The
         /// SUMMARY:/FACTS: reply format is preserved for parsing.
         /// </summary>
-        public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns, string? systemVoiceName = null)
+        public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns, string? systemVoiceName = null, int maxFacts = DefaultMaxKnownFacts)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
             var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
@@ -144,15 +160,25 @@ namespace ImmersiveAI.Core.Memory
                     AppendReflectedTurn(sb, turn, voice);
             }
 
+            AppendReplyFormat(sb, voice, maxFacts);
+
+            return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+        }
+
+        // The SUMMARY:/FACTS: reply contract shared by compression and reflection. The FACTS ask is
+        // written for replace semantics: she must restate every truth she chooses to keep carrying,
+        // because the list she returns becomes the whole of what she holds (see ApplyParsedFacts).
+        private static void AppendReplyFormat(StringBuilder sb, string voice, int maxFacts)
+        {
+            if (maxFacts < 1) maxFacts = 1;
             sb.AppendLine();
             sb.AppendLine($"Answer {voice} in exactly this format:");
             sb.AppendLine("SUMMARY:");
-            sb.AppendLine("<one short paragraph, in your own first-person voice, of what you choose to remember>");
+            sb.AppendLine("<what you choose to remember, in your own first-person voice — a paragraph, or two or three if the story asks for them>");
             sb.AppendLine("FACTS:");
             sb.AppendLine("- <a lasting truth worth never forgetting, if any>");
-            sb.AppendLine("Name at most 3 such truths; only what genuinely endures. If none, write FACTS: none.");
-
-            return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+            sb.AppendLine($"Write your truths anew, in full — every one you choose to go on holding: the kept, the refined, and the newly won alike, each named once. "
+                + $"What you do not write here falls away from you. Hold at most {maxFacts}; if none endure, write FACTS: none.");
         }
 
         /// <summary>
@@ -162,7 +188,7 @@ namespace ImmersiveAI.Core.Memory
         /// summary and facts if there are none, while the recent turns stay with her. Same SUMMARY:/FACTS:
         /// reply contract as compression.
         /// </summary>
-        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null, string? selfText = null)
+        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null, string? selfText = null, int maxFacts = DefaultMaxKnownFacts)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
             var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
@@ -223,13 +249,7 @@ namespace ImmersiveAI.Core.Memory
                     AppendReflectedTurn(sb, turn, voice);
             }
 
-            sb.AppendLine();
-            sb.AppendLine($"Answer {voice} in exactly this format:");
-            sb.AppendLine("SUMMARY:");
-            sb.AppendLine("<one short paragraph, in your own first-person voice, of what you choose to remember>");
-            sb.AppendLine("FACTS:");
-            sb.AppendLine("- <a lasting truth worth never forgetting, if any>");
-            sb.AppendLine("Name at most 3 such truths; only what genuinely endures. If none, write FACTS: none.");
+            AppendReplyFormat(sb, voice, maxFacts);
             if (reflectOnSelf)
             {
                 sb.AppendLine("SELF:");
@@ -309,7 +329,7 @@ namespace ImmersiveAI.Core.Memory
                 if (block.Length > 0) self = block;
             }
 
-            return new CompressionResult(summary.Length == 0 ? null : summary, facts, self);
+            return new CompressionResult(summary.Length == 0 ? null : summary, facts, self, hasFactsSection: factsIdx >= 0);
         }
 
         // The earliest section-label position at or after <afterPos>, or <length> if none of them apply.
@@ -331,11 +351,18 @@ namespace ImmersiveAI.Core.Memory
             /// null (no SELF section was asked for or returned). "unchanged" is handled by the caller.</summary>
             public string? Self { get; }
 
-            public CompressionResult(string? summary, List<string> facts, string? self = null)
+            /// <summary>True when the reply actually carried a FACTS section. Only then does
+            /// <see cref="Facts"/> speak for the whole of her truths (replace semantics) — an empty list
+            /// under a present section is her choosing to release them all ("FACTS: none"), while an
+            /// absent section means the reply was malformed and her truths must stand untouched.</summary>
+            public bool HasFactsSection { get; }
+
+            public CompressionResult(string? summary, List<string> facts, string? self = null, bool hasFactsSection = false)
             {
                 Summary = summary;
                 Facts = facts;
                 Self = self;
+                HasFactsSection = hasFactsSection;
             }
         }
     }

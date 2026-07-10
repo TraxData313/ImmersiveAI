@@ -113,8 +113,9 @@ namespace ImmersiveAI
             catch { return false; }
         }
 
-        // Rolls each DISTANT NPC's chance to sit down and write this hour — the mirror of
-        // PickInitiatingNpcForThisHour, for everyone that picker skips as not co-located. Writing is
+        // One roll per hour for the WHOLE circle of distant correspondents — the mirror of
+        // PickInitiatingNpcForThisHour, for everyone that picker skips as not co-located, sharing the day's
+        // letters (≈ WriteRateFactor × rate × combined pull) instead of stacking per bond. Writing is
         // rarer than crossing a room (LetterCourier.WriteRateFactor), and one courier per bond keeps
         // correspondence a conversation rather than a flood.
         private void MaybeStartNpcLetter()
@@ -127,7 +128,7 @@ namespace ImmersiveAI
                 if (!Directory.Exists(root)) return;
 
                 double nowDay = CampaignTime.Now.ToDays;
-                var moved = new List<Hero>();
+                var eligible = new List<Hero>();
                 var pulls = new List<double>();
 
                 foreach (var folder in Directory.GetDirectories(root))
@@ -149,20 +150,21 @@ namespace ImmersiveAI
                     double daysSince = memory.LastConversationGameDay >= 0
                         ? Math.Max(0, nowDay - memory.LastConversationGameDay)
                         : 0;
-                    double dailyChance = LetterCourier.WriteRateFactor * InitiationScorer.DailyChance(
-                        _config.DailyInitiationRate, memory.StoryRichness, GetStanding(hero), daysSince);
-                    if (dailyChance <= 0) continue;
+                    double pull = InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince);
+                    if (pull <= 0) continue;
 
-                    if (_rng.NextDouble() < dailyChance / 24.0)
-                    {
-                        moved.Add(hero);
-                        pulls.Add(dailyChance);
-                    }
+                    eligible.Add(hero);
+                    pulls.Add(pull);
                 }
 
-                if (moved.Count == 0) return;
-                int idx = moved.Count == 1 ? 0 : InitiationPlanner.PickWeightedIndex(pulls, _rng.NextDouble());
-                var writer = idx >= 0 ? moved[idx] : moved[0];
+                if (eligible.Count == 0) return;
+
+                double hourly = InitiationScorer.GroupHourlyChance(
+                    LetterCourier.WriteRateFactor * _config.DailyInitiationRate, InitiationScorer.UnionPull(pulls));
+                if (_rng.NextDouble() >= hourly) return;
+
+                int idx = InitiationPlanner.PickWeightedIndex(pulls, _rng.NextDouble());
+                var writer = idx >= 0 ? eligible[idx] : eligible[0];
 
                 MarkLetterWorkInFlight();
                 _ = BeginNpcLetterAsync(writer);

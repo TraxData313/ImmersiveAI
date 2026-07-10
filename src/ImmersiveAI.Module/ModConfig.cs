@@ -21,6 +21,18 @@ namespace ImmersiveAI
 
         public int MaxTokens { get; set; } = 400;
 
+        /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
+        /// compression: the rolling summary, her lasting truths, her sense of self). Kept apart from
+        /// <see cref="MaxTokens"/> — which paces spoken replies — so deep memory has room to be rich:
+        /// a summary of a long shared story plus a full list of truths does not fit in a reply budget.</summary>
+        public int MaxMemoryWriteTokens { get; set; } = 1500;
+
+        /// <summary>At most how many lasting truths ("known facts") an NPC may carry about the player.
+        /// At every compression or reflection she is shown all of them and writes the list anew —
+        /// keeping, refining, merging, or releasing as she sees fit — so the list stays hers and never
+        /// silts up with near-duplicates.</summary>
+        public int MaxKnownFacts { get; set; } = 10;
+
         /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
         public bool EnableConversationRecap { get; set; } = true;
@@ -61,12 +73,14 @@ namespace ImmersiveAI
         /// truly wish to — and only then does the player get a ransom-style offer to receive them or not.</summary>
         public bool EnableNpcInitiatedChats { get; set; } = true;
 
-        /// <summary>The daily reaching-out chance for a FULL-BLOWN bond — someone the player speaks with
-        /// often and holds at a strong standing (love or enmity). Every actual NPC's chance is this scaled
-        /// down by how much they talk and how far their standing is from indifference, so a fresh game stays
-        /// quiet while a devoted, frequent companion may write nearly every day. 0.3 ≈ a maxed bond reaching
-        /// out ~30% of days; raise toward ~1.5 to let the closest bonds write daily. 0 disables it (as does
-        /// <see cref="EnableNpcInitiatedChats"/>). Clamped to a sane ceiling in <see cref="Normalize"/>.</summary>
+        /// <summary>The expected number of reach-outs per day IN TOTAL, across every NPC together, when the
+        /// bonds are full — NOT a per-NPC chance, so it does not stack with each companion: at 0.3 the
+        /// player receives on average ~0.3 visits a day (most days none, some days one, rarely two) whether
+        /// one devoted friend rides along or ten; at 1.5, ~1.5 a day. Weak bonds scale the total below the
+        /// rate (how much you talk, how far the standing is from indifference, how recently you spoke), so a
+        /// fresh game stays quiet; who actually comes is chosen by the strength of each bond. 0 disables it
+        /// (as does <see cref="EnableNpcInitiatedChats"/>). Clamped to a sane ceiling in
+        /// <see cref="Normalize"/>.</summary>
         public double DailyInitiationRate { get; set; } = 0.3;
 
         /// <summary>When true, the accept/reject offer that appears when an NPC reaches out pauses the game
@@ -197,6 +211,16 @@ namespace ImmersiveAI
             // every NPC hammering the player. 24 is already far more than anyone would want.
             if (DailyInitiationRate < 0 || double.IsNaN(DailyInitiationRate)) DailyInitiationRate = 0;
             if (DailyInitiationRate > 24) DailyInitiationRate = 24;
+
+            // Memory-writing budget: never below the spoken budget (that would make reflection the
+            // narrowest voice she has), never runaway.
+            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 1500;
+            if (MaxMemoryWriteTokens < MaxTokens) MaxMemoryWriteTokens = MaxTokens;
+            if (MaxMemoryWriteTokens > 8000) MaxMemoryWriteTokens = 8000;
+
+            // Truths budget: at least one, and a bound that keeps the prompt from silting up.
+            if (MaxKnownFacts <= 0) MaxKnownFacts = 10;
+            if (MaxKnownFacts > 30) MaxKnownFacts = 30;
 
             // Recall rounds: 0 is a legitimate "none"; more than a handful only slows replies down.
             if (MaxRecallsPerReply < 0) MaxRecallsPerReply = 0;

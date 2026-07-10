@@ -115,17 +115,10 @@ namespace ImmersiveAI.Personas
             var sb = new StringBuilder();
             var name = Name(speaker);
 
-            // The approach: who comes to them, when, and where — the opening breath of the scene.
-            string approach;
-            if (partner == null || apart)
-                approach = $"This moment finds you, {name}";
-            else if (partner == Hero.MainHero)
-                approach = $"{Name(partner)} comes to you, {name}";
-            else
-                approach = $"{Name(partner)} comes to speak with you, {name}";
-            sb.AppendLine($"{approach}. It is {TimeOfDay()} — {Timestamp()} — and you are {PlaceDescription(speaker)}.");
-            if (partner != null && apart)
-                sb.AppendLine($"{Name(partner)} is not here — they are far from you now, and the road between you is long.");
+            // The narration moves like a mind waking toward the moment: the setting, then who you are,
+            // then what has lately stirred the world — and only at the end the person themselves, so
+            // "they come to you now" is the last thing held before the conversation begins.
+            sb.AppendLine($"This moment finds you, {name}. It is {TimeOfDay()} — {Timestamp()} — and you are {PlaceDescription(speaker)}.");
 
             // Who they are, gently recalled to them.
             var self = DescribeSelf(speaker);
@@ -133,17 +126,6 @@ namespace ImmersiveAI.Personas
             {
                 sb.AppendLine();
                 sb.AppendLine(self);
-            }
-
-            // Who now stands before them, and how their heart leans toward that person.
-            if (partner != null)
-            {
-                var them = DescribeOther(speaker, partner);
-                if (them.Length > 0)
-                {
-                    sb.AppendLine();
-                    sb.AppendLine(them);
-                }
             }
 
             // What has lately happened in the world, as far as it would have reached them (best-effort;
@@ -157,6 +139,23 @@ namespace ImmersiveAI.Personas
                     sb.AppendLine();
                     sb.AppendLine(tidings);
                 }
+            }
+
+            // And now, the person: who stands before them (or writes from afar), and how their
+            // heart leans toward that one — the closing breath of the scene.
+            if (partner != null)
+            {
+                sb.AppendLine();
+                if (apart)
+                    sb.AppendLine($"Your thoughts turn to {Name(partner)}, who is not here — they are far from you now, and the road between you is long.");
+                else if (partner == Hero.MainHero)
+                    sb.AppendLine($"And now {Name(partner)} comes to you.");
+                else
+                    sb.AppendLine($"And now {Name(partner)} comes to speak with you.");
+
+                var them = DescribeOther(speaker, partner);
+                if (them.Length > 0)
+                    sb.AppendLine(them);
             }
 
             return sb.ToString().TrimEnd();
@@ -183,6 +182,14 @@ namespace ImmersiveAI.Personas
             if (clan != null && kingdom != null) sentences.Add($"You belong to clan {clan}, sworn to {kingdom}.");
             else if (clan != null) sentences.Add($"You belong to clan {clan}.");
             else if (kingdom != null) sentences.Add($"You are sworn to {kingdom}.");
+
+            // Charge: a governor knows the place given into their keeping.
+            Try(() =>
+            {
+                var kept = h.GovernorOf?.Settlement?.Name?.ToString();
+                if (!string.IsNullOrWhiteSpace(kept))
+                    sentences.Add($"The keeping of {kept} — its walls, its garrison, its people — has been given into your hands: you are its governor.");
+            });
 
             // Kin.
             Try(() =>

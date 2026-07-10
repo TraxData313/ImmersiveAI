@@ -142,6 +142,62 @@ public class NpcMemoryTests
     }
 
     [Fact]
+    public void ApplyCompression_WithReplaceFacts_TheNewListBecomesTheWholeTruth()
+    {
+        // She is shown all her truths and asked to write them anew — so rewordings and released
+        // truths fall away instead of piling up beside their older phrasings.
+        var memory = new NpcMemory();
+        memory.KnownFacts.Add("The warmth of Vulgrim's castle creates a sense of home");
+        memory.KnownFacts.Add("Vulgrim's castle is warm and welcoming");
+
+        memory.ApplyCompression(
+            "s", consumedTurnCount: 0,
+            newFacts: new[] { "Vulgrim's castle in Ostican feels like home", "My sister is wed to Vulgrim" },
+            replaceFacts: true);
+
+        Assert.Equal(
+            new[] { "Vulgrim's castle in Ostican feels like home", "My sister is wed to Vulgrim" },
+            memory.KnownFacts);
+    }
+
+    [Fact]
+    public void ApplyCompression_WithReplaceFacts_AnEmptyListReleasesThemAll()
+    {
+        var memory = new NpcMemory();
+        memory.KnownFacts.Add("a truth she no longer holds");
+
+        memory.ApplyCompression("s", consumedTurnCount: 0, newFacts: Array.Empty<string>(), replaceFacts: true);
+
+        Assert.Empty(memory.KnownFacts);
+    }
+
+    [Fact]
+    public void ApplyCompression_NullFacts_NeverTouchesTheList_EvenWithReplace()
+    {
+        // A reply that carried no FACTS section at all must never cost her memory.
+        var memory = new NpcMemory();
+        memory.KnownFacts.Add("a truth");
+
+        memory.ApplyCompression("s", consumedTurnCount: 0, newFacts: null, replaceFacts: true);
+
+        Assert.Equal(new[] { "a truth" }, memory.KnownFacts);
+    }
+
+    [Fact]
+    public void ApplyCompression_WithReplaceFacts_StillDeduplicatesWithinTheNewList()
+    {
+        var memory = new NpcMemory();
+        memory.KnownFacts.Add("old truth");
+
+        memory.ApplyCompression(
+            "s", consumedTurnCount: 0,
+            newFacts: new[] { "A truth", "a truth", " ", "Another" },
+            replaceFacts: true);
+
+        Assert.Equal(new[] { "A truth", "Another" }, memory.KnownFacts);
+    }
+
+    [Fact]
     public void ApplyCompression_InvalidConsumedCount_Throws()
     {
         var memory = new NpcMemory();

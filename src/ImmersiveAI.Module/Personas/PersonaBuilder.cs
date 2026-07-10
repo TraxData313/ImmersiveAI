@@ -70,12 +70,9 @@ namespace ImmersiveAI.Personas
                 sb.Append($", sworn to {npc.Clan.Kingdom.Name}");
             sb.Append('.');
 
-            var player = Hero.MainHero;
-            if (player != null)
-            {
-                int relation = npc.GetRelation(player);
-                sb.Append($" Your standing with {player.Name}: {DescribeRelation(relation)} ({relation}).");
-            }
+            // The standing toward the player deliberately does NOT ride here: the situation block
+            // (SituationBuilder.DescribeOther) speaks it once, beside the person it belongs to, so the
+            // sheet never tells her the same heart twice in two places.
             return sb.ToString();
         }
 

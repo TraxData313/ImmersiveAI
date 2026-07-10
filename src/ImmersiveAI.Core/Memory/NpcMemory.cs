@@ -106,10 +106,15 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>
-        /// Replaces the compressed turns with the new rolling summary and merges any newly
-        /// distilled facts (case-insensitive de-duplication).
+        /// Replaces the compressed turns with the new rolling summary and applies the facts the NPC
+        /// chose to hold. With <paramref name="replaceFacts"/> true the given list IS her truths now —
+        /// she was shown all of them and asked to keep, refine, or release, so what she did not restate
+        /// falls away (this is what lets her refactor instead of only pile up rewordings). With it
+        /// false (or a null list — e.g. a reply that carried no FACTS section at all) the old merge
+        /// behavior applies: new facts are appended, existing ones are never touched, so a malformed
+        /// reply can never wipe her memory.
         /// </summary>
-        public void ApplyCompression(string newSummary, int consumedTurnCount, IEnumerable<string>? newFacts = null)
+        public void ApplyCompression(string newSummary, int consumedTurnCount, IEnumerable<string>? newFacts = null, bool replaceFacts = false)
         {
             if (consumedTurnCount < 0 || consumedTurnCount > RecentTurns.Count)
                 throw new ArgumentOutOfRangeException(nameof(consumedTurnCount));
@@ -118,6 +123,8 @@ namespace ImmersiveAI.Core.Memory
             RecentTurns.RemoveRange(0, consumedTurnCount);
 
             if (newFacts == null) return;
+
+            if (replaceFacts) KnownFacts.Clear();
             foreach (var fact in newFacts)
             {
                 if (string.IsNullOrWhiteSpace(fact)) continue;

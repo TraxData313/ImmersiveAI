@@ -40,7 +40,8 @@ namespace ImmersiveAI.Tools
 
             new ToolDefinition(RecallPlace,
                 "Call to mind what is known of a town, castle, or village — who holds it, whose realm it lies " +
-                "in, and how it fares. Reach for this when a place is spoken of and your memory of it is dim.",
+                "in, its walls and garrison, and how it fares. Reach for this when a place is spoken of and " +
+                "your memory of it is dim, and always before speaking in numbers of its defenses.",
                 new[] { new ToolParameter("name", "The place's name, as best you know it.") }),
 
             new ToolDefinition(RecallClan,
@@ -68,7 +69,7 @@ namespace ImmersiveAI.Tools
                 switch (call.Name)
                 {
                     case RecallPerson: return DescribePerson(name, asker);
-                    case RecallPlace: return DescribePlace(name);
+                    case RecallPlace: return DescribePlace(name, asker);
                     case RecallClan: return DescribeClan(name);
                     case RecallRealm: return DescribeRealm(name);
                     default: return string.Empty;
@@ -258,7 +259,7 @@ namespace ImmersiveAI.Tools
 
         // ------------------------------ places ------------------------------
 
-        private static string DescribePlace(string name)
+        private static string DescribePlace(string name, Hero asker)
         {
             var s = FindByName(Settlement.All, name, x => x.Name?.ToString());
             if (s == null)
@@ -291,12 +292,93 @@ namespace ImmersiveAI.Tools
                     lines.Add($"It lives in the shadow of {s.Village.Bound.Name}.");
             });
 
+            Try(() => lines.AddRange(FortificationLedger(s, asker)));
+
             Try(() =>
             {
                 if (s.IsUnderSiege) lines.Add("Word is that it lies under siege even now.");
             });
 
             return string.Join(" ", lines);
+        }
+
+        // The defenses and fortunes of a town or castle. An asker who truly knows the place — its
+        // governor, someone within its walls, or one of the clan that holds it — recalls the ledger
+        // exactly; anyone else gets what word of mouth would carry: walls and rough numbers, never
+        // granary counts or the mood of streets they have not walked.
+        private static IEnumerable<string> FortificationLedger(Settlement s, Hero asker)
+        {
+            var lines = new List<string>();
+            if (!(s.IsTown || s.IsCastle)) return lines;
+            var town = s.Town;
+            if (town == null) return lines;
+
+            bool intimate = asker != null && Safe(() =>
+                town.Governor == asker || asker.CurrentSettlement == s || (asker.Clan != null && asker.Clan == s.OwnerClan));
+
+            Try(() =>
+            {
+                var governor = town.Governor;
+                if (governor == null) return;
+                lines.Add(governor == asker
+                    ? "Its keeping rests in your own hands — you are its governor."
+                    : $"Its keeping rests in the hands of {governor.Name}, its governor.");
+            });
+
+            Try(() =>
+            {
+                int wall = town.GetWallLevel();
+                if (wall > 0) lines.Add($"Its walls stand {WallWords(wall)}.");
+            });
+
+            Try(() =>
+            {
+                int garrison = town.GarrisonParty?.MemberRoster?.TotalManCount ?? 0;
+                int militia = (int)s.Militia;
+                if (intimate)
+                    lines.Add($"Some {garrison} soldiers hold its garrison, and about {militia} militia stand among the folk.");
+                else
+                    lines.Add($"Last word puts its garrison near {Loose(garrison)} soldiers, with perhaps {Loose(militia)} militia among the folk.");
+            });
+
+            if (intimate)
+            {
+                Try(() =>
+                {
+                    int food = (int)town.FoodStocks;
+                    float change = town.FoodChange;
+                    var trend = change > 0.5f ? "and they grow day by day"
+                              : change < -0.5f ? "and they dwindle day by day"
+                              : "holding steady";
+                    lines.Add($"The granaries hold stores near {food}, {trend}.");
+                });
+
+                if (s.IsTown)
+                {
+                    Try(() => lines.Add(
+                        $"Of its fortunes: prosperity near {(int)town.Prosperity}, the folk's loyalty near {(int)town.Loyalty}, and order in its streets near {(int)town.Security}."));
+                }
+            }
+
+            return lines;
+        }
+
+        private static string WallWords(int level)
+        {
+            switch (level)
+            {
+                case 1: return "modest, at the first of three raisings";
+                case 2: return "strong, at the second of three raisings";
+                default: return "mighty, at their full third raising";
+            }
+        }
+
+        // Rounds a count to what hearsay would carry: nothing finer than tens, nothing above a
+        // hundred finer than fifties.
+        private static int Loose(int n)
+        {
+            if (n >= 100) return (int)Math.Round(n / 50.0) * 50;
+            return (int)Math.Round(n / 10.0) * 10;
         }
 
         // ------------------------------ clans ------------------------------

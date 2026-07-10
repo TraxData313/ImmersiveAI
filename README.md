@@ -10,11 +10,11 @@ decompilation, no code reused). Original code, freely publishable.
 
 ChatAi proved the concept but has two core weaknesses we fix by design:
 
-1. **Repetitive NPCs** â€” it stuffs a truncated flat history into a single prompt with one
+1. **Repetitive NPCs** — it stuffs a truncated flat history into a single prompt with one
    generic system message shared by every NPC. Here, each NPC gets a real multi-turn
    conversation, a rolling summary of older exchanges, durable "known facts", and a
    distinct speech style.
-2. **No real chat UI** â€” it reuses the vanilla text-input popup. A custom Gauntlet
+2. **No real chat UI** — it reuses the vanilla text-input popup. A custom Gauntlet
    conversation window is on the roadmap.
 
 ## The heart of it
@@ -45,32 +45,35 @@ below is in service of that.
 
 Key Core concepts:
 
-- `NpcMemory` â€” three memory layers per NPC (their memory *of the player*): verbatim
+- `NpcMemory` — three memory layers per NPC (their memory *of the player*): verbatim
   `RecentTurns`, rolling `Summary` (LLM-compressed when turns exceed a threshold), and
   `KnownFacts` (distilled one-liners).
-- `NpcSelf` â€” the NPC's *general* self-concept (`self.txt`), authored by them in first person
+- `NpcSelf` — the NPC's *general* self-concept (`self.txt`), authored by them in first person
   when they reflect. Kept apart from memory because the self is one identity carried into every
   relationship, while memory is branching toward per-person files (this player, later other NPCs).
-- `PromptBuilder` / `SituationBuilder` â€” assemble the whole prompt in the second-person Angel
+- `PromptBuilder` / `SituationBuilder` — assemble the whole prompt in the second-person Angel
   voice: who they are, their self, the world's notes, the current situation, and their memory,
   followed by real user/assistant message history.
-- `TidingsBuilder` / `TidingsFormatter` â€” fold the world's recent happenings (wars, falls of
+- `TidingsBuilder` / `TidingsFormatter` — fold the world's recent happenings (wars, falls of
   realms, towns changing hands, deaths, weddings, tournament wins) and the talk of the town into
-  each NPC's situation, drawn from the game's own campaign log â€” so they can bring up the news
+  each NPC's situation, drawn from the game's own campaign log — so they can bring up the news
   unprompted, like vanilla lords congratulating a tournament win. Config: `EnableWorldTidings`,
   `MaxWorldTidings`, `MaxLocalRumors`.
-- `MemoryCompressor` â€” the reflection: the Angel invites the NPC to settle their memory and,
-  if they wish, revise who they have become.
-- `ToolLoopRunner` / `WorldRecall` â€” the gift of recall: mid-reply, an NPC can reach into the
+- `MemoryCompressor` — the reflection: the Angel invites the NPC to settle their memory and,
+  if they wish, revise who they have become. Her lasting truths are rewritten whole each time
+  (replace, not append — so rewordings merge instead of piling up), up to `MaxKnownFacts`
+  (default 10); memory-writing calls get their own `MaxMemoryWriteTokens` budget (default 1500)
+  so a rich summary is never squeezed by the spoken-reply cap.
+- `ToolLoopRunner` / `WorldRecall` — the gift of recall: mid-reply, an NPC can reach into the
   world's memory (native LLM tool calls on both backends) for live campaign truth about a person,
-  place, clan, or realm â€” family names, who holds a town, which realms are at war â€” instead of
+  place, clan, or realm — family names, who holds a town, which realms are at war — instead of
   hallucinating it. Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
-- `LetterBag` / `LetterCourier` â€” letters: an NPC far away may write to you (at half their
+- `LetterBag` / `LetterCourier` — letters: an NPC far away may write to you (at half their
   reaching-out chance), and you can send letters from any town, castle, or village menu. Letters
   travel real in-game days with the map distance, survive save/load, and the NPC who receives one
-  may write back once â€” every letter is remembered, and logged per NPC in `letters.txt`.
+  may write back once — every letter is remembered, and logged per NPC in `letters.txt`.
   Config: `EnableLetters`.
-- `IChatClient` â€” backend abstraction; Anthropic/OpenAI-compatible implementations live
+- `IChatClient` — backend abstraction; Anthropic/OpenAI-compatible implementations live
   in the Module layer (both also speak native tool use via `IToolChatClient`).
 
 Memory token settings are configured as percentages of the selected model's context window:

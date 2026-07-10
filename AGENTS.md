@@ -103,7 +103,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   via a second, isolated feeling call), `EnableNpcInitiatedChats` (+ related initiation knobs),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
-  campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters).
+  campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters),
+  `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
+  replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across

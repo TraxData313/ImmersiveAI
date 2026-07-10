@@ -97,6 +97,11 @@ TaleWorlds API usage patterns, never copy from it.
 - **Memory is three layers** (`NpcMemory`): `RecentTurns` (verbatim, sent as real
   user/assistant messages), `Summary` (rolling, LLM-compressed when turns exceed
   `MaxRecentTurns`), and `KnownFacts` (distilled one-liners). This is the anti-repetition core.
+  **KnownFacts are REPLACE, not append** (2026.07.10): each compression/reflection shows her the
+  whole list and asks her to write it anew — the returned FACTS section becomes the whole truth
+  (so she can merge rewordings and release stale ones, up to `MaxKnownFacts`); a reply with no
+  FACTS section leaves the list untouched, and `FACTS: none` is her honored choice to drop all.
+  Memory-writing calls run on a separate client with `MaxMemoryWriteTokens` breathing room.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
@@ -168,9 +173,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts via a second, isolated
   feeling call; default on),
   `EnableNpcInitiatedChats` + `DailyInitiationRate` + `ShowInitiationTestButton` (NPCs reaching out to
-  the player on their own; the rate is the daily ceiling for a *maxed* bond — actual chance scales by how
-  often you talk and how far the standing is from 0, so a fresh game stays quiet; ~1.5 lets the closest
-  bonds write daily; the test button forces one on demand from the free-chat menu),
+  the player on their own; the rate is the expected visits per day **in total across everyone** when the
+  bonds are full — it does NOT stack per companion — scaled down by how often you talk and how far the
+  standing is from 0, so a fresh game stays quiet; 0.3 ≈ one visit every ~3 days, 1.5 ≈ one or two a day;
+  the test button forces one on demand from the free-chat menu),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world happenings — wars, falls of
   realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
@@ -179,7 +185,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
   menu in settlements; default on),
   `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
-  instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable).
+  instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable),
+  `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
+  `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
+  their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
+  default 1500, never below `MaxTokens`).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
@@ -238,6 +248,18 @@ AND the number leaks into her words. A question whose whole job is to return one
 across backends — at the cost of one extra short call per turn. gpt-4o is the backend Anton actively
 plays on, so cross-backend reliability wins over the single-call elegance.
 
+**Every visit is a recorded beat** (2026.07.10, Anton's ask): the opening recap greeting is no longer
+ephemeral — the Angel narrates the arrival (`PromptBuilder.ArrivalLine`, first-meeting vs "comes to you
+again") and her greeting is stored as a real Angel turn, exactly like reaching-out and letter beats, so
+her memory shows WHEN the player came to her; the old `_lastGreeting` weaving hack is gone (the history
+carries the greeting), and Angel turns replay with their `[place, time]` stamp. With recap disabled no
+beat is recorded (nothing is fabricated). **The prompt sheet reads like a mind waking toward the moment**
+(same day): identity → kin → self → About Calradia/About you → deep memory of the player (summary +
+truths) → the situation LAST — itself ordered setting → who you are → tidings/rumors → "And now X comes
+to you" + where the heart stands — so the arrival is the final breath before the live transcript. The
+standing line lives only in the situation now (removed from `PersonaBuilder.BuildRole` — never tell her
+the same heart twice).
+
 When a reply or opening recap is ready, a short "<Name> has answered." notice fires
 (`NotifyWhenReplyReady`, default on) so the player isn't left clicking "(wait for them to answer)" and
 guessing — kept brief so it never covers the reply in the box. Optionally each full spoken reply can also
@@ -252,16 +274,19 @@ briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2
 **NPCs reaching out on their own.** The first way the NPCs *act* instead of only answering. Each hour
 (`OnHourlyTick`), for every NPC the player has a history with who is **co-located** with them right now
 (`IsCoLocated` — in the player's party, or the same settlement; distant NPCs are the future *letter*
-system, see TASKS_TODO), we roll that NPC's own bond-scaled chance to reach out. The per-NPC daily chance
-is `InitiationScorer.DailyChance` = `DailyInitiationRate × frequency × closeness × recency`: `frequency`
+system, see TASKS_TODO), the whole group gets ONE bond-scaled roll to reach out. Each NPC has a *pull*
+in [0,1], `InitiationScorer.Pull` = `frequency × closeness × recency`: `frequency`
 saturates at `FrequencyFullAt` lifetime turns (`NpcMemory.StoryRichness` = lifetime `TotalTurns`, floored
 at surviving turns for old saves), `closeness` = a small floor
 (`InitiationScorer.ClosenessFloor`) plus |relation|/100 (love *or* enmity pulls hardest; a neutral bond
 you actually spend time with stays quiet, not silent — the floor keeps the feature observable),
-`recency` decays with days since the last talk. So a fresh game stays quiet and a
-devoted, frequent bond may write nearly daily; `DailyInitiationRate` is the ceiling for a maxed bond. The
-daily chance is spread as an independent hourly Bernoulli (÷24); if several are moved in one hour,
-`InitiationPlanner.PickWeightedIndex` breaks the tie by pull. Firing only happens at *safe* moments
+`recency` decays with days since the last talk. The pulls combine as `InitiationScorer.UnionPull`
+(= 1 − Π(1 − pull), the chance at least one soul is moved) and the hour rolls once at
+`InitiationScorer.GroupHourlyChance` = `DailyInitiationRate × unionPull ÷ 24`, so the **day's expected
+total across everyone is ≈ rate × unionPull ≤ rate** — five devoted companions share the visits instead of
+each bringing their own (the old per-NPC independent rolls summed: rate 0.777 with five close bonds gave
+~3.9/day; settled 2026.07.10). Who comes is `InitiationPlanner.PickWeightedIndex` by pull. So a fresh game
+stays quiet and `DailyInitiationRate` is the day's total for a full bond. Firing only happens at *safe* moments
 (`IsSafeToInitiate`/`InitiationBlockReason`: on the map, not in a scene/battle or a *non-settlement*
 encounter, not already talking — being **inside a settlement is fine**, that's where co-located NPCs are).
 A stuck-in-flight watchdog (`_initiationInFlightSince`, 3 min) self-heals a lost offer so one mishap can't

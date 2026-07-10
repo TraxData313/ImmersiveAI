@@ -21,7 +21,6 @@ namespace ImmersiveAI.Core.Prompts
             string sceneContext,
             string playerName,
             string playerInput,
-            string? openingLine = null,
             string? voiceName = null)
         {
             var voice = Voice(voiceName);
@@ -30,18 +29,10 @@ namespace ImmersiveAI.Core.Prompts
                 ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
             };
 
+            // Every beat of the shared story — the player's visits (arrival + greeting), the NPC's own
+            // reaching-out, letters — lives in the remembered stream as real turns, so nothing needs to
+            // be woven in here: the history above already carries the whole of it.
             AppendRememberedTurns(messages, memory, voice);
-
-            // A recap greeting (the NPC's opening when the player walks up) is ephemeral — not a stored turn —
-            // so it is woven in here as a real assistant message, otherwise the NPC would treat the player's
-            // reply as the first thing said and greet anew. A tiny stage-direction fills the user slot before
-            // it, since the models cannot lead with an assistant turn. (Reaching-out greetings need none of
-            // this: they are recorded as real Angel turns and already sit in the history above.)
-            if (!string.IsNullOrWhiteSpace(openingLine))
-            {
-                messages.Add(ChatMessage.User($"[{playerName} came to you, and you were the first to speak, greeting them:]"));
-                messages.Add(ChatMessage.Assistant(openingLine!.Trim()));
-            }
 
             messages.Add(ChatMessage.User(playerInput));
             return messages;
@@ -65,45 +56,20 @@ namespace ImmersiveAI.Core.Prompts
 
         private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice)
         {
-            if (turn.IsFromAngel)
-                return AngelFrame(voice, turn.PlayerLine.Trim());
+            // Angel turns carry the same "[place, time]" tag as player lines, so the NPC can see WHEN
+            // she was reached for, wrote a letter, or was come to — the full picture of her own story.
+            var line = turn.IsFromAngel ? AngelFrame(voice, turn.PlayerLine.Trim()) : turn.PlayerLine;
 
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
             if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
-            return parts.Count == 0
-                ? turn.PlayerLine
-                : "[" + string.Join(", ", parts) + "] " + turn.PlayerLine;
+            return parts.Count == 0 ? line : "[" + string.Join(", ", parts) + "] " + line;
         }
 
         // How the Angel's words are always rendered to the NPC — softly, by name, into their mind. Used both
         // for a live reaching-out beat and when replaying a recorded Angel turn, so the two read identically.
         private static string AngelFrame(string voice, string line) =>
             $"{voice} speaks softly into your mind: \"{line}\"";
-
-        /// <summary>
-        /// Builds the messages for the NPC's opening line when the player starts a conversation:
-        /// same persona/memory/scene system prompt and verbatim history, then a stage-direction
-        /// asking the NPC to greet the player and briefly recap what it remembers of them and of
-        /// the last exchange. The greeting is not itself a conversation turn and is not stored.
-        /// </summary>
-        public IReadOnlyList<ChatMessage> BuildRecap(
-            NpcPersona persona,
-            NpcMemory memory,
-            string sceneContext,
-            string playerName,
-            string? voiceName = null)
-        {
-            var voice = Voice(voiceName);
-            var messages = new List<ChatMessage>
-            {
-                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
-            };
-
-            AppendRememberedTurns(messages, memory, voice);
-            messages.Add(ChatMessage.User(BuildRecapInstruction(memory, playerName)));
-            return messages;
-        }
 
         /// <summary>
         /// Builds an exchange in which the Angel speaks a given line into the NPC's mind and the NPC answers.
@@ -182,20 +148,20 @@ namespace ImmersiveAI.Core.Prompts
             $"Then answer them. Give me only the letter you would send back to {playerName} — the words that " +
             "will stand on the page, in your own hand and your own voice. Do not tell me about the letter; write it.";
 
-        private static bool HasRememberedHistory(NpcMemory memory) =>
+        /// <summary>True when this NPC carries any memory of the player at all — used to choose between
+        /// the first-meeting and the familiar <see cref="ArrivalLine"/>.</summary>
+        public static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
             || !string.IsNullOrWhiteSpace(memory.Summary)
             || memory.KnownFacts.Count > 0;
 
-        private static string BuildRecapInstruction(NpcMemory memory, string playerName)
-        {
-            if (!HasRememberedHistory(memory))
-            {
-                return $"[{playerName} draws near and greets you. You have never spoken with them before — they are a stranger to you. Greet them as you would, and open the way to talk.]";
-            }
-
-            return $"[{playerName} comes to you again and greets you. Greet them warmly, as one you have spoken with before, and let a little of what you remember of them colour your words.]";
-        }
+        /// <summary>The Angel's line narrating the player coming to the NPC, asking her to speak the
+        /// greeting. Spoken through <see cref="BuildAngelPrompt"/> and recorded — with her greeting —
+        /// as a real Angel turn, so every visit becomes a durable beat in her memory: she can later see
+        /// WHEN the player came to her, just as she sees when she reached out or when letters travelled.</summary>
+        public static string ArrivalLine(string playerName, bool firstMeeting) => firstMeeting
+            ? $"{playerName} draws near and greets you. You have never spoken with them before — they are a stranger to you. Greet them as you would, and open the way to talk."
+            : $"{playerName} comes to you again and greets you. Greet them warmly, as one you have spoken with before, and let a little of what you remember of them colour your words.";
 
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
@@ -302,14 +268,10 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.CustomInstructions.Trim());
             }
 
-            if (!string.IsNullOrWhiteSpace(sceneContext))
-            {
-                // The scene is already written as narration addressed to the NPC, so it simply flows in
-                // on its own lines — no clinical "Current situation:" header.
-                sb.AppendLine();
-                sb.AppendLine(sceneContext.Trim());
-            }
-
+            // The sheet reads like a mind waking toward the moment: who you are → who you have become →
+            // the storyteller's words → what you remember of this person → and only THEN the present
+            // scene (the world's news and the arrival), so "they come to you now" lands immediately
+            // before the conversation itself begins — never buried mid-page between memory and guidance.
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
@@ -326,6 +288,14 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine("And these truths you decided to hold as certain, deep and unshaken:");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
+            }
+
+            if (!string.IsNullOrWhiteSpace(sceneContext))
+            {
+                // The scene is already written as narration addressed to the NPC, so it simply flows in
+                // on its own lines — no clinical "Current situation:" header.
+                sb.AppendLine();
+                sb.AppendLine(sceneContext.Trim());
             }
 
             sb.AppendLine();

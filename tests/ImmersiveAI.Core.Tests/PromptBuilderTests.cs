@@ -82,22 +82,24 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void Build_WeavesAnEphemeralRecapGreetingIntoHistory_AsAStageThenAssistantTurn()
+    public void Build_TagsARememberedAngelTurnWithPlaceAndTime_LikeAPlayerLine()
     {
-        var memory = new NpcMemory(); // no prior turns
+        // The arrival/letter/reaching-out beats must not float in time when replayed: she should see
+        // WHEN the player came to her just as she sees when a remembered player line was spoken.
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = "Vulgrim comes to you again and greets you.",
+            NpcLine = "Well met!",
+            Place = "Ostican",
+            CalradiaTime = "1087.01.01 10.20",
+        });
 
-        var messages = new PromptBuilder().Build(
-            Persona(), memory, "In the tavern.", "Vulgrim", "I am well, and you?",
-            openingLine: "How do you fare today?");
+        var messages = new PromptBuilder().Build(Persona(), memory, "In Ostican.", "Vulgrim", "Hello");
 
-        // system, [stage as user], [opening as assistant], [player's reply as user] — valid alternation.
-        Assert.Equal(4, messages.Count);
-        Assert.Equal(ChatRole.User, messages[1].Role);
-        Assert.Contains("came to you", messages[1].Content);
-        Assert.Equal(ChatRole.Assistant, messages[2].Role);
-        Assert.Equal("How do you fare today?", messages[2].Content);
-        Assert.Equal(ChatRole.User, messages[3].Role);
-        Assert.Equal("I am well, and you?", messages[3].Content);
+        Assert.StartsWith("[Ostican, 1087.01.01 10.20] Angel speaks softly into your mind", messages[1].Content);
+        Assert.Contains("Vulgrim comes to you again", messages[1].Content);
     }
 
     [Fact]
@@ -279,36 +281,45 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void BuildRecap_EndsWithRecapDirectiveAfterHistory()
+    public void ArrivalLine_DistinguishesAStrangerFromAKnownFriend()
     {
-        var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
-        memory.AddTurn(new ConversationTurn { PlayerLine = "Well met", NpcLine = "Aye." });
+        var first = PromptBuilder.ArrivalLine("Vulgrim", firstMeeting: true);
+        var again = PromptBuilder.ArrivalLine("Vulgrim", firstMeeting: false);
 
-        var messages = new PromptBuilder().BuildRecap(Persona(), memory, "In the tavern.", "Vulgrim");
-
-        Assert.Equal(ChatRole.System, messages[0].Role);
-        // History is replayed as real user/assistant turns before the directive.
-        Assert.Equal(ChatRole.User, messages[1].Role);
-        Assert.Equal("Well met", messages[1].Content);
-        Assert.Equal(ChatRole.Assistant, messages[2].Role);
-
-        var last = messages[^1];
-        Assert.Equal(ChatRole.User, last.Role);
-        Assert.Contains("Vulgrim", last.Content);
-        Assert.Contains("comes to you again", last.Content);
-        Assert.DoesNotContain("never spoken", last.Content);
+        Assert.Contains("never spoken", first);
+        Assert.Contains("open the way to talk", first);
+        Assert.Contains("comes to you again", again);
+        Assert.DoesNotContain("never spoken", again);
     }
 
     [Fact]
-    public void BuildRecap_WithNoHistory_AsksForFirstMeetingGreeting()
+    public void HasRememberedHistory_TrueOnAnyLayerOfMemory()
     {
-        var messages = new PromptBuilder().BuildRecap(new NpcPersona { Name = "Orvi" }, new NpcMemory(), "", "Vulgrim");
+        Assert.False(PromptBuilder.HasRememberedHistory(new NpcMemory()));
+        Assert.True(PromptBuilder.HasRememberedHistory(new NpcMemory { Summary = "s" }));
 
-        // No turns, so only the system prompt and the directive.
-        Assert.Equal(2, messages.Count);
-        var directive = messages[^1].Content;
-        Assert.Contains("never spoken", directive);
-        Assert.Contains("open the way to talk", directive);
-        Assert.DoesNotContain("comes to you again", directive);
+        var withFact = new NpcMemory();
+        withFact.KnownFacts.Add("f");
+        Assert.True(PromptBuilder.HasRememberedHistory(withFact));
+
+        var withTurn = new NpcMemory();
+        withTurn.AddTurn(new ConversationTurn { PlayerLine = "p", NpcLine = "n" });
+        Assert.True(PromptBuilder.HasRememberedHistory(withTurn));
+    }
+
+    [Fact]
+    public void SystemPrompt_PlacesDeepMemoryBeforeTheScene_SoTheMomentLandsLast()
+    {
+        var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
+        memory.KnownFacts.Add("Vulgrim rules Sargot");
+
+        var system = new PromptBuilder()
+            .Build(Persona(), memory, "And now Vulgrim comes to you.", "Vulgrim", "Hello")[0].Content;
+
+        // The sheet wakes toward the moment: memory → truths → the present scene → the closing whisper,
+        // so "they come to you now" is the last thing held before the conversation itself.
+        Assert.True(system.IndexOf("what lingers of Vulgrim") < system.IndexOf("Vulgrim rules Sargot"));
+        Assert.True(system.IndexOf("Vulgrim rules Sargot") < system.IndexOf("And now Vulgrim comes to you."));
+        Assert.True(system.IndexOf("And now Vulgrim comes to you.") < system.IndexOf("A whisper of guidance"));
     }
 }

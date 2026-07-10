@@ -1,22 +1,29 @@
 using System;
+using System.Collections.Generic;
 
 namespace ImmersiveAI.Core.Initiation
 {
     /// <summary>
-    /// How likely a single NPC is to reach out to the player on a given day. The reaching-out should feel
+    /// How strongly the NPCs are moved to reach out to the player. The reaching-out should feel
     /// earned, not random: someone who loves (or hates) the player and speaks with them often will want to
-    /// reach out; a near-stranger at a neutral standing almost never will. So the daily chance is
+    /// reach out; a near-stranger at a neutral standing almost never will.
     ///
-    ///     dailyRate × frequency × closeness × recency
+    /// Each NPC has a <see cref="Pull"/> in [0,1] — how moved they are toward the player —
     ///
-    /// where the config's <c>DailyInitiationRate</c> is the ceiling for a full-blown bond, and each factor
-    /// in [0,1] pulls it down toward silence:
+    ///     pull = frequency × closeness × recency
+    ///
+    /// where each factor in [0,1] pulls it down toward silence:
     ///   - frequency: how much has ever been shared, saturating at <see cref="FrequencyFullAt"/> exchanges.
     ///   - closeness: how far the standing is from indifference, |relation| / 100 (love OR enmity both pull).
     ///   - recency: gently decays if they have not spoken lately, so a long-quiet bond grows quiet.
     ///
-    /// This is why a fresh game stays calm (everyone near relation 0, little shared) while a devoted wife
-    /// you speak with daily may write nearly every day.
+    /// The config's <c>DailyInitiationRate</c> is the expected number of reach-outs per day IN TOTAL,
+    /// across every NPC together, when the bonds justify it — NOT a per-NPC chance that stacks with each
+    /// companion. The group's pulls are combined into <see cref="UnionPull"/> (the chance that at least one
+    /// soul is moved), the day's expectation is rate × unionPull ≤ rate, and who actually comes is chosen
+    /// by pull. So at 0.3 the player receives on average ~0.3 visits a day — some days none, some days one,
+    /// rarely two — whether one devoted friend rides along or ten; a fresh game (everyone near relation 0,
+    /// little shared) stays calm because every pull is tiny.
     /// </summary>
     public static class InitiationScorer
     {
@@ -37,20 +44,71 @@ namespace ImmersiveAI.Core.Initiation
         public const double ClosenessFloor = 0.15;
 
         /// <summary>
-        /// The probability, in [0,1], that this NPC reaches out to the player over one day. Zero whenever
-        /// there is nothing to move them — no shared story or a disabled rate. Capped at 1, since a soul
-        /// reaches out at most about once a day however deep the bond.
+        /// How moved this NPC is toward the player, in [0,1]: frequency × closeness × recency.
+        /// 1 is a full-blown bond (rich shared story, maxed standing, spoken today); zero means nothing
+        /// has ever been shared. This is the NPC's weight when the day's reach-outs are shared among the
+        /// group, and what scales the group's total below the configured rate when bonds are weak.
         /// </summary>
-        public static double DailyChance(double dailyRate, int storyRichness, int relation, double daysSinceLastTalk)
+        public static double Pull(int storyRichness, int relation, double daysSinceLastTalk)
         {
-            if (dailyRate <= 0 || double.IsNaN(dailyRate) || storyRichness <= 0) return 0;
+            if (storyRichness <= 0) return 0;
 
             double frequency = Math.Min(1.0, storyRichness / (double)FrequencyFullAt);
             double standing = Math.Min(1.0, Math.Abs(relation) / 100.0);
             double closeness = ClosenessFloor + (1.0 - ClosenessFloor) * standing;
             double recency = RecencyFactor(daysSinceLastTalk);
 
-            double chance = dailyRate * frequency * closeness * recency;
+            double pull = frequency * closeness * recency;
+            if (pull < 0) pull = 0;
+            if (pull > 1) pull = 1;
+            return pull;
+        }
+
+        /// <summary>
+        /// Combines the group's pulls into one factor in [0,1]: the chance that at least one soul is moved,
+        /// 1 − Π(1 − pull). A single NPC contributes exactly their own pull; several medium bonds together
+        /// pull harder than any one of them alone, but the whole can never exceed 1 — so the configured
+        /// rate stays the ceiling on the day's total no matter how many companions ride along.
+        /// </summary>
+        public static double UnionPull(IReadOnlyList<double> pulls)
+        {
+            if (pulls == null || pulls.Count == 0) return 0;
+
+            double silent = 1.0;
+            for (int i = 0; i < pulls.Count; i++)
+            {
+                double p = pulls[i];
+                if (p <= 0) continue;
+                silent *= p >= 1 ? 0 : 1.0 - p;
+            }
+            return 1.0 - silent;
+        }
+
+        /// <summary>
+        /// The probability that anyone at all reaches out during ONE HOUR: the day's expectation
+        /// (dailyRate × unionPull) spread over 24 hourly rolls, capped at 1. Rolled once per hour for the
+        /// whole group; the winner is then chosen by pull. Over a day this yields on average
+        /// dailyRate × unionPull reach-outs — 0 some days, 1 or occasionally 2 on others.
+        /// </summary>
+        public static double GroupHourlyChance(double dailyRate, double unionPull)
+        {
+            if (dailyRate <= 0 || double.IsNaN(dailyRate) || unionPull <= 0) return 0;
+
+            double hourly = dailyRate * Math.Min(1.0, unionPull) / 24.0;
+            return hourly > 1 ? 1 : hourly;
+        }
+
+        /// <summary>
+        /// The expected reach-outs per day if this NPC were ALONE with the player: dailyRate × pull,
+        /// capped at 1. Kept for the odds inspection view — the live schedule shares the day among the
+        /// whole group via <see cref="UnionPull"/> and <see cref="GroupHourlyChance"/> instead of
+        /// rolling this per NPC (which would stack: five devoted companions ≠ five times the visits).
+        /// </summary>
+        public static double DailyChance(double dailyRate, int storyRichness, int relation, double daysSinceLastTalk)
+        {
+            if (dailyRate <= 0 || double.IsNaN(dailyRate)) return 0;
+
+            double chance = dailyRate * Pull(storyRichness, relation, daysSinceLastTalk);
             if (chance < 0) chance = 0;
             if (chance > 1) chance = 1;
             return chance;

@@ -55,4 +55,49 @@ public class InitiationScorerTests
         Assert.Equal(0.5, InitiationScorer.RecencyFactor(InitiationScorer.RecencyHalfLifeDays), 5);
         Assert.Equal(InitiationScorer.RecencyFloor, InitiationScorer.RecencyFactor(10000), 5);
     }
+
+    [Fact]
+    public void Pull_IsOneForAFullBond_AndZeroWithNoStory()
+    {
+        Assert.Equal(1.0, InitiationScorer.Pull(storyRichness: 60, relation: 100, daysSinceLastTalk: 0), 5);
+        Assert.Equal(0.0, InitiationScorer.Pull(storyRichness: 0, relation: 100, daysSinceLastTalk: 0), 5);
+    }
+
+    [Fact]
+    public void UnionPull_IsTheChanceAtLeastOneIsMoved()
+    {
+        // Empty group: no one to be moved.
+        Assert.Equal(0.0, InitiationScorer.UnionPull(new double[0]), 5);
+
+        // Alone, an NPC contributes exactly their own pull.
+        Assert.Equal(0.4, InitiationScorer.UnionPull(new[] { 0.4 }), 5);
+
+        // Two medium bonds pull harder together than either alone, but not additively.
+        Assert.Equal(0.75, InitiationScorer.UnionPull(new[] { 0.5, 0.5 }), 5);
+
+        // The whole can never exceed 1, however devoted the crowd.
+        Assert.Equal(1.0, InitiationScorer.UnionPull(new[] { 1.0, 1.0, 1.0, 1.0, 1.0 }), 5);
+    }
+
+    [Fact]
+    public void GroupHourlyChance_TotalsToTheRatePerDay_NotPerNpc()
+    {
+        // THE regression this model exists for: at rate 0.777 with five full bonds present, the old
+        // per-NPC rolls averaged ~3.9 reach-outs/day; the group roll must average the rate itself.
+        double union = InitiationScorer.UnionPull(new[] { 1.0, 1.0, 1.0, 1.0, 1.0 });
+        double hourly = InitiationScorer.GroupHourlyChance(0.777, union);
+        Assert.Equal(0.777, hourly * 24.0, 5); // expected reach-outs per day = rate, shared by all
+
+        // Weak bonds pull the day's total below the rate — a fresh game stays quiet.
+        double freshUnion = InitiationScorer.UnionPull(new[]
+        {
+            InitiationScorer.Pull(storyRichness: 2, relation: 0, daysSinceLastTalk: 0),
+            InitiationScorer.Pull(storyRichness: 1, relation: 5, daysSinceLastTalk: 3),
+        });
+        Assert.True(InitiationScorer.GroupHourlyChance(0.777, freshUnion) * 24.0 < 0.03);
+
+        // Disabled or empty: silent.
+        Assert.Equal(0.0, InitiationScorer.GroupHourlyChance(0, 1.0), 5);
+        Assert.Equal(0.0, InitiationScorer.GroupHourlyChance(0.777, 0), 5);
+    }
 }
