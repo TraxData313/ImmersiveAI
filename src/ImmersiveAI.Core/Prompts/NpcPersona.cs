@@ -59,5 +59,11 @@ namespace ImmersiveAI.Core.Prompts
         /// search, framed in-world — when asked how something in the world is done. Adds a whisper
         /// offering the counsel and reminding them to answer in their own world's words.</summary>
         public bool CanSeekWisdom { get; set; }
+
+        /// <summary>True when this NPC may move their own regard for the one they speak with
+        /// mid-reply (the move_heart tool rides along — see the game layer's HeartTool). Adds a
+        /// whisper that their heart is theirs to move — and that most words leave it where it
+        /// stood. When false the game layer asks the feeling in a separate call instead.</summary>
+        public bool CanMoveHeart { get; set; }
     }
 }

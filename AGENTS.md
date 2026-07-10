@@ -100,8 +100,10 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
   `AtmosphereLine` + `RoleplayGuidance` (configurable opening line + world-wide tone/roleplay guidance),
-  `NotifyWhenReplyReady` + `ShowConversationInMessageLog`, `EnableRelationshipChanges` (relation shifts
-  via a second, isolated feeling call), `EnableNpcInitiatedChats` (+ related initiation knobs),
+  `NotifyWhenReplyReady` + `ShowConversationInMessageLog`, `EnableRelationshipChanges` +
+  `RelationshipChangesViaTool` (relation shifts — by default the NPC moves her own heart mid-reply via
+  the `move_heart` native tool; the second, isolated feeling call is the fallback shape),
+  `EnableNpcInitiatedChats` (+ related initiation knobs),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
   campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters),

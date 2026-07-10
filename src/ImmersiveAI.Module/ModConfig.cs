@@ -39,10 +39,18 @@ namespace ImmersiveAI
 
         /// <summary>When true, the NPC may set — in character, however they truly feel — how each exchange
         /// moves their regard for the player, and that shift is folded into the real game standing
-        /// (clamped to -100..100). Set false to leave relations untouched by conversation. Asked in a
-        /// second, isolated call after the spoken reply (one number, in the Angel's voice) — the only
-        /// approach chatty models like gpt-4o answer reliably.</summary>
+        /// (clamped to -100..100). Set false to leave relations untouched by conversation. How the
+        /// feeling is gathered is shaped by <see cref="RelationshipChangesViaTool"/>.</summary>
         public bool EnableRelationshipChanges { get; set; } = true;
+
+        /// <summary>When true (and the backend can carry tools), the NPC moves their own standing
+        /// mid-reply through the same native tool channel the recalls ride (move_heart) — one call
+        /// per exchange instead of two, and a greeting, a reaching-out, or a letter can move the
+        /// heart too; reaching for nothing leaves it where it stood. Set false to keep the second,
+        /// isolated feeling call after each spoken reply (one number, in the Angel's voice; also the
+        /// automatic fallback whenever the backend cannot carry tools). Does nothing while
+        /// <see cref="EnableRelationshipChanges"/> is off.</summary>
+        public bool RelationshipChangesViaTool { get; set; } = true;
 
         /// <summary>The opening line that sets each NPC's atmosphere, printed at the very top of their prompt.
         /// Use <c>{name}</c> for the character's name. Leave blank to fall back to the built-in default. This

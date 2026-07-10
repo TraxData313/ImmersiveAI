@@ -128,6 +128,15 @@ namespace ImmersiveAI.Personas
                 sb.AppendLine(self);
             }
 
+            // The trouble they themselves carry — the issue laid on them and any quest they gave —
+            // so a villager asked "what ails you?" knows his own problem (see TroubleBuilder).
+            var trouble = TroubleBuilder.Build(speaker, partner);
+            if (trouble.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(trouble);
+            }
+
             // What has lately happened in the world, as far as it would have reached them (best-effort;
             // a null config — e.g. an older caller — keeps the defaults rather than losing the tidings).
             if (config == null || config.EnableWorldTidings)

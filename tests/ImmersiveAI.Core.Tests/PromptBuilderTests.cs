@@ -350,6 +350,22 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void SystemPrompt_OffersTheHeartWhisper_OnlyWhenTheToolTrulyRides()
+    {
+        // The move_heart whisper must appear only when the tool rides along (CanMoveHeart), so an
+        // NPC is never told of a hand they cannot lift — and told nothing of numbers either way.
+        var withHeart = Persona();
+        withHeart.CanMoveHeart = true;
+
+        var granted = new PromptBuilder().Build(withHeart, new NpcMemory(), "", "Vulgrim", "Hi")[0].Content;
+        var withheld = new PromptBuilder().Build(Persona(), new NpcMemory(), "", "Vulgrim", "Hi")[0].Content;
+
+        Assert.Contains("Your heart is your own", granted);
+        Assert.Contains("Never speak of any measure", granted);
+        Assert.DoesNotContain("Your heart is your own", withheld);
+    }
+
+    [Fact]
     public void ReachOutDesireLine_TellsAStrangerHonestlyThereIsNoHistoryYet()
     {
         // With the pull floor, someone never spoken with may be moved to approach; the Angel must not

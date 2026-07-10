@@ -24,7 +24,7 @@ Mental model: **Core = pure, unit-tested logic; Module = Bannerlord glue.** Talk
 calls the LLM → reply shown in the conversation panel, memory saved and compressed when it grows.
 
 You usually only need to open:
-- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `TidingsBuilder` (Module), `MemoryCompressor` (Core).
+- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `TidingsBuilder` + `TroubleBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
@@ -174,8 +174,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `AtmosphereLine` (the configurable opening identity line, supports `{name}`) + `RoleplayGuidance`
   (world-wide tone/roleplay guidance, offered as freedom), `NotifyWhenReplyReady` (short "has answered"
   ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),
-  `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts via a second, isolated
-  feeling call; default on),
+  `EnableRelationshipChanges` + `RelationshipChangesViaTool` (NPC-authored, conversation-driven relation
+  shifts; with the tool shape on — default — the NPC moves her own heart mid-reply via the `move_heart`
+  native tool, silence meaning it held; off, or on a backend without tools, a second isolated feeling
+  call asks after the reply; both default on),
   `EnableNpcInitiatedChats` + `DailyInitiationRate` + `InitiationPullFloor` + `ShowInitiationTestButton`
   (NPCs reaching out to the player on their own; the rate is the expected visits per day **in total across
   everyone** when the bonds are full — it does NOT stack per companion — scaled down by how often you talk
@@ -259,21 +261,29 @@ Talking to any hero shows a **"Speak freely with me. [Immersive AI]"** dialog op
 "Say something..." → a text popup → the reply appears in the conversation panel and loops.
 Errors surface as a top-left "Immersive AI: ..." message.
 
-Each exchange can also move the NPC's standing with the player. After the spoken reply, a **second,
-isolated LLM call** (`PromptBuilder.BuildFeelingQuery`) asks the NPC — in the Angel's voice, in first
-person — how that moment moved their heart, expecting only a single signed number back;
-`FeelingParser.ParseShift` reads it and `ChangeRelationAction` folds it into the real game relation
+Each exchange can also move the NPC's standing with the player. **The heart moves by her own hand now
+(2026.07.10, Anton's ask): a `move_heart` native tool** (`Tools\HeartTool`) rides every spoken path
+beside the recalls — mid-reply the NPC may shift her regard herself (silence honestly means the heart
+held), the resolver applies it at once via `ApplyRelationShift` and tallies it into the turn's
+`FeltShift` (`TurnOutcome.FeltShiftApplied` keeps callers from applying twice), and a calibration lives
+in the tool description + a "Your heart is your own" whisper (`NpcPersona.CanMoveHeart`). This kills
+the second call per turn AND lets greetings, reach-outs, and letters move the heart, which the
+after-the-reply question never covered. `ChangeRelationAction` folds shifts into the real game relation
 (clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
-feel). The NPC is deliberately NOT told where the standing currently rests, and the colored message
-always shows the FELT shift even when the relation is already pinned at ±100 (the impact is the story;
-the rail just has nowhere left to move — 2026.07.09, Anton's ask, ChatAi-style). A calibration whisper
-keeps small kindnesses at 1..3. Toggle with `EnableRelationshipChanges`.
-Why a separate call — **settled twice, don't retry in-message marks**: both a ♥ tail-mark (early) and a
-firm `<relation>±N</relation>` tag (tried and reverted the same day, 2026.07.09) failed on gpt-4o — the
-model narrates the number in prose inside the spoken reply and never emits the mark, so nothing moves
-AND the number leaks into her words. A question whose whole job is to return one number is reliable
-across backends — at the cost of one extra short call per turn. gpt-4o is the backend Anton actively
-plays on, so cross-backend reliability wins over the single-call elegance.
+feel); the colored message always shows the FELT shift even when the relation is already pinned at ±100
+(the impact is the story; the rail just has nowhere left to move — 2026.07.09, Anton's ask,
+ChatAi-style). Toggles: `EnableRelationshipChanges` (master), `RelationshipChangesViaTool` (default on).
+Fallback — with the tool shape off, or a backend that cannot carry tools: the **second, isolated LLM
+call** (`PromptBuilder.BuildFeelingQuery`) asks the NPC — in the Angel's voice, in first person — how
+that moment moved their heart, one signed number back (`FeelingParser.ParseShift`), deliberately NOT
+told where the standing rests.
+Why tool-or-separate-call and never in-message marks — **settled twice, don't retry**: both a ♥
+tail-mark (early) and a firm `<relation>±N</relation>` tag (tried and reverted the same day,
+2026.07.09) failed on gpt-4o — the model narrates the number in prose inside the spoken reply and never
+emits the mark, so nothing moves AND the number leaks into her words. Native tool calling is a
+different, first-class API channel (the one the recalls ride reliably on both backends) — that is why
+`move_heart` is worth the third try where inline marks were not; if a backend proves shy of reaching
+for it, `RelationshipChangesViaTool: false` restores the separate question without a redeploy.
 
 **Every visit is a recorded beat** (2026.07.10, Anton's ask): the opening recap greeting is no longer
 ephemeral — the Angel narrates the arrival (`PromptBuilder.ArrivalLine`, first-meeting vs "comes to you
@@ -455,7 +465,15 @@ or party); that's ChatAi's equipment info made on-demand instead of crammed into
 always-on situational whispers went to `SituationBuilder` instead (mined from ChatAi's WorldPromptHints,
 2026.07.10): own-command line (party size even when berthed in a town — details via the tool), army
 membership, under-siege/besieging/raiding, pregnancy, and a renown-tiered line about how far the
-partner's name has traveled. The loop is Core's `ToolLoopRunner` (complete → resolve → repeat, unit-tested): the final
+partner's name has traveled. **NPCs also know their own troubles** (2026.07.10, the Turvald playtest
+find — a quest giver blank on his own quest): `TroubleBuilder` (Module, rides `SituationBuilder.Build`
+right after the self paragraph) reads `Campaign.Current.IssueManager.Issues[npc]` — on this game
+version `Title`/`IssueBriefByIssueGiver`/`IssueQuestSolutionExplanationByIssueGiver`/`IssueQuest` and
+the `IsSolvingWith*` state flags are all PUBLIC (ChatAi needed reflection; we don't) — and narrates the
+issue in the giver's own first-person words ("this is how you tell it: …"), where its resolving stands
+(untaken / taken by the player, with the quest journal's last word + days remaining / companions sent /
+laid in a lord's hands), plus up to two non-issue quests they gave (`QuestManager.Quests` by
+`QuestGiver`). Always on, best-effort per sentence, no config. The loop is Core's `ToolLoopRunner` (complete → resolve → repeat, unit-tested): the final
 round keeps sending the definitions but sets `tool_choice: none`, so the turn always ends in words; a
 failed lookup returns an honest "Nothing surfaces…" so the model owns not knowing instead of inventing.
 Both clients implement `IToolChatClient` (Anthropic `tool_use` blocks / OpenAI function calls — this is

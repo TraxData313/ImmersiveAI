@@ -140,28 +140,51 @@ namespace ImmersiveAI
         // counsel of the far-seeing sages (a web search, resolved off-thread). Every spoken path
         // goes through here; short utility calls (the feeling number, the yes/no of a reaching-out)
         // stay on plain CompleteAsync, where a recall would only slow the answer down.
-        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc)
+        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
             if (CanSeekWisdom()) tools.Add(Tools.WebWisdom.Tool);
+            bool heartRides = CanMoveHeart();
+            if (heartRides) tools.Add(Tools.HeartTool.Tool);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
+            // The heart's hand is not a recall: it keeps at least one round even when the recall
+            // budget is zeroed out, or the offered tool could never be reached for.
+            int rounds = heartRides ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
-                call => ResolveToolAsync(call, npc),
-                _config.MaxRecallsPerReply);
+                call => ResolveToolAsync(call, npc, heart),
+                rounds);
         }
 
         // Routes one tool call to its resolver, announcing the activity to the player first so the
-        // wait is never silent ("remembering…", "researching…").
-        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc)
+        // wait is never silent ("remembering…", "researching…"). The heart's shift gets no notice
+        // of its own — the colored relation line that follows IS the notice.
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart)
         {
+            if (call.Name == Tools.HeartTool.MoveHeart)
+                return Task.FromResult(ResolveHeartShift(call, npc, heart));
+
             NotifyActivity(npc, call);
             return call.Name == Tools.WebWisdom.SeekWisdom
                 ? Tools.WebWisdom.ResolveAsync(call)
                 : Tools.WorldRecall.ResolveAsync(call, npc);
+        }
+
+        // One heart's movement, chosen by the NPC mid-reply: applied to the real standing at once
+        // (marshaled to the game thread) so every spoken path — replies, greetings, approaches,
+        // letters — feels it without further plumbing, and tallied for the caller that records the
+        // turn. A shift of nothing (or an unreadable one) is answered as an honest stillness.
+        private string ResolveHeartShift(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart)
+        {
+            var shift = Tools.HeartTool.ParseShift(call) ?? 0;
+            if (shift == 0) return Tools.HeartTool.Held;
+
+            if (heart != null) heart.Total += shift;
+            MainThreadDispatcher.Enqueue(() => ApplyRelationShift(npc, shift));
+            return Tools.HeartTool.Felt;
         }
 
         // The gift is real only when it is both enabled and the backend can carry tools.
@@ -171,6 +194,11 @@ namespace ImmersiveAI
         // The sages' counsel (web search) rides the same tool channel and the same round budget.
         private bool CanSeekWisdom() =>
             _config.EnableWebSearch && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
+
+        // The heart's own hand (move_heart) rides the same channel; when the backend cannot carry
+        // tools — or this shape is turned off — the second, isolated feeling call remains the way.
+        private bool CanMoveHeart() =>
+            _config.EnableRelationshipChanges && _config.RelationshipChangesViaTool && _client is IToolChatClient;
 
         // A soft side notice of what the NPC is doing mid-thought, in the same voice as the
         // reply-ready notice. Called from LLM background threads; the message is marshaled to the
@@ -822,7 +850,8 @@ namespace ImmersiveAI
                     // Fold the felt shift into the real standing on the game thread (state + UI), after
                     // the reply is shown, so a hiccup here never eats the words she just spoke. Its own
                     // colored line is logged too, so a relation move can be read back from the message log.
-                    if (feltShift != 0)
+                    // (In the move_heart shape the shift already landed mid-reply — never apply it twice.)
+                    if (feltShift != 0 && !outcome.FeltShiftApplied)
                         ApplyRelationShift(npc, feltShift);
 
                     // A short "has answered" ping so the player isn't clicking "(wait...)" and guessing —
@@ -847,15 +876,22 @@ namespace ImmersiveAI
 
         private readonly struct TurnOutcome
         {
-            public TurnOutcome(string reply, int feltShift) { Reply = reply; FeltShift = feltShift; }
+            public TurnOutcome(string reply, int feltShift, bool feltShiftApplied)
+            {
+                Reply = reply; FeltShift = feltShift; FeltShiftApplied = feltShiftApplied;
+            }
             public string Reply { get; }
             public int FeltShift { get; }
+            /// <summary>True when the shift already reached the game standing mid-reply (the
+            /// move_heart tool applies as it resolves); callers must then only render, not apply.</summary>
+            public bool FeltShiftApplied { get; }
         }
 
         // The trunk of one player→NPC exchange, shared by the conversation panel and the chat window:
-        // prompt → spoken reply (the gifts of recall riding along) → the private feeling number → the
-        // turn recorded, stamped with when and where → compression when memory has grown heavy → saved.
-        // Callers render the outcome their own way and fold the felt shift in on the game thread.
+        // prompt → spoken reply (the gifts of recall riding along) → the heart's movement (her own
+        // move_heart mid-reply, or the private feeling question after) → the turn recorded, stamped
+        // with when and where → compression when memory has grown heavy → saved. Callers render the
+        // outcome their own way and fold a not-yet-applied felt shift in on the game thread.
         private async Task<TurnOutcome> ExecutePlayerTurnAsync(Hero npc, string playerInput, string? situationOverride = null)
         {
             var ctx = BuildContext(npc, situationOverride);
@@ -865,16 +901,24 @@ namespace ImmersiveAI
             // so the history carries it — no ephemeral opening to weave in.
             var messages = _promptBuilder.Build(
                 ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, _config.SystemVoiceName);
-            var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+            var heart = CanMoveHeart() ? new Tools.HeartTool.Tally() : null;
+            var rawReply = await CompleteSpokenAsync(messages, npc, heart).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
-            // Then ask her, in a separate breath, how that exchange moved her heart — one number, in
-            // her own voice (the Angel asking privately). Isolating the question makes it reliable even
-            // for chattier models that would never emit a mark inside a spoken reply (an in-message
-            // <relation> tag was tried and reverted on 2026.07.09: gpt-4o just spoke the number in prose
-            // and nothing moved). Best-effort: if she cannot weigh it now, her standing simply holds.
+            // How the exchange moved her heart. In the tool shape she moved it herself mid-reply
+            // (move_heart, already applied — silence means it held). Otherwise ask her in a separate
+            // breath — one number, in her own voice (the Angel asking privately); isolating the
+            // question is what chatty models answer reliably (an in-message <relation> tag was tried
+            // and reverted on 2026.07.09: gpt-4o just spoke the number in prose and nothing moved).
+            // Best-effort either way: if she cannot weigh it now, her standing simply holds.
             int feltShift = 0;
-            if (_config.EnableRelationshipChanges)
+            bool feltShiftApplied = false;
+            if (heart != null)
+            {
+                feltShift = heart.Total;
+                feltShiftApplied = true;
+            }
+            else if (_config.EnableRelationshipChanges)
             {
                 try
                 {
@@ -918,7 +962,7 @@ namespace ImmersiveAI
             }
 
             SaveMemory(npc, memory);
-            return new TurnOutcome(reply, feltShift);
+            return new TurnOutcome(reply, feltShift, feltShiftApplied);
         }
 
         // The NPC's current standing toward the player, read from the live game relation. Used to give
@@ -1767,7 +1811,7 @@ namespace ImmersiveAI
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     _quickChatBusy.Remove(npc.StringId);
-                    if (outcome.FeltShift != 0)
+                    if (outcome.FeltShift != 0 && !outcome.FeltShiftApplied)
                         ApplyRelationShift(npc, outcome.FeltShift);
 
                     // If the player is reading this very thread the reply appears before their eyes and a
@@ -1912,6 +1956,7 @@ namespace ImmersiveAI
             // The whispers about the gifts are offered only when the tools truly ride along.
             persona.CanRecallWorld = CanRecallWorld();
             persona.CanSeekWisdom = CanSeekWisdom();
+            persona.CanMoveHeart = CanMoveHeart();
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

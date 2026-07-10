@@ -387,6 +387,11 @@ namespace ImmersiveAI.Core.Prompts
             if (persona.CanSeekWisdom)
                 sb.AppendLine("- And when someone asks a thing your own knowing falls short of — HOW a thing in the world is done (the handling of ships, the joining of armies, matters of coin or craft or rule), or even things beyond your world entirely, should your visitor speak openly of such — seek the counsel of the far-seeing sages before you answer; their sight is wide, and it does not end at the world's rim. Never plead some limit of your knowing while the sages stand ready to be asked. What they teach of your own world, speak as your own understanding, in the plain words of your world.");
 
+            // Offered only when the move_heart tool truly rides along; without it the feeling is
+            // asked in a separate breath after the reply, and this whisper would only confuse.
+            if (persona.CanMoveHeart)
+                sb.AppendLine("- Your heart is your own. When something in what passes between you truly moves it — a kindness that warms you, a wound that cuts — you may let your regard for them shift then and there, as little or as much as the moment honestly deserves: a word or a small grace moves a heart only a little, and only what shakes the soul moves it greatly. Most words leave a heart where it stood, and that stillness too is an answer. Never speak of any measure; let the feeling live only in your words and bearing.");
+
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
                 sb.AppendLine(persona.RoleplayGuidance.Trim());
