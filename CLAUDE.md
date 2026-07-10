@@ -28,7 +28,7 @@ You usually only need to open:
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
-- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the four world-lookup tools) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
+- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search as "the sages' counsel") + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` (Core, queue + travel math) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows).
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
@@ -184,7 +184,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
   `EnableWorldRecall` + `MaxRecallsPerReply` (the gift of recall — NPCs fetching live campaign truth
-  about people/places/clans/realms mid-reply via native tool calls; default on, 3 rounds),
+  about people/places/clans/realms/troops/own company mid-reply via native tool calls; default on, 3 rounds),
+  `EnableWebSearch` (the sages' counsel — NPCs searching the internet mid-reply for "how do I…" game
+  questions, DuckDuckGo with the game name quietly prepended, answered in their own voice; default on)
+  + `ShowNpcActivity` (soft side notices of what an NPC is doing mid-thought — "remembering…",
+  "researching…"; default on),
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
   menu in settlements; default on),
   `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
@@ -365,10 +369,39 @@ the `ModConfig`), so it reaches every path — live chat, NPC-initiated flows, `
 and the prompt inspector. Config: `EnableWorldTidings`, `MaxWorldTidings`, `MaxLocalRumors`.
 
 **The gift of recall (NPC tool-use).** Mid-reply, an NPC can reach into the world's memory instead of
-hallucinating: four native tools (`Tools\WorldRecall` — `recall_person`, `recall_place`, `recall_clan`,
-`recall_realm`) look up live campaign truth — kin and house, whereabouts (phrased as hearsay, "last word
-places them at…"), who holds a town, which realms are at war — and hand it back as gentle second-person
-remembrance. The loop is Core's `ToolLoopRunner` (complete → resolve → repeat, unit-tested): the final
+hallucinating: seven native tools (`Tools\WorldRecall` — `recall_person`, `recall_place`, `recall_clan`,
+`recall_realm`, `recall_company`, `recall_troop`, `recall_market`) look up live campaign truth — kin and
+house, whereabouts (phrased as hearsay, "last word places them at…"), who holds a town, clan renown, which
+realms are at war — and hand it back as gentle second-person remembrance. `recall_market` (2026.07.10,
+from Cunbert quoting an invented grain price) reads the real ledger where the asker stands —
+`Town`/`Village.GetItemPrice` — one named good (buy + sell-back) or a staples survey from
+`Items.AllTradeGoods`; its `item` parameter is optional (`ToolParameter(required: false)`).
+Name-twins are resolved by closeness (`ClosenessTo`: kin > same party > same settlement > the player >
+same clan) so a wife asked of "Vulgrim" recalls HER Vulgrim, not a stranger across the map (playtest find,
+2026.07.10); a troop-name miss suggests the named people's real kinds ("Battanian recruit" → Battania
+musters Volunteers). `recall_troop` (2026.07.10) weighs kinds of soldier
+(tier as "rank of seasoning", manner of fighting, skills from `Skills.All`×`GetSkillValue`, gear from
+`FirstBattleEquipment`, `UpgradeTargets` as "with seasoning they may become…"; filtered to
+Soldier/Mercenary/Bandit occupations so "recruit" never matches a villager). Beside them rides
+**`seek_wisdom` (`Tools\WebWisdom`, 2026.07.10) — "don't ask Google; ask one of your companions":** a real
+web search (DuckDuckGo HTML endpoint, no key, regex-parsed titles+snippets, 12s timeout) framed to the NPC
+as "the counsel of the far-seeing sages"; the resolver quietly prepends the game's name to the query and
+the result closes by telling her to speak the substance in her own world's words and let no meta terms pass
+her lips — that framing is the whole fourth-wall defense, keep it. It runs off-thread (no game state) and
+shares the recall round budget. Config: `EnableWebSearch`. Every tool call also fires a soft **activity
+notice** ("X is remembering… (name)", "X takes stock of the company…", "X is researching… (question)") via
+`NotifyActivity` in the behavior — resolver-wrapped, marshaled to the game thread, `ShowNpcActivity`. `recall_company` (2026.07.10, "Yngvald doesn't know his own
+men") is the inward one — no name argument: the asker's OWN warband, known exactly (a captain reads his
+muster roll): head-count, hale/wounded, companions by name, ranks by troop kind, prisoners in the train,
+food-days from `Food`/`FoodChange`, morale in words + number, wages + own purse (leader only), what the
+company is about (`DefaultBehavior`/`MapEvent`/`BesiegedSettlement` → gentle errand phrases), and the army
+it marches in. `recall_person` also adds what the eyes see — garb and arms from real equipment (civilian
+kit within walls, battle kit on the road) — when the person truly stands with the asker (same settlement
+or party); that's ChatAi's equipment info made on-demand instead of crammed into every prompt. The
+always-on situational whispers went to `SituationBuilder` instead (mined from ChatAi's WorldPromptHints,
+2026.07.10): own-command line (party size even when berthed in a town — details via the tool), army
+membership, under-siege/besieging/raiding, pregnancy, and a renown-tiered line about how far the
+partner's name has traveled. The loop is Core's `ToolLoopRunner` (complete → resolve → repeat, unit-tested): the final
 round keeps sending the definitions but sets `tool_choice: none`, so the turn always ends in words; a
 failed lookup returns an honest "Nothing surfaces…" so the model owns not knowing instead of inventing.
 Both clients implement `IToolChatClient` (Anthropic `tool_use` blocks / OpenAI function calls — this is

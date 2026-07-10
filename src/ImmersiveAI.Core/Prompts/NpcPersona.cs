@@ -54,5 +54,10 @@ namespace ImmersiveAI.Core.Prompts
         /// tools are on offer — see the game layer's WorldRecall). Adds a whisper telling them to
         /// trust what surfaces over invention.</summary>
         public bool CanRecallWorld { get; set; }
+
+        /// <summary>True when this NPC can also seek "the counsel of the far-seeing sages" — a web
+        /// search, framed in-world — when asked how something in the world is done. Adds a whisper
+        /// offering the counsel and reminding them to answer in their own world's words.</summary>
+        public bool CanSeekWisdom { get; set; }
     }
 }

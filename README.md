@@ -69,7 +69,22 @@ Key Core concepts:
 - `ToolLoopRunner` / `WorldRecall` — the gift of recall: mid-reply, an NPC can reach into the
   world's memory (native LLM tool calls on both backends) for live campaign truth about a person,
   place, clan, or realm — family names, who holds a town, which realms are at war — instead of
-  hallucinating it. Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
+  hallucinating it. A fifth recall turns inward: their own company — a party leader truly knows
+  how many men ride under them, their kinds and wounds, the food in the wagons, their spirits,
+  wages, and what the warband is presently about. A sixth weighs kinds of soldier — ask which
+  recruit is worth more, Vlandian or Battanian, and they call each to mind: seasoning, skills,
+  gear, what training makes of them. A seventh minds the market: ask a headman what grain fetches
+  and he reads the real ledger of his own village, this day's true prices — never an invented
+  figure. And when the person asked about stands before their eyes, the recall adds what they
+  see — garb and arms. Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
+- `WebWisdom` — **don't ask Google; ask one of your companions.** When you ask an NPC *how*
+  something in the world is done — transferring ships to a companion's army, the ways of trade
+  or war — and their own knowledge falls short, they can quietly search the internet ("the
+  counsel of the far-seeing sages", DuckDuckGo, no API key needed) and give you the answer in
+  their own voice, in the words of their world — never breaking character to cite a wiki. While
+  they work, soft side notices tell you what they are doing — "remembering…", "taking stock of
+  the company…", "researching…" — so the wait is never silent. Config: `EnableWebSearch`,
+  `ShowNpcActivity`.
 - `LetterBag` / `LetterCourier` — letters: an NPC far away may write to you (at half their
   reaching-out chance), and you can send letters from any town, castle, or village menu. Letters
   travel real in-game days with the map distance, survive save/load, and the NPC who receives one

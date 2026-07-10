@@ -44,7 +44,8 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
   ImmersiveChatBehavior.Letters.cs  partial: the letter flows (NPC writes, player writes, arrivals)
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
-  Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
+  Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm/troop/market/own-company lookups from live campaign data
+  Tools/WebWisdom.cs      the sages' counsel: web search (DuckDuckGo, game name quietly prepended), in-world framed
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits)

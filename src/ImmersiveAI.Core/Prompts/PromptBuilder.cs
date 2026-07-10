@@ -333,7 +333,10 @@ namespace ImmersiveAI.Core.Prompts
             // Offered only when the recall tools truly ride along with the request, so the NPC is
             // never told of a gift the backend cannot grant.
             if (persona.CanRecallWorld)
-                sb.AppendLine("- When a person, place, house, or realm is spoken of and your memory of them is dim, be still a moment and call them to mind — what is truly known will surface as remembrance. Trust what surfaces over invention; and where nothing surfaces, own honestly that you do not know.");
+                sb.AppendLine("- When a person, place, house, realm, or kind of soldier is spoken of and your memory of them is dim, be still a moment and call them to mind — what is truly known will surface as remembrance. So too your own company, before speaking in numbers of the men you lead or march among; and so too the market about you, before ever quoting what a good fetches — prices are living things, never guessed. Trust what surfaces over invention; and where nothing surfaces, own honestly that you do not know.");
+
+            if (persona.CanSeekWisdom)
+                sb.AppendLine("- And when someone asks HOW a thing in the world is done — the handling of ships, the joining of armies, matters of coin or craft or rule — and your own knowing falls short, seek the counsel of the far-seeing sages before you answer; their knowing is wide. What they teach, speak as your own understanding, in the plain words of your world.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

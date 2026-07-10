@@ -145,6 +145,20 @@ namespace ImmersiveAI
         /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>
         public int MaxRecallsPerReply { get; set; } = 3;
 
+        /// <summary>When true, NPCs may also search the internet mid-thought ("the counsel of the
+        /// far-seeing sages") when asked how something in the world is done — ship handling, army
+        /// raising, trade, any of the game's ways their own knowledge cannot answer. The search quietly
+        /// prepends the game's name, and the NPC is told to speak the findings in their own voice, in
+        /// the words of their world. Don't ask Google — ask one of your companions. Uses DuckDuckGo,
+        /// no API key needed; shares <see cref="MaxRecallsPerReply"/> as its budget.</summary>
+        public bool EnableWebSearch { get; set; } = true;
+
+        /// <summary>When true, a soft side message tells you what an NPC is doing while you wait for
+        /// their answer — "remembering…" when they pull what is known of a person or place, "taking
+        /// stock of the company…", "researching…" when they search the wider world — the same style
+        /// as the reply-ready notice. Set false for silence while they think.</summary>
+        public bool ShowNpcActivity { get; set; } = true;
+
         /// <summary>When true, an NPC whose self file has not yet been written begins with the story the
         /// world already tells of them instead of a blank page: a wanderer carries the tale they tell in
         /// taverns when first met (hand-written, in their own voice), a noble the account the encyclopedia

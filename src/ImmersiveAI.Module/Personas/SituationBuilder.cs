@@ -207,17 +207,62 @@ namespace ImmersiveAI.Personas
                 else if (kids != null && kids.Count > 1) sentences.Add($"Your children are {JoinAnd(kids)}.");
             });
 
-            // Only whereabouts worth noting beyond the place already named in the opening.
+            Try(() => { if (h.IsFemale && h.IsPregnant) sentences.Add("You carry a child within you."); });
+
+            // The company they keep upon the map — named even inside walls, so a captain berthed in
+            // a town still holds his command in mind (details live in the recall of one's company).
             Try(() =>
             {
                 if (h.IsPrisoner) { sentences.Add("You are held captive, a prisoner."); return; }
-                if (h.CurrentSettlement != null) return; // already stated in the opening line
                 var party = h.PartyBelongedTo;
                 if (party == null) return;
                 var leader = party.LeaderHero;
-                sentences.Add(leader != null && leader != h
-                    ? $"You ride with {leader.Name}'s warband."
-                    : "You are upon the road.");
+                int men = 0;
+                Try(() => men = party.MemberRoster?.TotalManCount ?? 0);
+                if (leader == h)
+                    sentences.Add(men > 0
+                        ? $"A warband of some {men} souls rides under your command, looking to you for bread and orders."
+                        : "A warband rides under your command.");
+                else if (leader != null)
+                    sentences.Add(men > 0
+                        ? $"You ride with {leader.Name}'s warband, some {men} strong."
+                        : $"You ride with {leader.Name}'s warband.");
+                else if (h.CurrentSettlement == null)
+                    sentences.Add("You are upon the road.");
+            });
+
+            // A gathered army, if their company marches within one.
+            Try(() =>
+            {
+                var army = h.PartyBelongedTo?.Army;
+                if (army == null) return;
+                var armyName = army.Name?.ToString() ?? "a gathered army";
+                if (army.LeaderParty == h.PartyBelongedTo)
+                    sentences.Add($"More than that: the banners of {armyName} march at your word.");
+                else
+                {
+                    var armyLeader = army.LeaderParty?.LeaderHero?.Name?.ToString();
+                    sentences.Add(armyLeader != null
+                        ? $"Your company marches within {armyName}, under {armyLeader}."
+                        : $"Your company marches within {armyName}.");
+                }
+            });
+
+            // War pressing on this very moment: walls besieged, or a siege or raid of their own.
+            Try(() =>
+            {
+                var s = h.CurrentSettlement;
+                if (s != null && s.IsUnderSiege)
+                {
+                    sentences.Add($"And a shadow lies over this place: {s.Name} is under siege even now.");
+                    return;
+                }
+                var party = h.PartyBelongedTo;
+                if (party == null) return;
+                var besieged = party.BesiegedSettlement;
+                if (besieged != null) { sentences.Add($"Your company lies encamped in siege about {besieged.Name}."); return; }
+                if (party.MapEvent != null && party.MapEvent.IsRaid)
+                    sentences.Add("Your company has its hands in a raid even now.");
             });
 
             return string.Join(" ", sentences);
@@ -243,6 +288,14 @@ namespace ImmersiveAI.Personas
             if (clan != null && kingdom != null) sentences.Add($"Their house is clan {clan}, sworn to {kingdom}.");
             else if (clan != null) sentences.Add($"Their house is clan {clan}.");
             else if (kingdom != null) sentences.Add($"They are sworn to {kingdom}.");
+
+            // How far their name has traveled: what even a stranger would have heard of them.
+            Try(() =>
+            {
+                float renown = partner.Clan?.Renown ?? 0f;
+                if (renown >= 300f) sentences.Add("Their name is carried far across Calradia — word of their deeds travels ahead of them.");
+                else if (renown >= 150f) sentences.Add("You have heard their name spoken before now; word of their deeds has begun to travel.");
+            });
 
             Try(() =>
             {

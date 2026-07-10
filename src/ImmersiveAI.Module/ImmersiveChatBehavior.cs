@@ -129,23 +129,81 @@ namespace ImmersiveAI
         }
 
         // One spoken completion that may reach for the world's memory along the way (the recall
-        // tools, resolved from live campaign data on the game thread). Every spoken path goes
-        // through here; short utility calls (the feeling number, the yes/no of a reaching-out)
+        // tools, resolved from live campaign data on the game thread) and, when granted, the
+        // counsel of the far-seeing sages (a web search, resolved off-thread). Every spoken path
+        // goes through here; short utility calls (the feeling number, the yes/no of a reaching-out)
         // stay on plain CompleteAsync, where a recall would only slow the answer down.
         private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc)
         {
-            if (!CanRecallWorld())
+            var tools = new List<ToolDefinition>();
+            if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
+            if (CanSeekWisdom()) tools.Add(Tools.WebWisdom.Tool);
+            if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
             return ToolLoopRunner.RunAsync(
-                _client, messages, Tools.WorldRecall.Tools,
-                call => Tools.WorldRecall.ResolveAsync(call, npc),
+                _client, messages, tools,
+                call => ResolveToolAsync(call, npc),
                 _config.MaxRecallsPerReply);
+        }
+
+        // Routes one tool call to its resolver, announcing the activity to the player first so the
+        // wait is never silent ("remembering…", "researching…").
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc)
+        {
+            NotifyActivity(npc, call);
+            return call.Name == Tools.WebWisdom.SeekWisdom
+                ? Tools.WebWisdom.ResolveAsync(call)
+                : Tools.WorldRecall.ResolveAsync(call, npc);
         }
 
         // The gift is real only when it is both enabled and the backend can carry tools.
         private bool CanRecallWorld() =>
             _config.EnableWorldRecall && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
+
+        // The sages' counsel (web search) rides the same tool channel and the same round budget.
+        private bool CanSeekWisdom() =>
+            _config.EnableWebSearch && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
+
+        // A soft side notice of what the NPC is doing mid-thought, in the same voice as the
+        // reply-ready notice. Called from LLM background threads; the message is marshaled to the
+        // game thread. Best-effort: a failed notice never touches the turn.
+        private static readonly Color ActivityColor = new Color(0.74f, 0.90f, 0.86f, 1f); // soft sea-glass
+
+        private void NotifyActivity(Hero npc, Core.Llm.ToolCall call)
+        {
+            if (!_config.ShowNpcActivity) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                string subject = null;
+                try
+                {
+                    var args = Newtonsoft.Json.Linq.JObject.Parse(call.ArgumentsJson);
+                    subject = ((string)args["name"] ?? (string)args["question"] ?? (string)args["item"] ?? string.Empty).Trim();
+                }
+                catch { subject = null; }
+                var detail = string.IsNullOrWhiteSpace(subject) ? "" : $" ({subject})";
+
+                string doing;
+                switch (call.Name)
+                {
+                    case Tools.WebWisdom.SeekWisdom: doing = $"{name} is researching…{detail}"; break;
+                    case Tools.WorldRecall.RecallCompany: doing = $"{name} takes stock of the company…"; break;
+                    case Tools.WorldRecall.RecallTroop: doing = $"{name} weighs soldiers' worth…{detail}"; break;
+                    case Tools.WorldRecall.RecallMarket: doing = $"{name} minds the market prices…{detail}"; break;
+                    case Tools.WorldRecall.RecallPerson:
+                    case Tools.WorldRecall.RecallPlace:
+                    case Tools.WorldRecall.RecallClan:
+                    case Tools.WorldRecall.RecallRealm: doing = $"{name} is remembering…{detail}"; break;
+                    default: doing = $"{name} gathers their thoughts…"; break;
+                }
+
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage(doing, ActivityColor)));
+            }
+            catch { /* the notice is a nicety; never let it break a turn */ }
+        }
 
         // Loads this NPC's memory from its own folder, migrating old flat-layout files forward first.
         private NpcMemory LoadMemory(Hero npc)
@@ -1536,8 +1594,9 @@ namespace ImmersiveAI
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
             persona.RoleplayGuidance = ApplyTokens(_config.RoleplayGuidance, npcName);
             persona.FamilyKnowledge = FamilyBuilder.Build(npc);
-            // The whisper about the gift of recall is offered only when the tools truly ride along.
+            // The whispers about the gifts are offered only when the tools truly ride along.
             persona.CanRecallWorld = CanRecallWorld();
+            persona.CanSeekWisdom = CanSeekWisdom();
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

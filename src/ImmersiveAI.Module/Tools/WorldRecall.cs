@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.Core;
 
 namespace ImmersiveAI.Tools
 {
@@ -29,14 +30,24 @@ namespace ImmersiveAI.Tools
         public const string RecallPlace = "recall_place";
         public const string RecallClan = "recall_clan";
         public const string RecallRealm = "recall_realm";
+        public const string RecallCompany = "recall_company";
+        public const string RecallTroop = "recall_troop";
+        public const string RecallMarket = "recall_market";
 
         public static readonly IReadOnlyList<ToolDefinition> Tools = new[]
         {
             new ToolDefinition(RecallPerson,
                 "Call to mind what is truly known of a person of the world — who they are, their kin and house, " +
-                "their standing, and where word last placed them. Reach for this whenever a person is spoken of " +
-                "and your memory of them is dim, rather than guessing.",
+                "their standing, where word last placed them, and, if they stand before your eyes, what you see " +
+                "of their garb and arms. Reach for this whenever a person is spoken of and your memory of them " +
+                "is dim, rather than guessing.",
                 new[] { new ToolParameter("name", "The person's name, as best you know it.") }),
+
+            new ToolDefinition(RecallCompany,
+                "Take stock of your own company — the warband you lead or ride with: how many souls it counts, " +
+                "the kinds of fighters among them, the hale and the wounded, prisoners in your train, the food " +
+                "in the wagons, the men's spirits, their wages, and what the company is presently about. Reach " +
+                "for this before ever speaking in numbers of your own men."),
 
             new ToolDefinition(RecallPlace,
                 "Call to mind what is known of a town, castle, or village — who holds it, whose realm it lies " +
@@ -53,6 +64,20 @@ namespace ImmersiveAI.Tools
                 "Call to mind what is known of a realm or kingdom — who rules it, its great houses, its lands, " +
                 "and the wars it wages.",
                 new[] { new ToolParameter("name", "The realm's name, as best you know it.") }),
+
+            new ToolDefinition(RecallTroop,
+                "Call to mind what is known of a kind of soldier — recruit, warrior, knight, of any people: " +
+                "how seasoned they are, their skill at arms, the gear they carry, and what they may become " +
+                "with training. Reach for this when soldiers or their worth are spoken of — and when weighing " +
+                "one kind against another, call each to mind in turn before you judge.",
+                new[] { new ToolParameter("name", "The soldier kind's name, e.g. \"Vlandian Recruit\" or \"Battanian Fian\".") }),
+
+            new ToolDefinition(RecallMarket,
+                "Call to mind the day's trade in the market about you — what goods truly fetch here, this " +
+                "day, in the place where you stand. Reach for this before ever quoting a price or speaking " +
+                "of what the market bears; prices shift with the seasons and the wars, and yesterday's " +
+                "figure is a lie by morning.",
+                new[] { new ToolParameter("item", "One good to price — grain, tools, wine, a horse. Leave it out to survey the market's staples.", required: false) }),
         };
 
         /// <summary>
@@ -61,8 +86,11 @@ namespace ImmersiveAI.Tools
         /// </summary>
         public static async Task<string> ResolveAsync(ToolCall call, Hero asker)
         {
+            // The company recall reaches inward and the market recall reads the place itself —
+            // neither needs a name to look up.
             var name = ArgumentName(call);
-            if (string.IsNullOrWhiteSpace(name)) return ToolLoopRunner.NothingSurfaces;
+            if (call.Name != RecallCompany && call.Name != RecallMarket && string.IsNullOrWhiteSpace(name))
+                return ToolLoopRunner.NothingSurfaces;
 
             var lookup = OnGameThread(() =>
             {
@@ -72,6 +100,9 @@ namespace ImmersiveAI.Tools
                     case RecallPlace: return DescribePlace(name, asker);
                     case RecallClan: return DescribeClan(name);
                     case RecallRealm: return DescribeRealm(name);
+                    case RecallCompany: return DescribeCompany(asker);
+                    case RecallTroop: return DescribeTroop(name);
+                    case RecallMarket: return DescribeMarket(name, asker);
                     default: return string.Empty;
                 }
             });
@@ -87,7 +118,11 @@ namespace ImmersiveAI.Tools
 
         private static string ArgumentName(ToolCall call)
         {
-            try { return ((string?)JObject.Parse(call.ArgumentsJson)["name"] ?? string.Empty).Trim(); }
+            try
+            {
+                var args = JObject.Parse(call.ArgumentsJson);
+                return ((string?)args["name"] ?? (string?)args["item"] ?? string.Empty).Trim();
+            }
             catch { return string.Empty; }
         }
 
@@ -113,12 +148,43 @@ namespace ImmersiveAI.Tools
             if (matches.Count == 1)
                 return PersonRemembrance(matches[0], asker);
 
-            // Several share the name: recall each briefly so the NPC can tell them apart in speech.
+            // Several share the name. The heart knows which one is meant: kin before comrades,
+            // comrades before neighbors, the one who stands here before a stranger far away —
+            // so a wife asked about "Vulgrim" recalls HER Vulgrim, not some name-twin across the map.
+            var ranked = matches
+                .OrderByDescending(h => ClosenessTo(h, asker))
+                .ToList();
+            int best = ClosenessTo(ranked[0], asker);
+            if (best > 0 && (ranked.Count < 2 || ClosenessTo(ranked[1], asker) < best))
+            {
+                var answer = new StringBuilder(PersonRemembrance(ranked[0], asker));
+                var others = ranked.Skip(1).Take(2).Select(PersonBrief).ToList();
+                if (others.Count > 0)
+                    answer.Append(" (Others in the world also bear the name: " + string.Join("; ", others) + ".)");
+                return answer.ToString();
+            }
+
+            // No one of them is close to the asker: recall each briefly so they can be told apart.
             var sb = new StringBuilder();
             sb.AppendLine($"More than one soul called {name} comes to mind:");
-            foreach (var h in matches.Take(3))
+            foreach (var h in ranked.Take(3))
                 sb.AppendLine("- " + PersonBrief(h));
             return sb.ToString().TrimEnd();
+        }
+
+        // How near this person stands to the asker's own life — used to pick the meant one among
+        // name-twins. Kin outweigh comrades, comrades outweigh neighbors, the person standing here
+        // outweighs a stranger across the map.
+        private static int ClosenessTo(Hero h, Hero asker)
+        {
+            if (asker == null || h == null) return 0;
+            if (Safe(() => h.Spouse == asker || asker.Spouse == h
+                || h.Father == asker || h.Mother == asker || asker.Father == h || asker.Mother == h)) return 5;
+            if (Safe(() => h.PartyBelongedTo != null && h.PartyBelongedTo == asker.PartyBelongedTo)) return 4;
+            if (Safe(() => h.CurrentSettlement != null && h.CurrentSettlement == asker.CurrentSettlement)) return 3;
+            if (Safe(() => h == Hero.MainHero)) return 2;
+            if (Safe(() => h.Clan != null && h.Clan == asker.Clan)) return 1;
+            return 0;
         }
 
         private static List<Hero> FindHeroes(string name)
@@ -197,7 +263,42 @@ namespace ImmersiveAI.Tools
                     lines.Add($"Between you and them, the standing is {PersonaBuilder.DescribeRelation(standing)} ({standing}).");
             });
 
+            // If they truly stand where the asker can see them, the eyes add what hearsay cannot.
+            Try(() =>
+            {
+                if (asker == null || asker == h || !h.IsAlive) return;
+                bool together = Safe(() =>
+                    (h.CurrentSettlement != null && h.CurrentSettlement == asker.CurrentSettlement) ||
+                    (h.PartyBelongedTo != null && h.PartyBelongedTo == asker.PartyBelongedTo));
+                if (!together) return;
+                var sight = AttireBrief(h, civilian: Safe(() => h.CurrentSettlement != null));
+                if (sight.Length > 0) lines.Add(sight);
+            });
+
             return string.Join(" ", lines);
+        }
+
+        // What the eyes see of someone present: garb and arms, from the equipment they would truly
+        // be wearing here (civilian garments within walls, war gear on the road).
+        private static string AttireBrief(Hero h, bool civilian)
+        {
+            var eq = civilian ? h.CivilianEquipment : h.BattleEquipment;
+            if (eq == null) return string.Empty;
+
+            string ItemAt(EquipmentIndex i)
+            {
+                try { return eq[i].Item?.Name?.ToString(); } catch { return null; }
+            }
+
+            var garb = new[] { EquipmentIndex.Body, EquipmentIndex.Head, EquipmentIndex.Cape, EquipmentIndex.Gloves, EquipmentIndex.Leg }
+                .Select(ItemAt).Where(n => !string.IsNullOrWhiteSpace(n)).Take(4).ToList();
+            var arms = new[] { EquipmentIndex.Weapon0, EquipmentIndex.Weapon1, EquipmentIndex.Weapon2, EquipmentIndex.Weapon3 }
+                .Select(ItemAt).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+
+            if (garb.Count == 0 && arms.Count == 0) return string.Empty;
+            var clad = garb.Count > 0 ? "clad in " + string.Join(", ", garb) : "clad plainly";
+            var bearing = arms.Count > 0 ? "bearing " + string.Join(", ", arms) : "bearing no arms you can see";
+            return $"And they stand before your very eyes, {clad}, {bearing}.";
         }
 
         private static string PersonBrief(Hero h)
@@ -401,6 +502,16 @@ namespace ImmersiveAI.Tools
 
             Try(() =>
             {
+                int renown = (int)clan.Renown;
+                var word = renown >= 900 ? "famed across all Calradia"
+                         : renown >= 300 ? "well known, and spoken of with respect"
+                         : renown >= 50 ? "known in its own lands"
+                         : "little known beyond its own hearth";
+                lines.Add($"Its name is {word} (renown near {renown}).");
+            });
+
+            Try(() =>
+            {
                 var fiefs = clan.Fiefs?.Select(f => f?.Name?.ToString()).Where(n => !string.IsNullOrWhiteSpace(n)).Take(6).ToList();
                 if (fiefs != null && fiefs.Count > 0)
                     lines.Add("Its holdings include " + string.Join(", ", fiefs) + ".");
@@ -466,6 +577,363 @@ namespace ImmersiveAI.Tools
             });
 
             return string.Join(" ", lines);
+        }
+
+        // ------------------------------ kinds of soldier ------------------------------
+
+        // A soldier kind, recalled as a captain who has seen them fight would recall them: seasoning,
+        // craft, gear, and what training may make of them. This is what lets an NPC honestly weigh
+        // "which recruit is better" instead of guessing.
+        private static string DescribeTroop(string name)
+        {
+            var troops = new List<CharacterObject>();
+            Try(() => troops.AddRange((CharacterObject.All ?? Enumerable.Empty<CharacterObject>())
+                .Where(c => c != null && !c.IsHero && Safe(() =>
+                    c.Occupation == Occupation.Soldier || c.Occupation == Occupation.Mercenary || c.Occupation == Occupation.Bandit))));
+
+            var matches = troops.Where(c => string.Equals(c.Name?.ToString(), name, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (matches.Count == 0)
+                matches = troops.Where(c => (c.Name?.ToString() ?? "").IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+            if (matches.Count == 0)
+            {
+                // The name misses, but a people may be named in it ("Battanian recruit" — Battania
+                // musters Volunteers, not Recruits): offer that people's kinds so the asker can call
+                // the right one to mind instead of shrugging.
+                var kindsOfPeople = TroopKindsOfNamedCulture(troops, name);
+                return kindsOfPeople != null
+                    ? $"No kind of soldier called \"{name}\" comes to mind — that people names their fighters otherwise. Of them you know these kinds: {kindsOfPeople}. Call the one you mean to mind."
+                    : $"No kind of soldier called \"{name}\" comes to mind.";
+            }
+            if (matches.Count > 1)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"More than one kind of soldier answers to \"{name}\" — call the one you mean to mind by its fuller name:");
+                foreach (var c in matches.Take(6))
+                    sb.AppendLine("- " + c.Name);
+                return sb.ToString().TrimEnd();
+            }
+
+            var t = matches[0];
+            var lines = new List<string>();
+
+            Try(() =>
+            {
+                var opening = $"The {t.Name} comes to mind";
+                var culture = t.Culture?.Name?.ToString();
+                if (!string.IsNullOrWhiteSpace(culture)) opening += $": a soldier of the {culture} people";
+                opening += $", of the {Ordinal(t.Tier)} rank of seasoning";
+                var manner = t.IsMounted && t.IsRanged ? "they fight ahorse with missile arms"
+                           : t.IsMounted ? "they fight from horseback"
+                           : t.IsRanged ? "they fight at range"
+                           : "they fight on foot, blade to blade";
+                lines.Add(opening + $" — {manner}.");
+            });
+
+            Try(() =>
+            {
+                int ValueOf(SkillObject s) { try { return t.GetSkillValue(s); } catch { return 0; } }
+                var crafts = TaleWorlds.CampaignSystem.Extensions.Skills.All?
+                    .Where(s => s != null)
+                    .Select(s => new { Skill = s, Value = ValueOf(s) })
+                    .Where(x => x.Value > 20)
+                    .OrderByDescending(x => x.Value)
+                    .Take(5)
+                    .Select(x => $"{x.Skill.Name} near {x.Value}")
+                    .ToList();
+                if (crafts != null && crafts.Count > 0)
+                    lines.Add("Their craft: " + string.Join(", ", crafts) + ".");
+            });
+
+            Try(() =>
+            {
+                var eq = t.FirstBattleEquipment;
+                if (eq == null) return;
+                string ItemAt(EquipmentIndex i) { try { return eq[i].Item?.Name?.ToString(); } catch { return null; } }
+                var arms = new[] { EquipmentIndex.Weapon0, EquipmentIndex.Weapon1, EquipmentIndex.Weapon2, EquipmentIndex.Weapon3 }
+                    .Select(ItemAt).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+                var garb = new[] { EquipmentIndex.Body, EquipmentIndex.Head }
+                    .Select(ItemAt).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+                if (arms.Count > 0) lines.Add("They carry " + string.Join(", ", arms) + ".");
+                if (garb.Count > 0) lines.Add("They wear " + string.Join(" and ", garb) + $" (armor about the body near {(int)t.GetBodyArmorSum()}).");
+            });
+
+            Try(() =>
+            {
+                var next = t.UpgradeTargets?
+                    .Where(u => u != null)
+                    .Select(u => u.Name?.ToString())
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .ToList();
+                if (next != null && next.Count > 0)
+                    lines.Add("With seasoning they may become " + string.Join(" or ", next) + ".");
+                else
+                    lines.Add("They stand at the end of their road; training will make nothing further of them.");
+            });
+
+            return string.Join(" ", lines);
+        }
+
+        // If the failed troop query names a people ("Battanian…", "of Vlandia…"), lists that
+        // people's soldier kinds, greenest first, so the asker can re-ask by the right name.
+        private static string TroopKindsOfNamedCulture(List<CharacterObject> troops, string query)
+        {
+            try
+            {
+                var byCulture = troops
+                    .Where(c => c.Culture?.Name != null)
+                    .GroupBy(c => c.Culture.Name.ToString())
+                    .Where(g => !string.IsNullOrWhiteSpace(g.Key))
+                    // "Battanian recruit" contains "Battania", "Vlandian" contains "Vlandia" — the
+                    // adjective always carries the people's name inside it.
+                    .FirstOrDefault(g => query.IndexOf(g.Key, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (byCulture == null) return null;
+
+                var kinds = byCulture
+                    .Where(c => Safe(() => c.Occupation == Occupation.Soldier))
+                    .OrderBy(c => Safe(() => c.Tier > 0) ? c.Tier : 99)
+                    .Select(c => c.Name?.ToString())
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct()
+                    .Take(10)
+                    .ToList();
+                return kinds.Count > 0 ? string.Join(", ", kinds) : null;
+            }
+            catch { return null; }
+        }
+
+        private static string Ordinal(int n)
+        {
+            switch (n)
+            {
+                case 1: return "first";
+                case 2: return "second";
+                case 3: return "third";
+                case 4: return "fourth";
+                case 5: return "fifth";
+                case 6: return "sixth";
+                default: return n + "th";
+            }
+        }
+
+        // ------------------------------ the market about you ------------------------------
+
+        // The day's trade where the asker stands, read from the settlement's real market — so a
+        // headman quotes what grain truly fetches in his village today instead of inventing a
+        // plausible number. One named good, or a survey of the staples.
+        private static string DescribeMarket(string itemName, Hero asker)
+        {
+            Settlement? s = null;
+            Try(() => s = asker?.CurrentSettlement ?? Settlement.CurrentSettlement);
+            if (s == null)
+                return "You stand in no market — out here there are no stalls, no scales, and no day's prices to call to mind.";
+
+            // Towns, castles, and villages all keep their own ledger of what a thing trades at.
+            // Priced against the player's party, so the figures match the trade screen to the denar
+            // (the bare price is the market's midpoint; the buy/sell margin lives in the party terms).
+            Func<ItemObject, bool, int>? priceOf = null;
+            Try(() =>
+            {
+                var buyer = MobileParty.MainParty;
+                if (s.Town != null) priceOf = (item, selling) => s.Town.GetItemPrice(item, buyer, selling);
+                else if (s.Village != null) priceOf = (item, selling) => s.Village.GetItemPrice(item, buyer, selling);
+            });
+            if (priceOf == null)
+                return $"The trade of {s.Name} does not come to mind clearly.";
+
+            if (!string.IsNullOrWhiteSpace(itemName))
+            {
+                ItemObject? item = null;
+                Try(() =>
+                {
+                    var all = TaleWorlds.CampaignSystem.Extensions.Items.All?.Where(i => i != null).ToList();
+                    if (all == null) return;
+                    item = all.FirstOrDefault(i => string.Equals(i.Name?.ToString(), itemName, StringComparison.OrdinalIgnoreCase))
+                        ?? all.FirstOrDefault(i => (i.Name?.ToString() ?? "").IndexOf(itemName, StringComparison.OrdinalIgnoreCase) >= 0);
+                });
+                if (item == null)
+                    return $"No good called \"{itemName}\" comes to mind among the wares of the world.";
+
+                try
+                {
+                    int buy = priceOf(item, false);
+                    int sell = priceOf(item, true);
+                    return $"This day in {s.Name}, {item.Name} trades near {buy} denars" +
+                           (sell > 0 && sell != buy ? $" (one brought in to sell would fetch closer to {sell})." : ".");
+                }
+                catch { return $"The price of {item.Name} here does not come to mind."; }
+            }
+
+            // No good named: survey the staples of any market.
+            var lines = new List<string>();
+            Try(() =>
+            {
+                var staples = new[] { "grain", "fish", "meat", "butter", "cheese", "olives", "grape", "wine", "beer",
+                                      "wool", "linen", "hides", "leather", "iron", "hardwood", "tools", "pottery",
+                                      "salt", "oil", "clay", "fur", "date_fruit", "flax" };
+                var priced = TaleWorlds.CampaignSystem.Extensions.Items.AllTradeGoods?
+                    .Where(i => i != null && staples.Contains(i.StringId))
+                    .Select(i =>
+                    {
+                        try { return $"{i.Name} near {priceOf(i, false)}"; }
+                        catch { return null; }
+                    })
+                    .Where(p => p != null)
+                    .Take(12)
+                    .ToList();
+                if (priced != null && priced.Count > 0)
+                    lines.Add($"The day's trade in {s.Name} comes to mind — what the stalls ask, in denars: " +
+                              string.Join(", ", priced) + ".");
+            });
+
+            return lines.Count > 0 ? string.Join(" ", lines)
+                : $"The stalls of {s.Name} do not come clearly to mind this day.";
+        }
+
+        // ------------------------------ one's own company ------------------------------
+
+        // The asker taking stock of their own warband. Their own command is known to them exactly —
+        // no hearsay rounding here; a captain knows his muster roll, his wagons, and his purse.
+        private static string DescribeCompany(Hero asker)
+        {
+            if (asker == null) return ToolLoopRunner.NothingSurfaces;
+
+            MobileParty party = null;
+            Try(() => party = asker.PartyBelongedTo);
+            if (party == null)
+            {
+                string kept = null;
+                Try(() => kept = asker.GovernorOf?.Settlement?.Name?.ToString());
+                return kept != null
+                    ? $"No warband rides under you upon the road — your charge is {kept} itself, and its garrison comes to mind when you think upon the place."
+                    : "You take stock, and the truth is plain: no company rides with you now — no warband of your own, and none you march among.";
+            }
+
+            var lines = new List<string>();
+            Hero leader = null;
+            Try(() => leader = party.LeaderHero);
+            bool leading = leader == asker;
+
+            Try(() =>
+            {
+                int total = party.MemberRoster?.TotalManCount ?? 0;
+                int wounded = party.MemberRoster?.TotalWounded ?? 0;
+                var woundedNote = wounded > 0 ? $", {wounded} of them nursing wounds" : "";
+                if (leading)
+                    lines.Add($"Your company comes to mind as clearly as your own hand: {total} souls ride under your command{woundedNote}.");
+                else if (leader != null)
+                    lines.Add($"You take stock of {leader.Name}'s company, which you ride with: {total} souls in all{woundedNote}.");
+                else
+                    lines.Add($"You take stock of the company you march among: {total} souls in all{woundedNote}.");
+            });
+
+            // The named few first, then the ranks by kind — a captain reads his roll this way.
+            Try(() =>
+            {
+                var roster = party.MemberRoster?.GetTroopRoster();
+                if (roster == null) return;
+
+                var companions = roster
+                    .Where(e => Safe(() => e.Character != null && e.Character.IsHero
+                        && e.Character.HeroObject != asker && e.Character.HeroObject != leader))
+                    .Select(e => e.Character.HeroObject?.Name?.ToString())
+                    .Where(n => !string.IsNullOrWhiteSpace(n)).Take(8).ToList();
+                if (companions.Count > 0)
+                    lines.Add("At your side ride " + string.Join(", ", companions) + ".");
+
+                var kinds = roster
+                    .Where(e => Safe(() => e.Character != null && !e.Character.IsHero && e.Number > 0))
+                    .OrderByDescending(e => e.Number)
+                    .Select(e => $"{e.Number} {e.Character.Name}")
+                    .ToList();
+                if (kinds.Count > 0)
+                {
+                    var shown = string.Join(", ", kinds.Take(8));
+                    lines.Add(kinds.Count > 8
+                        ? $"Among them: {shown}, and others besides."
+                        : $"Among them: {shown}.");
+                }
+            });
+
+            Try(() =>
+            {
+                int prisoners = party.PrisonRoster?.TotalManCount ?? 0;
+                if (prisoners > 0) lines.Add($"Some {prisoners} prisoners are marched along in your train.");
+            });
+
+            Try(() =>
+            {
+                float food = party.Food;
+                float change = party.FoodChange;
+                if (food <= 0f) lines.Add("The wagons are all but empty — hunger walks close to the company.");
+                else if (change < 0f) lines.Add($"The wagons hold food for some {(int)Math.Floor(food / -change)} days more.");
+                else lines.Add("The wagons want for nothing; the stores hold and grow.");
+            });
+
+            Try(() =>
+            {
+                int morale = (int)party.Morale;
+                var word = morale >= 70 ? "high" : morale >= 50 ? "steady" : morale >= 30 ? "low" : "near breaking";
+                lines.Add($"The men's spirits stand {word} ({morale} of a hundred).");
+            });
+
+            // Only the captain carries the ledger of coin.
+            Try(() =>
+            {
+                if (!leading) return;
+                lines.Add($"Their keep runs some {party.TotalWage} denars a day in wages, and your own purse holds {asker.Gold}.");
+            });
+
+            Try(() => lines.Add(CompanyDoing(party)));
+
+            Try(() =>
+            {
+                var army = party.Army;
+                if (army == null) return;
+                var armyName = army.Name?.ToString() ?? "a gathered army";
+                if (army.LeaderParty == party)
+                    lines.Add($"And more than that: the banners of {armyName} — {army.TotalManCount} men in all — march at your word.");
+                else
+                {
+                    var armyLeader = army.LeaderParty?.LeaderHero?.Name?.ToString();
+                    lines.Add(armyLeader != null
+                        ? $"The company marches within {armyName}, {army.TotalManCount} men in all, under {armyLeader}."
+                        : $"The company marches within {armyName}, {army.TotalManCount} men in all.");
+                }
+            });
+
+            var answer = string.Join(" ", lines.Where(l => !string.IsNullOrWhiteSpace(l)));
+            return answer.Length > 0 ? answer : ToolLoopRunner.NothingSurfaces;
+        }
+
+        // What the company is presently about, read from its errand on the map.
+        private static string CompanyDoing(MobileParty party)
+        {
+            if (party.MapEvent != null)
+                return party.MapEvent.IsRaid
+                    ? "Even now the company has its hands in a raid."
+                    : "Even now the company stands in the press of battle.";
+
+            var besieged = party.BesiegedSettlement;
+            if (besieged != null) return $"The company lies encamped in siege about {besieged.Name}.";
+
+            var place = party.TargetSettlement?.Name?.ToString();
+            var quarry = party.TargetParty?.Name?.ToString();
+            switch (party.DefaultBehavior)
+            {
+                case AiBehavior.GoToSettlement: return place != null ? $"The company is bound for {place}." : "The company is on the road to a settlement.";
+                case AiBehavior.RaidSettlement:
+                case AiBehavior.AssaultSettlement: return place != null ? $"The company is set upon {place}, and not kindly." : "The company moves against a settlement.";
+                case AiBehavior.BesiegeSettlement: return place != null ? $"The company moves to lay siege to {place}." : "The company moves to lay a siege.";
+                case AiBehavior.EngageParty:
+                case AiBehavior.GoAroundParty: return quarry != null ? $"The company moves against {quarry}." : "The company moves against an enemy in the field.";
+                case AiBehavior.EscortParty: return quarry != null ? $"The company rides escort to {quarry}." : "The company rides escort.";
+                case AiBehavior.PatrolAroundPoint: return place != null ? $"The company patrols the country around {place}." : "The company is on patrol.";
+                case AiBehavior.DefendSettlement: return place != null ? $"The company is sworn to the defense of {place}." : "The company moves to a defense.";
+                case AiBehavior.FleeToPoint:
+                case AiBehavior.FleeToParty:
+                case AiBehavior.FleeToGate: return "The company is withdrawing from a danger it does not care to meet.";
+                default: return string.Empty;
+            }
         }
 
         // ------------------------------ helpers ------------------------------
