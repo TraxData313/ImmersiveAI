@@ -294,6 +294,22 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void ReachOutDesireLine_TellsAStrangerHonestlyThereIsNoHistoryYet()
+    {
+        // With the pull floor, someone never spoken with may be moved to approach; the Angel must not
+        // let them imagine a past that is not there — the approach is a first acquaintance.
+        var stranger = PromptBuilder.ReachOutDesireLine("Vulgrim", stranger: true);
+        var friend = PromptBuilder.ReachOutDesireLine("Vulgrim");
+
+        Assert.Contains("never truly spoken", stranger);
+        Assert.Contains("make their acquaintance", stranger);
+        Assert.DoesNotContain("never truly spoken", friend);
+        // Both leave the choice wholly theirs.
+        Assert.Contains("yes or no", stranger);
+        Assert.Contains("yes or no", friend);
+    }
+
+    [Fact]
     public void ArrivalLine_DistinguishesAStrangerFromAKnownFriend()
     {
         var first = PromptBuilder.ArrivalLine("Vulgrim", firstMeeting: true);

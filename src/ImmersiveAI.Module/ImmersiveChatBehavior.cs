@@ -935,40 +935,25 @@ namespace ImmersiveAI
         // One roll per hour for the WHOLE co-located group, so DailyInitiationRate stays the day's total
         // across everyone (≈ rate × combined pull) instead of stacking per companion — five devoted friends
         // share the visits rather than each bringing their own. If the hour fires, the one who comes is
-        // chosen weighted by pull. Only NPCs the player has actually built a history with — and who are in
-        // the same place right now, so the talk is naturally face-to-face — are considered. Returns null
-        // when no one reaches out this hour.
+        // chosen weighted by pull. EVERY hero in the same place counts — the whole party and everyone in
+        // the town — with at least InitiationPullFloor of a full bond's pull, so even someone the player
+        // has never spoken with may come up and begin their story; a real history raises the pull from
+        // there. Returns null when no one reaches out this hour.
         private Hero? PickInitiatingNpcForThisHour()
         {
             try
             {
-                var root = NpcPaths.CampaignRoot;
-                if (!Directory.Exists(root)) return null;
-
                 double nowDay = CampaignTime.Now.ToDays;
                 var eligible = new List<Hero>();
                 var pulls = new List<double>();
 
-                foreach (var folder in Directory.GetDirectories(root))
+                foreach (var hero in Hero.AllAliveHeroes)
                 {
-                    var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
-                    if (!File.Exists(memFile)) continue;
-
-                    NpcMemory memory;
-                    try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
-                    catch { continue; }
-
-                    if (string.IsNullOrWhiteSpace(memory.NpcId) || memory.StoryRichness <= 0) continue;
-
-                    var hero = FindAliveHero(memory.NpcId);
-                    if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner) continue;
+                    if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner || hero.IsChild) continue;
                     if (!IsCoLocated(hero)) continue;
                     if (_pendingNotices.ContainsKey(hero.StringId)) continue; // already knocking
 
-                    double daysSince = memory.LastConversationGameDay >= 0
-                        ? Math.Max(0, nowDay - memory.LastConversationGameDay)
-                        : 0;
-                    double pull = InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince);
+                    double pull = CoLocatedPull(hero, nowDay);
                     if (pull <= 0) continue;
 
                     eligible.Add(hero);
@@ -985,6 +970,27 @@ namespace ImmersiveAI
                 return idx >= 0 ? eligible[idx] : eligible[0];
             }
             catch { return null; }
+        }
+
+        // A co-located soul's pull: their bond's own weight (frequency × closeness × recency) lifted to at
+        // least the stranger's floor, so presence alone is enough to sometimes cross the room. Reads the
+        // memory file only when one exists — a stranger costs no disk.
+        private double CoLocatedPull(Hero hero, double nowDay)
+        {
+            double floor = _config.InitiationPullFloor;
+
+            var memFile = NpcPaths.MemoryFile(hero);
+            if (!File.Exists(memFile)) return floor;
+
+            NpcMemory memory;
+            try { memory = _memoryStore.LoadFrom(memFile, hero.StringId); }
+            catch { return floor; }
+            if (memory.StoryRichness <= 0) return floor;
+
+            double daysSince = memory.LastConversationGameDay >= 0
+                ? Math.Max(0, nowDay - memory.LastConversationGameDay)
+                : 0;
+            return Math.Max(floor, InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince));
         }
 
         private static Hero? FindAliveHero(string stringId)
@@ -1027,7 +1033,9 @@ namespace ImmersiveAI
                 var ctx = BuildContext(npc, situation);
 
                 // The Angel asks whether they even wish to reach out; their answer becomes a recorded turn.
-                var desireLine = PromptBuilder.ReachOutDesireLine(ctx.PlayerName);
+                // A stranger is told honestly that this would be a first acquaintance, not a return.
+                var desireLine = PromptBuilder.ReachOutDesireLine(
+                    ctx.PlayerName, stranger: !PromptBuilder.HasRememberedHistory(ctx.Memory));
                 var desireMsgs = _promptBuilder.BuildAngelPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
                 var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
@@ -1366,9 +1374,11 @@ namespace ImmersiveAI
             {
                 var root = NpcPaths.CampaignRoot;
                 double nowDay = CampaignTime.Now.ToDays;
+                double floor = _config.InitiationPullFloor;
                 int shown = 0;
                 var herePulls = new List<double>();
                 var awayPulls = new List<double>();
+                var knownIds = new HashSet<string>();
 
                 if (Directory.Exists(root))
                 {
@@ -1381,6 +1391,7 @@ namespace ImmersiveAI
                         try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
                         catch { continue; }
                         if (string.IsNullOrWhiteSpace(memory.NpcId)) continue;
+                        knownIds.Add(memory.NpcId);
 
                         var hero = FindAliveHero(memory.NpcId);
                         var name = hero?.Name?.ToString() ?? memory.NpcName;
@@ -1393,8 +1404,8 @@ namespace ImmersiveAI
                         double daysSince = memory.LastConversationGameDay >= 0
                             ? Math.Max(0, nowDay - memory.LastConversationGameDay) : 0;
                         double pull = InitiationScorer.Pull(memory.StoryRichness, relation, daysSince);
-                        double alone = InitiationScorer.DailyChance(
-                            _config.DailyInitiationRate, memory.StoryRichness, relation, daysSince);
+                        if (coLocated) pull = Math.Max(floor, pull); // presence alone lifts to the floor
+                        double alone = Math.Min(1, _config.DailyInitiationRate * pull);
                         (coLocated ? herePulls : awayPulls).Add(pull);
 
                         sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
@@ -1411,8 +1422,25 @@ namespace ImmersiveAI
                     }
                 }
 
-                if (shown == 0)
-                    sb.AppendLine("(You have no NPC history yet — speak with someone first.)");
+                // Everyone else in the same place — the rest of the party, the town around you — carries
+                // the newcomer's floor: they too may cross the room, and their first word begins a story.
+                int strangersHere = 0;
+                if (floor > 0)
+                {
+                    foreach (var hero in Hero.AllAliveHeroes)
+                    {
+                        if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner || hero.IsChild) continue;
+                        if (knownIds.Contains(hero.StringId)) continue;
+                        if (!IsCoLocated(hero)) continue;
+                        strangersHere++;
+                        herePulls.Add(floor);
+                    }
+                    if (strangersHere > 0)
+                        sb.AppendLine($"• …and {strangersHere} more soul{(strangersHere == 1 ? "" : "s")} here with you, not yet truly spoken with — each at the newcomer's pull of {floor * 100:0.#}%.");
+                }
+
+                if (shown == 0 && strangersHere == 0)
+                    sb.AppendLine("(No one is near, and you have no NPC history yet — speak with someone first.)");
                 else
                 {
                     double hereTotal = _config.DailyInitiationRate * InitiationScorer.UnionPull(herePulls);

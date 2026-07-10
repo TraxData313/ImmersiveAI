@@ -100,11 +100,18 @@ namespace ImmersiveAI.Core.Prompts
         }
 
         /// <summary>The Angel's line asking whether the NPC wishes, of their own will, to seek the player out
-        /// and speak (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).</summary>
-        public static string ReachOutDesireLine(string playerName) =>
-            $"The day is quiet, and {playerName} is near. No one has bid you do anything — this moment is yours alone. " +
-            $"Tell me, from your own heart: do you wish, of your own will, to go to {playerName} now and speak with them? " +
-            "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
+        /// and speak (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).
+        /// When <paramref name="stranger"/>, the Angel says honestly that they have never truly spoken —
+        /// the approach would be a first acquaintance, not a return — so the NPC never imagines a history
+        /// that is not there.</summary>
+        public static string ReachOutDesireLine(string playerName, bool stranger = false) => stranger
+            ? $"The day is quiet, and {playerName} is near — someone you know only by sight, for you have never truly spoken with them. " +
+              "No one has bid you do anything — this moment is yours alone. " +
+              $"Tell me, from your own heart: do you wish, of your own will, to go to {playerName} now and make their acquaintance? " +
+              "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you."
+            : $"The day is quiet, and {playerName} is near. No one has bid you do anything — this moment is yours alone. " +
+              $"Tell me, from your own heart: do you wish, of your own will, to go to {playerName} now and speak with them? " +
+              "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
 
         /// <summary>The Angel's line narrating the NPC crossing to the player: when <paramref name="welcomed"/>
         /// the player turns to them gladly and they greet first; otherwise the player is too busy just now and

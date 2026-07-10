@@ -172,11 +172,14 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),
   `EnableRelationshipChanges` (NPC-authored, conversation-driven relation shifts via a second, isolated
   feeling call; default on),
-  `EnableNpcInitiatedChats` + `DailyInitiationRate` + `ShowInitiationTestButton` (NPCs reaching out to
-  the player on their own; the rate is the expected visits per day **in total across everyone** when the
-  bonds are full — it does NOT stack per companion — scaled down by how often you talk and how far the
-  standing is from 0, so a fresh game stays quiet; 0.3 ≈ one visit every ~3 days, 1.5 ≈ one or two a day;
-  the test button forces one on demand from the free-chat menu),
+  `EnableNpcInitiatedChats` + `DailyInitiationRate` + `InitiationPullFloor` + `ShowInitiationTestButton`
+  (NPCs reaching out to the player on their own; the rate is the expected visits per day **in total across
+  everyone** when the bonds are full — it does NOT stack per companion — scaled down by how often you talk
+  and how far the standing is from 0, so a fresh game stays quiet; 0.3 ≈ one visit every ~3 days, 1.5 ≈ one
+  or two a day; the pull floor (default 0.1) gives EVERY co-located soul — the whole party, everyone in
+  town, even someone never spoken with — at least that fraction of a full bond's pull, so strangers can
+  approach and begin a story, still capped by the same group total; the test button forces one on demand
+  from the free-chat menu),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world happenings — wars, falls of
   realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
@@ -272,10 +275,13 @@ Known caveat: the "considers your words..." → reply transition can outrun a sl
 briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2 removes this.
 
 **NPCs reaching out on their own.** The first way the NPCs *act* instead of only answering. Each hour
-(`OnHourlyTick`), for every NPC the player has a history with who is **co-located** with them right now
-(`IsCoLocated` — in the player's party, or the same settlement; distant NPCs are the future *letter*
-system, see TASKS_TODO), the whole group gets ONE bond-scaled roll to reach out. Each NPC has a *pull*
-in [0,1], `InitiationScorer.Pull` = `frequency × closeness × recency`: `frequency`
+(`OnHourlyTick`), **every hero co-located** with the player right now (`IsCoLocated` — in the player's
+party, or the same settlement; distant NPCs write letters instead) joins ONE bond-scaled group roll to
+reach out — including people never spoken with: everyone carries at least `InitiationPullFloor` (default
+0.1) of a full bond's pull, so a stranger may cross the room and begin their story (the Angel's desire
+question tells them honestly it would be a first acquaintance — `ReachOutDesireLine(stranger: true)` —
+and their first beat creates their memory). A real history raises the pull from there: each NPC's *pull*
+in [0,1] is `InitiationScorer.Pull` = `frequency × closeness × recency`: `frequency`
 saturates at `FrequencyFullAt` lifetime turns (`NpcMemory.StoryRichness` = lifetime `TotalTurns`, floored
 at surviving turns for old saves), `closeness` = a small floor
 (`InitiationScorer.ClosenessFloor`) plus |relation|/100 (love *or* enmity pulls hardest; a neutral bond

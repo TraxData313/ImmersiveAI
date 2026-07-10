@@ -83,6 +83,16 @@ namespace ImmersiveAI
         /// <see cref="Normalize"/>.</summary>
         public double DailyInitiationRate { get; set; } = 0.3;
 
+        /// <summary>A floor on every co-located soul's pull, so that EVERYONE near the player — the whole
+        /// party, everyone in the same town, even someone never spoken with — carries at least this
+        /// fraction of a full bond's weight and may come up to speak. 0.1 = a stranger counts as 10% of a
+        /// devoted friend: they come far more rarely, and the group math (<c>UnionPull</c>) still caps the
+        /// day's total at <see cref="DailyInitiationRate"/> however many people are around. A stranger's
+        /// first approach begins their story with the player. 0 restores the old behavior (history only).
+        /// Letters are unaffected — distant strangers do not write. Clamped to [0,1] in
+        /// <see cref="Normalize"/>.</summary>
+        public double InitiationPullFloor { get; set; } = 0.1;
+
         /// <summary>When true, the accept/reject offer that appears when an NPC reaches out pauses the game
         /// while it is up, so the player can always stop and decide (otherwise, at fast-forward the moment
         /// can slip by). With the map notice on (see <see cref="UseMapNoticeForInitiations"/>) this only
@@ -211,6 +221,10 @@ namespace ImmersiveAI
             // every NPC hammering the player. 24 is already far more than anyone would want.
             if (DailyInitiationRate < 0 || double.IsNaN(DailyInitiationRate)) DailyInitiationRate = 0;
             if (DailyInitiationRate > 24) DailyInitiationRate = 24;
+
+            // The stranger's floor is a fraction of a full bond's pull; anything outside [0,1] is a typo.
+            if (InitiationPullFloor < 0 || double.IsNaN(InitiationPullFloor)) InitiationPullFloor = 0;
+            if (InitiationPullFloor > 1) InitiationPullFloor = 1;
 
             // Memory-writing budget: never below the spoken budget (that would make reflection the
             // narrowest voice she has), never runaway.
