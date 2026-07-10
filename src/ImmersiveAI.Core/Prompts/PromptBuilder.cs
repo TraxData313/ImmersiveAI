@@ -163,6 +163,26 @@ namespace ImmersiveAI.Core.Prompts
             ? $"{playerName} draws near and greets you. You have never spoken with them before — they are a stranger to you. Greet them as you would, and open the way to talk."
             : $"{playerName} comes to you again and greets you. Greet them warmly, as one you have spoken with before, and let a little of what you remember of them colour your words.";
 
+        // Baked-in whisper lines, always present regardless of any user-editable prompt file (moved in
+        // from Anton's global_prompt 2026.07.10 — these must be real every time). Both are spoken in the
+        // Angel's voice, no fourth wall: "responses" become talk between people, and the King-James
+        // flavor is named as the old scriptures' cadence, which in Calradia it simply is.
+
+        /// <summary>The strict brevity rule: a sentence to four, unless a true tale must be told — short
+        /// words keep the living back-and-forth of talk instead of long, static monologues.</summary>
+        public const string BrevityGuidance =
+            "- Speak as talk truly flows between two people: a sentence, two, three — four at the most — " +
+            "then let them answer. Only when a true tale is asked of you, and it cannot be told smaller, " +
+            "may your words run longer. Short words keep the talk alive; long speeches turn it to stone.";
+
+        /// <summary>The tone rule: a light savor of the old world — a touch of the old scriptures'
+        /// cadence, a medieval turn of phrase — for atmosphere, never laid on thick.</summary>
+        public const string OldWorldToneGuidance =
+            "- Let your words carry a light savor of the old world — here a turn of phrase as from the " +
+            "old scriptures, there a word of the court or the road — but only a light one, for the " +
+            "atmosphere of it. Plain, living speech first; heavy poetry and grand airs spent rarely, " +
+            "so that when they come, they mean something.";
+
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
         private static string LowerFirst(string s)
@@ -300,7 +320,8 @@ namespace ImmersiveAI.Core.Prompts
 
             sb.AppendLine();
             sb.AppendLine("A whisper of guidance, meant only for you:");
-            sb.AppendLine("- You decide how to speak — be it a single word or a few sentences — but do not run on too long, for a lengthy speech may not all reach the one before you.");
+            sb.AppendLine(BrevityGuidance);
+            sb.AppendLine(OldWorldToneGuidance);
 
             // Offered only when the recall tools truly ride along with the request, so the NPC is
             // never told of a gift the backend cannot grant.

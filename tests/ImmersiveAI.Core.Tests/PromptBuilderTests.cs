@@ -138,7 +138,7 @@ public class PromptBuilderTests
         Assert.Contains("You fought beside Vulgrim at Omor.", system);
         Assert.Contains("Vulgrim rules Sargot", system);
         Assert.Contains("You distrust Imperial nobility.", system);
-        Assert.Contains("You decide how to speak", system);
+        Assert.Contains("A whisper of guidance", system);
     }
 
     [Fact]
@@ -278,6 +278,19 @@ public class PromptBuilderTests
         Assert.Contains("your haven", system);
         // Kin rides high with identity; guidance sits in the closing whisper.
         Assert.True(system.IndexOf("daughter of Caladog") < system.IndexOf("your haven"));
+    }
+
+    [Fact]
+    public void SystemPrompt_AlwaysCarriesTheBrevityAndOldWorldToneWhispers()
+    {
+        // Moved in from the user-editable global prompt (2026.07.10): these must be real every time,
+        // whatever the prompt files say — short living talk, and only a light savor of the old world.
+        var system = new PromptBuilder().Build(Persona(), new NpcMemory(), "", "Vulgrim", "Hi")[0].Content;
+
+        Assert.Contains(PromptBuilder.BrevityGuidance, system);
+        Assert.Contains(PromptBuilder.OldWorldToneGuidance, system);
+        Assert.Contains("four at the most", system);
+        Assert.Contains("light savor of the old world", system);
     }
 
     [Fact]
