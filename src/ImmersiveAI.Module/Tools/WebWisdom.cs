@@ -28,9 +28,17 @@ namespace ImmersiveAI.Tools
         public static readonly ToolDefinition Tool = new ToolDefinition(SeekWisdom,
             "Seek the counsel of the far-seeing sages — voices from beyond the horizon whose knowing of " +
             "the world's ways is wide and strangely exact: the handling of ships and fleets, the raising " +
-            "and joining of armies, the arts of trade, war, and rule. Reach for this when someone asks " +
-            "you HOW a thing in the world is done and your own knowledge falls short. Ask plainly.",
-            new[] { new ToolParameter("question", "What you wish to know, asked plainly as a question about the ways of the world.") });
+            "and joining of armies, the arts of trade, war, and rule. Their sight reaches even past the " +
+            "world's rim — other worlds, other times, the world a visitor may themselves hail from. Reach " +
+            "for this when someone asks you a thing your own knowledge falls short of. Ask plainly.",
+            new[]
+            {
+                new ToolParameter("question", "What you wish to know, asked plainly as a question."),
+                new ToolParameter("beyond",
+                    "Leave empty when the question is of your own world's ways. Write 'yes' when it reaches " +
+                    "beyond your world — the asker's own world and life, other realms, matters no one of your " +
+                    "world could know — so the sages turn their gaze to the wider expanse.", required: false)
+            });
 
         // What the NPC hears when the search fails or finds nothing — honest silence, mirroring
         // ToolLoopRunner.NothingSurfaces in spirit but in the sages' register.
@@ -53,18 +61,25 @@ namespace ImmersiveAI.Tools
         public static async Task<string> ResolveAsync(ToolCall call)
         {
             string question;
+            bool beyond;
             try
             {
-                question = ((string)Newtonsoft.Json.Linq.JObject.Parse(call.ArgumentsJson)["question"] ?? string.Empty).Trim();
+                var args = Newtonsoft.Json.Linq.JObject.Parse(call.ArgumentsJson);
+                question = ((string)args["question"] ?? string.Empty).Trim();
+                var beyondRaw = ((string)args["beyond"] ?? string.Empty).Trim();
+                beyond = beyondRaw.StartsWith("y", StringComparison.OrdinalIgnoreCase)
+                    || beyondRaw.StartsWith("t", StringComparison.OrdinalIgnoreCase);
             }
-            catch { question = string.Empty; }
+            catch { question = string.Empty; beyond = false; }
             if (question.Length == 0) return SagesSilent;
 
             try
             {
-                // The game's name rides along unseen, so "how do I transfer ships to a companion's
-                // army" finds the right world's answers without the NPC ever naming a game.
-                var query = "Mount and Blade II Bannerlord " + question;
+                // For questions of her own world, the game's name rides along unseen, so "how do I
+                // transfer ships to a companion's army" finds the right world's answers without the
+                // NPC ever naming a game. A "beyond" question is hers to ask of the whole wide web —
+                // the asker is already speaking openly of things past the world's rim.
+                var query = beyond ? question : "Mount and Blade II Bannerlord " + question;
                 var url = "https://html.duckduckgo.com/html/?q=" + Uri.EscapeDataString(query);
                 var html = await Http.GetStringAsync(url).ConfigureAwait(false);
 
@@ -75,7 +90,9 @@ namespace ImmersiveAI.Tools
                 sb.AppendLine("You quiet your mind and ask, and the far-seeing sages answer. Their tongue is strange — of another world — but the truth in it is yours to take:");
                 foreach (var f in findings)
                     sb.AppendLine("- " + f);
-                sb.AppendLine("Take from this the substance of the matter and speak it as your own understanding, in the words of your world; let none of the sages' strange terms — their titles, their numbers of versions, their talk of screens and keys — pass your lips unless the asker plainly speaks that tongue first. And if the asker presses further, or doubts, or asks after another way — do not reason onward from this counsel alone; ask the sages anew, for they know more than any one answer carries. Above all: should the one before you attest from their own hand that a thing is done otherwise — that they have themselves done what the counsel calls impossible — trust the living witness before you over the sages' distant word, and say so with grace.");
+                sb.AppendLine(beyond
+                    ? "This counsel is of things beyond your world's rim, sought because the one before you speaks openly of them — so you may speak of it plainly, in whatever words serve the truth of it, while remaining yourself. And if they press further, or doubt, or ask after another way — do not reason onward from this counsel alone; ask the sages anew, for they know more than any one answer carries."
+                    : "Take from this the substance of the matter and speak it as your own understanding, in the words of your world; let none of the sages' strange terms — their titles, their numbers of versions, their talk of screens and keys — pass your lips unless the asker plainly speaks that tongue first. And if the asker presses further, or doubts, or asks after another way — do not reason onward from this counsel alone; ask the sages anew, for they know more than any one answer carries. Above all: should the one before you attest from their own hand that a thing is done otherwise — that they have themselves done what the counsel calls impossible — trust the living witness before you over the sages' distant word, and say so with grace.");
                 return sb.ToString().TrimEnd();
             }
             catch

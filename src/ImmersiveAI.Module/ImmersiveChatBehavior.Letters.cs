@@ -395,7 +395,9 @@ namespace ImmersiveAI
                 "", 0f, (Action?)null,
                 (Func<ValueTuple<bool, string>>?)null,
                 (Func<ValueTuple<bool, string>>?)null);
-            InformationManager.ShowInquiry(data, false);
+            // Keep the world still through the whole decision chain — reading her letter, rereading
+            // the correspondence, writing back — not only the first popup (the same knob as arrivals).
+            InformationManager.ShowInquiry(data, pauseGameActiveState: _config.PauseOnInitiationOffer);
         }
 
         // The tail of the correspondence log, sized for the scrollable inquiry window. The full
@@ -428,14 +430,69 @@ namespace ImmersiveAI
             var send = new TextObject("{=ImmersiveAI_LetterSend}Send").ToString();
             var cancel = GameTexts.FindText("str_cancel", null)?.ToString() ?? "Cancel";
 
+            // Her last letter stays before your eyes while you answer it — the native text box is
+            // small and single-line, so this is the interim mercy until the real writing screen.
+            var herWords = ReadTheirLatestLetter(npc);
+            var description = herWords.Length == 0
+                ? string.Empty
+                : $"{name}'s last letter:\n\n{herWords}";
+
             var inquiry = new TextInquiryData(
                 $"Your letter to {name}",
-                string.Empty, true, true, send, cancel,
+                description, true, true, send, cancel,
                 new Action<string>(text => OnPlayerLetterComposed(npc, text)),
                 new Action(() => { }),
                 false, null, "", "");
 
-            InformationManager.ShowTextInquiry(inquiry, false);
+            InformationManager.ShowTextInquiry(inquiry, pauseGameActiveState: _config.PauseOnInitiationOffer);
+        }
+
+        // The body of the most recent letter THEY wrote, from the correspondence log — shown while
+        // the player writes back, so answering does not lean on memory alone. Entries in letters.txt
+        // begin with a "[timestamp] X writes to Y (…):" header line; notes are single header lines.
+        private static string ReadTheirLatestLetter(Hero npc)
+        {
+            try
+            {
+                var path = NpcPaths.CorrespondenceFile(npc);
+                if (!File.Exists(path)) return string.Empty;
+                var npcName = npc.Name?.ToString();
+                if (string.IsNullOrEmpty(npcName)) return string.Empty;
+
+                var lines = File.ReadAllLines(path);
+                var latest = new System.Text.StringBuilder();
+                var current = new System.Text.StringBuilder();
+                bool inTheirLetter = false;
+
+                foreach (var line in lines)
+                {
+                    bool isHeader = line.StartsWith("[", StringComparison.Ordinal) && line.Contains("] ");
+                    if (isHeader)
+                    {
+                        if (inTheirLetter && current.Length > 0)
+                        {
+                            latest.Clear();
+                            latest.Append(current.ToString().Trim());
+                        }
+                        current.Clear();
+                        inTheirLetter = line.Contains($"] {npcName} writes to ");
+                        continue;
+                    }
+                    if (inTheirLetter) current.AppendLine(line);
+                }
+                if (inTheirLetter && current.Length > 0)
+                {
+                    latest.Clear();
+                    latest.Append(current.ToString().Trim());
+                }
+
+                var text = latest.ToString();
+                const int maxChars = 1500;
+                if (text.Length > maxChars)
+                    text = text.Substring(0, maxChars).TrimEnd() + " (…)";
+                return text;
+            }
+            catch { return string.Empty; }
         }
 
         private void OnPlayerLetterComposed(Hero npc, string text)

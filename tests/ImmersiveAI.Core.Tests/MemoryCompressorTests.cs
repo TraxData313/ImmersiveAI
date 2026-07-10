@@ -335,6 +335,8 @@ public class MemoryCompressorTests
     [InlineData("Unchanged.")]
     [InlineData("(unchanged)")]
     [InlineData("  *Unchanged*  ")]
+    [InlineData("**  \nUnchanged.")] // the exact shape that once overwrote a real self (2026.07.10)
+    [InlineData("---\nunchanged\n---")]
     public async Task ReflectAsync_TreatsPunctuatedUnchangedAsNoChange(string selfReply)
     {
         var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + selfReply };
@@ -350,7 +352,11 @@ public class MemoryCompressorTests
     [InlineData("unchanged", true)]
     [InlineData("Unchanged.", true)]
     [InlineData("(unchanged)", true)]
+    [InlineData("**  \nUnchanged.", true)]          // markdown decoration line above the word
+    [InlineData("### \n> *Unchanged!*\n---", true)] // heavier dressing, still only the one word
     [InlineData("I have grown bolder.", false)]
+    [InlineData("I am unchanged in my love for the sea.", false)] // prose containing the word is prose
+    [InlineData("Unchanged in most ways.\nYet the war weighs on me.", false)] // two meaningful lines
     [InlineData("", false)]
     public void IsUnchangedMarker_RecognizesTheMarkerNotProse(string text, bool expected)
     {

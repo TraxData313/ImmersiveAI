@@ -97,16 +97,26 @@ namespace ImmersiveAI.Core.Memory
                 memory.ApplyCompression(parsed.Summary!, consumedTurnCount);
         }
 
+        // Everything a model may dress the marker in: quotes, brackets, markdown bold/italic/rules/
+        // headings, stray sentence punctuation. Safe to strip aggressively because the only thing we
+        // ever compare against afterwards is the single word "unchanged".
+        private static readonly char[] MarkerDressing =
+            { '"', '\'', '(', ')', '[', ']', '*', '.', '!', '?', ' ', '\t', '\r', '-', '_', '#', '`', '~', ':', '>' };
+
         /// <summary>
         /// True when a self-concept value is really just the "nothing has changed" marker, not prose —
-        /// e.g. "unchanged", "Unchanged.", "(unchanged)", "*unchanged*". The model rarely returns the
-        /// bare lowercase word we ask for, so we normalize away surrounding punctuation/quotes/case.
+        /// e.g. "unchanged", "Unchanged.", "(unchanged)", or markdown-dressed forms like a decoration
+        /// line above the word ("**\nUnchanged."). Judged line by line: lines that carry no words are
+        /// decoration; the marker is exactly one meaningful line saying "unchanged".
         /// </summary>
         public static bool IsUnchangedMarker(string? text)
         {
             if (string.IsNullOrWhiteSpace(text)) return false;
-            var trimmed = text!.Trim().Trim('"', '\'', '(', ')', '[', ']', '*', '.', '!', '?', ' ', '\t');
-            return string.Equals(trimmed, "unchanged", StringComparison.OrdinalIgnoreCase);
+            var meaningful = text!.Split('\n')
+                .Select(l => l.Trim().Trim(MarkerDressing))
+                .Where(l => l.Length > 0)
+                .ToList();
+            return meaningful.Count == 1 && string.Equals(meaningful[0], "unchanged", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -270,7 +280,9 @@ namespace ImmersiveAI.Core.Memory
         {
             var speaker = turn.IsFromAngel ? voice : "They";
             sb.AppendLine($"[{TurnStamp(turn)}] {speaker} said: {turn.PlayerLine}");
-            sb.AppendLine($"You answered: {turn.NpcLine}");
+            // A silent beat (a meeting noted, no reply recorded) carries no answer — never invent one.
+            if (!string.IsNullOrWhiteSpace(turn.NpcLine))
+                sb.AppendLine($"You answered: {turn.NpcLine}");
         }
 
         /// <summary>A short "where and when" label for a turn: place and/or Calradia time if recorded,

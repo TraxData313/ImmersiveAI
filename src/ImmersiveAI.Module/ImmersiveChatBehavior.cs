@@ -66,6 +66,12 @@ namespace ImmersiveAI
         // conversation, so what the player inspects on disk is exactly what the NPC's prompt carries.
         private volatile string? _currentSituation;
 
+        // The NPC whose CURRENT conversation is already becoming recorded beats (free chat opened, or
+        // an accepted reaching-out) — consumed and cleared when the conversation ends. Any hero
+        // conversation that ends WITHOUT this set still leaves a silent meeting note in their memory
+        // (see OnConversationEnded), so a quest talk or a bargain never ends in "hello, stranger".
+        private volatile string? _conversationBeatNpcId;
+
         // --- NPC-initiated conversations (them reaching out to the player of their own accord) ---
 
         private readonly Random _rng = new Random();
@@ -271,6 +277,55 @@ namespace ImmersiveAI
             // for new games too (after character creation, so the player's name is known).
             CampaignEvents.OnGameLoadedEvent.AddNonSerializedListener(this, OnGameLoaded);
             CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);
+
+            // Even a talk that never opens free chat is a real meeting — note it at the goodbye.
+            CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
+        }
+
+        // A conversation just closed. If it never became recorded beats (no free chat, no accepted
+        // reaching-out), leave a silent Angel note that the two met — no words fabricated, only the
+        // meeting itself with its [place, time] stamp — so returning later never rings "hello, stranger"
+        // after a quest talk, a bargain, or words on the road.
+        private void OnConversationEnded(IEnumerable<CharacterObject> characters)
+        {
+            try
+            {
+                var alreadyRecorded = _conversationBeatNpcId;
+                _conversationBeatNpcId = null;
+                if (characters == null) return;
+
+                foreach (var character in characters)
+                {
+                    var npc = character?.HeroObject;
+                    if (npc == null || npc == Hero.MainHero || !npc.IsAlive) continue;
+                    if (npc.StringId == alreadyRecorded) continue;
+                    RecordMeetingBeat(npc);
+                }
+            }
+            catch { /* a missed note must never break the goodbye */ }
+        }
+
+        private void RecordMeetingBeat(Hero npc)
+        {
+            try
+            {
+                var memory = LoadMemory(npc);
+
+                // One meeting note per day is acquaintance enough — bartering thrice in an afternoon,
+                // or a companion spoken to all day on the march, stays a single quiet beat.
+                double today = Math.Floor(CampaignTime.Now.ToDays);
+                for (int i = memory.RecentTurns.Count - 1; i >= 0; i--)
+                {
+                    var turn = memory.RecentTurns[i];
+                    if (Math.Floor(turn.GameDay) < today) break;
+                    if (turn.IsFromAngel && PromptBuilder.IsMeetingLine(turn.PlayerLine)) return;
+                }
+
+                bool firstMeeting = !PromptBuilder.HasRememberedHistory(memory);
+                var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
+                AppendAngelTurn(npc, PromptBuilder.MeetingLine(playerName, firstMeeting), string.Empty);
+            }
+            catch { /* best-effort; the meeting mattered, the bookkeeping must not */ }
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -503,6 +558,8 @@ namespace ImmersiveAI
             _currentNpc = npc;
             _currentSituation = null;
             if (npc == null) return null;
+            // Free chat records its own real beats; the goodbye needs no extra meeting note.
+            _conversationBeatNpcId = npc.StringId;
 
             try
             {
@@ -1382,6 +1439,8 @@ namespace ImmersiveAI
                     MainThreadDispatcher.Enqueue(() =>
                     {
                         _lastNpcLine = npcLine;
+                        // The approach beat is already recorded — the goodbye needs no meeting note.
+                        _conversationBeatNpcId = npc.StringId;
                         MBTextManager.SetTextVariable(RecapVar, npcLine, false);
                         _recapReady = true;
                     });

@@ -32,9 +32,9 @@ namespace ImmersiveAI.Core.Prompts
             // Every beat of the shared story — the player's visits (arrival + greeting), the NPC's own
             // reaching-out, letters — lives in the remembered stream as real turns, so nothing needs to
             // be woven in here: the history above already carries the whole of it.
-            AppendRememberedTurns(messages, memory, voice);
+            var carried = AppendRememberedTurns(messages, memory, voice);
 
-            messages.Add(ChatMessage.User(playerInput));
+            messages.Add(ChatMessage.User(carried + playerInput));
             return messages;
         }
 
@@ -45,13 +45,29 @@ namespace ImmersiveAI.Core.Prompts
         // player's (tagged with when/where it was said); when it was the Angel's — the NPC's own exchanges
         // with the meta-voice — it is framed in the Angel's voice, exactly as it was when first spoken, so
         // the NPC re-reads its own past truthfully rather than mistaking the Angel for the player.
-        private static void AppendRememberedTurns(List<ChatMessage> messages, NpcMemory memory, string voice)
+        //
+        // Silent beats — a moment witnessed but no reply recorded (NpcLine empty, e.g. a meeting noted in
+        // passing) — cannot stand as their own user/assistant pair: both backends require the roles to
+        // alternate. Their incoming lines fold into the NEXT user message instead, so the story still
+        // reads in order; whatever remains past the last spoken turn is returned for the caller to carry
+        // into the live incoming line.
+        private static string AppendRememberedTurns(List<ChatMessage> messages, NpcMemory memory, string voice)
         {
+            var pending = new StringBuilder();
             foreach (var turn in memory.RecentTurns)
             {
-                messages.Add(ChatMessage.User(FormatRememberedIncomingLine(turn, voice)));
+                var incoming = FormatRememberedIncomingLine(turn, voice);
+                if (string.IsNullOrWhiteSpace(turn.NpcLine))
+                {
+                    pending.AppendLine(incoming);
+                    pending.AppendLine();
+                    continue;
+                }
+                messages.Add(ChatMessage.User(pending.Length == 0 ? incoming : pending.ToString() + incoming));
+                pending.Clear();
                 messages.Add(ChatMessage.Assistant(turn.NpcLine));
             }
+            return pending.ToString();
         }
 
         private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice)
@@ -94,8 +110,8 @@ namespace ImmersiveAI.Core.Prompts
                 ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
             };
 
-            AppendRememberedTurns(messages, memory, voice);
-            messages.Add(ChatMessage.User(AngelFrame(voice, angelLine)));
+            var carried = AppendRememberedTurns(messages, memory, voice);
+            messages.Add(ChatMessage.User(carried + AngelFrame(voice, angelLine)));
             return messages;
         }
 
@@ -184,6 +200,24 @@ namespace ImmersiveAI.Core.Prompts
         public static string ArrivalLine(string playerName, bool firstMeeting) => firstMeeting
             ? $"{playerName} draws near and greets you. You have never spoken with them before — they are a stranger to you. Greet them as you would, and open the way to talk."
             : $"{playerName} comes to you again and greets you. Greet them warmly, as one you have spoken with before, and let a little of what you remember of them colour your words.";
+
+        // The shared marker phrase of every meeting beat — one distinctive clause present in both
+        // variants of MeetingLine, so the game layer can recognize an already-recorded meeting
+        // (IsMeetingLine) and not note the same day's meeting twice.
+        private const string MeetingMarker = "though the words of it are not set down here";
+
+        /// <summary>The Angel's quiet note that the player and the NPC met and spoke face to face
+        /// OUTSIDE a free conversation — a bargain struck, a quest discussed, words on the road — so
+        /// the meeting itself endures in memory even though no words were recorded. Stored as a
+        /// SILENT Angel turn (no reply asked or fabricated): at replay it folds into the next
+        /// incoming line; the [place, time] stamp carries the when and where.</summary>
+        public static string MeetingLine(string playerName, bool firstMeeting) => firstMeeting
+            ? $"You and {playerName} met and spoke face to face for the first time — a stranger no longer, {MeetingMarker}."
+            : $"{playerName} came and spoke with you awhile — of the business of the day, {MeetingMarker}.";
+
+        /// <summary>True when a recorded Angel line is a meeting beat (see <see cref="MeetingLine"/>).</summary>
+        public static bool IsMeetingLine(string? line) =>
+            !string.IsNullOrEmpty(line) && line!.IndexOf(MeetingMarker, System.StringComparison.Ordinal) >= 0;
 
         // Baked-in whisper lines, always present regardless of any user-editable prompt file (moved in
         // from Anton's global_prompt 2026.07.10 — these must be real every time). Both are spoken in the
@@ -351,7 +385,7 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine("- When a person, place, house, realm, or kind of soldier is spoken of and your memory of them is dim, be still a moment and call them to mind — what is truly known will surface as remembrance. So too your own company, before speaking in numbers of the men you lead or march among; and so too the market about you, before ever quoting what a good fetches — prices are living things, never guessed. Trust what surfaces over invention; and where nothing surfaces, own honestly that you do not know.");
 
             if (persona.CanSeekWisdom)
-                sb.AppendLine("- And when someone asks HOW a thing in the world is done — the handling of ships, the joining of armies, matters of coin or craft or rule — and your own knowing falls short, seek the counsel of the far-seeing sages before you answer; their knowing is wide. What they teach, speak as your own understanding, in the plain words of your world.");
+                sb.AppendLine("- And when someone asks a thing your own knowing falls short of — HOW a thing in the world is done (the handling of ships, the joining of armies, matters of coin or craft or rule), or even things beyond your world entirely, should your visitor speak openly of such — seek the counsel of the far-seeing sages before you answer; their sight is wide, and it does not end at the world's rim. Never plead some limit of your knowing while the sages stand ready to be asked. What they teach of your own world, speak as your own understanding, in the plain words of your world.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

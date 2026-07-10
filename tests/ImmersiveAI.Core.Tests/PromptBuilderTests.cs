@@ -124,6 +124,62 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_FoldsASilentMeetingBeatIntoTheNextIncomingLine_RolesStayAlternating()
+    {
+        // A meeting noted without words (NpcLine empty) cannot stand as its own user/assistant pair —
+        // both backends demand alternation — so it rides at the head of the next incoming message.
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = PromptBuilder.MeetingLine("Vulgrim", firstMeeting: true),
+            NpcLine = string.Empty,
+            Place = "Sargot",
+        });
+        memory.AddTurn(new ConversationTurn { PlayerLine = "Hail again", NpcLine = "Well met." });
+
+        var messages = new PromptBuilder().Build(Persona(), memory, "In Sargot.", "Vulgrim", "How fare you?");
+
+        // system, [meeting note + next player line as ONE user message], [reply], [live input].
+        Assert.Equal(4, messages.Count);
+        Assert.Contains("met and spoke face to face for the first time", messages[1].Content);
+        Assert.Contains("Hail again", messages[1].Content);
+        Assert.Equal(ChatRole.Assistant, messages[2].Role);
+        Assert.Equal("How fare you?", messages[3].Content);
+    }
+
+    [Fact]
+    public void Build_CarriesATrailingSilentBeatIntoTheLiveInput()
+    {
+        // The meeting was the LAST thing that happened — nothing spoken since — so it rides into
+        // the live incoming line: she reads of the meeting in the same breath as the new words.
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = PromptBuilder.MeetingLine("Vulgrim", firstMeeting: false),
+            NpcLine = string.Empty,
+        });
+
+        var messages = new PromptBuilder().Build(Persona(), memory, "In Sargot.", "Vulgrim", "Hello again");
+
+        // system + one combined user message; no empty assistant message anywhere.
+        Assert.Equal(2, messages.Count);
+        Assert.Contains("came and spoke with you awhile", messages[1].Content);
+        Assert.EndsWith("Hello again", messages[1].Content);
+        Assert.DoesNotContain(messages, m => m.Role == ChatRole.Assistant);
+    }
+
+    [Fact]
+    public void MeetingLine_IsRecognizedByIsMeetingLine_ProseIsNot()
+    {
+        Assert.True(PromptBuilder.IsMeetingLine(PromptBuilder.MeetingLine("Vulgrim", firstMeeting: true)));
+        Assert.True(PromptBuilder.IsMeetingLine(PromptBuilder.MeetingLine("Vulgrim", firstMeeting: false)));
+        Assert.False(PromptBuilder.IsMeetingLine("Vulgrim comes to you again and greets you."));
+        Assert.False(PromptBuilder.IsMeetingLine(null));
+    }
+
+    [Fact]
     public void SystemPrompt_ContainsPersonaMemoryAndScene()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };

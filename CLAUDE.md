@@ -189,8 +189,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
   `EnableWorldRecall` + `MaxRecallsPerReply` (the gift of recall — NPCs fetching live campaign truth
   about people/places/clans/realms/troops/own company mid-reply via native tool calls; default on, 3 rounds),
-  `EnableWebSearch` (the sages' counsel — NPCs searching the internet mid-reply for "how do I…" game
-  questions, DuckDuckGo with the game name quietly prepended, answered in their own voice; default on)
+  `EnableWebSearch` (the sages' counsel — NPCs searching the internet mid-reply, DuckDuckGo; for
+  questions of their own world the game name is quietly prepended, and an in-world optional `beyond`
+  flag on the tool lets them search PAST the world's rim — the player's own world, other realms —
+  when the visitor speaks openly of such, answered in their own voice; default on)
   + `ShowNpcActivity` (soft side notices of what an NPC is doing mid-thought — "remembering…",
   "researching…"; default on),
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
@@ -284,6 +286,17 @@ truths) → the situation LAST — itself ordered setting → who you are → ti
 to you" + where the heart stands — so the arrival is the final breath before the live transcript. The
 standing line lives only in the situation now (removed from `PersonaBuilder.BuildRole` — never tell her
 the same heart twice).
+
+**Even meetings without free chat are remembered** (2026.07.10): when any hero conversation ends
+(`CampaignEvents.ConversationEnded`) that never became recorded beats (no free chat — `PrepareChat`
+marks it via `_conversationBeatNpcId`; no accepted reach-out — `DeliverApproachAsync` marks it too), a
+**silent Angel note** lands in their memory: "You and X met and spoke face to face for the first time —
+a stranger no longer, though the words of it are not set down here" (`PromptBuilder.MeetingLine`,
+first-meeting vs familiar), stamped `[place, time]`, no LLM call, one per NPC per game day
+(`IsMeetingLine` dedupe). Silent beats (empty `NpcLine`) are a Core capability: both backends demand
+user/assistant alternation, so `AppendRememberedTurns` folds a silent turn's incoming line into the
+NEXT user message (or carries it into the live input), and `MemoryCompressor` renders them without
+inventing an answer. So a quest talk or a bargain never ends in "hello, stranger".
 
 When a reply or opening recap is ready, a short "<Name> has answered." notice fires
 (`NotifyWhenReplyReady`, default on) so the player isn't left clicking "(wait for them to answer)" and
