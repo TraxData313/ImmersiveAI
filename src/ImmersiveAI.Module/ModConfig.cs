@@ -145,6 +145,14 @@ namespace ImmersiveAI
         /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>
         public int MaxRecallsPerReply { get; set; } = 3;
 
+        /// <summary>When true, an NPC whose self file has not yet been written begins with the story the
+        /// world already tells of them instead of a blank page: a wanderer carries the tale they tell in
+        /// taverns when first met (hand-written, in their own voice), a noble the account the encyclopedia
+        /// keeps of their house and repute. From there it is theirs — every reflection lets them keep,
+        /// refine, or release it. Deleting an NPC's self.txt re-seeds them afresh. Set false for everyone
+        /// to begin unwritten.</summary>
+        public bool SeedSelfFromWorldStory { get; set; } = true;
+
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
         /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>

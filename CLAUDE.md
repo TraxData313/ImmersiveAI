@@ -189,6 +189,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   menu in settlements; default on),
   `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
   instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable),
+  `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
+  a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
   `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
   their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
@@ -215,6 +217,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
     into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
+    **First seeded from the story the world tells of them** (2026.07.10): a never-written self
+    begins as a wanderer's hand-written tavern tale (first person, from the game's
+    `backstory_a..d`/`generic_backstory` strings keyed by character template) or a noble's
+    encyclopedia account (`Hero.EncyclopediaText` if hand-authored, else the generated
+    `Hero.SetHeroEncyclopediaTextAndLinks` paragraph, framed "So runs my story, as the world
+    tells it:") — gathered by `BackstoryBuilder` (Module), shaped by `SelfSeedFormatter` (Core),
+    seeded via `LoadOrSeedSelf`. Deleting `self.txt` re-seeds. Toggle: `SeedSelfFromWorldStory`.
   - `letters.txt` — human-readable log of every letter carried between the player and this NPC,
     both directions, including "(read and let lie unanswered)" notes. Append-only record.
   - future per-NPC files go here too.

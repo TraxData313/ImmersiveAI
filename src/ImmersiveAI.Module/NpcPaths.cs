@@ -304,9 +304,12 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
                             snapshot, edits are overwritten. This is exactly what the NPC 'sees'
                             as the Current situation in her prompt.
   self.txt                - the NPC's OWN evolving sense of who they are, written by them (in their
-                            own first-person voice) when they reflect - not by you. It grows over
-                            time and is folded into their prompt as 'Who you have become'. Safe to
-                            read; you may edit it, but the next reflection may rewrite it.
+                            own first-person voice) when they reflect - not by you. Its first page
+                            is seeded from the story the world already tells of them (a wanderer's
+                            tavern tale, a noble's repute); from there it grows over time and is
+                            folded into their prompt as 'Who you have become'. Safe to read; you may
+                            edit it, but the next reflection may rewrite it. Delete it to re-seed
+                            them afresh from their story.
   letters.txt             - a plain log of every letter carried between you and this NPC, in both
                             directions. Read-only record; the letters themselves also live in the
                             NPC's memory.

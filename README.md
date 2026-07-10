@@ -51,6 +51,8 @@ Key Core concepts:
 - `NpcSelf` — the NPC's *general* self-concept (`self.txt`), authored by them in first person
   when they reflect. Kept apart from memory because the self is one identity carried into every
   relationship, while memory is branching toward per-person files (this player, later other NPCs).
+  It begins not blank but seeded with the story the world already tells of them — a wanderer's
+  tavern tale, a noble's repute — theirs to keep, refine, or release at every reflection.
 - `PromptBuilder` / `SituationBuilder` — assemble the whole prompt in the second-person Angel
   voice: who they are, their self, the world's notes, the current situation, and their memory,
   followed by real user/assistant message history.

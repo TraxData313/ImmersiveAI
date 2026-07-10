@@ -104,6 +104,7 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
   campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters),
+  `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
   `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
   replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
@@ -126,6 +127,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
     into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
+    First seeded from the story the world tells of them: a wanderer's tavern tale or a noble's
+    encyclopedia account (`BackstoryBuilder` Module + `SelfSeedFormatter` Core, hooked in
+    `LoadOrSeedSelf`); deleting the file re-seeds. Toggle: `SeedSelfFromWorldStory`.
   - `letters.txt` — human-readable log of all letters carried between the player and this NPC.
   - future per-NPC files go here too.
 - `NPCs\campaign_<id>\_letters.json` — letters currently on the road (Core `LetterBag`); they

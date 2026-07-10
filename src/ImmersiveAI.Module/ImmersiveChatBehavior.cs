@@ -187,6 +187,21 @@ namespace ImmersiveAI
             catch { /* best-effort; never block a conversation on saving the self */ }
         }
 
+        // No one begins as a blank page: when their self has never been written, the story the world
+        // already tells of them (a wanderer's tavern tale, a noble's repute — see BackstoryBuilder) is
+        // set down as its first page, theirs to keep, refine, or release at every reflection after.
+        private string LoadOrSeedSelf(Hero npc)
+        {
+            var text = LoadSelf(npc);
+            if (!string.IsNullOrEmpty(text) || !_config.SeedSelfFromWorldStory) return text;
+
+            var seed = BackstoryBuilder.BuildInitialSelf(npc);
+            if (string.IsNullOrWhiteSpace(seed)) return text;
+
+            SaveSelf(npc, seed);
+            return seed;
+        }
+
         public override void RegisterEvents()
         {
             // Each hour, give the NPCs co-located with the player their small, bond-scaled chance to reach out.
@@ -517,7 +532,7 @@ namespace ImmersiveAI
 
                 // Reflection is also the moment the NPC looks inward and may revise who they feel
                 // themselves to be. We hand in their current self and let them rewrite it (or leave it).
-                var self = new NpcSelf { Text = LoadSelf(npc) };
+                var self = new NpcSelf { Text = LoadOrSeedSelf(npc) };
                 var selfBefore = self.Text;
 
                 // Always reflect (rewrite the rolling summary and facts), even when nothing is old enough
@@ -1513,8 +1528,9 @@ namespace ImmersiveAI
             persona.WorldInstructions = PromptFiles.LoadGlobalPrompt();
             persona.CustomInstructions = PromptFiles.LoadNpcPrompt(
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
-            // The NPC's own evolving self-concept (authored by them during reflection), from its own file.
-            persona.SelfConcept = LoadSelf(npc);
+            // The NPC's own evolving self-concept (authored by them during reflection; first seeded from
+            // the story the world tells of them), from its own file.
+            persona.SelfConcept = LoadOrSeedSelf(npc);
             // The player-configurable atmosphere line and roleplay guidance (tokens resolved here), and the
             // NPC's kin and house — all folded into the prompt so the world's feel and their family carry.
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
