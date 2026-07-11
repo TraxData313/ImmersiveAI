@@ -64,6 +64,25 @@ public class InitiationScorerTests
     }
 
     [Fact]
+    public void Pull_InPlayersService_DoesNotFadeWithTheWeeksAway()
+    {
+        // The moving-writers fix (2026.07.12): a caravan or party of the player's own clan, away for
+        // forty days doing the player's bidding, is exactly who should be writing home — duty floors
+        // the recency and closeness that would otherwise silence them.
+        double faded = InitiationScorer.Pull(storyRichness: 40, relation: 5, daysSinceLastTalk: 40);
+        double dutiful = InitiationScorer.Pull(storyRichness: 40, relation: 5, daysSinceLastTalk: 40, inPlayersService: true);
+        Assert.True(dutiful > faded * 3, $"duty should lift a long-away servant well above the faded pull ({dutiful} vs {faded})");
+        Assert.Equal(InitiationScorer.DutyClosenessFloor * InitiationScorer.DutyRecencyFloor, dutiful, 5);
+
+        // Duty never lowers a bond that is already warm and fresh...
+        double warm = InitiationScorer.Pull(60, 90, 0);
+        Assert.True(InitiationScorer.Pull(60, 90, 0, inPlayersService: true) >= warm);
+
+        // ...and frequency still gates: a servant never truly spoken with stays quiet.
+        Assert.Equal(0.0, InitiationScorer.Pull(0, 0, 0, inPlayersService: true), 5);
+    }
+
+    [Fact]
     public void UnionPull_IsTheChanceAtLeastOneIsMoved()
     {
         // Empty group: no one to be moved.

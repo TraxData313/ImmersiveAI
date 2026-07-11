@@ -66,18 +66,41 @@ namespace ImmersiveAI.Personas
         /// Used to stamp conversation turns.</summary>
         public static string Place(Hero npc)
         {
-            var settlement = npc?.CurrentSettlement ?? Settlement.CurrentSettlement;
+            var settlement = SettlementOf(npc);
             var name = settlement?.Name?.ToString() ?? string.Empty;
-            return name.Trim().Length == 0 ? "the open field" : name;
+            if (name.Trim().Length > 0) return name;
+            return HasPartyOnMap(npc) ? "the road" : "the open field";
+        }
+
+        // Where this hero truly stands: their own settlement, their party's, and only for someone
+        // actually WITH the player the player's settlement. The old unconditional fallback to
+        // Settlement.CurrentSettlement made a distant party's letter claim it was written in
+        // whatever town the PLAYER stood in (the moving-writers bug, 2026.07.12).
+        private static Settlement SettlementOf(Hero h)
+        {
+            if (h == null) return Settlement.CurrentSettlement;
+            var s = h.CurrentSettlement ?? h.PartyBelongedTo?.CurrentSettlement;
+            if (s != null) return s;
+            bool withPlayer = h == Hero.MainHero
+                || (h.PartyBelongedTo != null && h.PartyBelongedTo == TaleWorlds.CampaignSystem.Party.MobileParty.MainParty);
+            return withPlayer ? Settlement.CurrentSettlement : null;
+        }
+
+        private static bool HasPartyOnMap(Hero h)
+        {
+            try { return h?.PartyBelongedTo != null; }
+            catch { return false; }
         }
 
         /// <summary>Fuller sentence describing where the conversation happens, with settlement type
         /// and the faction that holds it, for the situation block and the prompt.</summary>
         private static string PlaceDescription(Hero speaker)
         {
-            var settlement = speaker?.CurrentSettlement ?? Settlement.CurrentSettlement;
+            var settlement = SettlementOf(speaker);
             if (settlement == null)
-                return "out in the open field, away from any town or castle";
+                return HasPartyOnMap(speaker)
+                    ? "upon the road, away from any town or castle"
+                    : "out in the open field, away from any town or castle";
 
             var type = SettlementType(settlement);
             var name = settlement.Name?.ToString() ?? "an unnamed place";

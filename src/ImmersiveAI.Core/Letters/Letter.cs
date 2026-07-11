@@ -32,5 +32,12 @@ namespace ImmersiveAI.Core.Letters
 
         /// <summary>Where it was written (a settlement name or a field note) — the letterhead.</summary>
         public string SentFrom { get; set; } = string.Empty;
+
+        /// <summary>True once this letter stands in the human-readable correspondence log. The
+        /// player's own letters are logged the moment they set out (the player knows what they
+        /// wrote); an NPC's letter to the player is logged only on ARRIVAL — a letter still on the
+        /// road must not be readable through the letter window. Defaults true so letters persisted
+        /// before this flag existed (already logged at send) are never logged twice.</summary>
+        public bool Logged { get; set; } = true;
     }
 }

@@ -53,6 +53,16 @@ namespace ImmersiveAI.Core.Initiation
         /// close in time spent. Keeps the feature observable rather than near-impossible to ever see.</summary>
         public const double ClosenessFloor = 0.15;
 
+        /// <summary>Recency floor for someone in the player's own service (their clan: companions
+        /// leading parties and caravans, kin, governors). Bonds of AFFECTION fade with silence; a
+        /// bond of DUTY does not — a caravan away for forty days doing the player's bidding is
+        /// exactly who should be writing home, so distance-in-time must not silence them.</summary>
+        public const double DutyRecencyFloor = 0.6;
+
+        /// <summary>Closeness floor for someone in the player's own service: duty stands in for
+        /// affection, so even a near-neutral standing keeps the field reports coming.</summary>
+        public const double DutyClosenessFloor = 0.5;
+
         /// <summary>
         /// How moved this NPC is toward the player, in [0,1]: frequency × closeness × recency.
         /// 1 is a full-blown bond (rich shared story, maxed standing, spoken today); zero means nothing
@@ -60,6 +70,15 @@ namespace ImmersiveAI.Core.Initiation
         /// group, and what scales the group's total below the configured rate when bonds are weak.
         /// </summary>
         public static double Pull(int storyRichness, int relation, double daysSinceLastTalk)
+            => Pull(storyRichness, relation, daysSinceLastTalk, inPlayersService: false);
+
+        /// <summary>Same pull, but for someone in the PLAYER'S OWN SERVICE the fading factors are
+        /// floored (<see cref="DutyRecencyFloor"/>, <see cref="DutyClosenessFloor"/>): the letter
+        /// flow passes true for the player's clan, so a party or caravan long on the road still
+        /// writes its casual report home. Frequency still gates — someone never truly spoken with
+        /// stays quiet — and the face-to-face flow keeps the plain pull (when they are near, the
+        /// bond itself should do the moving).</summary>
+        public static double Pull(int storyRichness, int relation, double daysSinceLastTalk, bool inPlayersService)
         {
             if (storyRichness <= 0) return 0;
 
@@ -67,6 +86,12 @@ namespace ImmersiveAI.Core.Initiation
             double standing = Math.Min(1.0, Math.Abs(relation) / 100.0);
             double closeness = ClosenessFloor + (1.0 - ClosenessFloor) * standing;
             double recency = RecencyFactor(daysSinceLastTalk);
+
+            if (inPlayersService)
+            {
+                closeness = Math.Max(closeness, DutyClosenessFloor);
+                recency = Math.Max(recency, DutyRecencyFloor);
+            }
 
             double pull = frequency * closeness * recency;
             if (pull < 0) pull = 0;

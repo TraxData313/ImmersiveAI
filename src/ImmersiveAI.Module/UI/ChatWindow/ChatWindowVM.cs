@@ -166,6 +166,15 @@ namespace ImmersiveAI.UI.ChatWindow
                         // spoke stays as soft stage directions, never hidden.
                         if (Core.Prompts.PromptBuilder.IsComposeLetterBeat(turn.PlayerLine))
                         {
+                            // A letter still on the road stays sealed: she remembers writing it, but
+                            // its words are not the player's until the courier arrives.
+                            if (ImmersiveChatBehavior.IsLetterOnRoadToPlayer(npc.StringId, turn.NpcLine))
+                            {
+                                messages.Add(new ChatMessageVM(string.Empty,
+                                    WithStamp(stamp, $"✉ {npcName} has written you a letter — it is sealed, and rides toward you still."),
+                                    isNarration: true, Colors.White));
+                                continue;
+                            }
                             messages.Add(new ChatMessageVM(string.Empty,
                                 WithStamp(stamp, $"✉ {npcName} takes up the quill and writes to you:"),
                                 isNarration: true, Colors.White));

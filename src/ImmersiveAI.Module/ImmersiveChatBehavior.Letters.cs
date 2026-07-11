@@ -79,6 +79,13 @@ namespace ImmersiveAI
             {
                 _letterBag.Remove(toPlayer.Id);
                 SaveLetterBag();
+                // Only now, hand in hand, does the letter enter the readable correspondence log —
+                // a writer who died en route still gets their words set down (folder by identity).
+                if (!toPlayer.Logged)
+                {
+                    toPlayer.Logged = true;
+                    AppendCorrespondenceLog(FindAliveHero(toPlayer.NpcId), toPlayer);
+                }
                 PresentLetterToPlayer(toPlayer);
             }
 
@@ -156,7 +163,11 @@ namespace ImmersiveAI
                     double daysSince = memory.LastConversationGameDay >= 0
                         ? Math.Max(0, nowDay - memory.LastConversationGameDay)
                         : 0;
-                    double pull = InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince);
+                    // One's own clan writes out of duty as much as affection: a party or caravan
+                    // long on the road is exactly who should be sending word home, so their pull
+                    // is floored instead of fading with the weeks away (see the scorer).
+                    double pull = InitiationScorer.Pull(
+                        memory.StoryRichness, GetStanding(hero), daysSince, InPlayersService(hero));
                     if (pull <= 0) continue;
 
                     eligible.Add(hero);
@@ -225,6 +236,14 @@ namespace ImmersiveAI
             }
         }
 
+        // In the player's own service: their clan — companions leading parties and caravans, kin,
+        // governors. These write home out of duty, not only affection (see the scorer's duty floors).
+        private static bool InPlayersService(Hero h)
+        {
+            try { return h?.Clan != null && h.Clan == Clan.PlayerClan; }
+            catch { return false; }
+        }
+
         private string SafeBuildApartSituation(Hero npc)
         {
             try { return Personas.SituationBuilder.Build(npc, Hero.MainHero, _config, apart: true); }
@@ -261,11 +280,14 @@ namespace ImmersiveAI
                 ArriveGameDay = now + travelDays,
                 IsReply = isReply,
                 SentFrom = toPlayer ? Personas.SituationBuilder.Place(npc) : Personas.SituationBuilder.Place(Hero.MainHero),
+                // An NPC's letter enters the readable log only when it ARRIVES — the player must not
+                // be able to read words still on the road. The player's own letters log at once.
+                Logged = !toPlayer,
             };
 
             _letterBag.Add(letter);
             SaveLetterBag();
-            AppendCorrespondenceLog(npc, letter);
+            if (letter.Logged) AppendCorrespondenceLog(npc, letter);
 
             if (!toPlayer)
             {
@@ -295,13 +317,25 @@ namespace ImmersiveAI
         }
 
         // The plain-text record of the whole correspondence, one entry per letter, in the NPC's own
-        // folder — nothing about the bond is ever hidden from the player who goes looking.
-        private void AppendCorrespondenceLog(Hero npc, Letter letter)
+        // folder — nothing about the bond is ever hidden from the player who goes looking. The hero
+        // may be null (a writer who died while their last letter rode): the folder is then resolved
+        // by identity from the letter itself, so even a dead hand's words are set down.
+        private void AppendCorrespondenceLog(Hero? npc, Letter letter)
         {
             try
             {
-                NpcPaths.EnsureMigrated(npc);
-                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                string folder;
+                if (npc != null)
+                {
+                    NpcPaths.EnsureMigrated(npc);
+                    folder = NpcPaths.NpcFolder(npc);
+                }
+                else
+                {
+                    var firstName = (letter.NpcName ?? string.Empty).Split(' ').FirstOrDefault() ?? string.Empty;
+                    folder = NpcPaths.NpcFolder(letter.NpcId, firstName);
+                }
+                Directory.CreateDirectory(folder);
 
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
                 var from = letter.ToPlayer ? letter.NpcName : playerName;
@@ -313,7 +347,7 @@ namespace ImmersiveAI
                     $" (from {letter.SentFrom}, ~{days:0.#} days on the road):" + Environment.NewLine +
                     letter.Body + Environment.NewLine + Environment.NewLine;
 
-                File.AppendAllText(NpcPaths.CorrespondenceFile(npc), entry);
+                File.AppendAllText(Path.Combine(folder, NpcPaths.CorrespondenceFileName), entry);
             }
             catch { /* the log is a nicety; the letter itself is already safe */ }
         }
@@ -815,6 +849,24 @@ namespace ImmersiveAI
                 return CorrespondenceLog.Parse(File.ReadAllText(path));
             }
             catch { return new List<CorrespondenceEntry>(); }
+        }
+
+        /// <summary>True while THIS letter (matched by writer and body) still rides toward the
+        /// player. The chat window uses it to seal an in-flight letter's card: the compose beat is
+        /// recorded in her memory the moment she writes, but the words must not be readable through
+        /// any window until the courier arrives.</summary>
+        internal static bool IsLetterOnRoadToPlayer(string npcId, string body)
+        {
+            try
+            {
+                var bag = Current?._letterBag;
+                if (bag == null || string.IsNullOrEmpty(npcId) || string.IsNullOrWhiteSpace(body)) return false;
+                var text = body.Trim();
+                return bag.Letters.Any(l => l != null && l.ToPlayer
+                    && string.Equals(l.NpcId, npcId, StringComparison.Ordinal)
+                    && string.Equals(l.Body?.Trim(), text, StringComparison.Ordinal));
+            }
+            catch { return false; }
         }
 
         /// <summary>A short line about the courier between the player and this one, empty when the

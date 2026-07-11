@@ -1974,7 +1974,9 @@ namespace ImmersiveAI
                         int relation = GetStanding(hero);
                         double daysSince = memory.LastConversationGameDay >= 0
                             ? Math.Max(0, nowDay - memory.LastConversationGameDay) : 0;
-                        double pull = InitiationScorer.Pull(memory.StoryRichness, relation, daysSince);
+                        // Away NPCs show their LETTER pull, duty floors included (see the letter roll).
+                        double pull = InitiationScorer.Pull(memory.StoryRichness, relation, daysSince,
+                            !coLocated && InPlayersService(hero));
                         if (coLocated) pull = Math.Max(floor, pull); // presence alone lifts to the floor
                         double alone = Math.Min(1, _config.DailyInitiationRate * pull);
                         (coLocated ? herePulls : awayPulls).Add(pull);
