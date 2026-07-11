@@ -84,7 +84,9 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
-  ModConfig.cs            JSON config (API keys, model, token/memory limits)
+  ModConfig.cs            JSON config (API keys, model, token/memory limits) — the single source of truth
+  Mcm/                    ImmersiveAiMcmSettings + McmBridge: the in-game MCM settings menu (SOFT dependency —
+                          absent MCM = config.json only; present = a live two-way editor over a subset, config.json still master)
   MainThreadDispatcher.cs marshals async LLM results back to the game thread
 tests/ImmersiveAI.Core.Tests/  xUnit tests for Core (net8.0)
 module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)

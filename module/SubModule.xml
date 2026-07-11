@@ -17,6 +17,9 @@
     <DependedModuleMetadata id="SandBoxCore" order="LoadBeforeThis" />
     <DependedModuleMetadata id="Sandbox" order="LoadBeforeThis" />
     <DependedModuleMetadata id="StoryMode" order="LoadBeforeThis" />
+    <!-- Mod Configuration Menu: optional. Load it before us (so its settings menu is ready when we bind),
+         but never require it — the mod runs on config.json when MCM is absent. -->
+    <DependedModuleMetadata id="Bannerlord.MBOptionScreen" order="LoadBeforeThis" optional="true" />
   </DependedModuleMetadatas>
   <SubModules>
     <SubModule>

@@ -9,6 +9,11 @@ namespace ImmersiveAI
     {
         private bool _announced;
 
+        // One config for the whole process: loaded once, shared by the behavior, the on-map controls,
+        // and the MCM menu, so a change made in any of them is seen by all the others.
+        private static ModConfig? _config;
+        internal static ModConfig Config => _config ??= ModConfig.LoadOrCreate();
+
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
@@ -23,7 +28,9 @@ namespace ImmersiveAI
             base.OnGameStart(game, gameStarterObject);
             if (gameStarterObject is CampaignGameStarter starter)
             {
-                var config = ModConfig.LoadOrCreate();
+                var config = Config;
+                // If MCM was not yet ready when the main menu came up, bind it now (guarded, no-op once bound).
+                Mcm.McmBridge.TryBind(config);
                 // Which campaign's memory folder is on stage isn't known until the save's id is
                 // read (or minted) in the behavior's load/session hooks; clear any id left over
                 // from a previous session so nothing can write into the wrong campaign meanwhile.
@@ -43,6 +50,9 @@ namespace ImmersiveAI
                 InformationManager.DisplayMessage(new InformationMessage("Immersive AI loaded."));
                 _announced = true;
             }
+            // Bind the MCM menu to our config as early as the main menu, so settings edited before a
+            // campaign is even loaded take hold. A soft dependency: does nothing if MCM isn't installed.
+            Mcm.McmBridge.TryBind(Config);
         }
 
         protected override void OnApplicationTick(float dt)

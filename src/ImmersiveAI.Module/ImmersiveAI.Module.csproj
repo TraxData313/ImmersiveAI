@@ -28,6 +28,17 @@
     </Reference>
   </ItemGroup>
 
+  <!-- Mod Configuration Menu: a SOFT RUNTIME dependency. Referenced to compile the settings menu but
+       never copied to our bin (the MCM module provides the DLL at runtime). If a player lacks MCM, the
+       menu binding is skipped (McmBridge checks the assembly is loaded first) and the mod runs on
+       config.json alone. Building does require MCM installed at McmBinFolder — standard for MCM mods. -->
+  <ItemGroup>
+    <Reference Include="MCMv5">
+      <HintPath>$(McmBinFolder)\MCMv5.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
   <!-- Game assemblies are referenced from the local install and never copied to output -->
   <ItemGroup>
     <Reference Include="TaleWorlds.Core">
