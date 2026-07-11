@@ -3,6 +3,34 @@ MUST BE DONE FOR V1 RELEASE:
     maybe next to the O chat and U letter windows add a info, where there are, explanations, instructions and examples
 - [ ] discuss with Claude
     get Fable to think of more TODOs that would be nice to have before we release a V1 to steam
+    FABLE'S V1 PROPOSALS (2026.07.12, the night shift — react to these, strike what you don't want):
+    - [ ] First-run experience: a player with no API key gets ONE clear, kind popup on first campaign
+        entry pointing at config.json / the MCM page (the health check already speaks, but a brand-new
+        Steam player needs the "here is where the key goes, here is where keys come from" version, once).
+    - [ ] Cost visibility: a rough per-session token/request counter (even just requests made + a soft
+        note in DevMode) — Steam players WILL ask "what is this costing me"; a config `MaxDailyRequests`
+        safety valve (default off) would calm the worried.
+    - [ ] Graceful key-death mid-session: today a 429/insufficient-quota mid-talk reads as a mute NPC
+        with an error toast; catch the classified error once and tell the player plainly, then quiet the
+        hourly flows (letters/reach-outs) until the next successful call so the log isn't a wall of red.
+    - [ ] The prompt-files story for players: NPCs\_README.txt exists, but a short "how to shape your
+        world" section in the Steam description + a sample global_prompt.txt with commented examples
+        would turn the folder from mystery to feature.
+    - [ ] Performance guard: MaybeStartNpcLetter and the odds view read EVERY memory file each hour/use;
+        fine at 30 NPCs, worth a cached index (id → richness/lastDay, invalidated on save) before Steam
+        players show up with 300-NPC campaigns.
+    - [ ] Localization pass at least for the dialog-option strings ({=ImmersiveAI_*} ids exist — decide
+        V1 ships English-only and say so, or wire the XML).
+    - [ ] Version + migration stamp inside config.json (a "ConfigVersion": 1) so V1.1 can migrate
+        defaults without clobbering hand-edits.
+    - [ ] A "panic switch": one MCM toggle / config key that disables ALL autonomous behavior (reach-outs,
+        letters, notices) in one move for players who only want the talk-when-I-talk experience.
+    - [ ] Steam page assets: 3-4 honest screenshots (chat window, letter window, a reach-out notice, the
+        socialness stepper), a 30s clip of a real conversation, and the "clean-room, no ChatAi code"
+        provenance note stated plainly.
+    - [ ] Playtest checklist for the new roles wave before release: a scout answering "can we escape
+        them?", weigh_battle against a castle, a wife speaking of the children, a king receiving a
+        tier-0 stranger, and a caravan letter arriving as a field report.
 - [ ] steam release
     release to steam for everyone to enjoy with good descriptions
 
