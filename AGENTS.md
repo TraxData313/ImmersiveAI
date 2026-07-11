@@ -170,7 +170,9 @@ CLAUDE.md / AGENTS.md together.**
 
 Talking to any hero shows a **"Speak freely with me. [Immersive AI]"** dialog option →
 "Say something..." → a text popup → the reply appears in the conversation panel and loops.
-Errors surface as a top-left "Immersive AI: ..." message.
+Errors surface as a top-left "Immersive AI: ..." message. A **startup health check**
+(`LlmHealthCheck`, once per process from `SubModule.OnGameStart`) pings the LLM when a campaign is
+entered and reports a missing/wrong key or a dead connection in plain, actionable terms up front.
 
 NPCs also act on their own: co-located ones may reach out for a face-to-face talk (bond-scaled
 hourly rolls); distant ones may WRITE — letters travel real in-game days by map distance,

@@ -1,6 +1,6 @@
 MUST BE DONE FOR V1 RELEASE:
 - [ ] save dependent memories
-   (maybe — leaning "leave it") Reload-divergence: within ONE campaign, loading an EARLIER save keeps "memories from the future" — the NPC still remembers this morning's talk after you reload to yesterday. Campaign-scoping (done 2026.07.09) fixed cross-campaign bleed but deliberately not this. When time comes: stamp each `ConversationTurn` with `CampaignTime`, and on load drop turns dated after now (an opt-in `DropFutureMemoriesOnLoad`, default off). Same for their goals, if we have them by then. Note it can't un-bake facts already compressed into `Summary`/`KnownFacts`, so it's a partial fix at best — another reason to leave it.
+    (maybe — leaning "leave it") Reload-divergence: within ONE campaign, loading an EARLIER save keeps "memories from the future" — the NPC still remembers this morning's talk after you reload to yesterday. Campaign-scoping (done 2026.07.09) fixed cross-campaign bleed but deliberately not this. When time comes: stamp each `ConversationTurn` with `CampaignTime`, and on load drop turns dated after now (an opt-in `DropFutureMemoriesOnLoad`, default off). Same for their goals, if we have them by then. Note it can't un-bake facts already compressed into `Summary`/`KnownFacts`, so it's a partial fix at best — another reason to leave it.
 - [ ] Player interactions visible to the NPC
     Bannerlord has pop up decision which the player can take, like Apples from heaven event. Those are one of the few events that tell the world who the player is, so it will be good for the NPCs to see the latest X of those events that happened to the player, when and where, what options he had and what their impact was (lose 200 denars, gain honor etc) and what he chose. All who speak with him should see them - the ones that were with him will know and the ones that werent will have heard from the people that are with him.
 - [ ] info sections
@@ -9,8 +9,6 @@ MUST BE DONE FOR V1 RELEASE:
     Anton will take a look at the prompt and will improve it, Claude will check and implement what is possible (waiting for Anton)
 - [ ] mood mood swings
     there should be some mood variable that changes with the moon, escpecially for women, who are more moved by their feelings and also have the custom for the women. Maybe upon entering in the scope of ImmersiveAI a mood custom period for the women should be generated and it should be let known to then what period they are in, so they can get that into their decision. Also maybe a dayly random little story must be generated, that will be added to their mood, like "depressed", "energetic", "happy" idk here we must think, but the interplay of those two and the specific scene should create variety of different encounters
-- [ ] LLM hi test when entering a game
-    if the test fails the player should be notifyed, told to enter their API key if not set, and if the problem is another for them to see "check your net connect" etc and restart the game.
 - [ ] discuss with Claude
     get Fable to think of more TODOs that would be nice to have before we release a V1 to steam
 - [ ] steam release

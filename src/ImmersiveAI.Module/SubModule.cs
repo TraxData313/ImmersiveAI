@@ -39,6 +39,10 @@ namespace ImmersiveAI
                 var behavior = new ImmersiveChatBehavior(config);
                 starter.AddBehavior(behavior);
                 behavior.AddDialogs(starter);
+                // A quiet "are you there?" to the LLM the moment a game is entered, so a missing key,
+                // a wrong key, or a dead connection surfaces as plain guidance now — not as mute NPCs
+                // discovered mid-conversation. Runs once per process, off-thread.
+                LlmHealthCheck.RunOnce(config);
             }
         }
 

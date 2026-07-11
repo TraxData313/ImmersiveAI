@@ -315,6 +315,12 @@ Talking to any hero shows a **"Speak freely with me. [Immersive AI]"** dialog op
 "Say something..." → a text popup → the reply appears in the conversation panel and loops.
 Errors surface as a top-left "Immersive AI: ..." message.
 
+**Startup health check** (`LlmHealthCheck`, fired once per process from `SubModule.OnGameStart`): a tiny
+off-thread "reply OK" ping when a campaign is entered, so a missing key / wrong key / dead connection is
+told plainly ("add your key to <config> and restart", "check your internet connection", 401/429/404/5xx
+classified) instead of surfacing as mute NPCs mid-conversation. Success shows a soft "connected to
+<backend · model>." The remedy for any failure is fix-config-and-restart, which re-runs the check.
+
 Each exchange can also move the NPC's standing with the player. **The heart moves by her own hand now
 (2026.07.10, Anton's ask): a `move_heart` native tool** (`Tools\HeartTool`) rides every spoken path
 beside the recalls — mid-reply the NPC may shift her regard herself (silence honestly means the heart
