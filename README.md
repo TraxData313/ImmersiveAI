@@ -62,6 +62,11 @@ Key Core concepts:
 - `PromptBuilder` / `SituationBuilder` — assemble the whole prompt in the second-person Angel
   voice: who they are, their self, the world's notes, the current situation, and their memory,
   followed by real user/assistant message history.
+- `MoodTides` — the passing weather of the heart: every soul carries a daily humor (bright, weary,
+  brooding, bold…), and the women of the world also keep their body's own monthly season — "the
+  custom of women", told to them gently by its turning so it may color their choices. Deterministic
+  from who they are and what day it is (no dice, nothing stored): reloading rerolls no one's
+  weather. Config: `EnableMoodSwings`, `EnableWomensCycle` (both default on).
 - `TidingsBuilder` / `TidingsFormatter` — fold the world's recent happenings (wars, falls of
   realms, towns changing hands, deaths, weddings, tournament wins) and the talk of the town into
   each NPC's situation, drawn from the game's own campaign log — so they can bring up the news

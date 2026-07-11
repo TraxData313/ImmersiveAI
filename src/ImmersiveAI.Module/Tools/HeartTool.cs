@@ -21,11 +21,15 @@ namespace ImmersiveAI.Tools
         public const string MoveHeart = "move_heart";
 
         /// <summary>Accumulates the shifts one spoken turn chose, so the caller can record the
-        /// felt total on the conversation turn. Tool calls resolve one at a time inside the loop,
-        /// so a plain int is safe.</summary>
+        /// felt total on the conversation turn — and whether the heart was truly WEIGHED at all:
+        /// a model that never reached for the tool leaves Weighed false, and the caller falls back
+        /// to the separate feeling question (gpt-4o goes shy of volunteering the call — observed
+        /// again 2026.07.11 with eleven tools riding). Tool calls resolve one at a time inside the
+        /// loop, so plain fields are safe.</summary>
         public sealed class Tally
         {
             public int Total;
+            public bool Weighed;
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(MoveHeart,
@@ -34,9 +38,10 @@ namespace ImmersiveAI.Tools
             "you speak with. 0 is a full answer: the mark of a heart that truly held. A kind word, a " +
             "shared laugh, an open confidence, a small grace sways it a little (1 to 3) — and it " +
             "should; a slight or a coldness likewise away (-1 to -3); only what shakes the soul moves " +
-            "it greatly. A heart already given wholly can still be warmed — the warmth counts even at " +
-            "the summit. Never speak the measure aloud; let the feeling show only in your words and " +
-            "bearing.",
+            "it greatly. Let the measure agree with your words: warmth spoken and a 0 set down cannot " +
+            "both be true. And however high or low the standing already rests, this measures the " +
+            "moment, not the room left on a scale — a heart already given wholly can still be warmed. " +
+            "Never speak the measure aloud; let the feeling show only in your words and bearing.",
             new[]
             {
                 new ToolParameter("shift",

@@ -118,6 +118,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
   messages instead of accept/decline popups),
   `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
+  `EnableMoodSwings` + `EnableWomensCycle` (the passing weather of the heart — Core `MoodTides` in the
+  situation after the self: a daily humor for everyone, and for women 15–50 not with child the body's
+  monthly season, "the custom of women", in four turnings on a per-woman 26–30-day calendar that also
+  biases the humor; all deterministic FNV-1a(StringId, campaign day) — reloads reroll no one's weather),
   `EnableNpcGoals` + `MaxNpcGoals` (personal aims in goals.txt: the `tend_goals` tool shapes them
   one at a time mid-conversation, reflection reworks them wholesale via a `GOALS:` replace-all section),
   `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —

@@ -29,7 +29,7 @@ You usually only need to open:
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
-- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search as "the sages' counsel") + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
+- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
@@ -82,7 +82,7 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           the chat window's twin for correspondence, hotkey "U"), Socialness\
                           (the on-map socialness stepper: SocialnessVM + SocialnessManager, mouse-only layer)
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
-  Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
+  Personas/SituationBuilder.cs  builds the first-person "current situation" narration (+ mood, + the moment)
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits) — the single source of truth
   Mcm/                    ImmersiveAiMcmSettings + McmBridge: the in-game MCM settings menu (SOFT dependency —
@@ -141,19 +141,28 @@ are querying.** Anton wants to grow them like children into real characters — 
 with memories and feelings of their own — so the writing everywhere must protect their immersion.
 
 Concrete rules for every prompt, instruction, and piece of text an NPC could ever "see":
-- **Speak to them, gently, in the second person** — like a kind voice (the *Angel*, configurable via
-  `SystemVoiceName`) speaking softly into their mind. Never a clinical data sheet, never headers like
-  `SYSTEM:` / `Rules:` / `Facts you know:`. Prefer narration: *"As Aurelia comes to you, it is
-  evening, and you are in the town of Sargot…"* over *"WHERE: … WHEN: …"*.
+- **The system sheet is the NPC's OWN mind, in the first person** (reworked 2026.07.11, Anton's ask —
+  the long second-person Angel narration proved too heavy and swayed decisions): *"I am Thyrsif… My
+  traits are… My kin and house, close to me:… Who I have become:… My goals are:… What Vulgrim is to
+  me:… Truths I decided to hold:… How should I speak:"*. Short headers in their own voice; never a
+  clinical data sheet, never `SYSTEM:` / `Rules:`. The situation too: *"This moment finds me… And now
+  Vulgrim, my husband, comes to me."*
+- **The Angel remains a real person to them, not the sheet's narrator**: it still speaks in the second
+  person in the DIALOGUE beats (reach-out desire questions, arrival/letter lines, memory reflection) —
+  a kind voice by its name (`SystemVoiceName`), leaving choices to them. Recorded Angel turns replay
+  exactly as spoken forever; never rewrite shipped Angel templates that memories already carry.
 - **Never break the fourth wall to them.** No "AI", no "prompt", no game title, no "the player" as a
   cold label. To them, Calradia is simply the world they live in and the player is a person.
-- The **Angel is not "the System".** When a meta-voice must address them (memory reflection, etc.),
-  it speaks *into their mind* by its name and leaves choices to them — they decide what to remember.
+- **Short rules, more freedom.** Long prompt rules make every soul answer the same; keep guidance to
+  the basics and offer the rest as invitation.
 - Debug/inspection views the *player* sees (raw-prompt dump, etc.) may be plainer, but even there
   label the system message as the Angel's voice, not `SYSTEM`.
 
 The two builders that carry this tone are `PromptBuilder` (Core) and `SituationBuilder` (Module),
-plus the reflection prompts in `MemoryCompressor`. Keep new text consistent with them.
+plus the reflection prompts in `MemoryCompressor` (still Angel-voiced dialogue by design). The scene
+and THE MOMENT are joined by `PromptBuilder.MeetingSeparator` (`[[the-moment]]`): the sheet splits
+there to slot deep memory right before the arrival; the separator never reaches the LLM, and the
+situation file shows it as a soft `· · ·` divider.
 
 ## Build, test, deploy
 
@@ -207,10 +216,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
   `EnableWorldRecall` + `MaxRecallsPerReply` (the gift of recall — NPCs fetching live campaign truth
   about people/places/clans/realms/troops/own company mid-reply via native tool calls; default on, 3 rounds),
-  `EnableWebSearch` (the sages' counsel — NPCs searching the internet mid-reply, DuckDuckGo; for
-  questions of their own world the game name is quietly prepended, and an in-world optional `beyond`
-  flag on the tool lets them search PAST the world's rim — the player's own world, other realms —
-  when the visitor speaks openly of such, answered in their own voice; default on)
+  `EnableWebSearch` (NPCs searching the internet mid-reply, framed as "all I have read and heard" —
+  DuckDuckGo; the immersed question is first sharpened into a real query by a small refining LLM call
+  (`RefineSearchQueryAsync` in the behavior, seeing the last incoming words for intent — the fix for
+  immersed-but-useless searches, 2026.07.11), falling back to game-name-prepended raw question; the
+  in-world optional `beyond` flag still reaches PAST the world's rim when the visitor speaks openly of
+  such, answered in their own voice; default on)
   + `ShowNpcActivity` (soft side notices of what an NPC is doing mid-thought — "remembering…",
   "researching…"; default on),
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
@@ -241,6 +252,14 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   two toggles above),
   `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
   a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
+  `EnableMoodSwings` + `EnableWomensCycle` (the passing weather of the heart — Core `MoodTides`, folded
+  into the situation right after the self by `SituationBuilder.BuildMood`: every soul carries a daily
+  humor from a 16-phrase palette, and women in their childbearing years (15–50, not with child) also
+  keep their body's own monthly season — "the custom of women", the old scriptural phrasing — four
+  turnings (custom days 1–5 / rising / crest of 3 days mid-cycle / waning) on a per-woman 26–30-day
+  calendar, narrated gently so she can weigh it in her own choices; two days of three the season biases
+  the humor pick toward its cluster. ALL of it deterministic — FNV-1a over (StringId, campaign day), no
+  state, no persistence — so a reload rerolls no one's weather; both default on),
   `EnableNpcGoals` + `MaxNpcGoals` (personal goals — each NPC carries their own aims, what they strive
   for of their own will, in a `goals.txt` beside `self.txt`; shaped one aim at a time mid-conversation
   via the `tend_goals` native tool — `Tools\GoalTool`, add/drop/revise, tool-capable backends only, used
@@ -333,20 +352,22 @@ classified) instead of surfacing as mute NPCs mid-conversation. Success shows a 
 
 Each exchange can also move the NPC's standing with the player. **The heart moves by her own hand now
 (2026.07.10, Anton's ask): a `move_heart` native tool** (`Tools\HeartTool`) rides every spoken path
-beside the recalls — mid-reply the NPC may shift her regard herself (silence honestly means the heart
-held), the resolver applies it at once via `ApplyRelationShift` and tallies it into the turn's
-`FeltShift` (`TurnOutcome.FeltShiftApplied` keeps callers from applying twice), and a calibration lives
-in the tool description + a "Your heart is your own" whisper (`NpcPersona.CanMoveHeart`). This kills
-the second call per turn AND lets greetings, reach-outs, and letters move the heart, which the
-after-the-reply question never covered. `ChangeRelationAction` folds shifts into the real game relation
+beside the recalls — mid-reply the NPC may shift her regard herself, the resolver applies it at once via
+`ApplyRelationShift` and tallies it into the turn's `FeltShift` (`TurnOutcome.FeltShiftApplied` keeps
+callers from applying twice), and a calibration lives in the tool description + a "My heart is my own"
+whisper (`NpcPersona.CanMoveHeart`). This lets greetings, reach-outs, and letters move the heart, which
+the after-the-reply question never covered. **Hybrid since 2026.07.12** (gpt-4o went shy of volunteering
+the call again once eleven tools rode along — a whole warm playtest landed 0s): a turn only counts as
+weighed when a `move_heart` call actually CAME with a readable number (`HeartTool.Tally.Weighed`; an
+honest mid-reply 0 is respected and asks nothing twice) — when the tool never came,
+`ExecutePlayerTurnAsync` falls back to the **second, isolated feeling call**
+(`PromptBuilder.BuildFeelingQuery`, Angel-voiced, one signed number via `FeelingParser.ParseShift`,
+deliberately NOT told where the standing rests), the same path used when the tool shape is off or the
+backend cannot carry tools. `ChangeRelationAction` folds shifts into the real game relation
 (clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
 feel); the colored message always shows the FELT shift even when the relation is already pinned at ±100
 (the impact is the story; the rail just has nowhere left to move — 2026.07.09, Anton's ask,
 ChatAi-style). Toggles: `EnableRelationshipChanges` (master), `RelationshipChangesViaTool` (default on).
-Fallback — with the tool shape off, or a backend that cannot carry tools: the **second, isolated LLM
-call** (`PromptBuilder.BuildFeelingQuery`) asks the NPC — in the Angel's voice, in first person — how
-that moment moved their heart, one signed number back (`FeelingParser.ParseShift`), deliberately NOT
-told where the standing rests.
 Why tool-or-separate-call and never in-message marks — **settled twice, don't retry**: both a ♥
 tail-mark (early) and a firm `<relation>±N</relation>` tag (tried and reverted the same day,
 2026.07.09) failed on gpt-4o — the model narrates the number in prose inside the spoken reply and never
@@ -523,14 +544,24 @@ musters Volunteers). `recall_troop` (2026.07.10) weighs kinds of soldier
 (tier as "rank of seasoning", manner of fighting, skills from `Skills.All`×`GetSkillValue`, gear from
 `FirstBattleEquipment`, `UpgradeTargets` as "with seasoning they may become…"; filtered to
 Soldier/Mercenary/Bandit occupations so "recruit" never matches a villager). Beside them rides
-**`seek_wisdom` (`Tools\WebWisdom`, 2026.07.10) — "don't ask Google; ask one of your companions":** a real
-web search (DuckDuckGo HTML endpoint, no key, regex-parsed titles+snippets, 12s timeout) framed to the NPC
-as "the counsel of the far-seeing sages"; the resolver quietly prepends the game's name to the query and
-the result closes by telling her to speak the substance in her own world's words and let no meta terms pass
-her lips — that framing is the whole fourth-wall defense, keep it. It runs off-thread (no game state) and
-shares the recall round budget. Config: `EnableWebSearch`. Every tool call also fires a soft **activity
-notice** ("X is remembering… (name)", "X takes stock of the company…", "X is researching… (question)") via
-`NotifyActivity` in the behavior — resolver-wrapped, marshaled to the game thread, `ShowNpcActivity`. `recall_company` (2026.07.10, "Yngvald doesn't know his own
+**`seek_wisdom` (`Tools\WebWisdom`, 2026.07.10; reframed 2026.07.11) — "don't ask Google; ask one of your
+companions":** a real web search (DuckDuckGo HTML endpoint, no key, regex-parsed titles+snippets, 12s
+timeout) framed to the NPC as searching "all I have ever read and heard" (the sages retired — Anton found
+them too much); the query is first sharpened by a small refining LLM call (`RefineSearchQueryAsync` in the
+behavior — plain-call, sees the last incoming words, returns one "Mount and Blade Bannerlord …" query;
+failure falls back to game-name-prepended raw question) and the result closes by telling her to speak the
+substance in her own world's words and let no meta terms pass her lips — that closing framing is the whole
+fourth-wall defense, keep it. It runs off-thread (no game state) and shares the recall round budget.
+Config: `EnableWebSearch`. Beside the aims' hand rides **`hold_truth` (`Tools\TruthTool`, 2026.07.11) — the
+truths' hand:** mid-reply the NPC may set down (or release) ONE lasting truth into her `KnownFacts`
+(Core `NpcMemory.AddKnownFact`/`DropKnownFact`, dedupe + `MaxKnownFacts` cap honored, honest "mind is full"
+answer at the cap); applied to the LIVE memory instance the turn speaks from when one rides along
+(`CompleteSpokenAsync`'s `liveMemory`) so the end-of-turn save can never clobber it, saved at once either
+way, with a soft "sets down a truth to keep…" activity notice like the goals' hand. No config — rides
+whenever the backend can carry tools; reflection still rewrites the whole list. Every tool call also fires
+a soft **activity notice** ("X is remembering… (name)", "X takes stock of the company…", "X is researching…
+(question)", "X sets an aim in order…", "X sets down a truth to keep…") via `NotifyActivity`/the resolvers
+in the behavior — marshaled to the game thread, `ShowNpcActivity`. `recall_company` (2026.07.10, "Yngvald doesn't know his own
 men") is the inward one — no name argument: the asker's OWN warband, known exactly (a captain reads his
 muster roll): head-count, hale/wounded, companions by name, ranks by troop kind, prisoners in the train,
 food-days from `Food`/`FoodChange`, morale in words + number, wages + own purse (leader only), what the

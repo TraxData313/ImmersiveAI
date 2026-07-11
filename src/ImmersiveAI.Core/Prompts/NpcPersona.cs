@@ -77,5 +77,10 @@ namespace ImmersiveAI.Core.Prompts
         /// keep, take up, or let go — sparingly, only when something truly shifts what they strive for.
         /// Even when false, reflection still lets them rework their aims.</summary>
         public bool CanTendGoals { get; set; }
+
+        /// <summary>True when this NPC may set down a lasting truth mid-conversation (the hold_truth
+        /// tool rides along — see the game layer's TruthTool). Adds a whisper that what deserves to
+        /// stay may be quietly kept. Even when false, reflection still rewrites their truths whole.</summary>
+        public bool CanHoldTruths { get; set; }
     }
 }

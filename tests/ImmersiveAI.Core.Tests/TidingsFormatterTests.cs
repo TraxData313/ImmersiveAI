@@ -63,7 +63,7 @@ public class TidingsFormatterTests
             new[] { "- “So it's war, then.”" },
             "Sargot");
 
-        Assert.Contains("Tidings of the world's late doings have reached your ears:", block);
+        Assert.Contains("Tidings of the world's late doings have reached my ears:", block);
         Assert.Contains("- A war began — yesterday.", block);
         Assert.Contains("in the streets of Sargot", block);
         Assert.Contains("- “So it's war, then.”", block);
@@ -74,6 +74,6 @@ public class TidingsFormatterTests
     {
         var block = TidingsFormatter.Compose(new string[0], new[] { "- “Word travels.”" }, null);
         Assert.DoesNotContain("Tidings of the world's", block);
-        Assert.Contains("And you have overheard the common folk say:", block);
+        Assert.Contains("And I have overheard the common folk say:", block);
     }
 }

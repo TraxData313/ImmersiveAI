@@ -205,4 +205,39 @@ public class NpcMemoryTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() => memory.ApplyCompression("s", consumedTurnCount: 2));
     }
+
+    [Fact]
+    public void AddKnownFact_Trims_Dedupes_AndHonorsTheCap()
+    {
+        var memory = new NpcMemory();
+
+        Assert.True(memory.AddKnownFact("  They saved my caravan at Omor  ", maxFacts: 2));
+        Assert.Equal("They saved my caravan at Omor", memory.KnownFacts[0]);
+
+        // A restatement differing only in case is the same truth, not a second one.
+        Assert.False(memory.AddKnownFact("they saved my caravan at omor", maxFacts: 2));
+
+        Assert.True(memory.AddKnownFact("They rule Sargot", maxFacts: 2));
+        // The mind is full: reflection is where the list resettles, not a silent overflow.
+        Assert.False(memory.AddKnownFact("A third truth", maxFacts: 2));
+        Assert.Equal(2, memory.KnownFacts.Count);
+
+        Assert.False(memory.AddKnownFact("   ", maxFacts: 2));
+    }
+
+    [Fact]
+    public void DropKnownFact_MatchesExactlyFirst_ThenByContainment_AndMissesSafely()
+    {
+        var memory = new NpcMemory();
+        memory.KnownFacts.Add("They saved my caravan at Omor");
+        memory.KnownFacts.Add("They rule Sargot");
+
+        // A close restatement releases the held truth (the NPC sees the exact list in the prompt).
+        Assert.Equal("They rule Sargot", memory.DropKnownFact("rule Sargot"));
+        Assert.Single(memory.KnownFacts);
+
+        // A miss releases nothing — safer than a wrong release.
+        Assert.Null(memory.DropKnownFact("something never held"));
+        Assert.Single(memory.KnownFacts);
+    }
 }

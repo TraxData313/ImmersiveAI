@@ -69,7 +69,7 @@ namespace ImmersiveAI.Core.Prompts
             var sb = new StringBuilder();
             if (hasTidings)
             {
-                sb.AppendLine("Tidings of the world's late doings have reached your ears:");
+                sb.AppendLine("Tidings of the world's late doings have reached my ears:");
                 foreach (var line in tidingLines!)
                     if (!string.IsNullOrWhiteSpace(line)) sb.AppendLine(line);
             }
@@ -77,8 +77,8 @@ namespace ImmersiveAI.Core.Prompts
             {
                 if (hasTidings) sb.AppendLine();
                 sb.AppendLine(string.IsNullOrWhiteSpace(placeName)
-                    ? "And you have overheard the common folk say:"
-                    : $"And in the streets of {placeName}, you have overheard folk say:");
+                    ? "And I have overheard the common folk say:"
+                    : $"And in the streets of {placeName}, I have overheard folk say:");
                 foreach (var line in rumorLines!)
                     if (!string.IsNullOrWhiteSpace(line)) sb.AppendLine(line);
             }

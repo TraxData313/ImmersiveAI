@@ -105,6 +105,38 @@ namespace ImmersiveAI.Core.Memory
                 : RecentTurns.Take(count).ToList();
         }
 
+        /// <summary>Sets down one lasting truth mid-conversation (the hold_truth tool). Trimmed and
+        /// deduplicated case-insensitively; refused when already held or when the mind is full —
+        /// reflection remains the place where the whole list is resettled.</summary>
+        public bool AddKnownFact(string fact, int maxFacts)
+        {
+            if (string.IsNullOrWhiteSpace(fact)) return false;
+            var trimmed = fact.Trim();
+            if (KnownFacts.Any(f => string.Equals(f, trimmed, StringComparison.OrdinalIgnoreCase))) return false;
+            if (maxFacts > 0 && KnownFacts.Count >= maxFacts) return false;
+            KnownFacts.Add(trimmed);
+            return true;
+        }
+
+        /// <summary>Releases one held truth by restatement: an exact match first, then a containment
+        /// match either way (the NPC sees the exact list in their prompt, so a close restatement is
+        /// enough). Returns the released truth, or null when nothing matched — a miss is safer than
+        /// a wrong release.</summary>
+        public string? DropKnownFact(string fact)
+        {
+            if (string.IsNullOrWhiteSpace(fact)) return null;
+            var needle = fact.Trim();
+
+            var hit = KnownFacts.FirstOrDefault(f => string.Equals(f, needle, StringComparison.OrdinalIgnoreCase))
+                ?? KnownFacts.FirstOrDefault(f =>
+                    f.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
+                    || needle.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (hit == null) return null;
+
+            KnownFacts.Remove(hit);
+            return hit;
+        }
+
         /// <summary>
         /// Replaces the compressed turns with the new rolling summary and applies the facts the NPC
         /// chose to hold. With <paramref name="replaceFacts"/> true the given list IS her truths now —

@@ -68,6 +68,16 @@ namespace ImmersiveAI.Personas
                 sb.Append($" of clan {npc.Clan.Name}");
             if (npc.MapFaction != null && npc.Clan?.Kingdom != null)
                 sb.Append($", sworn to {npc.Clan.Kingdom.Name}");
+
+            // Gender and years belong to the opening thought of who I am (moved up from the situation
+            // block, 2026.07.11 — Anton's ask), so she never meets herself mid-page.
+            try
+            {
+                var gender = npc.IsFemale ? "a woman" : "a man";
+                int age = (int)npc.Age;
+                sb.Append(age > 0 ? $" — {gender} of some {age} years" : $" — {gender}");
+            }
+            catch { /* the role stands without it */ }
             sb.Append('.');
 
             // The standing toward the player deliberately does NOT ride here: the situation block

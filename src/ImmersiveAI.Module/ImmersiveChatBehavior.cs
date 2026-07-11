@@ -155,7 +155,7 @@ namespace ImmersiveAI
         // counsel of the far-seeing sages (a web search, resolved off-thread). Every spoken path
         // goes through here; short utility calls (the feeling number, the yes/no of a reaching-out)
         // stay on plain CompleteAsync, where a recall would only slow the answer down.
-        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null)
+        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
@@ -164,22 +164,45 @@ namespace ImmersiveAI
             if (heartRides) tools.Add(Tools.HeartTool.Tool);
             bool goalsRide = CanTendGoals();
             if (goalsRide) tools.Add(Tools.GoalTool.Tool);
+            bool truthsRide = CanHoldTruths();
+            if (truthsRide) tools.Add(Tools.TruthTool.Tool);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
-            // The heart's hand and the aims' hand are not recalls: they keep at least one round even when
-            // the recall budget is zeroed out, or the offered tool could never be reached for.
-            int rounds = (heartRides || goalsRide) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
+            // The last words that prompted the reply, carried to the search refiner so an immersed
+            // question ("how might I grant my ships…") becomes a query that truly finds answers.
+            var recentContext = LastIncomingWords(messages);
+
+            // The heart's hand and the personal hands (aims, truths) are not recalls: they keep at
+            // least one round even when the recall budget is zeroed out.
+            int rounds = (heartRides || goalsRide || truthsRide) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
-                call => ResolveToolAsync(call, npc, heart),
+                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext),
                 rounds);
+        }
+
+        // The tail of the newest user message — the words the NPC is presently answering — for the
+        // search refiner's context. Best-effort; never more than a few lines.
+        private static string LastIncomingWords(IReadOnlyList<ChatMessage> messages)
+        {
+            try
+            {
+                for (int i = messages.Count - 1; i >= 0; i--)
+                {
+                    if (messages[i].Role != ChatRole.User) continue;
+                    var text = messages[i].Content ?? string.Empty;
+                    return text.Length <= 400 ? text : text.Substring(text.Length - 400);
+                }
+            }
+            catch { /* context is a nicety */ }
+            return string.Empty;
         }
 
         // Routes one tool call to its resolver, announcing the activity to the player first so the
         // wait is never silent ("remembering…", "researching…"). The heart's shift gets no notice
         // of its own — the colored relation line that follows IS the notice.
-        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart)
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext)
         {
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
@@ -187,10 +210,75 @@ namespace ImmersiveAI
             if (call.Name == Tools.GoalTool.TendGoals)
                 return Task.FromResult(ResolveGoalEdit(call, npc));
 
+            if (call.Name == Tools.TruthTool.HoldTruth)
+                return Task.FromResult(ResolveTruthEdit(call, npc, liveMemory));
+
             NotifyActivity(npc, call);
             return call.Name == Tools.WebWisdom.SeekWisdom
-                ? Tools.WebWisdom.ResolveAsync(call)
+                ? Tools.WebWisdom.ResolveAsync(call, (question, beyond) => RefineSearchQueryAsync(question, beyond, recentContext))
                 : Tools.WorldRecall.ResolveAsync(call, npc);
+        }
+
+        // One search query sharpened before it goes to the web: the NPC asks in her own immersed
+        // words, and this small plain call recasts them as a query that actually finds the answer
+        // ("In Bannerlord how to…"), seeing the last words of the exchange for intent. Best-effort:
+        // any failure returns null and the raw question rides with the game name prepended, as before.
+        private async Task<string?> RefineSearchQueryAsync(string question, bool beyond, string recentContext)
+        {
+            try
+            {
+                var context = string.IsNullOrWhiteSpace(recentContext)
+                    ? string.Empty
+                    : $"The words that prompted it: \"{recentContext.Trim()}\". ";
+                var ask = beyond
+                    ? "A speaker in a medieval roleplay conversation wants to look something up about the real world beyond the game. "
+                      + context
+                      + $"Their question, in roleplay language: \"{question}\". "
+                      + "Rewrite it as ONE effective, plain-English web search query. Answer with the query only."
+                    : "A character inside the video game Mount & Blade II: Bannerlord wants to look up how something works. "
+                      + context
+                      + $"Their question, in roleplay language: \"{question}\". "
+                      + "Rewrite it as ONE effective web search query about Bannerlord gameplay, starting with: Mount and Blade Bannerlord. "
+                      + "Strip the roleplay flavor, keep the true intent. Answer with the query only.";
+
+                var messages = new List<ChatMessage>
+                {
+                    ChatMessage.System("You sharpen web search queries. Answer with the search query alone — one line, no quotes, no commentary."),
+                    ChatMessage.User(ask),
+                };
+                var raw = await _client.CompleteAsync(messages).ConfigureAwait(false);
+                var line = (raw ?? string.Empty).Trim().Trim('"', '“', '”');
+                int nl = line.IndexOf('\n');
+                if (nl >= 0) line = line.Substring(0, nl).Trim();
+                return line.Length == 0 || line.Length > 200 ? null : line;
+            }
+            catch { return null; }
+        }
+
+        // One truth set down (or released) by the NPC mid-reply: applied to the LIVE memory the turn
+        // speaks from when one rides along (so the turn's own end-of-exchange save keeps it), else to
+        // a fresh load — either way saved at once. A change earns a soft notice like the other hands.
+        private string ResolveTruthEdit(Core.Llm.ToolCall call, Hero npc, NpcMemory? liveMemory)
+        {
+            try
+            {
+                var memory = liveMemory ?? LoadMemory(npc);
+                var answer = Tools.TruthTool.Apply(call, memory, _config.MaxKnownFacts, out bool changed);
+                if (!changed) return answer;
+
+                SaveMemory(npc, memory);
+                if (_config.ShowNpcActivity)
+                {
+                    var name = npc?.Name?.ToString() ?? "They";
+                    var doing = ReferenceEquals(answer, Tools.TruthTool.Released)
+                        ? $"{name} releases a truth once held…"
+                        : $"{name} sets down a truth to keep…";
+                    MainThreadDispatcher.Enqueue(() => InformationManager.DisplayMessage(
+                        new InformationMessage(doing, ActivityColor)));
+                }
+                return answer;
+            }
+            catch { return Tools.TruthTool.NoChange; }
         }
 
         // One heart's movement, chosen by the NPC mid-reply: applied to the real standing at once
@@ -199,7 +287,12 @@ namespace ImmersiveAI
         // turn. A shift of nothing (or an unreadable one) is answered as an honest stillness.
         private string ResolveHeartShift(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart)
         {
-            var shift = Tools.HeartTool.ParseShift(call) ?? 0;
+            var parsed = Tools.HeartTool.ParseShift(call);
+            // A readable number — even an honest 0 — means the heart was truly weighed this turn,
+            // so the fallback feeling question stays quiet. An unreadable call does not count.
+            if (parsed.HasValue && heart != null) heart.Weighed = true;
+
+            var shift = parsed ?? 0;
             if (shift == 0) return Tools.HeartTool.Held;
 
             if (heart != null) heart.Total += shift;
@@ -244,6 +337,10 @@ namespace ImmersiveAI
         // the mid-conversation shaping is.
         private bool CanTendGoals() =>
             _config.EnableNpcGoals && _client is IToolChatClient;
+
+        // The truths' own hand (hold_truth) rides the same channel; needs a tool-capable backend.
+        // Without it, reflection still rewrites the truths whole — only the mid-talk hand is dark.
+        private bool CanHoldTruths() => _client is IToolChatClient;
 
         // A soft side notice of what the NPC is doing mid-thought, in the same voice as the
         // reply-ready notice. Called from LLM background threads; the message is marshaled to the
@@ -418,6 +515,19 @@ namespace ImmersiveAI
         // after a quest talk, a bargain, or words on the road.
         private void OnConversationEnded(IEnumerable<CharacterObject> characters)
         {
+            // A talk we forced onto the map may have spun up a PlayerEncounter just to host the
+            // scene; finish it (next tick, once the conversation has fully unwound) or the player
+            // lands in the engage-party menu against the very person they were chatting with.
+            if (_finishEncounterAfterTalk)
+            {
+                _finishEncounterAfterTalk = false;
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    try { if (PlayerEncounter.Current != null) PlayerEncounter.Finish(true); }
+                    catch { /* worst case the player clicks Leave, as before */ }
+                });
+            }
+
             try
             {
                 var alreadyRecorded = _conversationBeatNpcId;
@@ -735,7 +845,10 @@ namespace ImmersiveAI
                 _currentSituation = situation;
                 NpcPaths.EnsureMigrated(npc);
                 Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
-                File.WriteAllText(NpcPaths.SituationFile(npc), situation);
+                // The scene/meeting separator is prompt plumbing (PromptBuilder splits on it to slot
+                // memory before the arrival); on disk it reads as a soft divider.
+                File.WriteAllText(NpcPaths.SituationFile(npc),
+                    situation.Replace(PromptBuilder.MeetingSeparator, "· · ·"));
             }
             catch (Exception ex)
             {
@@ -891,7 +1004,7 @@ namespace ImmersiveAI
             var sb = new StringBuilder();
             foreach (var msg in messages)
             {
-                sb.AppendLine("──────── " + RawPromptLabel(msg.Role, voice, name, ctx.PlayerName) + " ────────");
+                sb.AppendLine("--- " + RawPromptLabel(msg.Role, voice, name, ctx.PlayerName) + " ---");
                 sb.AppendLine(msg.Content);
                 sb.AppendLine();
             }
@@ -1049,18 +1162,22 @@ namespace ImmersiveAI
             var messages = _promptBuilder.Build(
                 ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, _config.SystemVoiceName);
             var heart = CanMoveHeart() ? new Tools.HeartTool.Tally() : null;
-            var rawReply = await CompleteSpokenAsync(messages, npc, heart).ConfigureAwait(false);
+            // The live memory rides along so a hold_truth mid-reply lands in the same instance this
+            // turn will record into and save — the end-of-exchange save can never clobber it.
+            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
-            // How the exchange moved her heart. In the tool shape she moved it herself mid-reply
-            // (move_heart, already applied — silence means it held). Otherwise ask her in a separate
-            // breath — one number, in her own voice (the Angel asking privately); isolating the
-            // question is what chatty models answer reliably (an in-message <relation> tag was tried
-            // and reverted on 2026.07.09: gpt-4o just spoke the number in prose and nothing moved).
+            // How the exchange moved her heart. In the tool shape she moves it herself mid-reply
+            // (move_heart, already applied) — but only a call that actually CAME counts as weighed:
+            // when the model never reached for the tool (gpt-4o goes shy of volunteering it — every
+            // warm exchange landing 0, re-observed 2026.07.12), the separate feeling question asks
+            // after the reply instead, exactly as in the no-tool shape. An honest mid-reply 0 is
+            // respected and asks nothing twice. Isolating the question is what chatty models answer
+            // reliably (an in-message <relation> tag was tried and reverted on 2026.07.09).
             // Best-effort either way: if she cannot weigh it now, her standing simply holds.
             int feltShift = 0;
             bool feltShiftApplied = false;
-            if (heart != null)
+            if (heart != null && heart.Weighed)
             {
                 feltShift = heart.Total;
                 feltShiftApplied = true;
@@ -1760,8 +1877,17 @@ namespace ImmersiveAI
         // Forces a face-to-face conversation with a hero who may be anywhere in the world (they have "come
         // to you"). Their party — or their settlement's — carries the conversation; falls back to the
         // player's party only so the engine always has a valid party to hang the scene on.
-        private static void OpenConversationWith(Hero npc)
+        //
+        // Hanging the scene on another lord's MOBILE party makes the engine spin up a PlayerEncounter
+        // with that party; left unfinished, closing the talk dumps the player into the engage-party
+        // menu ("Attack / Send troops / Leave") — against their own kin, no less (Anton's Asgotha
+        // playtest, 2026.07.12). We note whether an encounter existed BEFORE opening, and finish only
+        // the one our conversation created (see OnConversationEnded) — a town visit's own encounter
+        // is never touched.
+        private void OpenConversationWith(Hero npc)
         {
+            _finishEncounterAfterTalk = PlayerEncounter.Current == null;
+
             var playerData = new ConversationCharacterData(
                 CharacterObject.PlayerCharacter, PartyBase.MainParty,
                 false, false, false, false, false, false);
@@ -1776,6 +1902,10 @@ namespace ImmersiveAI
 
             CampaignMapConversation.OpenConversation(playerData, npcData);
         }
+
+        // True while a conversation WE forced onto the map is up and no encounter predated it — the
+        // signal that whatever PlayerEncounter exists when the talk ends is ours to finish.
+        private bool _finishEncounterAfterTalk;
 
         // She has spoken her opening; drop the interception so the rest of the conversation is ordinary.
         private void OnInitiationDelivered()
@@ -2250,6 +2380,7 @@ namespace ImmersiveAI
             persona.CanSeekWisdom = CanSeekWisdom();
             persona.CanMoveHeart = CanMoveHeart();
             persona.CanTendGoals = CanTendGoals();
+            persona.CanHoldTruths = CanHoldTruths();
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

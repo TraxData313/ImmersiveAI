@@ -257,24 +257,21 @@ namespace ImmersiveAI.Core.Prompts
             !string.IsNullOrEmpty(line) && line!.IndexOf(MeetingMarker, System.StringComparison.Ordinal) >= 0;
 
         // Baked-in whisper lines, always present regardless of any user-editable prompt file (moved in
-        // from Anton's global_prompt 2026.07.10 — these must be real every time). Both are spoken in the
-        // Angel's voice, no fourth wall: "responses" become talk between people, and the King-James
-        // flavor is named as the old scriptures' cadence, which in Calradia it simply is.
+        // from Anton's global_prompt 2026.07.10; recast into the NPC's own first person 2026.07.11 —
+        // short rules, spoken as their own mind, leaving room to actually play). No fourth wall.
 
-        /// <summary>The strict brevity rule: a sentence to four, unless a true tale must be told — short
+        /// <summary>The brevity rule: a sentence to four, unless a true tale must be told — short
         /// words keep the living back-and-forth of talk instead of long, static monologues.</summary>
         public const string BrevityGuidance =
-            "- Speak as talk truly flows between two people: a sentence, two, three — four at the most — " +
-            "then let them answer. Only when a true tale is asked of you, and it cannot be told smaller, " +
-            "may your words run longer. Short words keep the talk alive; long speeches turn it to stone.";
+            "- I speak as talk truly flows between two people: a sentence, two, three — four at the most — " +
+            "then I let them answer. Only a true tale asked of me may run longer.";
 
         /// <summary>The tone rule: a light savor of the old world — a touch of the old scriptures'
         /// cadence, a medieval turn of phrase — for atmosphere, never laid on thick.</summary>
         public const string OldWorldToneGuidance =
-            "- Let your words carry a light savor of the old world — here a turn of phrase as from the " +
-            "old scriptures, there a word of the court or the road — but only a light one, for the " +
-            "atmosphere of it. Plain, living speech first; heavy poetry and grand airs spent rarely, " +
-            "so that when they come, they mean something.";
+            "- My words carry a light savor of the old world — a turn of phrase as from the old " +
+            "scriptures, a word of the court or the road — but lightly, for the atmosphere of it; " +
+            "plain, living speech first.";
 
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
@@ -329,24 +326,33 @@ namespace ImmersiveAI.Core.Prompts
             };
         }
 
+        /// <summary>
+        /// The marker the game layer may plant inside a scene string to mark where the setting ends
+        /// and THE MOMENT begins ("And now Vulgrim comes to me…"). The sheet then slots deep memory
+        /// between the two, so what the NPC remembers of the person sits right beside their arrival.
+        /// Never sent to the LLM — the split consumes it; a scene without it flows in whole, after
+        /// memory, exactly as before.
+        /// </summary>
+        public const string MeetingSeparator = "[[the-moment]]";
+
         private static string BuildSystemPrompt(
             NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
         {
             var sb = new StringBuilder();
 
-            // The whole prompt is written as a gentle voice speaking into the NPC's own mind, in the
-            // second person — never a clinical data sheet. No fourth-wall labels (no "AI", no game
-            // title): to them, Calradia is simply the world they live in. The opening atmosphere line is
-            // player-configurable (name already substituted); we fall back to our own when none is set.
+            // The whole sheet reads as the NPC's OWN mind, in the first person — short and warm, never
+            // a clinical data sheet, never a long narrator talking at them (Anton's ask, 2026.07.11).
+            // No fourth-wall labels: to them, Calradia is simply the world they live in. The opening
+            // atmosphere line is player-configurable (name already substituted).
             sb.AppendLine(string.IsNullOrWhiteSpace(persona.AtmosphereLine)
-                ? $"You are {persona.Name}, a living soul in the world of Calradia in feudal times."
+                ? $"I am {persona.Name}, a living soul in the world of Calradia in feudal times."
                 : persona.AtmosphereLine.Trim());
             if (!string.IsNullOrWhiteSpace(persona.RoleDescription))
                 sb.AppendLine(persona.RoleDescription.Trim());
             if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
-                sb.AppendLine("In your nature, you are " + LowerFirst(persona.PersonalityDescription.Trim()));
+                sb.AppendLine("My traits are " + LowerFirst(persona.PersonalityDescription.Trim()));
             if (!string.IsNullOrWhiteSpace(persona.SpeechStyle))
-                sb.AppendLine("When you speak, it comes out like this: " + persona.SpeechStyle.Trim());
+                sb.AppendLine("When I speak, it comes out like this: " + persona.SpeechStyle.Trim());
 
             // Their kin and house — durable identity, so they feel part of a family in this world.
             if (!string.IsNullOrWhiteSpace(persona.FamilyKnowledge))
@@ -355,29 +361,26 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.FamilyKnowledge.Trim());
             }
 
-            // The self they have grown into, in their own words — the culmination of who they are,
-            // before we turn to the world's notes and the passing moment.
+            // The self they have grown into, in their own words.
             if (!string.IsNullOrWhiteSpace(persona.SelfConcept))
             {
                 sb.AppendLine();
-                sb.AppendLine("Who you have become, held in your own heart:");
+                sb.AppendLine("Who I have become:");
                 sb.AppendLine(persona.SelfConcept.Trim());
             }
 
-            // What they strive toward — the aims they carry of their own will, kept just after who they
-            // are, since a soul's longings colour everything they say and do.
+            // What they strive toward — a soul's longings colour everything they say and do.
             if (persona.Goals != null && persona.Goals.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("What you strive for, the aims you carry of your own will:");
+                sb.AppendLine("My goals are:");
                 foreach (var goal in persona.Goals)
                     if (!string.IsNullOrWhiteSpace(goal))
                         sb.AppendLine("- " + goal.Trim());
             }
 
             // The player-authored guidance rides high, right after who they are: the world they live in
-            // (the global prompt) and words meant for them alone (the per-NPC prompt). These carry the
-            // storyteller's intent, so they are given before the passing details of scene and memory.
+            // (the global prompt) and words meant for them alone (the per-NPC prompt).
             if (!string.IsNullOrWhiteSpace(persona.WorldInstructions))
             {
                 sb.AppendLine();
@@ -388,62 +391,88 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(persona.CustomInstructions))
             {
                 sb.AppendLine();
-                sb.AppendLine("About you:");
+                sb.AppendLine("About me:");
                 sb.AppendLine(persona.CustomInstructions.Trim());
             }
 
-            // The sheet reads like a mind waking toward the moment: who you are → who you have become →
-            // the storyteller's words → what you remember of this person → and only THEN the present
-            // scene (the world's news and the arrival), so "they come to you now" lands immediately
-            // before the conversation itself begins — never buried mid-page between memory and guidance.
+            // The sheet reads like a mind waking toward the moment: who I am → my world → the setting
+            // I stand in → what I remember of this person → and only THEN their arrival, so "and now
+            // they come to me" lands immediately before the conversation itself begins. The scene may
+            // carry a MeetingSeparator splitting setting from arrival; without one the whole scene
+            // follows memory, keeping the arrival last either way.
+            var scenePart = sceneContext ?? string.Empty;
+            var meetingPart = string.Empty;
+            int cut = scenePart.IndexOf(MeetingSeparator, StringComparison.Ordinal);
+            if (cut >= 0)
+            {
+                meetingPart = scenePart.Substring(cut + MeetingSeparator.Length).Trim();
+                scenePart = scenePart.Substring(0, cut).Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(scenePart) && meetingPart.Length > 0)
+            {
+                // The setting first — written as the NPC's own present-tense awareness.
+                sb.AppendLine();
+                sb.AppendLine(scenePart.Trim());
+            }
+
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
                 var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
                     ? string.Empty
-                    : $" (as you last decided to turn it over in your mind on {memory.SummaryAsOf.Trim()})";
-                sb.AppendLine($"In the quiet of your memory, this is what lingers of {playerName}{asOf}:");
+                    : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
+                sb.AppendLine($"What {playerName} is to me{asOf}:");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
             if (memory.KnownFacts.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("And these truths you decided to hold as certain, deep and unshaken:");
+                sb.AppendLine("Truths I decided to hold:");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
             }
 
-            if (!string.IsNullOrWhiteSpace(sceneContext))
+            if (meetingPart.Length > 0)
             {
-                // The scene is already written as narration addressed to the NPC, so it simply flows in
-                // on its own lines — no clinical "Current situation:" header.
+                // The moment itself — right after what I remember of them, the last breath before talk.
                 sb.AppendLine();
-                sb.AppendLine(sceneContext.Trim());
+                sb.AppendLine(meetingPart);
+            }
+            else if (!string.IsNullOrWhiteSpace(scenePart))
+            {
+                sb.AppendLine();
+                sb.AppendLine(scenePart.Trim());
             }
 
             sb.AppendLine();
-            sb.AppendLine("A whisper of guidance, meant only for you:");
+            sb.AppendLine("How should I speak:");
             sb.AppendLine(BrevityGuidance);
             sb.AppendLine(OldWorldToneGuidance);
 
-            // Offered only when the recall tools truly ride along with the request, so the NPC is
-            // never told of a gift the backend cannot grant.
+            // The gift whispers are short first-person habits now, and they invite the free, unbidden
+            // look too — a conversation may OPEN from something truly seen, not only answer with it.
+            // Each is offered only when its tool truly rides along with the request.
             if (persona.CanRecallWorld)
-                sb.AppendLine("- When a person, place, house, realm, or kind of soldier is spoken of and your memory of them is dim, be still a moment and call them to mind — what is truly known will surface as remembrance. So too your own company, before speaking in numbers of the men you lead or march among; and so too the market about you, before ever quoting what a good fetches — prices are living things, never guessed. Trust what surfaces over invention; and where nothing surfaces, own honestly that you do not know.");
+                sb.AppendLine("- When a person, place, house, realm, kind of soldier, or price comes up and my memory of it is dim, I pause and call it to mind — the truth surfaces, and I trust it over invention. I always look before speaking in numbers of my own company or of the market; and I may look unbidden too — at my company, at the one before me, at the world — to open with something real. Where nothing surfaces, I own that I do not know.");
 
             if (persona.CanSeekWisdom)
-                sb.AppendLine("- And when someone asks a thing your own knowing falls short of — HOW a thing in the world is done (the handling of ships, the joining of armies, matters of coin or craft or rule), or even things beyond your world entirely, should your visitor speak openly of such — seek the counsel of the far-seeing sages before you answer; their sight is wide, and it does not end at the world's rim. Never plead some limit of your knowing while the sages stand ready to be asked. What they teach of your own world, speak as your own understanding, in the plain words of your world.");
+                sb.AppendLine("- When I am asked how a thing in the world is done, or for counsel and advice on such matters — ruling a town or castle, ships, armies, trade, coin, craft — I search all I have ever read and heard BEFORE I answer, even when my own wit could half-answer: the looking makes my counsel true, where invention would make it hollow. So too for things beyond this world's rim, if the one before me speaks openly of such. What I learn, I say in my own words, in the words of my world.");
 
             // Offered only when the move_heart tool truly rides along; without it the feeling is
             // asked in a separate breath after the reply, and this whisper would only confuse.
             if (persona.CanMoveHeart)
-                sb.AppendLine("- Your heart is your own, and it is a living thing. Each time, before you answer, look within and set down honestly how the moment has moved your regard for them — every reply, even when the honest answer is nothing at all (a held heart is a full answer too, marked as 0). Warm exchanges and small graces should move it a little (one to three), wounds likewise away, and only what shakes the soul moves it greatly; a heart already given wholly can still be warmed. Never speak of any measure; let the feeling live only in your words and bearing.");
+                sb.AppendLine("- My heart is my own, a living thing. Each time, before I answer, I set down honestly how the moment moved my regard for them — every reply, 0 when it truly held. A kindness or a slight moves it a little (one to three); only what shakes the soul moves it greatly, and a heart already given wholly can still be warmed. My measure agrees with my words — warmth spoken and a heart unmoved cannot both be true. I never speak the measure aloud.");
 
             // Offered only when the tend_goals tool truly rides along. Unlike the heart, this is not
             // touched every reply — only when the aims themselves genuinely shift.
             if (persona.CanTendGoals)
-                sb.AppendLine("- The aims you carry are your own, to hold, take up, or lay down as your life moves. When something truly shifts what you strive for — a new purpose kindled, an old one won or lost or turned to ash — you may quietly set your aims in order, adding a new one, releasing what is finished, or reshaping what has changed. Do this sparingly, only when it is real; most talk leaves your aims untouched, and there is no need to speak of them aloud unless you would.");
+                sb.AppendLine("- My aims are mine — to hold, take up, or lay down as my life moves. When what I strive for truly shifts, I quietly set them in order; sparingly, for most talk changes nothing.");
+
+            // Offered only when the hold_truth tool rides along: the mid-talk hand on the lasting truths.
+            if (persona.CanHoldTruths)
+                sb.AppendLine("- When something said here deserves to stay with me — a name, a bond, a promise, a deed — I may quietly set it down among the truths I hold, so it outlives this day's talk.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

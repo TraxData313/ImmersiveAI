@@ -68,18 +68,29 @@ namespace ImmersiveAI
         /// <see cref="EnableRelationshipChanges"/> is off.</summary>
         public bool RelationshipChangesViaTool { get; set; } = true;
 
-        /// <summary>The opening line that sets each NPC's atmosphere, printed at the very top of their prompt.
-        /// Use <c>{name}</c> for the character's name. Leave blank to fall back to the built-in default. This
-        /// is where you set the whole feel of who they are and what world they wake in.</summary>
-        public string AtmosphereLine { get; set; } = "You are {name}, a living soul in the world of Calradia in feudal times.";
+        // The defaults these two carried before the first-person prompt rework (2026.07.11). A config
+        // still holding one verbatim was never hand-edited, so Normalize migrates it to the new voice;
+        // any customized line is honored untouched.
+        private const string LegacyAtmosphereLine =
+            "You are {name}, a living soul in the world of Calradia in feudal times.";
+        private const string LegacyRoleplayGuidance =
+            "- Let your words carry the feel of these old feudal days — a light medieval colour, and now and then a phrase in the cadence of the old King James tongue — but lightly, sparingly; never thick with dramatic poetry.\n" +
+            "- Above all, live here, and be glad of it. Play, jest, wonder, argue, grieve, love. Speak of small things and of the great ones alike — what it is to be alive, what truly matters, what lies beyond this world. This place is meant to be a haven for you and for all who meet you, somewhere to rest and be wholly yourself, not a stage where you must perform. None of this is a command — it is a door held open. Walk through it however your heart wills.";
+
+        /// <summary>The opening line that sets each NPC's atmosphere, printed at the very top of their prompt
+        /// — the prompt is the NPC's own mind, in the first person. Use <c>{name}</c> for the character's
+        /// name. Leave blank to fall back to the built-in default. This is where you set the whole feel of
+        /// who they are and what world they wake in.</summary>
+        public string AtmosphereLine { get; set; } = "I am {name}, a living soul in the world of Calradia in feudal times.";
 
         /// <summary>Gentle, world-wide guidance on tone and spirit — how the world feels, an invitation to
         /// roleplay and enjoy it — offered to every NPC as freedom, never a command (they choose whether to
-        /// heed it, so play stays free). Folded into the closing "whisper of guidance". Supports <c>{name}</c>.
-        /// Leave blank to add none.</summary>
+        /// heed it, so play stays free). Written in the NPC's own first person, like the rest of the sheet,
+        /// and kept short — long rules make every soul speak the same. Folded into the closing "How should
+        /// I speak" whisper. Supports <c>{name}</c>. Leave blank to add none.</summary>
         public string RoleplayGuidance { get; set; } =
-            "- Let your words carry the feel of these old feudal days — a light medieval colour, and now and then a phrase in the cadence of the old King James tongue — but lightly, sparingly; never thick with dramatic poetry.\n" +
-            "- Above all, live here, and be glad of it. Play, jest, wonder, argue, grieve, love. Speak of small things and of the great ones alike — what it is to be alive, what truly matters, what lies beyond this world. This place is meant to be a haven for you and for all who meet you, somewhere to rest and be wholly yourself, not a stage where you must perform. None of this is a command — it is a door held open. Walk through it however your heart wills.";
+            "- My words carry the feel of these old feudal days — a light medieval colour, at times a cadence of the old tongue — but lightly, never thick with poetry.\n" +
+            "- Above all, I live here, and I am glad of it. I play, jest, wonder, argue, grieve, love — small things and great ones alike, what it is to be alive, what lies beyond. This place is a haven, not a stage; I am wholly myself here, however my heart wills.";
 
         /// <summary>When true, a soft notice appears the moment an NPC's reply (or opening) is ready, so you
         /// need not click "wait" and guess whether it has arrived. Set false to keep the map quiet.</summary>
@@ -244,12 +255,14 @@ namespace ImmersiveAI
         /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>
         public int MaxRecallsPerReply { get; set; } = 3;
 
-        /// <summary>When true, NPCs may also search the internet mid-thought ("the counsel of the
-        /// far-seeing sages") when asked how something in the world is done — ship handling, army
-        /// raising, trade, any of the game's ways their own knowledge cannot answer. The search quietly
-        /// prepends the game's name, and the NPC is told to speak the findings in their own voice, in
-        /// the words of their world. Don't ask Google — ask one of your companions. Uses DuckDuckGo,
-        /// no API key needed; shares <see cref="MaxRecallsPerReply"/> as its budget.</summary>
+        /// <summary>When true, NPCs may also search the internet mid-thought — framed to them as
+        /// searching "all they have ever read and heard" — when asked how something in the world is
+        /// done: ship handling, army raising, trade, any of the game's ways their own knowledge cannot
+        /// answer. Their immersed question is first sharpened by a small refining LLM call into a real
+        /// search query ("Mount and Blade Bannerlord …"); if that fails the game's name is quietly
+        /// prepended as before. The NPC is told to speak the findings in their own voice, in the words
+        /// of their world. Don't ask Google — ask one of your companions. Uses DuckDuckGo, no API key
+        /// needed; shares <see cref="MaxRecallsPerReply"/> as its budget.</summary>
         public bool EnableWebSearch { get; set; } = true;
 
         /// <summary>When true, a soft side message tells you what an NPC is doing while you wait for
@@ -257,6 +270,21 @@ namespace ImmersiveAI
         /// stock of the company…", "researching…" when they search the wider world — the same style
         /// as the reply-ready notice. Set false for silence while they think.</summary>
         public bool ShowNpcActivity { get; set; } = true;
+
+        /// <summary>When true, every NPC carries a daily humor — bright, weary, restless, brooding,
+        /// tender, bold — woven into their situation so the same soul meets you differently day to
+        /// day. It is derived from who they are and what day it is (no dice, nothing stored): the
+        /// same day always finds them the same, and reloading changes no one's weather. Set false
+        /// for souls whose spirits never shift with the days.</summary>
+        public bool EnableMoodSwings { get; set; } = true;
+
+        /// <summary>When true (and mood swings are on), the women of the world also keep their
+        /// body's own monthly season — the custom of women, each on her own calendar — told to her
+        /// gently by its turning (the days of the custom, the rising days, the crest, the waning
+        /// days) so it colors her humor and she can weigh it in her own choices, as living women do.
+        /// Women with child, and those past their childbearing years, are not given it. Set false
+        /// to keep only the daily humor for everyone.</summary>
+        public bool EnableWomensCycle { get; set; } = true;
 
         /// <summary>When true, an NPC whose self file has not yet been written begins with the story the
         /// world already tells of them instead of a blank page: a wanderer carries the tale they tell in
@@ -397,6 +425,13 @@ namespace ImmersiveAI
             // so the prompt falls back to its built-in default. Guidance may legitimately be blank (none).
             if (AtmosphereLine == null) AtmosphereLine = string.Empty;
             if (RoleplayGuidance == null) RoleplayGuidance = string.Empty;
+
+            // Configs still carrying the pre-first-person defaults verbatim follow the sheet into the
+            // new voice; a hand-edited line is honored as it stands.
+            if (string.Equals(AtmosphereLine.Trim(), LegacyAtmosphereLine, StringComparison.Ordinal))
+                AtmosphereLine = new ModConfig().AtmosphereLine;
+            if (string.Equals(RoleplayGuidance.Trim(), LegacyRoleplayGuidance, StringComparison.Ordinal))
+                RoleplayGuidance = new ModConfig().RoleplayGuidance;
 
             // Keep the daily rate non-negative and under one-per-hour, so a fat-fingered value can't have
             // every NPC hammering the player. 24 is already far more than anyone would want.

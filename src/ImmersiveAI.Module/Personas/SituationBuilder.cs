@@ -8,9 +8,9 @@ namespace ImmersiveAI.Personas
 {
     /// <summary>
     /// Builds the "current situation" — the environmental facts about a conversation the moment
-    /// it begins: when and where it happens, who the speaker is, and who they are speaking with.
-    /// It is written as a gentle voice speaking into the NPC's own mind (second person, no clinical
-    /// headers), the same block that gets written to <c>current_situation_info.txt</c> and folded
+    /// it begins: when and where it happens, how the speaker presently stands, and who they are
+    /// speaking with. It is written as the NPC's OWN first-person awareness (no clinical headers,
+    /// no narrator), the same block that gets written to <c>current_situation_info.txt</c> and folded
     /// into the LLM prompt, so what the player inspects on disk is exactly what the NPC "sees".
     ///
     /// It is built with respect to the <paramref name="partner"/> the speaker is addressing
@@ -109,23 +109,42 @@ namespace ImmersiveAI.Personas
 
         /// <summary>Same situation block, but with <paramref name="apart"/> true the partner is NOT
         /// here: the scene opens on the speaker alone and the partner is described as someone far
-        /// away and on their mind — the framing a letter is written or read in.</summary>
+        /// away and on their mind — the framing a letter is written or read in.
+        ///
+        /// The whole block is the speaker's OWN first-person awareness now (2026.07.11). The setting
+        /// and THE MOMENT ("And now X comes to me…") are joined with
+        /// <see cref="ImmersiveAI.Core.Prompts.PromptBuilder.MeetingSeparator"/>: the prompt splits
+        /// there to slot deep memory of the person right before their arrival; the situation FILE
+        /// writer replaces it with a soft divider.</summary>
         public static string Build(Hero speaker, Hero partner, ModConfig? config, bool apart)
         {
             var sb = new StringBuilder();
             var name = Name(speaker);
 
-            // The narration moves like a mind waking toward the moment: the setting, then who you are,
-            // then what has lately stirred the world — and only at the end the person themselves, so
-            // "they come to you now" is the last thing held before the conversation begins.
-            sb.AppendLine($"This moment finds you, {name}. It is {TimeOfDay()} — {Timestamp()} — and you are {PlaceDescription(speaker)}.");
+            // The narration moves like a mind waking toward the moment: the setting, then how I stand
+            // in it, then what has lately stirred the world — and only at the end (past the separator,
+            // with memory between) the person themselves.
+            sb.AppendLine($"This moment finds me, {name}. It is {TimeOfDay()} — {Timestamp()} — and I am {PlaceDescription(speaker)}.");
 
-            // Who they are, gently recalled to them.
+            // How they presently stand: charge, condition, company, war — identity itself (culture,
+            // station, kin) lives up top with the persona and the family, never repeated here.
             var self = DescribeSelf(speaker);
             if (self.Length > 0)
             {
                 sb.AppendLine();
                 sb.AppendLine(self);
+            }
+
+            // The passing weather of the heart: the day's humor and, for the women, the body's own
+            // season — part of who they are this day, so it follows the self (see MoodTides).
+            if (config == null || config.EnableMoodSwings)
+            {
+                var mood = BuildMood(speaker, config);
+                if (mood.Length > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine(mood);
+                }
             }
 
             // The trouble they themselves carry — the issue laid on them and any quest they gave —
@@ -150,79 +169,68 @@ namespace ImmersiveAI.Personas
                 }
             }
 
-            // And now, the person: who stands before them (or writes from afar), and how their
-            // heart leans toward that one — the closing breath of the scene.
-            if (partner != null)
+            // And past the separator, the person: who stands before me (or writes from afar), named
+            // with what they are to me — my husband, my daughter, my liege — and how my heart leans.
+            var meeting = BuildMeeting(speaker, partner, apart);
+            if (meeting.Length > 0)
             {
                 sb.AppendLine();
-                if (apart)
-                    sb.AppendLine($"Your thoughts turn to {Name(partner)}, who is not here — they are far from you now, and the road between you is long.");
-                else if (partner == Hero.MainHero)
-                    sb.AppendLine($"And now {Name(partner)} comes to you.");
-                else
-                    sb.AppendLine($"And now {Name(partner)} comes to speak with you.");
-
-                var them = DescribeOther(speaker, partner);
-                if (them.Length > 0)
-                    sb.AppendLine(them);
+                sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.MeetingSeparator);
+                sb.AppendLine(meeting);
             }
 
             return sb.ToString().TrimEnd();
         }
 
-        // A flowing second-person recollection of who the speaker is: birth, calling, house, and kin.
+        // The moment itself: the arrival (or the far-away thought), the person, and where my heart
+        // stands — the closing breath of the sheet, placed right after my memory of them.
+        private static string BuildMeeting(Hero speaker, Hero partner, bool apart)
+        {
+            if (partner == null) return string.Empty;
+
+            var sb = new StringBuilder();
+            var them = Name(partner);
+            var kin = FamilyBuilder.KinshipTo(speaker, partner);
+            var appos = kin == null ? string.Empty : $", {kin},";
+
+            if (apart)
+                sb.AppendLine($"My thoughts turn to {them}{appos} who is far from me now — the road between us is long.");
+            else if (partner == Hero.MainHero)
+                sb.AppendLine($"And now {them}{appos} comes to me.");
+            else
+                sb.AppendLine($"And now {them}{appos} comes to speak with me.");
+
+            var themDesc = DescribeOther(speaker, partner);
+            if (themDesc.Length > 0)
+                sb.AppendLine(themDesc);
+
+            return sb.ToString().TrimEnd();
+        }
+
+        // How the speaker presently STANDS — charge, condition, company, war. Identity (culture,
+        // station, gender, years) moved up to the persona head, and kin to the family block
+        // (2026.07.11), so the sheet never tells them the same thing twice.
         private static string DescribeSelf(Hero h)
         {
             if (h == null) return string.Empty;
             var sentences = new System.Collections.Generic.List<string>();
-
-            Facts(h, out string gender, out string age, out string culture, out string occ,
-                  out string clan, out string kingdom);
-
-            // Identity: "You are a Battanian noble, a woman of some 34 years."
-            var head = "You are";
-            if (culture != null && occ != null) head += $" {A(culture)} {culture} {occ}";
-            else if (culture != null) head += $" of {culture} stock";
-            else if (occ != null) head += $" {A(occ)} {occ}";
-            head += GenderAgeClause(gender, age, culture == null && occ == null);
-            sentences.Add(head.TrimEnd() + ".");
-
-            // House and allegiance.
-            if (clan != null && kingdom != null) sentences.Add($"You belong to clan {clan}, sworn to {kingdom}.");
-            else if (clan != null) sentences.Add($"You belong to clan {clan}.");
-            else if (kingdom != null) sentences.Add($"You are sworn to {kingdom}.");
 
             // Charge: a governor knows the place given into their keeping.
             Try(() =>
             {
                 var kept = h.GovernorOf?.Settlement?.Name?.ToString();
                 if (!string.IsNullOrWhiteSpace(kept))
-                    sentences.Add($"The keeping of {kept} — its walls, its garrison, its people — has been given into your hands: you are its governor.");
+                    sentences.Add($"The keeping of {kept} — its walls, its garrison, its people — is given into my hands: I am its governor.");
             });
 
-            // Kin.
-            Try(() =>
-            {
-                var spouse = h.Spouse?.Name?.ToString();
-                if (!string.IsNullOrWhiteSpace(spouse)) sentences.Add($"{spouse} is wed to you.");
-            });
-            Try(() =>
-            {
-                var kids = h.Children?.Where(c => c != null && c.IsAlive)
-                                      .Select(c => c.Name?.ToString())
-                                      .Where(n => !string.IsNullOrWhiteSpace(n))
-                                      .ToList();
-                if (kids != null && kids.Count == 1) sentences.Add($"Your child is {kids[0]}.");
-                else if (kids != null && kids.Count > 1) sentences.Add($"Your children are {JoinAnd(kids)}.");
-            });
-
-            Try(() => { if (h.IsFemale && h.IsPregnant) sentences.Add("You carry a child within you."); });
+            Try(() => { if (h.IsFemale && h.IsPregnant) sentences.Add("I carry a child within me."); });
 
             // The company they keep upon the map — named even inside walls, so a captain berthed in
             // a town still holds his command in mind (details live in the recall of one's company).
+            // A named duty in another's warband (scout, surgeon…) is their place in it — their role.
             Try(() =>
             {
-                if (h.IsPrisoner) { sentences.Add("You are held captive, a prisoner."); return; }
+                if (h.IsPrisoner) { sentences.Add("I am held captive, a prisoner."); return; }
                 var party = h.PartyBelongedTo;
                 if (party == null) return;
                 var leader = party.LeaderHero;
@@ -230,14 +238,18 @@ namespace ImmersiveAI.Personas
                 Try(() => men = party.MemberRoster?.TotalManCount ?? 0);
                 if (leader == h)
                     sentences.Add(men > 0
-                        ? $"A warband of some {men} souls rides under your command, looking to you for bread and orders."
-                        : "A warband rides under your command.");
+                        ? $"A warband of some {men} souls rides under my command, looking to me for bread and orders."
+                        : "A warband rides under my command.");
                 else if (leader != null)
+                {
+                    var duty = PartyDuty(h, party);
+                    var dutyClause = duty == null ? "" : $", and I serve as its {duty}";
                     sentences.Add(men > 0
-                        ? $"You ride with {leader.Name}'s warband, some {men} strong."
-                        : $"You ride with {leader.Name}'s warband.");
+                        ? $"I ride with {leader.Name}'s warband, some {men} strong{dutyClause}."
+                        : $"I ride with {leader.Name}'s warband{dutyClause}.");
+                }
                 else if (h.CurrentSettlement == null)
-                    sentences.Add("You are upon the road.");
+                    sentences.Add("I am upon the road.");
             });
 
             // A gathered army, if their company marches within one.
@@ -247,13 +259,13 @@ namespace ImmersiveAI.Personas
                 if (army == null) return;
                 var armyName = army.Name?.ToString() ?? "a gathered army";
                 if (army.LeaderParty == h.PartyBelongedTo)
-                    sentences.Add($"More than that: the banners of {armyName} march at your word.");
+                    sentences.Add($"More than that: the banners of {armyName} march at my word.");
                 else
                 {
                     var armyLeader = army.LeaderParty?.LeaderHero?.Name?.ToString();
                     sentences.Add(armyLeader != null
-                        ? $"Your company marches within {armyName}, under {armyLeader}."
-                        : $"Your company marches within {armyName}.");
+                        ? $"My company marches within {armyName}, under {armyLeader}."
+                        : $"My company marches within {armyName}.");
                 }
             });
 
@@ -269,13 +281,52 @@ namespace ImmersiveAI.Personas
                 var party = h.PartyBelongedTo;
                 if (party == null) return;
                 var besieged = party.BesiegedSettlement;
-                if (besieged != null) { sentences.Add($"Your company lies encamped in siege about {besieged.Name}."); return; }
+                if (besieged != null) { sentences.Add($"My company lies encamped in siege about {besieged.Name}."); return; }
                 if (party.MapEvent != null && party.MapEvent.IsRaid)
-                    sentences.Add("Your company has its hands in a raid even now.");
+                    sentences.Add("My company has its hands in a raid even now.");
             });
 
             return string.Join(" ", sentences);
         }
+
+        // The named duty this hero holds in the party they ride with — scout, surgeon, engineer,
+        // quartermaster — or null when they hold none. Best-effort against the live roles.
+        private static string PartyDuty(Hero h, TaleWorlds.CampaignSystem.Party.MobileParty party)
+        {
+            try
+            {
+                if (party.EffectiveScout == h) return "scout";
+                if (party.EffectiveSurgeon == h) return "surgeon";
+                if (party.EffectiveEngineer == h) return "engineer";
+                if (party.EffectiveQuartermaster == h) return "quartermaster";
+            }
+            catch { /* roles unavailable */ }
+            return null;
+        }
+
+        // The mood paragraph: deterministic in the soul and the campaign day (see MoodTides in Core),
+        // so a reload rerolls no one's weather. The monthly season goes to women in their childbearing
+        // years; a woman carrying a child gets her own carrying-season instead — the body is never
+        // simply silent for her.
+        private static string BuildMood(Hero h, ModConfig config)
+        {
+            try
+            {
+                var id = h?.StringId;
+                if (string.IsNullOrWhiteSpace(id)) return string.Empty;
+
+                bool seasonAllowed = (config == null || config.EnableWomensCycle) && h.IsFemale;
+                bool pregnant = Safe(() => h.IsPregnant);
+                bool withChild = seasonAllowed && pregnant;
+                bool withCycle = seasonAllowed && !pregnant && h.Age >= 15 && h.Age < 50;
+
+                int campaignDay = (int)CampaignTime.Now.ToDays;
+                return ImmersiveAI.Core.Prompts.MoodTides.BuildNarration(id, campaignDay, withCycle, withChild);
+            }
+            catch { return string.Empty; }
+        }
+
+        private static bool Safe(Func<bool> f) { try { return f(); } catch { return false; } }
 
         // A flowing account of the one who has come to speak, and how the speaker's heart leans toward them.
         private static string DescribeOther(Hero speaker, Hero partner)
@@ -290,7 +341,7 @@ namespace ImmersiveAI.Personas
             if (culture != null && occ != null) head += $" {A(culture)} {culture} {occ}";
             else if (culture != null) head += $" of {culture} stock";
             else if (occ != null) head += $" {A(occ)} {occ}";
-            else head = $"{them} stands before you";
+            else head = $"{them} stands before me";
             head += GenderAgeClause(gender, age, false);
             sentences.Add(head.TrimEnd() + ".");
 
@@ -303,13 +354,13 @@ namespace ImmersiveAI.Personas
             {
                 float renown = partner.Clan?.Renown ?? 0f;
                 if (renown >= 300f) sentences.Add("Their name is carried far across Calradia — word of their deeds travels ahead of them.");
-                else if (renown >= 150f) sentences.Add("You have heard their name spoken before now; word of their deeds has begun to travel.");
+                else if (renown >= 150f) sentences.Add("I have heard their name spoken before now; word of their deeds has begun to travel.");
             });
 
             Try(() =>
             {
                 int relation = speaker.GetRelation(partner);
-                sentences.Add($"Where your heart stands toward them: {PersonaBuilder.DescribeRelation(relation)} ({relation}).");
+                sentences.Add($"Where my heart stands toward them: {PersonaBuilder.DescribeRelation(relation)} ({relation}).");
             });
 
             Try(() =>
@@ -317,10 +368,10 @@ namespace ImmersiveAI.Personas
                 var f1 = speaker.MapFaction;
                 var f2 = partner.MapFaction;
                 if (f1 == null || f2 == null) return;
-                if (f1 == f2) { sentences.Add("You stand beneath the same banner."); return; }
+                if (f1 == f2) { sentences.Add("We stand beneath the same banner."); return; }
                 sentences.Add(AreAtWar(f1, f2)
-                    ? $"Your peoples — {f1.Name} and {f2.Name} — are at war."
-                    : $"Your peoples — {f1.Name} and {f2.Name} — are at peace.");
+                    ? $"Our peoples — {f1.Name} and {f2.Name} — are at war."
+                    : $"Our peoples — {f1.Name} and {f2.Name} — are at peace.");
             });
 
             return string.Join(" ", sentences);

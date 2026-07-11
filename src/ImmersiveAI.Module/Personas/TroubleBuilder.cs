@@ -10,9 +10,9 @@ namespace ImmersiveAI.Personas
     /// Narrates the trouble the speaker themselves carries — the issue the game has laid on them
     /// (the very matter a player is sent to resolve) and any quest they have already given — so a
     /// villager asked "what ails you?" truly knows his own problem instead of inventing one.
-    /// Rendered in the same gentle second person as the rest of the situation, using the issue's
+    /// Rendered in the speaker's own first person like the rest of the situation, using the issue's
     /// own words (the brief and the asked-for remedy are written first person by the giver, so
-    /// they quote naturally as "this is how you tell it").
+    /// they quote naturally as "this is how I tell it").
     ///
     /// Everything is best-effort: a missing or throwing game datum costs only its own sentence,
     /// and a hero with no trouble simply contributes nothing.
@@ -59,34 +59,34 @@ namespace ImmersiveAI.Personas
             Try(() => ask = TidingsFormatter.StripMarkup(issue.IssueQuestSolutionExplanationByIssueGiver?.ToString()));
 
             sentences.Add(string.IsNullOrWhiteSpace(title)
-                ? "A trouble weighs on you in these days."
-                : $"A trouble weighs on you in these days — the matter of “{title.TrimEnd('.')}”.");
+                ? "A trouble weighs on me in these days."
+                : $"A trouble weighs on me in these days — the matter of “{title.TrimEnd('.')}”.");
 
             if (!string.IsNullOrWhiteSpace(brief))
-                sentences.Add($"When any ask after it, this is how you tell it: “{brief}”");
+                sentences.Add($"When any ask after it, this is how I tell it: “{brief}”");
 
             var player = Hero.MainHero?.Name?.ToString() ?? "someone";
 
             if (issue.IsSolvingWithQuest)
             {
-                sentences.Add($"{player} has taken this burden up at your asking.");
+                sentences.Add($"{player} has taken this burden up at my asking.");
                 if (!string.IsNullOrWhiteSpace(ask))
-                    sentences.Add($"What you asked of them, in your own words: “{ask}”");
+                    sentences.Add($"What I asked of them, in my own words: “{ask}”");
                 Try(() => DescribeQuestProgress(issue.IssueQuest, sentences));
             }
             else if (issue.IsSolvingWithAlternative)
             {
-                sentences.Add($"{player} has sent trusted people with a company of men to see it done for you; you await word of how they fare.");
+                sentences.Add($"{player} has sent trusted people with a company of men to see it done for me; I await word of how they fare.");
             }
             else if (issue.IsSolvingWithLordSolution)
             {
-                sentences.Add("The matter has been laid in a lord's hands to resolve, and you await their justice.");
+                sentences.Add("The matter has been laid in a lord's hands to resolve, and I await their justice.");
             }
             else
             {
-                sentences.Add("No one has yet taken this burden from you.");
+                sentences.Add("No one has yet taken this burden from me.");
                 if (!string.IsNullOrWhiteSpace(ask))
-                    sentences.Add($"Were one willing and able to see it done, this is what you would ask of them: “{ask}”");
+                    sentences.Add($"Were one willing and able to see it done, this is what I would ask of them: “{ask}”");
             }
         }
 
@@ -133,7 +133,7 @@ namespace ImmersiveAI.Personas
                 Try(() => title = TidingsFormatter.StripMarkup(quest.Title?.ToString()));
                 if (string.IsNullOrWhiteSpace(title)) continue;
 
-                sentences.Add($"And there is the matter of “{title.TrimEnd('.')}”, which {player} took up at your asking.");
+                sentences.Add($"And there is the matter of “{title.TrimEnd('.')}”, which {player} took up at my asking.");
                 var latest = LatestJournalLine(quest);
                 if (latest.Length > 0)
                     sentences.Add($"The last word of it: {latest}");
