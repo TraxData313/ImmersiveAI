@@ -1,29 +1,4 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] BUG - can move camera angle
-    When I right click and hold and move the mouse to change the camera angle it moves a few inches then resets and it cant be changed. When I remove the ImmersionAI mod it works. I think this might be since we added the the Socialness slider of after we changed it. With the gamepad it works. Before I saw that bug from time to time, even before we started on the ImmersiveAI mod, but when I hit ESC and ESC again to see the ESC menu and close it it fixed itself.
-- [ ] I can read the text of the letters that have not yet arrived
-- [ ] Make sure NPCs on the move can send letters too so that I can receive the casual update from a party or a caravan of mine, because they dont sit in towns very much
-- [ ] More roles immersion
-    - [ ] Party roles immersion
-        maybe I should see on the chat widget their party roles, and they should also make sure they know them and speak to them about their duties:
-            - scout i will ask stuff like can we move faster, do you see any enemies in the distance, do you see that army there, can we escape them - they should gather all the info they need from the game, make a case to think about (search the web for the case)
-            - quatermaster should know the army composition and how strong it is, can we face the army there or the castle in the distance, what troops do they have, compare our best to their, come up with strategies
-            - surgen, idk, you can think of stuff, but maybe id speak to them to know how fast I will heal, which skills should I chose for him if we want that and that
-            ...
-        Just make a rich expansion for emersion on those roles, thinking of what they do, so what the player could ask them, giving them the tools they will need to answer, and taking account how good they are in scouting, fighting etc maybe. We want to expand here nicely.
-    - [ ] wifes immersion
-        they are among the first we meet in the game and we want a relation with them, they must know how much kids we have, how old they are, what they are doing, they must know us in an intimate way. We would turn to them about intimacy and maybe grand strategy even
-    - [ ] artisans immersion, maybe id ask them about how to make caravans or workshops and how they work etc. They maybe must have something like some basic info what they do and how they can help and then ask, understand, search, answer
-    - [ ] caravan leaders immersion
-    - [ ] Party immersion
-        they should maybe want to send reports with letters, I will ask them for reports, what they did and how much battles they had
-        I will want to ask them to go near a place and defend or ask them to attack (maybe this will go into later revisit as actions, but at lease the first wave of immersion I want them to know what they do, how they can help, to undersand, to search etc, but make their roles matter, make their skills known, like "good scount, bad steward" etc)
-    - [ ] bartenders immersion, like knowing people in free speach and what the roles do (what scout helps me with, not hard code big explanations, but know basic stuff and be smart enought that they should know that and from there to understand what they are asked for and search the answer)
-    - [ ] Ransom brockers
-    - [ ] Wanderers and their stories, ask them freely about their equipment, skills, what theyd be good at (scout, medic etc), how if he is a good scout a good scout can help me, if he is good at scouting maybe he will have little more hardcoded knowledge, but then understand and search for what he misses hardcoded
-    - [ ] Nobles/renown imersion
-        Speaking with high lords who dont know you tand if they are with bad traits they would normally dismiss you ask you what you want, not chat with you about the meaning of the universe a few hours if you are clan level 0, this would break the emersion, just to make sure we wont have that here like in other mods. I dont want to hard code that into them as well, but to let them see enough information, like eg he is king you are unknown, etc. Maybe the higher he is at rank, and lower in bad traits, and the lower your renown is it would be harder for him to get interested in you, and maybe have less chance to reach back to you (that one I think is ok to kinda hard code, and also we ask them if they want, so they, if they have not been impressed or anything would normaly reject). But dont overdo it, maybe some touches, the other way around, them becoming not interested in interactions would be maybe worse. Idk, just random ramble, I think you will be able to do it good. But I do think we should consider that, many players I heard talk about this in the AI mods. Yeash the more I think about it, if there is 2 or more difference in clan tier we should really tell them, like "I am the king and leader of... and to me comes an unknown person, in rags (maybe mean armour tier) and holding a rusty 1st weapon and rusty gear (ave of the 4 weapons), carries no banner/small banner, epic banner (depending on the banner equiped), if he is low tier "my X tells me he is a small band leader"... Something like this, that doesnt make a list of ties, weapons, but smashes them down to a suitable sentence that gives the NPC all the info they would see to decide. So if he is king and I start asking him to search stuff for me and im from different culture even, he wont go searching stuff for me like a pupie.
-    - [ ] we need to think about the big picture here and then get them done at once or have a good overall plan
 - [ ] info sections
     maybe next to the O chat and U letter windows add a info, where there are, explanations, instructions and examples
 - [ ] discuss with Claude

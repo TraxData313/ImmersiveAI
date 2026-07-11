@@ -70,6 +70,34 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_FoldsInTheCrafts_AndOffersTheFieldWhisperOnlyWhenItRides()
+    {
+        var persona = Persona();
+        persona.Crafts = "What my hands and wits are honestly good at: masterly in Medicine.";
+        persona.CanSurveyField = true;
+        var on = new PromptBuilder().Build(persona, new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.Contains("masterly in Medicine", on);
+        Assert.Contains("cast my eyes over the country", on);
+
+        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.DoesNotContain("cast my eyes over the country", off);
+    }
+
+    [Fact]
+    public void ComposeLetterLine_InService_StaysARecognizedLetterBeat()
+    {
+        // The field-report invitation is appended AFTER the marker fragment, so both variants must
+        // keep being recognized as compose beats (recorded memories depend on the prefix forever).
+        var plain = PromptBuilder.ComposeLetterLine("Vulgrim");
+        var report = PromptBuilder.ComposeLetterLine("Vulgrim", inService: true);
+
+        Assert.True(PromptBuilder.IsComposeLetterBeat(plain));
+        Assert.True(PromptBuilder.IsComposeLetterBeat(report));
+        Assert.Contains("as a captain reports home", report);
+        Assert.DoesNotContain("as a captain reports home", plain);
+    }
+
+    [Fact]
     public void BuildAngelPrompt_FramesTheAngelLineInTheConfiguredVoice()
     {
         var memory = new NpcMemory();

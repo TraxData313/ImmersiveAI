@@ -50,18 +50,34 @@ namespace ImmersiveAI.Personas
                     : $"I was wed to {NameOf(spouse)}, now passed.");
             });
 
-            // Living children, with their ages so the years show.
+            // Living children, with their ages so the years show — named WITH their other parent
+            // ("my children with Vulgrim…"), so a wife knows exactly which children are theirs
+            // together, and further wives' children stay rightly attributed (polygamy mods).
             Try(() =>
             {
                 var kids = npc.Children?
                     .Where(c => c != null && c.IsAlive)
-                    .Select(ChildClause)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
                     .ToList();
                 if (kids == null || kids.Count == 0) return;
-                lines.Add(kids.Count == 1
-                    ? $"My child is {kids[0]}."
-                    : $"My children are {JoinAnd(kids)}.");
+
+                var groups = kids
+                    .GroupBy(c => OtherParentName(npc, c) ?? string.Empty)
+                    .Select(g =>
+                    {
+                        var clauses = g.Select(ChildClause).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                        if (clauses.Count == 0) return null;
+                        var body = JoinAnd(clauses);
+                        return g.Key.Length == 0 ? body : $"with {g.Key}: {body}";
+                    })
+                    .Where(s => s != null)
+                    .ToList();
+                if (groups.Count == 0) return;
+
+                bool named = groups.Any(g => g.Contains(":"));
+                if (kids.Count == 1)
+                    lines.Add(named ? $"My child, {groups[0]}." : $"My child is {groups[0]}.");
+                else
+                    lines.Add(named ? $"My children — {string.Join("; ", groups)}." : $"My children are {groups[0]}.");
             });
 
             // Living siblings, by name.
@@ -214,7 +230,23 @@ namespace ImmersiveAI.Personas
             return age > 0 ? $"{name}, {gender} of some {age} years" : $"{name}, {gender}";
         }
 
-        // "Yorwen (a girl of 8)" — a child with their years; the newest ones as babes, not "of 0".
+        // The child's OTHER parent, as the speaker would name them — for the "with Vulgrim" grouping.
+        // Null when the other parent is unknown (the clause then reads plainly).
+        private static string OtherParentName(Hero speaker, Hero child)
+        {
+            try
+            {
+                var other = child.Father == speaker ? child.Mother : child.Father;
+                if (other == null || other == speaker) return null;
+                var name = other.Name?.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(name)) return null;
+                return other.IsAlive ? name : $"{name} (now passed)";
+            }
+            catch { return null; }
+        }
+
+        // "Yorwen (a girl of 8)" — a child with their years; the newest ones as babes, not "of 0";
+        // the grown ones with where life has taken them, so a mother asked of her son truly knows.
         private static string ChildClause(Hero c)
         {
             var name = NameOf(c);
@@ -222,6 +254,26 @@ namespace ImmersiveAI.Personas
             int age = -1;
             Try(() => age = (int)c.Age);
             if (age == 0) return $"{name} (a babe in arms)";
+            if (age > 0 && age >= 18)
+            {
+                var grown = c.IsFemale ? "a woman grown" : "a man grown";
+                string doing = null;
+                Try(() =>
+                {
+                    var kept = c.GovernorOf?.Settlement?.Name?.ToString();
+                    if (!string.IsNullOrWhiteSpace(kept)) { doing = $"governor of {kept}"; return; }
+                    var party = c.PartyBelongedTo;
+                    if (party != null && party.LeaderHero == c)
+                    { doing = c.IsFemale ? "leading a warband of her own" : "leading a warband of his own"; return; }
+                    if (party != null && party.LeaderHero != null)
+                    { doing = $"riding with {NameOf(party.LeaderHero)}"; return; }
+                    var at = c.CurrentSettlement?.Name?.ToString();
+                    if (!string.IsNullOrWhiteSpace(at)) doing = $"now at {at}";
+                });
+                return doing == null
+                    ? $"{name} ({grown}, of {age})"
+                    : $"{name} ({grown}, of {age}, {doing})";
+            }
             return age > 0 ? $"{name} (a {word} of {age})" : $"{name} (a {word})";
         }
 

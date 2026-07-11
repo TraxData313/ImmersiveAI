@@ -166,11 +166,20 @@ namespace ImmersiveAI.Core.Prompts
             $"Tell me, from your own heart: do you wish, of your own will, to write to {playerName} now? " +
             "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
 
-        /// <summary>The Angel's line inviting the NPC to set the letter itself onto the page.</summary>
-        public static string ComposeLetterLine(string playerName) =>
+        /// <summary>The Angel's line inviting the NPC to set the letter itself onto the page. For one
+        /// in the player's own service (<paramref name="inService"/> — their clan: a party or caravan
+        /// on the road, a governor at their post) the Angel adds the field-report invitation, so the
+        /// letter home may carry word of their charge. The added sentence follows the marker fragment
+        /// (<see cref="IsComposeLetterBeat"/> matches by prefix), so recorded beats stay recognized.</summary>
+        public static string ComposeLetterLine(string playerName, bool inService = false) =>
             $"Then sit, and set your heart to paper. Give me only the letter itself — the words that will " +
             $"stand on the page before {playerName}'s eyes, in your own hand and your own voice. " +
-            "Do not tell me about the letter; write it.";
+            "Do not tell me about the letter; write it." +
+            (inService
+                ? $" And as one who serves their house, if there is aught to tell of your charge — your company " +
+                  "and its state, the road behind you, battles fought or dangers passed — let the letter carry " +
+                  "your account of it, plainly, as a captain reports home."
+                : string.Empty);
 
         /// <summary>The Angel's line placing a received letter into the NPC's hands — the reading is part
         /// of the line, so it enters their memory even if they choose not to answer — and asking whether
@@ -351,6 +360,8 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.RoleDescription.Trim());
             if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
                 sb.AppendLine("My traits are " + LowerFirst(persona.PersonalityDescription.Trim()));
+            if (!string.IsNullOrWhiteSpace(persona.Crafts))
+                sb.AppendLine(persona.Crafts.Trim());
             if (!string.IsNullOrWhiteSpace(persona.SpeechStyle))
                 sb.AppendLine("When I speak, it comes out like this: " + persona.SpeechStyle.Trim());
 
@@ -473,6 +484,11 @@ namespace ImmersiveAI.Core.Prompts
             // Offered only when the hold_truth tool rides along: the mid-talk hand on the lasting truths.
             if (persona.CanHoldTruths)
                 sb.AppendLine("- When something said here deserves to stay with me — a name, a bond, a promise, a deed — I may quietly set it down among the truths I hold, so it outlives this day's talk.");
+
+            // Offered only when the field-craft tools ride along (the NPC stands with a company on
+            // the map): the outward eyes and the scales of battle.
+            if (persona.CanSurveyField)
+                sb.AppendLine("- From where my company stands I may cast my eyes over the country about — who moves near, how strong, how swift — and set any foe upon the scales before a fight is joined. I always look before I speak of pace, pursuit, escape, or the odds of battle; my judgment is only as good as what my eyes have truly seen.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

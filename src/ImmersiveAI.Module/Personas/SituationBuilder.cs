@@ -223,11 +223,142 @@ namespace ImmersiveAI.Personas
             else
                 sb.AppendLine($"And now {them}{appos} comes to speak with me.");
 
+            // Man and wife stand closer than any courtesy: the marriage bed, the children, and the
+            // grand designs of the house are all one conversation between them.
+            bool wedded = Safe(() => speaker.Spouse == partner);
+            if (wedded)
+                sb.AppendLine("Between us there is no ceremony and nothing held back for propriety's sake: " +
+                    "we are wed, and we speak as two who share one bed, one hearth, and one fate — tenderness " +
+                    "and teasing, our children and our household, and the grand designs of our house alike.");
+
             var themDesc = DescribeOther(speaker, partner);
             if (themDesc.Length > 0)
                 sb.AppendLine(themDesc);
 
+            // The beholder's eye: when a great lord is met by someone far beneath their station whom
+            // they barely know, what the eyes see IS the introduction — garb, arms, banner, following,
+            // smashed down to one sentence, so a king receives an unknown as a king would, without a
+            // single hard-coded manner forced on him.
+            if (!apart)
+            {
+                var sight = FirstSightOfStranger(speaker, partner);
+                if (sight.Length > 0) sb.AppendLine(sight);
+            }
+
             return sb.ToString().TrimEnd();
+        }
+
+        // One sentence of what a high lord's eyes take in of an unknown caller. Only spoken when the
+        // station gap is real (two clan tiers or more, or a crowned head one tier above) and the two
+        // are strangers in the heart (standing well under friendship): a known friend of low birth is
+        // met as a friend, and the sizing-up never repeats once a bond exists. (Anton's ask,
+        // 2026.07.12: "he is king, you are unknown" must be SEEN, not hard-coded as rudeness.)
+        private static string FirstSightOfStranger(Hero speaker, Hero partner)
+        {
+            try
+            {
+                if (speaker == null || partner == null || partner != Hero.MainHero) return string.Empty;
+                if (speaker.Clan == null || !speaker.IsLord) return string.Empty;
+
+                int myTier = speaker.Clan.Tier;
+                int theirTier = partner.Clan?.Tier ?? 0;
+                bool crowned = Safe(() => speaker.Clan.Kingdom != null && speaker.Clan.Kingdom.Leader == speaker);
+                int gap = myTier - theirTier;
+                if (!(gap >= 2 || (crowned && gap >= 1))) return string.Empty;
+
+                int relation = 0;
+                Try(() => relation = speaker.GetRelation(partner));
+                if (relation >= 10) return string.Empty; // a bond already outweighs first sight
+
+                var sb = new StringBuilder();
+                sb.Append(crowned
+                    ? "I am a crowned head among my people, and this caller stands far beneath my station. "
+                    : "I stand high among the lords of the land, and this caller stands well beneath my station. ");
+
+                sb.Append($"My eyes take them in as they come: {GarbWords(partner)}, bearing {ArmsWords(partner)}, {BannerWords(partner)}, {FollowingWords()}.");
+
+                float renown = 0f;
+                Try(() => renown = partner.Clan?.Renown ?? 0f);
+                if (renown < 150f) sb.Append(" No word of their deeds has ever reached me.");
+
+                sb.Append(" What welcome such a one merits — a great lord's ear is not owed to every caller — is mine alone to judge, by my own nature.");
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
+        }
+
+        // The war-harness, averaged over what armor they truly wear, smashed to a garb-word.
+        private static string GarbWords(Hero h)
+        {
+            try
+            {
+                var eq = h.BattleEquipment;
+                float sum = 0; int worn = 0;
+                foreach (var slot in new[] { TaleWorlds.Core.EquipmentIndex.Head, TaleWorlds.Core.EquipmentIndex.Body,
+                    TaleWorlds.Core.EquipmentIndex.Leg, TaleWorlds.Core.EquipmentIndex.Gloves, TaleWorlds.Core.EquipmentIndex.Cape })
+                {
+                    var item = eq[slot].Item;
+                    if (item == null) continue;
+                    sum += item.Tierf; worn++;
+                }
+                if (worn == 0) return "unarmored, in common clothes";
+                float avg = sum / worn;
+                if (avg < 1f) return "in rough, patched gear";
+                if (avg < 2.5f) return "in plain traveling harness";
+                if (avg < 4f) return "in serviceable mail";
+                if (avg < 5f) return "in fine harness";
+                return "in splendid armor fit for a great lord";
+            }
+            catch { return "plainly dressed"; }
+        }
+
+        // The best blade among the four weapon slots, as the eye would judge it.
+        private static string ArmsWords(Hero h)
+        {
+            try
+            {
+                var eq = h.BattleEquipment;
+                float best = -1f;
+                foreach (var slot in new[] { TaleWorlds.Core.EquipmentIndex.Weapon0, TaleWorlds.Core.EquipmentIndex.Weapon1,
+                    TaleWorlds.Core.EquipmentIndex.Weapon2, TaleWorlds.Core.EquipmentIndex.Weapon3 })
+                {
+                    var item = eq[slot].Item;
+                    if (item != null && item.Tierf > best) best = item.Tierf;
+                }
+                if (best < 0f) return "no arms at all";
+                if (best < 1f) return "a rusty, cheap blade";
+                if (best < 2.5f) return "plain, well-worn arms";
+                if (best < 4f) return "good steel";
+                return "masterwork arms";
+            }
+            catch { return "arms I cannot judge"; }
+        }
+
+        private static string BannerWords(Hero h)
+        {
+            try
+            {
+                var item = h.BattleEquipment[TaleWorlds.Core.EquipmentIndex.ExtraWeaponSlot].Item;
+                if (item != null && item.IsBannerItem)
+                    return item.Tierf >= 4f ? "a storied banner at their back" : "a banner at their back";
+            }
+            catch { /* no banner read */ }
+            return "no banner at their back";
+        }
+
+        // The following at their heels — the player's own party, sized in a lord's words.
+        private static string FollowingWords()
+        {
+            try
+            {
+                int men = TaleWorlds.CampaignSystem.Party.MobileParty.MainParty?.MemberRoster?.TotalManCount ?? 0;
+                if (men <= 1) return "and they come alone";
+                if (men < 15) return $"with a handful at their back ({men})";
+                if (men < 40) return $"at the head of a small band ({men})";
+                if (men < 100) return $"at the head of a warband ({men})";
+                return $"at the head of a strong warband ({men})";
+            }
+            catch { return "with what following I cannot tell"; }
         }
 
         // How the speaker presently STANDS — charge, condition, company, war. Identity (culture,
@@ -259,17 +390,27 @@ namespace ImmersiveAI.Personas
                 var leader = party.LeaderHero;
                 int men = 0;
                 Try(() => men = party.MemberRoster?.TotalManCount ?? 0);
+                bool caravan = false;
+                Try(() => caravan = party.IsCaravan);
+                var company = caravan ? "trading caravan" : "warband";
                 if (leader == h)
+                {
                     sentences.Add(men > 0
-                        ? $"A warband of some {men} souls rides under my command, looking to me for bread and orders."
-                        : "A warband rides under my command.");
+                        ? (caravan
+                            ? $"A trading caravan of some {men} souls goes upon its rounds under my hand — goods bought where they are cheap, sold where they are dear, and the road's dangers weighed at every turn."
+                            : $"A warband of some {men} souls rides under my command, looking to me for bread and orders.")
+                        : $"A {company} rides under my command.");
+                    var held = HeldDuties(party, h);
+                    if (held.Length > 0) sentences.Add(held);
+                }
                 else if (leader != null)
                 {
                     var duty = PartyDuty(h, party);
                     var dutyClause = duty == null ? "" : $", and I serve as its {duty}";
                     sentences.Add(men > 0
-                        ? $"I ride with {leader.Name}'s warband, some {men} strong{dutyClause}."
-                        : $"I ride with {leader.Name}'s warband{dutyClause}.");
+                        ? $"I ride with {leader.Name}'s {company}, some {men} strong{dutyClause}."
+                        : $"I ride with {leader.Name}'s {company}{dutyClause}.");
+                    if (duty != null) sentences.Add(DutySentence(duty, h));
                 }
                 else if (h.CurrentSettlement == null)
                     sentences.Add("I am upon the road.");
@@ -314,7 +455,7 @@ namespace ImmersiveAI.Personas
 
         // The named duty this hero holds in the party they ride with — scout, surgeon, engineer,
         // quartermaster — or null when they hold none. Best-effort against the live roles.
-        private static string PartyDuty(Hero h, TaleWorlds.CampaignSystem.Party.MobileParty party)
+        internal static string PartyDuty(Hero h, TaleWorlds.CampaignSystem.Party.MobileParty party)
         {
             try
             {
@@ -325,6 +466,50 @@ namespace ImmersiveAI.Personas
             }
             catch { /* roles unavailable */ }
             return null;
+        }
+
+        // What the duty MEANS, in the holder's own words, weighed with how good they honestly are
+        // at its craft — so a scout asked "can we outrun them?" knows both that the question is his
+        // to answer and how far his own eyes are to be trusted.
+        private static string DutySentence(string duty, Hero h)
+        {
+            switch (duty)
+            {
+                case "scout":
+                    return "As its scout, the road, the pace of the march, the tracks upon the ground, and the first sight of any banner on the horizon are mine to judge; my eyes are " +
+                        CraftsBuilder.WordFor(h, TaleWorlds.Core.DefaultSkills.Scouting) + " at the craft.";
+                case "surgeon":
+                    return "As its surgeon, every wound in the company passes through my hands, and how fast the hurt mend is my charge; my leechcraft is " +
+                        CraftsBuilder.WordFor(h, TaleWorlds.Core.DefaultSkills.Medicine) + ".";
+                case "engineer":
+                    return "As its engineer, engines, earthworks, and the breaking or holding of walls are mine; my craft is " +
+                        CraftsBuilder.WordFor(h, TaleWorlds.Core.DefaultSkills.Engineering) + ".";
+                case "quartermaster":
+                    return "As its quartermaster, the stores, the wagons, the men's wages, and what the company carries pass through my hands; my reckoning is " +
+                        CraftsBuilder.WordFor(h, TaleWorlds.Core.DefaultSkills.Steward) + ".";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        // For a LEADER: who holds the duties in their own company — a captain should know his own
+        // scout from his surgeon, and it lets him speak of his people's crafts truly.
+        private static string HeldDuties(TaleWorlds.CampaignSystem.Party.MobileParty party, Hero leader)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            void Note(Func<Hero> pick, string duty)
+            {
+                Try(() =>
+                {
+                    var who = pick();
+                    if (who != null && who != leader) parts.Add($"{who.Name} is my {duty}");
+                });
+            }
+            Note(() => party.EffectiveScout, "scout");
+            Note(() => party.EffectiveSurgeon, "surgeon");
+            Note(() => party.EffectiveEngineer, "engineer");
+            Note(() => party.EffectiveQuartermaster, "quartermaster");
+            return parts.Count == 0 ? string.Empty : "In my company, " + JoinAnd(parts) + ".";
         }
 
         // The mood paragraph: deterministic in the soul and the campaign day (see MoodTides in Core),

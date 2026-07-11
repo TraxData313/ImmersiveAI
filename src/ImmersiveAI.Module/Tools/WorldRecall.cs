@@ -263,6 +263,24 @@ namespace ImmersiveAI.Tools
                     lines.Add($"Between you and them, the standing is {PersonaBuilder.DescribeRelation(standing)} ({standing}).");
             });
 
+            // What they are honestly good at — the crafts a captain weighs before hiring: would this
+            // one make a fine scout, a passable surgeon? Word travels of such things.
+            Try(() =>
+            {
+                if (!h.IsAlive) return;
+                int ValueOf(SkillObject s) { try { return h.GetSkillValue(s); } catch { return 0; } }
+                var crafts = TaleWorlds.CampaignSystem.Extensions.Skills.All?
+                    .Where(s => s != null)
+                    .Select(s => new { Name = s.Name?.ToString(), Value = ValueOf(s) })
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Name) && x.Value >= 60)
+                    .OrderByDescending(x => x.Value)
+                    .Take(4)
+                    .Select(x => $"{x.Name} ({Personas.CraftsBuilder.WordForValue(x.Value)})")
+                    .ToList();
+                if (crafts != null && crafts.Count > 0)
+                    lines.Add($"Their crafts, as word has it: strongest in {string.Join(", ", crafts)}.");
+            });
+
             // If they truly stand where the asker can see them, the eyes add what hearsay cannot.
             Try(() =>
             {
@@ -874,6 +892,23 @@ namespace ImmersiveAI.Tools
                 int morale = (int)party.Morale;
                 var word = morale >= 70 ? "high" : morale >= 50 ? "steady" : morale >= 30 ? "low" : "near breaking";
                 lines.Add($"The men's spirits stand {word} ({morale} of a hundred).");
+            });
+
+            // How the hurt mend — the surgeon's ledger, read from the game's own healing model, so a
+            // surgeon asked "how fast will they heal?" answers with the true rates.
+            Try(() =>
+            {
+                int wounded = party.MemberRoster?.TotalWounded ?? 0;
+                var model = Campaign.Current?.Models?.PartyHealingModel;
+                if (model == null) return;
+                int named = (int)model.GetDailyHealingHpForHeroes(party.Party, false).ResultNumber;
+                int ranks = (int)model.GetDailyHealingForRegulars(party.Party, false).ResultNumber;
+                var surgeon = party.EffectiveSurgeon;
+                var care = surgeon == null ? "with no surgeon named to the charge"
+                    : surgeon == asker ? "under your own care"
+                    : $"under {surgeon.Name}'s care";
+                if (wounded > 0)
+                    lines.Add($"The hurt mend {care}: the named heal some {named} points of vigor a day, the ranks some {ranks}.");
             });
 
             // Only the captain carries the ledger of coin.

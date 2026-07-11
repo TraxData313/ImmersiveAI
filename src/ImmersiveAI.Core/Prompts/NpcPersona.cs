@@ -30,6 +30,12 @@ namespace ImmersiveAI.Core.Prompts
         /// <summary>Prose rendering of game personality traits (honor, valor, mercy, ...).</summary>
         public string PersonalityDescription { get; set; } = string.Empty;
 
+        /// <summary>What this NPC's hands and wits are honestly good at, in their own words — their
+        /// real skills weighed into craft-words ("masterly in leechcraft, able in scouting…"). Built
+        /// by the game layer (CraftsBuilder) from live skill values, so a wanderer asked what they
+        /// would be good at, or a captain judging his own scouting, answers from truth.</summary>
+        public string Crafts { get; set; } = string.Empty;
+
         /// <summary>
         /// A distinct voice assigned to this NPC (vocabulary, sentence rhythm, verbal tics).
         /// Giving every NPC its own speech style is a primary anti-repetition lever.
@@ -82,5 +88,11 @@ namespace ImmersiveAI.Core.Prompts
         /// tool rides along — see the game layer's TruthTool). Adds a whisper that what deserves to
         /// stay may be quietly kept. Even when false, reflection still rewrites their truths whole.</summary>
         public bool CanHoldTruths { get; set; }
+
+        /// <summary>True when this NPC rides with a company on the map and may cast their eyes over
+        /// the country and weigh a battle (the field-craft tools ride along — see the game layer's
+        /// FieldCraft: survey_surroundings and weigh_battle). Adds a whisper to look before judging
+        /// pace, pursuit, escape, or odds aloud.</summary>
+        public bool CanSurveyField { get; set; }
     }
 }

@@ -62,7 +62,7 @@ namespace ImmersiveAI.Personas
             else if (npc.IsMerchant)
                 sb.Append($"A {culture} merchant");
             else
-                sb.Append($"A {culture} character");
+                sb.Append(OccupationHead(npc, culture));
 
             if (npc.Clan != null)
                 sb.Append($" of clan {npc.Clan.Name}");
@@ -80,10 +80,87 @@ namespace ImmersiveAI.Personas
             catch { /* the role stands without it */ }
             sb.Append('.');
 
+            // What their trade means they truly KNOW — one sentence, so an artisan can counsel on
+            // workshops and a tavern-keeper on hirelings without a rulebook stapled to their head:
+            // the basics live here, the rest they reason out or go and look up (seek_wisdom).
+            var trade = TradeKnowledge(npc);
+            if (trade.Length > 0) sb.Append(' ').Append(trade);
+
             // The standing toward the player deliberately does NOT ride here: the situation block
             // (SituationBuilder.DescribeOther) speaks it once, beside the person it belongs to, so the
             // sheet never tells her the same heart twice in two places.
             return sb.ToString();
+        }
+
+        // A warmer station word for the folk the head cases above don't cover, from the live occupation.
+        private static string OccupationHead(Hero npc, string culture)
+        {
+            try
+            {
+                switch (npc.Occupation)
+                {
+                    case Occupation.Tavernkeeper: return $"A {culture} tavern-keeper";
+                    case Occupation.RansomBroker: return $"A {culture} ransom broker";
+                    case Occupation.Artisan: return $"A {culture} artisan";
+                    case Occupation.GangLeader: return $"A {culture} leader among the streets";
+                    case Occupation.Preacher: return $"A {culture} preacher";
+                    case Occupation.Headman: return $"A {culture} village headman";
+                    case Occupation.RuralNotable: return $"A {culture} elder of the countryside";
+                    case Occupation.ArenaMaster: return $"A {culture} master of the arena";
+                    case Occupation.Blacksmith:
+                    case Occupation.Weaponsmith:
+                    case Occupation.Armorer: return $"A {culture} smith";
+                    case Occupation.GoodsTrader:
+                    case Occupation.HorseTrader: return $"A {culture} trader";
+                    case Occupation.Musician: return $"A {culture} musician";
+                    case Occupation.Mercenary: return $"A {culture} sellsword";
+                }
+            }
+            catch { /* the plain word serves */ }
+            return $"A {culture} character";
+        }
+
+        // The working knowledge a station carries — short, an anchor to reason from, never a lecture.
+        private static string TradeKnowledge(Hero npc)
+        {
+            try
+            {
+                bool caravan = false;
+                try { caravan = npc.PartyBelongedTo?.IsCaravan == true; } catch { }
+                if (caravan && npc.PartyBelongedTo?.LeaderHero == npc)
+                    return "The roads are my ledger: what sells where, what the passage costs in days and dangers, " +
+                           "and what a caravan must carry to come home richer than it left.";
+
+                switch (npc.Occupation)
+                {
+                    case Occupation.Tavernkeeper:
+                        return "All the town's talk passes my counter: who is hiring, who is for hire and what " +
+                               "they are good for — a keen-eyed scout, a learned healer, a steady hand with stores — " +
+                               "and where work and trouble are both to be found.";
+                    case Occupation.RansomBroker:
+                        return "My trade is captives and their prices: ransoms brokered between foes, prisoners " +
+                               "bought and sold, and the worth of a man in chains reckoned to the denar.";
+                    case Occupation.Artisan:
+                        return "My trade is the workshop: the making and selling of goods, what a workshop costs " +
+                               "to begin and what it returns, and which wares a town truly hungers for.";
+                    case Occupation.Merchant:
+                        return "Trade is my blood: caravans and workshops, the roads and their risks, what such " +
+                               "ventures cost to mount and what they return when they are run well.";
+                    case Occupation.ArenaMaster:
+                        return "The arena is mine: the fighters, the wagers, the tourneys and their prizes.";
+                    case Occupation.Blacksmith:
+                    case Occupation.Weaponsmith:
+                    case Occupation.Armorer:
+                        return "Steel is my trade: the forging and mending of arms and harness, and the worth of " +
+                               "a blade at a glance.";
+                    case Occupation.Headman:
+                    case Occupation.RuralNotable:
+                        return "The village's needs are mine to carry: its fields and herds, its levies, and its " +
+                               "standing with the lords who hold the land.";
+                }
+            }
+            catch { /* no trade line */ }
+            return string.Empty;
         }
 
         public static string DescribeRelation(int relation)

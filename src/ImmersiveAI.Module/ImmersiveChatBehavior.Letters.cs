@@ -213,8 +213,9 @@ namespace ImmersiveAI
 
                 // They wish to. The letter is written with everything they are — and the writing is
                 // itself a remembered moment (the compose line and the letter, as an Angel turn).
+                // One in the player's own service is invited to make it a field report of their charge.
                 var composeCtx = BuildContext(npc, situation);
-                var composeLine = PromptBuilder.ComposeLetterLine(ctx.PlayerName);
+                var composeLine = PromptBuilder.ComposeLetterLine(ctx.PlayerName, InPlayersService(npc));
                 var composeMsgs = _promptBuilder.BuildAngelPrompt(
                     composeCtx.Persona, composeCtx.Memory, composeCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
                 var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
@@ -735,7 +736,15 @@ namespace ImmersiveAI
             try
             {
                 if (h.CurrentSettlement != null) return $"Last word places them at {h.CurrentSettlement.Name}";
-                if (h.PartyBelongedTo != null) return "They ride with their party";
+                var party = h.PartyBelongedTo;
+                if (party != null)
+                {
+                    // One's own servants are named by their charge — the caravan master and the
+                    // captain in the field read as YOURS in every list that shows whereabouts.
+                    if (party.LeaderHero == h && InPlayersService(h))
+                        return party.IsCaravan ? "leads a caravan of yours upon the roads" : "leads a warband of yours in the field";
+                    return "They ride with their party";
+                }
                 return "Their whereabouts are uncertain";
             }
             catch { return "Their whereabouts are uncertain"; }

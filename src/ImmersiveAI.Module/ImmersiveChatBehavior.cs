@@ -159,6 +159,9 @@ namespace ImmersiveAI
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
+            // The field-craft rides only for a soul with a company on the map — the outward eyes and
+            // the scales of battle mean nothing to a tavern-keeper, and a lean list keeps tools used.
+            if (CanSurveyField(npc)) tools.AddRange(Tools.FieldCraft.Tools);
             if (CanSeekWisdom()) tools.Add(Tools.WebWisdom.Tool);
             bool heartRides = CanMoveHeart();
             if (heartRides) tools.Add(Tools.HeartTool.Tool);
@@ -214,9 +217,11 @@ namespace ImmersiveAI
                 return Task.FromResult(ResolveTruthEdit(call, npc, liveMemory));
 
             NotifyActivity(npc, call);
-            return call.Name == Tools.WebWisdom.SeekWisdom
-                ? Tools.WebWisdom.ResolveAsync(call, (question, beyond) => RefineSearchQueryAsync(question, beyond, recentContext))
-                : Tools.WorldRecall.ResolveAsync(call, npc);
+            if (call.Name == Tools.WebWisdom.SeekWisdom)
+                return Tools.WebWisdom.ResolveAsync(call, (question, beyond) => RefineSearchQueryAsync(question, beyond, recentContext));
+            if (call.Name == Tools.FieldCraft.SurveySurroundings || call.Name == Tools.FieldCraft.WeighBattle)
+                return Tools.FieldCraft.ResolveAsync(call, npc);
+            return Tools.WorldRecall.ResolveAsync(call, npc);
         }
 
         // One search query sharpened before it goes to the web: the NPC asks in her own immersed
@@ -342,6 +347,15 @@ namespace ImmersiveAI
         // Without it, reflection still rewrites the truths whole — only the mid-talk hand is dark.
         private bool CanHoldTruths() => _client is IToolChatClient;
 
+        // The field-craft (survey_surroundings, weigh_battle) rides the recall channel, but only for
+        // a soul who actually stands with a company on the map — a captain, a rider, a caravan hand.
+        private bool CanSurveyField(Hero npc)
+        {
+            if (!CanRecallWorld()) return false;
+            try { return npc?.PartyBelongedTo != null; }
+            catch { return false; }
+        }
+
         // A soft side notice of what the NPC is doing mid-thought, in the same voice as the
         // reply-ready notice. Called from LLM background threads; the message is marshaled to the
         // game thread. Best-effort: a failed notice never touches the turn.
@@ -366,6 +380,8 @@ namespace ImmersiveAI
                 switch (call.Name)
                 {
                     case Tools.WebWisdom.SeekWisdom: doing = $"{name} is researching…{detail}"; break;
+                    case Tools.FieldCraft.SurveySurroundings: doing = $"{name} casts an eye over the country…"; break;
+                    case Tools.FieldCraft.WeighBattle: doing = $"{name} weighs the odds of battle…{detail}"; break;
                     case Tools.WorldRecall.RecallCompany: doing = $"{name} takes stock of the company…"; break;
                     case Tools.WorldRecall.RecallTroop: doing = $"{name} weighs soldiers' worth…{detail}"; break;
                     case Tools.WorldRecall.RecallMarket: doing = $"{name} minds the market prices…{detail}"; break;
@@ -1471,23 +1487,43 @@ namespace ImmersiveAI
 
         // A co-located soul's pull: their bond's own weight (frequency × closeness × recency) lifted to at
         // least the stranger's floor, so presence alone is enough to sometimes cross the room. Reads the
-        // memory file only when one exists — a stranger costs no disk.
+        // memory file only when one exists — a stranger costs no disk. For a stranger far above the
+        // player's station the floor shrinks (see StrangerStationFactor): a king does not often cross a
+        // room for an unknown; once any true history exists, station no longer gates the bond.
         private double CoLocatedPull(Hero hero, double nowDay)
         {
             double floor = _config.InitiationPullFloor;
 
             var memFile = NpcPaths.MemoryFile(hero);
-            if (!File.Exists(memFile)) return floor;
+            if (!File.Exists(memFile)) return floor * StrangerStationFactor(hero);
 
             NpcMemory memory;
             try { memory = _memoryStore.LoadFrom(memFile, hero.StringId); }
-            catch { return floor; }
-            if (memory.StoryRichness <= 0) return floor;
+            catch { return floor * StrangerStationFactor(hero); }
+            if (memory.StoryRichness <= 0) return floor * StrangerStationFactor(hero);
 
             double daysSince = memory.LastConversationGameDay >= 0
                 ? Math.Max(0, nowDay - memory.LastConversationGameDay)
                 : 0;
             return Math.Max(floor, InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince));
+        }
+
+        // How readily a STRANGER of this station approaches the player: 1 for equals and commoners,
+        // fading for great lords far above an unknown player (two tiers → 0.4, more → 0.25; a crowned
+        // head → 0.2). Only the stranger's floor is scaled — real bonds are never dampened by rank.
+        private static double StrangerStationFactor(Hero hero)
+        {
+            try
+            {
+                if (hero?.Clan == null || !hero.IsLord) return 1.0;
+                int gap = hero.Clan.Tier - (Hero.MainHero?.Clan?.Tier ?? 0);
+                bool crowned = hero.Clan.Kingdom != null && hero.Clan.Kingdom.Leader == hero;
+                if (crowned && gap >= 1) return 0.2;
+                if (gap >= 3) return 0.25;
+                if (gap >= 2) return 0.4;
+                return 1.0;
+            }
+            catch { return 1.0; }
         }
 
         private static Hero? FindAliveHero(string stringId)
@@ -2006,7 +2042,7 @@ namespace ImmersiveAI
                         if (knownIds.Contains(hero.StringId)) continue;
                         if (!IsCoLocated(hero)) continue;
                         strangersHere++;
-                        herePulls.Add(floor);
+                        herePulls.Add(floor * StrangerStationFactor(hero));
                     }
                     if (strangersHere > 0)
                         sb.AppendLine($"• …and {strangersHere} more soul{(strangersHere == 1 ? "" : "s")} here with you, not yet truly spoken with — each at the newcomer's pull of {floor * 100:0.#}%.");
@@ -2131,9 +2167,16 @@ namespace ImmersiveAI
                     }
                     catch { /* an unreadable memory only costs the ordering */ }
 
-                    var detail = hero.PartyBelongedTo == MobileParty.MainParty
-                        ? "rides with you"
-                        : "here in " + SituationBuilder.Place(hero);
+                    // Those in the player's own company wear their duty openly — "your scout" beside
+                    // the name, so the widget shows at a glance who holds which charge.
+                    string detail;
+                    if (hero.PartyBelongedTo == MobileParty.MainParty)
+                    {
+                        var duty = SituationBuilder.PartyDuty(hero, MobileParty.MainParty);
+                        detail = duty == null ? "rides with you" : $"rides with you — your {duty}";
+                    }
+                    else
+                        detail = "here in " + SituationBuilder.Place(hero);
                     result.Add(new ChatContactInfo(hero, hasHistory, lastDay, detail, isHere: true));
                     seen.Add(hero.StringId);
                 }
@@ -2377,12 +2420,16 @@ namespace ImmersiveAI
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
             persona.RoleplayGuidance = ApplyTokens(_config.RoleplayGuidance, npcName);
             persona.FamilyKnowledge = FamilyBuilder.Build(npc);
+            // What their hands and wits are honestly good at — from their real skills, so a wanderer
+            // asked what they would be good at answers from truth.
+            persona.Crafts = CraftsBuilder.Build(npc);
             // The whispers about the gifts are offered only when the tools truly ride along.
             persona.CanRecallWorld = CanRecallWorld();
             persona.CanSeekWisdom = CanSeekWisdom();
             persona.CanMoveHeart = CanMoveHeart();
             persona.CanTendGoals = CanTendGoals();
             persona.CanHoldTruths = CanHoldTruths();
+            persona.CanSurveyField = CanSurveyField(npc);
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

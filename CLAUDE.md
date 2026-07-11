@@ -24,12 +24,12 @@ Mental model: **Core = pure, unit-tested logic; Module = Bannerlord glue.** Talk
 calls the LLM → reply shown in the conversation panel, memory saved and compressed when it grows.
 
 You usually only need to open:
-- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `TidingsBuilder` + `TroubleBuilder` (Module), `MemoryCompressor` (Core).
+- **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `CraftsBuilder` (real skills → honest craft-words, on every sheet) + `TidingsBuilder` + `TroubleBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
-- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
+- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
@@ -72,6 +72,8 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
+  Tools/FieldCraft.cs     the field-craft (2026.07.12): survey_surroundings + weigh_battle — the country
+                          about and the scales of battle, only for souls with a party on the map
   Tools/HeartTool.cs, Tools/GoalTool.cs  the heart's hand (move_heart) and the aims' hand (tend_goals)
   UI/                     MapNoticePatch (the one Harmony patch), ImmersiveChatMapNotification (+ save
                           definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
@@ -80,9 +82,15 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           hotkey/Enter/Escape polling, unread marks, scroll-to-bottom), LetterWindow\
                           (the letter window: LetterWindowVM/LetterContactVM + LetterWindowManager —
                           the chat window's twin for correspondence, hotkey "U"), Socialness\
-                          (the on-map socialness stepper: SocialnessVM + SocialnessManager, mouse-only layer)
-  Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
-  Personas/SituationBuilder.cs  builds the first-person "current situation" narration (+ mood, + the moment)
+                          (the on-map socialness stepper: SocialnessVM + SocialnessManager — the layer
+                          claims the mouse ONLY while hovered (HitTest per tick, 2026.07.12); a resting
+                          claim broke the map's right-drag camera)
+  Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style + one
+                          trade-knowledge sentence per station (artisan, tavern-keeper, ransom broker…)
+  Personas/CraftsBuilder.cs  real skills weighed into honest craft-words ("masterly in Medicine") —
+                          the sheet line, the duty sentences, and recall_person all draw on it
+  Personas/SituationBuilder.cs  builds the first-person "current situation" narration (+ mood, + the
+                          moment, + party-duty depth, + the beholder's eye on unknown callers)
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits) — the single source of truth
   Mcm/                    ImmersiveAiMcmSettings + McmBridge: the in-game MCM settings menu (SOFT dependency —
@@ -591,11 +599,45 @@ approach beats, letter composition; short utility calls (feeling number, yes/no 
 NPC gets one whisper line about the gift only when the tools truly ride along (`NpcPersona.CanRecallWorld`).
 Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
 
+**The company and the crafts (2026.07.12 — the roles-immersion wave).** Every soul now knows what they
+are honestly good at: `CraftsBuilder` (Module) weighs real skills into craft-words ("What my hands and
+wits are honestly good at: masterly in Medicine; able in Scouting…") on every sheet (`NpcPersona.Crafts`),
+so wanderers answer "what would you be good at?" from truth; `recall_person` lists a looked-up soul's
+strongest crafts too. Party duties run deep: the situation gives each duty-holder their charge in their
+own words with their skill weighed in ("As its scout… my eyes are able at the craft"), a leader knows who
+holds his duties, caravans speak of rounds and ledgers (not "warbands"), and the chat window tags your
+own party "rides with you — your scout". Beside the recalls ride the **field-craft tools**
+(`Tools\FieldCraft`, only when `npc.PartyBelongedTo != null` — a lean list keeps tools used; whisper flag
+`NpcPersona.CanSurveyField`): `survey_surroundings` (bands within `SeeingRange`×1.5 with kind/faction/
+strength/foe-or-friend/distance-in-rider's-words + who is swifter — the true "can we escape them?" — and
+our own pace with the real `SpeedExplained` drag lines; counts coarsened below Scouting 125/50) and
+`weigh_battle` (company-or-army vs a named band/army/walled place, garrison + militia at half weight,
+compositions from real rosters, verdict by true `EstimatedStrength` ratio, confidence by Tactics —
+NOTE: this game version has NO `PartyBase.TotalStrength`, use `EstimatedStrength`; `ExplainedNumber`
+explanations come from the parameterless `GetLines()`; `DefaultSkills` lives in `TaleWorlds.Core`).
+`recall_company` gained the surgeon's ledger (healing rates for named and ranks via the game's
+`PartyHealingModel`). Stations carry one trade-knowledge sentence each (`PersonaBuilder.TradeKnowledge`:
+artisan, tavern-keeper, ransom broker, smith, arena master, headman, merchant/caravan master). Family
+deepened: children named WITH their other parent (polygamy-safe), grown children carry where life took
+them, and a spouse's arrival states plainly that between wedded souls there is no ceremony. **The
+beholder's eye**: a great lord (2+ clan tiers above, or crowned 1+) meeting a near-stranger (standing
+< 10) gets ONE smashed-down sentence of what his eyes see — garb/blade by real item tiers, banner,
+following, "no word of their deeds" when renown < 150 — and the welcome is left to his own nature;
+`StrangerStationFactor` also shrinks the reach-out stranger floor for such lords (king → 0.2×), never
+touching real bonds.
+
 **Letters — the bond crosses the map.** The mirror of reaching-out for everyone `IsCoLocated` skips:
 each hour, distant NPCs with history roll `LetterCourier.WriteRateFactor` (0.5) × their reaching-out
 chance; one moved soul is asked by the Angel — privately, yes/no, recorded — whether they wish to write,
 and on a yes composes the letter with their full self (persona, memory, the situation built *apart*
-via `SituationBuilder.Build(..., apart: true)`, and the gift of recall). The letter rides real in-game
+via `SituationBuilder.Build(..., apart: true)`, and the gift of recall). **The player's own clan writes
+out of duty** (2026.07.12): `InitiationScorer.Pull(..., inPlayersService)` floors recency (0.6) and
+closeness (0.5) for one's own companions/kin/governors — a caravan forty days on the road still writes
+home — and their compose line invites a field report of their charge (`ComposeLetterLine(inService)`,
+appended AFTER the marker fragment so recorded beats stay recognized). **A letter is readable only when
+it arrives** (2026.07.12): `Letter.Logged` defers the letters.txt entry to delivery (default true so old
+bags never double-log; dead writers' folders resolved by identity), and the chat window seals an
+in-flight compose beat ("it is sealed, and rides toward you still" — `IsLetterOnRoadToPlayer`). The letter rides real in-game
 days by map distance (Core `LetterCourier`: 150 units/day, 0.25–10 day rails) and persists across
 save/load in `campaign_<id>\_letters.json` (Core `LetterBag`, atomic writes) — a letter is a promise,
 unlike a live chat. Arrival: faced toast + pausing inquiry, "Write back" (opens the composer popup) or
