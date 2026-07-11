@@ -1,0 +1,169 @@
+<!--
+  Immersive AI letter window: every correspondent on the left, the whole correspondence on the
+  right as letter cards (writer, when, provenance), a courier on the road noted at the end, and a
+  place to write the next letter - single-line input with a tall wrapped draft mirror above it
+  (the engine's editable text is one line; the mirror is where a long letter stays readable).
+  Same skeleton and brushes as ImmersiveChatWindow.xml, which is playtested and rendering true.
+  Loaded by LetterWindowManager via GauntletLayer.LoadMovie("ImmersiveLetterWindow", LetterWindowVM).
+-->
+<Prefab>
+  <Window>
+    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
+      <Children>
+
+        <!-- Dim the world behind, softly -->
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#000000FF" AlphaFactor="0.40" />
+
+        <!-- The window itself -->
+        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="1160" SuggestedHeight="740" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Children>
+
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.97" />
+
+            <!-- ============================ left: your correspondents ============================ -->
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="330" HorizontalAlignment="Left" MarginLeft="20" MarginTop="18" MarginBottom="18">
+              <Children>
+
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@TitleText" />
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="52">
+                  <Children>
+
+                    <ScrollablePanel Id="ContactsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="ContactsClip" InnerPanel="ContactsClip\ContactsList" VerticalScrollbar="..\ContactsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                      <Children>
+                        <Widget Id="ContactsClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                          <Children>
+                            <ListPanel Id="ContactsList" DataSource="{Contacts}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" StackLayout.LayoutMethod="VerticalTopToBottom">
+                              <ItemTemplate>
+                                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="68" Command.Click="ExecuteSelect">
+                                  <Children>
+                                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.10" IsVisible="@IsSelected" />
+                                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="54" SuggestedHeight="54" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="6" CircularClipEnabled="true" CircularClipRadius="27">
+                                      <Children>
+                                        <ImageIdentifierWidget DataSource="{Visual}" DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" AdditionalArgs="@AdditionalArgs" ImageId="@Id" TextureProviderName="@TextureProviderName" />
+                                      </Children>
+                                    </Widget>
+                                    <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="72" MarginRight="30" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <Children>
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@Detail" />
+                                      </Children>
+                                    </ListPanel>
+                                  </Children>
+                                </ButtonWidget>
+                              </ItemTemplate>
+                            </ListPanel>
+                          </Children>
+                        </Widget>
+                      </Children>
+                    </ScrollablePanel>
+
+                    <ScrollbarWidget Id="ContactsScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="ContactsScrollbarHandle" MinValue="0" MaxValue="100">
+                      <Children>
+                        <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                        <BrushWidget Id="ContactsScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                      </Children>
+                    </ScrollbarWidget>
+
+                  </Children>
+                </Widget>
+
+              </Children>
+            </Widget>
+
+            <!-- column divider -->
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Left" MarginLeft="362" MarginTop="24" MarginBottom="24" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.12" />
+
+            <!-- ============================ right: the correspondence ============================ -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="380" MarginRight="20" MarginTop="18" MarginBottom="18">
+              <Children>
+
+                <!-- before anyone is chosen -->
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Center" Text="@EmptyHint" IsHidden="@HasSelection" />
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@HasSelection">
+                  <Children>
+
+                    <!-- header: their name, and the road's state -->
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="44" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="42" MarginRight="44" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@StatusText" />
+
+                    <!-- the letters -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="70" MarginBottom="@EntriesBottomMargin">
+                      <Children>
+                        <ScrollablePanel Id="LettersScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="LettersClip" InnerPanel="LettersClip\LettersList" VerticalScrollbar="..\LettersScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                          <Children>
+                            <Widget Id="LettersClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                              <Children>
+                                <ListPanel Id="LettersList" DataSource="{Entries}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                  <ItemTemplate>
+                                    <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginBottom="16" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <Children>
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@Header" IsVisible="@HasHeader" />
+                                        <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="19" Text="@Body" IsHidden="@IsNarration" />
+                                        <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#9AA3B2FF" Text="@Body" IsVisible="@IsNarration" />
+                                      </Children>
+                                    </ListPanel>
+                                  </ItemTemplate>
+                                </ListPanel>
+                              </Children>
+                            </Widget>
+                          </Children>
+                        </ScrollablePanel>
+                        <ScrollbarWidget Id="LettersScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="LettersScrollbarHandle" MinValue="0" MaxValue="100">
+                          <Children>
+                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                            <BrushWidget Id="LettersScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                          </Children>
+                        </ScrollbarWidget>
+                      </Children>
+                    </Widget>
+
+                    <!-- the whole letter as it is written, wrapped and tall - the single-line input
+                         below only ever shows its tail -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="150" VerticalAlignment="Bottom" MarginBottom="78" MarginRight="210" IsVisible="@HasDraft">
+                      <Children>
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.05" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="10" MarginRight="10" MarginTop="6" MarginBottom="6" ClipContents="true">
+                          <Children>
+                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="#D9C08CFF" Text="@InputText" />
+                          </Children>
+                        </Widget>
+                      </Children>
+                    </Widget>
+
+                    <!-- your words (shown only while the road is open; the status line above says why not) -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="70" VerticalAlignment="Bottom" MarginRight="210" Sprite="General\CharacterCreation\name_input_area" IsVisible="@CanWrite">
+                      <Children>
+                        <EditableTextWidget Id="LetterInput" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="14" MarginRight="14" MarginTop="12" MarginBottom="12" Brush="Review.NameInput.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Left" RealText="@InputText" MaxLength="4000" />
+                      </Children>
+                    </Widget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="62" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="4" Brush="Popup.Done.Button" Command.Click="ExecuteSend" IsEnabled="@CanSend" IsVisible="@CanWrite">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.TextHorizontalAlignment="Center" Text="@SendText" />
+                      </Children>
+                    </ButtonWidget>
+
+                  </Children>
+                </Widget>
+
+              </Children>
+            </Widget>
+
+            <!-- close -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="34" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="8" Command.Click="ExecuteClose">
+              <Children>
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Center" Text="X" />
+              </Children>
+            </ButtonWidget>
+
+            <!-- frame border -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_9" ExtendLeft="18" ExtendTop="18" ExtendRight="18" ExtendBottom="18" IsEnabled="false" />
+
+          </Children>
+        </Widget>
+
+      </Children>
+    </Widget>
+  </Window>
+</Prefab>

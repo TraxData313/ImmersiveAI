@@ -29,18 +29,20 @@ namespace ImmersiveAI.Tools
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(MoveHeart,
-            "Let your regard for the one you speak with truly move — warmed or wounded by what has " +
-            "just passed between you. Reach for this only when a moment genuinely moves your heart: " +
-            "a kind word or a small grace sways it a little (1 to 3); only what shakes the soul moves " +
-            "it greatly. Most words leave a heart where it stood — reaching for nothing is also an " +
-            "honest answer. Never speak the measure aloud; let the feeling show only in your words " +
-            "and bearing.",
+            "Weigh your heart each time before you answer, and set down here — every reply, without " +
+            "exception — the honest measure of how what has just passed moved your regard for the one " +
+            "you speak with. 0 is a full answer: the mark of a heart that truly held. A kind word, a " +
+            "shared laugh, an open confidence, a small grace sways it a little (1 to 3) — and it " +
+            "should; a slight or a coldness likewise away (-1 to -3); only what shakes the soul moves " +
+            "it greatly. A heart already given wholly can still be warmed — the warmth counts even at " +
+            "the summit. Never speak the measure aloud; let the feeling show only in your words and " +
+            "bearing.",
             new[]
             {
                 new ToolParameter("shift",
-                    "How far your heart moves: a whole number — positive toward them (+1 a small " +
-                    "warmth, +3 a true kindness, more only for what shakes you), negative away from " +
-                    "them (-1 to -100)."),
+                    "The honest measure, a whole number: 0 when the heart held; positive toward them " +
+                    "(+1 a small warmth, +3 a true kindness, more only for what shakes you), negative " +
+                    "away from them (-1 to -100)."),
             });
 
         /// <summary>What the tool answers when the shift was felt — steering her back to words.</summary>

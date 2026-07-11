@@ -151,6 +151,35 @@ namespace ImmersiveAI.UI.ChatWindow
                     var stamp = Stamp(turn);
                     if (turn.IsFromAngel)
                     {
+                        // Letter beats wear their letters openly (Anton's ask, 2026.07.10): the
+                        // moment she wrote to the player, or the player's letter reaching her
+                        // hands, shows as a letter card in its place in the thread — instead of
+                        // the Angel's raw quill-instruction narration. Everything else the Angel
+                        // spoke stays as soft stage directions, never hidden.
+                        if (Core.Prompts.PromptBuilder.IsComposeLetterBeat(turn.PlayerLine))
+                        {
+                            messages.Add(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, $"✉ {npcName} takes up the quill and writes to you:"),
+                                isNarration: true, Colors.White));
+                            if (!string.IsNullOrWhiteSpace(turn.NpcLine))
+                                messages.Add(new ChatMessageVM($"{npcName} ✉ by letter",
+                                    turn.NpcLine, isNarration: false, NpcHeaderColor));
+                            continue;
+                        }
+                        if (Core.Prompts.PromptBuilder.TryExtractReceivedLetter(turn.PlayerLine, out var letterBody))
+                        {
+                            messages.Add(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, $"✉ Your letter reaches {npcName}:"),
+                                isNarration: true, Colors.White));
+                            messages.Add(new ChatMessageVM($"{playerName} ✉ by letter",
+                                letterBody, isNarration: false, PlayerHeaderColor));
+                            if (!string.IsNullOrWhiteSpace(turn.NpcLine))
+                                messages.Add(new ChatMessageVM(string.Empty,
+                                    $"({npcName}, on whether to answer: {turn.NpcLine})",
+                                    isNarration: true, Colors.White));
+                            continue;
+                        }
+
                         // The Angel's beats are the story's stage directions — shown softly, never
                         // hidden: the same recorded stream her own prompt replays.
                         messages.Add(new ChatMessageVM(string.Empty,

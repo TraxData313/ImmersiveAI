@@ -126,6 +126,7 @@ namespace ImmersiveAI
             Current = this;
             _config = config;
             UI.ChatWindow.ChatWindowManager.Configure(config);
+            UI.LetterWindow.LetterWindowManager.Configure(config);
             UI.Socialness.SocialnessManager.Configure(config);
             _client = ChatClientFactory.Create(config);
             // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
@@ -875,6 +876,7 @@ namespace ImmersiveAI
                     // (In the move_heart shape the shift already landed mid-reply — never apply it twice.)
                     if (feltShift != 0 && !outcome.FeltShiftApplied)
                         ApplyRelationShift(npc, feltShift);
+                    NotifyHeartHeld(npc, feltShift);
 
                     // A short "has answered" ping so the player isn't clicking "(wait...)" and guessing —
                     // deliberately brief (like the opening "gathers their thoughts" beat) so it never covers
@@ -1037,6 +1039,24 @@ namespace ImmersiveAI
             {
                 InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
             }
+        }
+
+        // Says so when an exchange ended with the heart deliberately still, so "no relation line" is
+        // readable as her honest choice rather than a missed message or a silent failure — the
+        // moved-heart line (ApplyRelationShift) and this stillness note together cover every outcome
+        // in the message log. Player-visible by design (Anton's ask, 2026.07.11): every exchange
+        // answers, green, red, or grey. ShowHeartHeldNotice quiets it for players who prefer only
+        // real movements to speak.
+        private void NotifyHeartHeld(Hero npc, int feltShift)
+        {
+            if (feltShift != 0 || !_config.ShowHeartHeldNotice || !_config.EnableRelationshipChanges) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "Their";
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"{name}'s heart held where it stood.", ConversationLogColor));
+            }
+            catch { /* the note is a nicety; never let it break a turn */ }
         }
 
         // A soft notice that an NPC's reply (or opening greeting) is ready, so the player need not keep
@@ -1838,6 +1858,7 @@ namespace ImmersiveAI
                     _quickChatBusy.Remove(npc.StringId);
                     if (outcome.FeltShift != 0 && !outcome.FeltShiftApplied)
                         ApplyRelationShift(npc, outcome.FeltShift);
+                    NotifyHeartHeld(npc, outcome.FeltShift);
 
                     // If the player is reading this very thread the reply appears before their eyes and a
                     // toast would only state the obvious; otherwise the ready-ping and the unread mark

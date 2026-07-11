@@ -358,7 +358,7 @@ namespace ImmersiveAI
                         title, body, true, true,
                         new TextObject("{=ImmersiveAI_LetterReply}Write back").ToString(),
                         new TextObject("{=ImmersiveAI_LetterAside}Set it aside").ToString(),
-                        new Action(() => OpenLetterComposer(npc)), new Action(() => { }),
+                        new Action(() => OpenWriteBack(npc)), new Action(() => { }),
                         "", 0f, (Action?)null,
                         (Func<ValueTuple<bool, string>>?)null,
                         (Func<ValueTuple<bool, string>>?)null);
@@ -723,6 +723,161 @@ namespace ImmersiveAI
 
             MarkLetterWorkInFlight();
             _ = BeginNpcLetterAsync(npc);
+        }
+
+        // ============================ the letter window (view accessors) ============================
+        //
+        // The letter window is a VIEW over what already exists — letters.txt per bond, the bag of
+        // letters on the road, the same QueueLetter the courier menu uses. Nothing new is persisted
+        // for it; closing it loses nothing. All of these run on the game thread (UI commands).
+
+        /// <summary>One correspondent for the letter window's left-hand list. The hero is null when
+        /// the writer has died — the letters remain readable, the road is closed.</summary>
+        internal sealed class LetterContactInfo
+        {
+            public LetterContactInfo(Hero? hero, string name, string folder, bool hasLetters, double lastSpokenGameDay, string detail)
+            {
+                Hero = hero; Name = name; Folder = folder; HasLetters = hasLetters;
+                LastSpokenGameDay = lastSpokenGameDay; Detail = detail;
+            }
+            public Hero? Hero { get; }
+            public string Name { get; }
+            public string Folder { get; }
+            public bool HasLetters { get; }
+            public double LastSpokenGameDay { get; }
+            public string Detail { get; }
+        }
+
+        /// <summary>Everyone this campaign could hold letters with: every soul with a real remembered
+        /// history (the courier menu's own bar), plus anyone a letters.txt already exists for — even
+        /// the dead, whose correspondence remains. Ordered: existing correspondence first, then the
+        /// freshest bonds.</summary>
+        internal static List<LetterContactInfo> CorrespondentsForLetters()
+        {
+            var result = new List<LetterContactInfo>();
+            var self = Current;
+            if (self == null) return result;
+
+            try
+            {
+                var root = NpcPaths.CampaignRoot;
+                if (!Directory.Exists(root)) return result;
+
+                foreach (var folder in Directory.GetDirectories(root))
+                {
+                    var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
+                    bool hasLetters = File.Exists(Path.Combine(folder, NpcPaths.CorrespondenceFileName));
+                    if (!File.Exists(memFile) && !hasLetters) continue;
+
+                    NpcMemory? memory = null;
+                    if (File.Exists(memFile))
+                    {
+                        try { memory = self._memoryStore.LoadFrom(memFile, string.Empty); }
+                        catch { /* the letters may still be readable */ }
+                    }
+
+                    var npcId = memory?.NpcId ?? string.Empty;
+                    if (!hasLetters && (memory == null || string.IsNullOrWhiteSpace(npcId) || memory.StoryRichness <= 0))
+                        continue; // no letters and no real history — not a correspondent yet
+
+                    // A first letter still on the road leaves letters.txt without a memory file (her
+                    // memory is only written when she reads it) — the writer is alive, not "gone";
+                    // resolve them by their folder when the id is not yet on record.
+                    var hero = string.IsNullOrWhiteSpace(npcId)
+                        ? Hero.AllAliveHeroes.FirstOrDefault(h => string.Equals(NpcPaths.NpcFolder(h), folder, StringComparison.OrdinalIgnoreCase))
+                        : FindAliveHero(npcId);
+                    var name = hero?.Name?.ToString() ?? memory?.NpcName ?? Path.GetFileName(folder);
+
+                    string detail;
+                    if (hero == null) detail = "gone from this world — the letters remain";
+                    else if (IsCoLocated(hero)) detail = "here with you — go and speak";
+                    else
+                    {
+                        var status = self.CourierStatusFor(hero.StringId);
+                        detail = status.Length > 0 ? status : Whereabouts(hero);
+                    }
+
+                    result.Add(new LetterContactInfo(
+                        hero, name, folder, hasLetters, memory?.LastConversationGameDay ?? -1, detail));
+                }
+            }
+            catch { /* an unreadable list entry only costs the list */ }
+            return result;
+        }
+
+        /// <summary>The whole correspondence of one bond, parsed from its letters.txt (oldest first).</summary>
+        internal static List<CorrespondenceEntry> CorrespondenceEntriesFor(string folder)
+        {
+            try
+            {
+                var path = Path.Combine(folder, NpcPaths.CorrespondenceFileName);
+                if (!File.Exists(path)) return new List<CorrespondenceEntry>();
+                return CorrespondenceLog.Parse(File.ReadAllText(path));
+            }
+            catch { return new List<CorrespondenceEntry>(); }
+        }
+
+        /// <summary>A short line about the courier between the player and this one, empty when the
+        /// road is quiet: "Your letter is on the road — about 1.4 days out." (or theirs).</summary>
+        internal string CourierStatusFor(string npcId)
+        {
+            try
+            {
+                var letter = _letterBag?.Letters.FirstOrDefault(
+                    l => l != null && string.Equals(l.NpcId, npcId, StringComparison.Ordinal));
+                if (letter == null) return string.Empty;
+
+                double daysOut = Math.Max(0, letter.ArriveGameDay - CampaignTime.Now.ToDays);
+                return letter.ToPlayer
+                    ? $"A letter from them rides toward you — about {daysOut:0.#} days out."
+                    : $"Your letter is on the road — about {daysOut:0.#} days out.";
+            }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>Whether a letter can set out to this one right now; the reason speaks when not.
+        /// Same rules as the courier menu: the dead cannot answer, the near should be spoken to,
+        /// one courier per bond.</summary>
+        internal static bool CanWriteTo(Hero? hero, out string reason)
+        {
+            var self = Current;
+            reason = string.Empty;
+
+            if (self == null || !self._config.EnableLetters) { reason = "The couriers are not riding."; return false; }
+            if (hero == null || !hero.IsAlive) { reason = "The hand that wrote these is gone from this world."; return false; }
+            if (IsCoLocated(hero)) { reason = $"{hero.Name} is here with you — go and speak instead."; return false; }
+            if (self._letterBag != null && self._letterBag.HasInFlightWith(hero.StringId))
+            { reason = $"A courier already rides between you and {hero.Name}; wait for word."; return false; }
+            return true;
+        }
+
+        /// <summary>Sends the player's letter from the window — the same road the courier menu takes.
+        /// False (with the reason toasted by the caller's status line) when it cannot set out.</summary>
+        internal static bool SendLetterFromWindow(Hero npc, string body)
+        {
+            var self = Current;
+            var text = (body ?? string.Empty).Trim();
+            if (self == null || npc == null || text.Length == 0) return false;
+            if (!CanWriteTo(npc, out _)) return false;
+
+            self.QueueLetter(npc, text, toPlayer: false, isReply: false);
+            return true;
+        }
+
+        // "Write back" on an arrived letter: the letter window with the thread on stage where it can
+        // open (next tick, once the inquiry is gone), the old two-beat composer popups where not.
+        private void OpenWriteBack(Hero npc)
+        {
+            if (_config.EnableLetterWindow)
+            {
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    if (!UI.LetterWindow.LetterWindowManager.Open(npc))
+                        OpenLetterComposer(npc);
+                });
+                return;
+            }
+            OpenLetterComposer(npc);
         }
     }
 }

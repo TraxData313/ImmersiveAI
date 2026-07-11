@@ -92,6 +92,14 @@ Key Core concepts:
   `MaxLettersInFlight` letters (default 3) may be on the road toward you at once — letters lag your
   mood by days, so a social morning cannot bury a busy evening.
   Config: `EnableLetters`, `MaxLettersInFlight`.
+- `LetterWindowVM` / `LetterWindowManager` — **the letter window**: press its hotkey (default `U`)
+  anywhere on the map and your whole correspondence opens — every letter-writer on the left (even
+  those gone from this world; their letters remain), the letters themselves as readable cards with
+  when and where they were written, any courier still on the road, and a place to write the next
+  letter with the story open before your eyes ("Seal and send" — same couriers, same rules as the
+  settlement menu). "Write back" on an arriving letter opens it on that thread. Letters also appear
+  as ✉ cards woven between the spoken messages in the chat window's thread, right where they
+  happened. Config: `EnableLetterWindow`, `LetterWindowHotkey`.
 - `ChatWindowVM` / `ChatWindowManager` — **the chat window** (Milestone 2's first stone): press
   the hotkey (default `O`) anywhere on the map — travelling, at sea, or inside a town, castle, or
   village menu — and a window opens with everyone in the same place as you (portraits, friends

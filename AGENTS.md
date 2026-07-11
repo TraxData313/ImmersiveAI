@@ -108,7 +108,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
   campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters)
-  + `MaxLettersInFlight` (cap on letters riding toward the player at once, default 3),
+  + `MaxLettersInFlight` (cap on letters riding toward the player at once, default 3)
+  + `EnableLetterWindow` + `LetterWindowHotkey` (the letter window, hotkey "U" — correspondence as
+  letter cards from letters.txt via Core `CorrespondenceLog`, composer on the courier-menu road;
+  letter beats also render as ✉ cards in the chat window's thread),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the map chat window:
   write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
   messages instead of accept/decline popups),

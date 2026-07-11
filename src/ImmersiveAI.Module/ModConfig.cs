@@ -116,6 +116,20 @@ namespace ImmersiveAI
         /// the control and adjust the rate only from this file.</summary>
         public bool ShowSocialnessControl { get; set; } = true;
 
+        /// <summary>When true (and letters are enabled), the letter window can be opened anywhere on
+        /// the map with its hotkey (<see cref="LetterWindowHotkey"/>): every correspondent on the
+        /// left — existing letters first, even those whose writers have died — the whole
+        /// correspondence with whoever is chosen as readable letter cards, a courier on the road
+        /// shown at the end, and a place to write the next letter with the story open before your
+        /// eyes. "Write back" on an arriving letter opens it too. Set false to keep only the courier
+        /// menu and popups.</summary>
+        public bool EnableLetterWindow { get; set; } = true;
+
+        /// <summary>The key that opens (and closes) the letter window on the map. A single letter or
+        /// an InputKey name, like <see cref="ChatWindowHotkey"/>. Chosen not to collide with the
+        /// vanilla map keys.</summary>
+        public string LetterWindowHotkey { get; set; } = "U";
+
         /// <summary>At most how many letters may be ON THE ROAD toward the player at once, across all
         /// writers. Letters take in-game days to arrive, so a social morning must not turn into a
         /// buried evening: when this many are already riding, no NPC starts another until one lands.
@@ -123,6 +137,13 @@ namespace ImmersiveAI
         /// at one per bond anyway). 0 stops NPCs from writing first at all. Clamped in
         /// <see cref="Normalize"/>.</summary>
         public int MaxLettersInFlight { get; set; } = 3;
+
+        /// <summary>When true, exchanges that moved nothing also say so: a soft grey "X's heart held
+        /// where it stood." after any exchange whose heart-shift was zero — the quiet counterpart of
+        /// the green/red moved-heart lines, so every exchange visibly answers and a still heart is
+        /// never mistaken for a missed message. Set false for the classic behavior where only real
+        /// movements speak. Does nothing while <see cref="EnableRelationshipChanges"/> is off.</summary>
+        public bool ShowHeartHeldNotice { get; set; } = true;
 
         /// <summary>When true, a soft notice tells you the moment an NPC quietly reworks her deep
         /// memory of you — folding old exchanges into her rolling summary and rewriting the truths
@@ -330,9 +351,11 @@ namespace ImmersiveAI
         {
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
-            // The hotkey must name a real key; anything unparseable falls back to the default.
+            // The hotkeys must name real keys; anything unparseable falls back to the defaults.
             if (string.IsNullOrWhiteSpace(ChatWindowHotkey)) ChatWindowHotkey = "O";
             ChatWindowHotkey = ChatWindowHotkey.Trim();
+            if (string.IsNullOrWhiteSpace(LetterWindowHotkey)) LetterWindowHotkey = "U";
+            LetterWindowHotkey = LetterWindowHotkey.Trim();
 
             // A null (rather than blank) atmosphere line would trip token substitution; treat it as "unset"
             // so the prompt falls back to its built-in default. Guidance may legitimately be blank (none).

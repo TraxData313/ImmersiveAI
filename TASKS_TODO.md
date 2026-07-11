@@ -1,20 +1,40 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] letter widget/gui
-    maybe we can add a second window like the one for chat for the letters (keep making sure the letters and chat hist are all sees in the full chat - i also want to see the letters between the messages in the normal chat window if there were letters in between)
-- [ ] "Send letter" in hero's encyclopedia
-    Milestone 2 GUI, letters chapter: (a) a "Send letter" button on the encyclopedia hero page — needs swapping `EncyclopediaHeroPageVM` for a subclass (patch the page-VM factory) + overriding the big hero-page prefab to add the button; (b) a proper letter-writing screen — the native `TextInquiryData` box is single-line and small, so a custom Gauntlet layer with a multiline `EditableTextWidget`, the correspondence shown alongside as you write, and a wax-seal Send. The interim two-beat flow (correspondence window → text box, 2026.07.09) covers the need until then. Both fit the same custom-screen foundations as the Milestone 2 chat window — do them together. Or maybe add it in the letter widget/gui if ready by then
+- [ ] Sent letter 
+    replace the option in towns "Send a letter by courirer" with the letter widget that opens by default with U key.
+- [ ] Chat widget - see the chats with NPCs away
+    in the chat widget O I want to see the chats with the ones I had even if they are not near me, next to the name add (here) if they are here with you or (away) if they are not here. If they are away the "send button" should be grayed out
+- [ ] persistent drafts
+    when i start typing a letter ot in chat in the respecitive widget, and I close the window to look for the name of the castle i speak of for example, when i return to the widgher with U or O by default keep the message I was drafting
+- [ ] Socialness scale fast min/max buttons
+    next to the socialness scale that lets you go from 0 to 24 maybe add whic is like "Socialness (?) [-] Value [+]" -> "Socialness (?) [0] [-] Value [+] [24]" to min/max them quickly
+- [ ] click on conversation popup opens old style chat instear of the chat widget for immersion
+    seeing the person face to face not to the widget (if I want, I will X the notification and will go the widget if I want to talk there). No need for the accept/decline when I click the popup - I just X it if I cant talk, the NPC sees that they come to me said hi and I didnt answer next time we talk
+- [ ] Night interactions
+    Maybe reduce the night interactions possibility, they should sleep during the night, maybe the deeper we are into the night we can start reducing from /2 to /8 in the deepest night!
+- [ ] relation points in chat visible
+    when im in achat or letter with an NPC next to their name on the chat, please show me their relation points with me and if they change, reflect them there
+- [ ] 
+    in the chat widget O, when I type a windows with my message pops up for me to see my message helps me when its long, but it covers the last message of the NPC i speak with. Its not a big deal, I can scroll down and it shows, but maybe if its an easy fix this scroll to let me see their last message above the one i complse will be automatic
 - [ ] Mod Config:
     export the settings in the Mod menu (with the mod menu mod)
     MCM export — before I take a dependency on the Mod Configuration Menu mod: do you have MCM installed, and are you okay with it being a soft dependency? - yes and yes
-- [ ] Actions for the NPCs:
-    NPCs that can ACT, not just know (found while mining ChatAi for the "what the NPC can interact with" task, 2026.07.10): ChatAi lets the LLM trigger real game actions via its NpcDecisionPlanner/AIActionEvaluator — travel to a settlement, patrol, join the player's party (or offer to for coin), accept a join offer, marry the player, give the player gold, start a spar/fight. The info half is done (recall_company + situation whispers); the acting half deserves its own design pass — likely the same native tool-call channel (an "act" tool family beside the recalls), each action gated and phrased to the NPC as a choice of their own will, never a command. Decide scope with Anton first: which actions, what limits, how consent/impossibility is narrated back.
+- [ ] angel narrator -> the NPC is the narrator (1st person)
+    The angel instructiuons are overly long and they might be too gay for say the king of the sturgians (a genlte bla bla), so this both I fear may take too much tokens and sway their decision. Maybe we can rework the full prompt and the helper prompts, i was thinking maybe rework the instructions in the I (from long angel perspective "angel wispers you what you remember" to short first person perspective "I remember...").
+    Example when they have the chance to talk to me "Angel, softly into Name: you go to Name now - ..." -> "Vulgrim walks by, I've never met him, he is the ..., would I want to ask him something?..."
+- [ ] renown imersion
+    Speaking with high lords who dont know you tand if they are with bad traits they would normally dismiss you ask you what you want, not chat with you about the meaning of the universe a few hours if you are clan level 0, this would break the emersion, just to make sure we wont have that here like in other mods. I dont want to hard code that into them as well, but to let them see enough information, like eg he is king you are unknown, etc. Maybe the higher he is at rank, and lower in bad traits, and the lower your renown is it would be harder for him to get interested in you, and maybe have less chance to reach back to you (that one I think is ok to kinda hard code, and also we ask them if they want, so they, if they have not been impressed or anything would normaly reject). But dont overdo it, maybe some touches, the other way around, them becoming not interested in interactions would be maybe worse. Idk, just random ramble, I think you will be able to do it good. But I do think we should consider that, many players I heard talk about this in the AI mods. Yeash the more I think about it, if there is 2 or more difference in clan tier we should really tell them, like "I am the king and leader of... and to me comes an unknown person, in rags (maybe mean armour tier) and holding a rusty 1st weapon and rusty gear (ave of the 4 weapons), carries no banner/small banner, epic banner (depending on the banner equiped), if he is low tier "my X tells me he is a small band leader"... Something like this, that doesnt make a list of ties, weapons, but smashes them down to a suitable sentence that gives the NPC all the info they would see to decide. So if he is king and I start asking him to search stuff for me and im from different culture even, he wont go searching stuff for me like a pupie.
+- [ ] infos
+    maybe next to the O chat and U letter windows add a info, where there are, explanations, instructions and examples   
 - [ ] discuss with Claude
     get Fable to think of more TODOs that would be nice to have before we release a V1 to steam
-- [ ] renown imersion
-    Speaking with high lords who dont know you tand if they are with bad traits they would normally dismiss you ask you what you want, not chat with you about the meaning of the universe a few hours if you are clan level 0, this would break the emersion, just to make sure we wont have that here like in other mods. I dont want to hard code that into them as well, but to let them see enough information, like eg he is king you are unknown, etc. Maybe the higher he is at rank, and lower in bad traits, and the lower your renown is it would be harder for him to get interested in you, and maybe have less chance to reach back to you (that one I think is ok to kinda hard code, and also we ask them if they want, so they, if they have not been impressed or anything would normaly reject). But dont overdo it, maybe some touches, the other way around, them becoming not interested in interactions would be maybe worse. Idk, just random ramble, I think you will be able to do it good. But I do think we should consider that, many players I heard talk about this in the AI mods
+- [ ] steam release
+    release to steam for everyone to enjoy with good descriptions
 
-
-POST V1:
+POST V1 or NOT FULLY DECIDED:
+- [ ] "Send letter" in hero's encyclopedia
+    Milestone 2 GUI, letters chapter, the remaining half: a "Send letter" button on the encyclopedia hero page — needs swapping `EncyclopediaHeroPageVM` for a subclass (patch the page-VM factory) + overriding the big hero-page prefab to add the button; simplest wiring now is the button opening the letter window (2026.07.10) preselected on that hero. The letter-writing screen half is DONE — the letter window's composer (correspondence alongside, draft mirror, "Seal and send") covers it.
+- [ ] Actions for the NPCs:
+    NPCs that can ACT, not just know (found while mining ChatAi for the "what the NPC can interact with" task, 2026.07.10): ChatAi lets the LLM trigger real game actions via its NpcDecisionPlanner/AIActionEvaluator — travel to a settlement, patrol, join the player's party (or offer to for coin), accept a join offer, marry the player, give the player gold, start a spar/fight. The info half is done (recall_company + situation whispers); the acting half deserves its own design pass — likely the same native tool-call channel (an "act" tool family beside the recalls), each action gated and phrased to the NPC as a choice of their own will, never a command. Decide scope with Anton first: which actions, what limits, how consent/impossibility is narrated back.
 - [ ] NPC to NPC chat
     In the future have a system that lets the NPC pick a person (another NPC) to talk to and for them to be able to exchange a few messages and for me to be able to see the log or watch them in real time talk, again maybe based on how popular they are, but even the unused to have the option to do it. So they should have a general deep memory, a per person deep memory and per person hist maybe
 - [ ] save controllable memories

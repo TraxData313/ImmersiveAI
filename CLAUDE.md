@@ -30,7 +30,7 @@ You usually only need to open:
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search as "the sages' counsel") + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
-- **Letters** → `LetterBag` / `LetterCourier` (Core, queue + travel math) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows).
+- **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
 Always `dotnet test` after touching Core. Don't crack open the decompiled ChatAi reference unless
@@ -75,7 +75,9 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
                           Portraits (shared dark-backdrop portrait codes), ChatWindow\ (the chat window:
                           ChatWindowVM/ChatContactVM/ChatMessageVM + ChatWindowManager — layer lifecycle,
-                          hotkey/Enter/Escape polling, unread marks, scroll-to-bottom), Socialness\
+                          hotkey/Enter/Escape polling, unread marks, scroll-to-bottom), LetterWindow\
+                          (the letter window: LetterWindowVM/LetterContactVM + LetterWindowManager —
+                          the chat window's twin for correspondence, hotkey "U"), Socialness\
                           (the on-map socialness stepper: SocialnessVM + SocialnessManager, mouse-only layer)
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
   Personas/SituationBuilder.cs  builds the gentle second-person "current situation" narration
@@ -176,9 +178,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   (world-wide tone/roleplay guidance, offered as freedom), `NotifyWhenReplyReady` (short "has answered"
   ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),
   `EnableRelationshipChanges` + `RelationshipChangesViaTool` (NPC-authored, conversation-driven relation
-  shifts; with the tool shape on — default — the NPC moves her own heart mid-reply via the `move_heart`
-  native tool, silence meaning it held; off, or on a backend without tools, a second isolated feeling
-  call asks after the reply; both default on),
+  shifts; with the tool shape on — default — the NPC weighs her heart via the `move_heart` native tool
+  EVERY reply, 0 being a full answer — the always-weigh ritual, Anton's design 2026.07.11 after gpt-4o
+  proved too shy to reach for an optional tool; off, or on a backend without tools, a second isolated
+  feeling call asks after the reply; both default on) + `ShowHeartHeldNotice` (the grey "heart held
+  where it stood" line after zero-shift exchanges, the quiet counterpart of the green/red moved lines
+  so every exchange visibly answers; player-visible, default on),
   `EnableNpcInitiatedChats` + `DailyInitiationRate` + `InitiationPullFloor` + `ShowInitiationTestButton`
   (NPCs reaching out to the player on their own; the rate is the expected visits per day **in total across
   everyone** when the bonds are full — it does NOT stack per companion — scaled down by how often you talk
@@ -207,7 +212,15 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableLetters` (distant NPCs writing letters that travel with distance, and the player's courier
   menu in settlements; default on) + `MaxLettersInFlight` (at most this many letters ON THE ROAD toward
   the player at once — letters lag the socialness mood by days, so the cap, not the moment's mood,
-  protects the later busier self; spontaneous writes only, player-invited replies ride free; default 3),
+  protects the later busier self; spontaneous writes only, player-invited replies ride free; default 3)
+  + `EnableLetterWindow` + `LetterWindowHotkey` (the letter window — the chat window's twin, hotkey
+  default "U", one of the two windows open at a time: every correspondent listed even when the writer
+  has died, the whole correspondence as letter cards parsed from letters.txt by Core `CorrespondenceLog`,
+  a courier on the road noted at the end, and a composer with a tall draft mirror, "Seal and send",
+  same QueueLetter road and rules as the courier menu; "Write back" on an arrival opens it, popup
+  fallback when it cannot; letter beats ALSO render as "✉ by letter" cards inside the chat window's
+  thread via `PromptBuilder.IsComposeLetterBeat`/`TryExtractReceivedLetter` — markers that must stay
+  word-for-word fragments of the Angel letter templates; both default on),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the chat window — see its
   section below: a Gauntlet window over the map, hotkey default "O", listing everyone co-located;
   the player writes first with no greeting ceremony, and NPC reach-outs land there as waiting spoken
@@ -521,6 +534,24 @@ back as a quiet notice. All beats are Angel turns in `memories.json`; each NPC f
 most one delivery per direction per hour. Test lever: "[test — trigger them to write you a letter]"
 (co-located → lands in ~6 game-hours). The odds view shows distant NPCs' letter chance. Config:
 `EnableLetters`.
+
+**The letter window (2026.07.11)** is the chat window's twin for correspondence (`UI\LetterWindow\`,
+prefab `ImmersiveLetterWindow.xml`, hotkey `LetterWindowHotkey` default "U"; the two managers yield to
+each other so one window is up at a time). It is a pure VIEW: correspondents enumerated from the
+campaign's NPC folders (`CorrespondentsForLetters` — anyone with a letters.txt, even dead writers, plus
+everyone with real history), the correspondence parsed from letters.txt by Core `CorrespondenceLog.Parse`
+(letter cards with writer/stamp/provenance; asides as narration), the courier's road from the live
+`LetterBag` (`CourierStatusFor`), and writing routed through the same `QueueLetter` as the courier menu
+(`SendLetterFromWindow` + `CanWriteTo` — one courier per bond, co-located souls pointed to speak, the
+dead cannot answer). Enter deliberately does NOT send here (a letter deserves a deliberate seal); the
+composer's tall draft mirror is the "letter-writing screen" the encyclopedia task wanted — its remaining
+half is only the encyclopedia button. "Write back" on an arrival opens the window preselected
+(`OpenWriteBack`, next-tick via the dispatcher so the inquiry is gone; popup-composer fallback). In the
+CHAT window's thread, letter beats now wear their letters openly: `PromptBuilder.IsComposeLetterBeat` and
+`TryExtractReceivedLetter` (Core, unit-tested) recognize the recorded Angel letter turns and render them
+as "✉ by letter" cards between the spoken messages — those markers must remain word-for-word fragments
+of the shipped Angel letter templates (recorded memories carry the old phrasing forever), so change a
+template and its marker together, never one.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

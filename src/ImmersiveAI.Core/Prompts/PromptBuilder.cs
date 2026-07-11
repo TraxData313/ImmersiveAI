@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -185,6 +186,42 @@ namespace ImmersiveAI.Core.Prompts
         public static string ComposeReplyLine(string playerName) =>
             $"Then answer them. Give me only the letter you would send back to {playerName} — the words that " +
             "will stand on the page, in your own hand and your own voice. Do not tell me about the letter; write it.";
+
+        // ------------------------------ recognizing letter beats ------------------------------
+        // The letter moments live in memory as ordinary Angel turns; these markers let a VIEW (the
+        // chat window's thread) recognize them and dress them as letters instead of raw narration.
+        // They must stay word-for-word fragments of the lines above — recorded memories already
+        // carry the shipped phrasing, so change a template and its marker together, never one.
+
+        private const string ComposeLetterMark = "Then sit, and set your heart to paper";
+        private const string ComposeReplyMark = "Then answer them. Give me only the letter";
+        private const string ReadLetterOpenMark = "You break the seal and read:";
+        private const string ReadLetterCloseMark = "Tell me, from your own heart";
+
+        /// <summary>True when this Angel line invited the NPC to write a letter (first word or
+        /// reply) — the turn's spoken side IS the letter that went to the player.</summary>
+        public static bool IsComposeLetterBeat(string? angelLine)
+        {
+            var line = (angelLine ?? string.Empty).TrimStart();
+            return line.StartsWith(ComposeLetterMark, StringComparison.Ordinal)
+                || line.StartsWith(ComposeReplyMark, StringComparison.Ordinal);
+        }
+
+        /// <summary>When this Angel line placed the PLAYER's letter into the NPC's hands, hands back
+        /// the letter's body (it lives inside the line so the reading is remembered verbatim).</summary>
+        public static bool TryExtractReceivedLetter(string? angelLine, out string body)
+        {
+            body = string.Empty;
+            var line = angelLine ?? string.Empty;
+
+            int open = line.IndexOf(ReadLetterOpenMark, StringComparison.Ordinal);
+            if (open < 0) return false;
+            int start = open + ReadLetterOpenMark.Length;
+
+            int close = line.IndexOf(ReadLetterCloseMark, start, StringComparison.Ordinal);
+            body = (close > start ? line.Substring(start, close - start) : line.Substring(start)).Trim();
+            return body.Length > 0;
+        }
 
         /// <summary>True when this NPC carries any memory of the player at all — used to choose between
         /// the first-meeting and the familiar <see cref="ArrivalLine"/>.</summary>
@@ -390,7 +427,7 @@ namespace ImmersiveAI.Core.Prompts
             // Offered only when the move_heart tool truly rides along; without it the feeling is
             // asked in a separate breath after the reply, and this whisper would only confuse.
             if (persona.CanMoveHeart)
-                sb.AppendLine("- Your heart is your own. When something in what passes between you truly moves it — a kindness that warms you, a wound that cuts — you may let your regard for them shift then and there, as little or as much as the moment honestly deserves: a word or a small grace moves a heart only a little, and only what shakes the soul moves it greatly. Most words leave a heart where it stood, and that stillness too is an answer. Never speak of any measure; let the feeling live only in your words and bearing.");
+                sb.AppendLine("- Your heart is your own, and it is a living thing. Each time, before you answer, look within and set down honestly how the moment has moved your regard for them — every reply, even when the honest answer is nothing at all (a held heart is a full answer too, marked as 0). Warm exchanges and small graces should move it a little (one to three), wounds likewise away, and only what shakes the soul moves it greatly; a heart already given wholly can still be warmed. Never speak of any measure; let the feeling live only in your words and bearing.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
