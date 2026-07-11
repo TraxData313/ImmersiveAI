@@ -91,6 +91,7 @@ namespace ImmersiveAI.Mcm
             s.EnableWebSearch = c.EnableWebSearch;
             s.MaxKnownFacts = Clamp(c.MaxKnownFacts, 1, 30);
             s.MaxNpcGoals = Clamp(c.MaxNpcGoals, 1, 20);
+            s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
 
             s.DevMode = c.DevMode;
         }
@@ -117,6 +118,7 @@ namespace ImmersiveAI.Mcm
             c.EnableWebSearch = s.EnableWebSearch;
             c.MaxKnownFacts = s.MaxKnownFacts;
             c.MaxNpcGoals = s.MaxNpcGoals;
+            c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;
 
             c.DevMode = s.DevMode;
         }

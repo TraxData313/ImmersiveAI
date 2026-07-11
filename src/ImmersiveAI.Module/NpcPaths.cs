@@ -79,12 +79,77 @@ namespace ImmersiveAI
 
         public static string NpcFolder(Hero npc) => NpcFolder(npc.StringId, FirstNameOf(npc));
 
+        /// <summary>
+        /// Resolves an NPC's folder by IDENTITY (the stringId), not by the current name. The folder is
+        /// labelled &lt;stringId&gt;_&lt;FirstName&gt; for readability, but a hero can be renamed (the player
+        /// renaming a companion, an appearance change) while the stringId endures — so when the name-labelled
+        /// path is missing we look for an existing folder that belongs to this same stringId and heal it to
+        /// the current name, so the memories follow the rename instead of being orphaned. (The campaign folder
+        /// is safe from a player rename already: its id is minted once and frozen inside the save.)
+        /// </summary>
         public static string NpcFolder(string npcId, string firstName)
         {
-            var folderName = Sanitize(npcId);
+            var idPart = Sanitize(npcId);
             var fn = Sanitize(firstName);
-            if (fn.Length > 0 && fn != "_") folderName += "_" + fn;
-            return Path.Combine(CampaignRoot, folderName);
+            var folderName = (fn.Length > 0 && fn != "_") ? idPart + "_" + fn : idPart;
+            var desired = Path.Combine(CampaignRoot, folderName);
+
+            try
+            {
+                if (Directory.Exists(desired)) return desired;
+
+                var existing = FindFolderByNpcId(idPart);
+                if (existing == null || string.Equals(existing, desired, StringComparison.OrdinalIgnoreCase))
+                    return desired;
+
+                // The name changed since the folder was made. Relabel it to the current name so future
+                // lookups are O(1); if it is momentarily locked, use it in place and retry next time.
+                try { Directory.Move(existing, desired); return desired; }
+                catch { return existing; }
+            }
+            catch { return desired; }
+        }
+
+        /// <summary>
+        /// Finds an existing NPC folder in the active campaign that belongs to this stringId, whatever name
+        /// it was labelled with. A folder named exactly the id matches unambiguously; a folder named
+        /// &lt;id&gt;_&lt;suffix&gt; is only claimed when the NpcId written inside its memories.json actually
+        /// equals this id — so a shorter id (lord_1) can never steal a longer id's folder (lord_1_2_Alice).
+        /// Returns null when none is found (a brand-new NPC, the common case).
+        /// </summary>
+        private static string? FindFolderByNpcId(string idPart)
+        {
+            if (!Directory.Exists(CampaignRoot)) return null;
+
+            foreach (var dir in Directory.GetDirectories(CampaignRoot))
+            {
+                var name = Path.GetFileName(dir);
+                if (string.IsNullOrEmpty(name)) continue;
+
+                if (string.Equals(name, idPart, StringComparison.OrdinalIgnoreCase))
+                    return dir;
+
+                if (!name.StartsWith(idPart + "_", StringComparison.OrdinalIgnoreCase)) continue;
+
+                var stored = NpcIdInFolder(dir);
+                if (stored != null && string.Equals(Sanitize(stored), idPart, StringComparison.OrdinalIgnoreCase))
+                    return dir;
+            }
+
+            return null;
+        }
+
+        // Reads only the NpcId recorded inside a folder's memories.json (the durable identity), or null
+        // when there is no memory yet or it can't be read.
+        private static string? NpcIdInFolder(string folder)
+        {
+            try
+            {
+                var path = Path.Combine(folder, MemoryFileName);
+                if (!File.Exists(path)) return null;
+                return (string?)JObject.Parse(File.ReadAllText(path))["NpcId"];
+            }
+            catch { return null; }
         }
 
         public static string MemoryFile(Hero npc) => Path.Combine(NpcFolder(npc), MemoryFileName);
@@ -327,6 +392,15 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
 A _letters.json in the campaign folder holds the letters currently ON THE ROAD (sent but
 not yet arrived). Deleting it loses those letters mid-journey; the ones already delivered
 are safe in each NPC's memory and letters.txt.
+
+A _snapshots folder holds a photograph of this campaign's memories taken at each of your
+saves, so that loading a save also rewinds the NPCs' memories to that moment (a reload can
+truly un-remember a bad turn — the game already rewinds the relation number the same way).
+It is managed for you: a save's photograph is replaced when you overwrite that save, and old
+ones are pruned. You can delete _snapshots to reclaim disk (you only lose the ability to
+rewind memories on OLDER saves; current memory is untouched). Turn the whole behavior off with
+'RevertMemoriesWithSaves' in config.json (or the mod's menu) if you prefer memories to persist
+across reloads.
 
 You can delete an NPC's whole folder to reset that character, or delete a whole
 campaign_<id> folder to reset every memory of a playthrough you no longer keep.

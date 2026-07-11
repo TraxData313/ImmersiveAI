@@ -1,6 +1,4 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] save dependent memories
-    (maybe — leaning "leave it") Reload-divergence: within ONE campaign, loading an EARLIER save keeps "memories from the future" — the NPC still remembers this morning's talk after you reload to yesterday. Campaign-scoping (done 2026.07.09) fixed cross-campaign bleed but deliberately not this. When time comes: stamp each `ConversationTurn` with `CampaignTime`, and on load drop turns dated after now (an opt-in `DropFutureMemoriesOnLoad`, default off). Same for their goals, if we have them by then. Note it can't un-bake facts already compressed into `Summary`/`KnownFacts`, so it's a partial fix at best — another reason to leave it.
 - [ ] Player interactions visible to the NPC
     Bannerlord has pop up decision which the player can take, like Apples from heaven event. Those are one of the few events that tell the world who the player is, so it will be good for the NPCs to see the latest X of those events that happened to the player, when and where, what options he had and what their impact was (lose 200 denars, gain honor etc) and what he chose. All who speak with him should see them - the ones that were with him will know and the ones that werent will have heard from the people that are with him.
 - [ ] info sections

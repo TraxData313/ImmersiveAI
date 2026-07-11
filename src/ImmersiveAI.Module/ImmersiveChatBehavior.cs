@@ -96,6 +96,14 @@ namespace ImmersiveAI
         // stable for the campaign's whole life. See NpcPaths for the folder layout.
         private string _campaignId = string.Empty;
 
+        // Save-scoped memory: a fresh token is minted into every save (SyncData) and copied into a
+        // snapshot folder once the save completes (OnSaveOver), so loading that save restores the exact
+        // memory of the moment — this is what lets a reload truly un-remember a bad turn. _snapshotToken
+        // is the token read back on load (what to restore); _pendingSnapshotToken is the one just minted
+        // this save (what OnSaveOver photographs). See MemorySnapshotStore.
+        private string _snapshotToken = string.Empty;
+        private string _pendingSnapshotToken = string.Empty;
+
         // The live behavior instance, for the map-notice UI types (which the game constructs
         // reflectively and cannot be handed a reference) to reach back into. One campaign, one
         // behavior; re-assigned on every game start.
@@ -398,6 +406,10 @@ namespace ImmersiveAI
 
             // Even a talk that never opens free chat is a real meeting — note it at the goodbye.
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
+
+            // A completed save hands us its name here — photograph this campaign's memory into the token
+            // minted for that save, so loading it later rewinds the NPCs' memories with it.
+            CampaignEvents.OnSaveOverEvent.AddNonSerializedListener(this, OnSaveOver);
         }
 
         // A conversation just closed. If it never became recorded beats (no free chat, no accepted
@@ -449,6 +461,33 @@ namespace ImmersiveAI
         public override void SyncData(IDataStore dataStore)
         {
             dataStore.SyncData("ImmersiveAI_CampaignId", ref _campaignId);
+
+            // Mint a fresh snapshot token for THIS save before it is written, so the token stored inside the
+            // file is the one OnSaveOver photographs; on load this reads back the token saved with the file,
+            // which OnGameLoaded restores. (Harmless when the feature is off — no folder is ever written, so
+            // the read finds nothing to restore.)
+            if (dataStore.IsSaving)
+            {
+                _snapshotToken = Guid.NewGuid().ToString("N");
+                _pendingSnapshotToken = _snapshotToken;
+            }
+            dataStore.SyncData("ImmersiveAI_SnapshotToken", ref _snapshotToken);
+        }
+
+        // A save just finished — with the feature on, photograph this campaign's whole memory folder into the
+        // token minted for it, and let the save's name prune that slot's previous photograph (an overwrite
+        // reuses the disk). Runs on the game thread after the save, so memory files are quiescent.
+        private void OnSaveOver(bool isSuccessful, string saveName)
+        {
+            var token = _pendingSnapshotToken;
+            _pendingSnapshotToken = string.Empty;
+            try
+            {
+                if (!isSuccessful || _config == null || !_config.RevertMemoriesWithSaves) return;
+                if (string.IsNullOrEmpty(token)) return;
+                MemorySnapshotStore.Snapshot(NpcPaths.CampaignRoot, token, saveName, _config.MaxMemorySnapshots);
+            }
+            catch { /* a snapshot must never break a save */ }
         }
 
         // A loaded save either carries its campaign id already, or predates campaign scoping — in
@@ -468,6 +507,13 @@ namespace ImmersiveAI
                 NpcPaths.AdoptLegacyIntoActiveCampaign();
                 NpcPaths.MigrateAll(); // ancient flat memory\ / npcs\ files, now campaign-scoped
             }
+
+            // Rewind the memory folder to the photograph taken when this save was written, so a reload truly
+            // un-remembers whatever happened after it. Runs before any NPC file or the letter bag is read;
+            // a pre-feature save carries no token, so this is a safe no-op there. (An empty/missing snapshot
+            // restores nothing — it never blanks live memory.)
+            if ((_config?.RevertMemoriesWithSaves ?? false) && !string.IsNullOrEmpty(_snapshotToken))
+                MemorySnapshotStore.Restore(NpcPaths.CampaignRoot, _snapshotToken);
         }
 
         // New campaigns mint a fresh id here (nothing to adopt — a new world starts unremembered);

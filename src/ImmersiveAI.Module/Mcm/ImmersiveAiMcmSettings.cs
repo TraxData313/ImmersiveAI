@@ -120,6 +120,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int MaxNpcGoals { get; set; } = 6;
 
+        [SettingPropertyBool("Memories rewind with your saves", Order = 7, RequireRestart = false,
+            HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool RevertMemoriesWithSaves { get; set; } = true;
+
         // ── Advanced ────────────────────────────────────────────────────────────────
 
         [SettingPropertyBool("Developer mode", Order = 0, RequireRestart = false,

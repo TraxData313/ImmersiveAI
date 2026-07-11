@@ -278,6 +278,20 @@ namespace ImmersiveAI
         /// both honor it). Kept small so the prompt stays lean and their striving stays focused.</summary>
         public int MaxNpcGoals { get; set; } = 6;
 
+        /// <summary>
+        /// Reverting a bad turn: when on, each save quietly photographs this campaign's whole memory folder
+        /// (every NPC's memories/self/goals/letters + the letters still on the road) and loading that save
+        /// restores the photograph — so reloading to before an NPC's angry moment truly un-remembers it, the
+        /// same way the game already reverts the relation number that lives inside the save. Off = the old
+        /// behavior, where a reload leaves "memories from the future" in place. Snapshots live in _snapshots\
+        /// inside the campaign folder, keyed to each save and pruned when a save is overwritten. Default on.
+        /// </summary>
+        public bool RevertMemoriesWithSaves { get; set; } = true;
+
+        /// <summary>A safety cap on how many memory snapshots one campaign keeps across all its saves (oldest
+        /// pruned first). Normally each save slot keeps only its own, so this bites only many-slot players.</summary>
+        public int MaxMemorySnapshots { get; set; } = 40;
+
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
         /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>

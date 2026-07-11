@@ -248,6 +248,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   the same replace/none contract as `FACTS:`, works on any backend); folded into the prompt as "What you
   strive for" right after "Who you have become"; default on, cap 6, clamp 1..20),
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
+  `RevertMemoriesWithSaves` (save-scoped memory — each save photographs the whole campaign memory folder
+  and loading it restores the photo, so a reload truly un-remembers a bad turn, the way the game already
+  rewinds the relation inside the save; the fix for the reload-divergence "memories from the future" bug;
+  default on) + `MaxMemorySnapshots` (disk cap on snapshots per campaign, oldest pruned first; default 40) +
   `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
   their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
   default 1500, never below `MaxTokens`),
@@ -301,6 +305,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
 - `NPCs\campaign_<id>\_letters.json` — the letters currently ON THE ROAD for that campaign
   (Core `LetterBag`; letters travel real in-game days and must survive save/load). Delivered
   letters leave this file — they live on in NPC memory and `letters.txt`.
+- `NPCs\campaign_<id>\_snapshots\<token>\` — save-scoped memory photographs (Module `MemorySnapshotStore`):
+  a copy of the whole campaign folder taken at each save, so loading that save rewinds the NPCs' memories
+  with it. Tied to the save by a GUID token minted into the save via `SyncData` (`OnSaveOverEvent` writes the
+  photo, `OnGameLoaded` restores it); the save name (from `OnSaveOverEvent`) only prunes an overwritten
+  slot's old photo. `_index.json` maps save→token. Managed automatically; restore is fail-safe (empty/missing
+  photo restores nothing). Toggle `RevertMemoriesWithSaves`, cap `MaxMemorySnapshots`.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 
 The folder layout, path resolution, and the one-time migration from the old flat
