@@ -32,6 +32,12 @@ namespace ImmersiveAI.UI.Socialness
         public void ExecuteDecrease() =>
             SetRate(Math.Max(0.0, Snap(_config.DailyInitiationRate) - Step));
 
+        // Jump straight to "leave me be" or "glad of company every hour" (Anton's ask, 2026.07.11) —
+        // the [0] and [24] rails flanking the stepper, one click instead of many.
+        public void ExecuteMin() => SetRate(0.0);
+
+        public void ExecuteMax() => SetRate(24.0);
+
         private static double Snap(double value) => Math.Round(value / Step) * Step;
 
         private void SetRate(double value)

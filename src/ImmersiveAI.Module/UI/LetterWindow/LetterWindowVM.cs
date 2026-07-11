@@ -25,6 +25,8 @@ namespace ImmersiveAI.UI.LetterWindow
         private LetterContactVM? _selected;
         private string _inputText = string.Empty;
         private string _selectedName = string.Empty;
+        private string _relationText = string.Empty;
+        private Color _relationColor = Colors.White;
         private string _statusText = string.Empty;
         private bool _canWrite;
 
@@ -64,6 +66,9 @@ namespace ImmersiveAI.UI.LetterWindow
 
             RefreshCorrespondence();
             RefreshSelectionState();
+
+            // Bring back any half-written letter to this one from before the window was last closed.
+            InputText = LetterWindowManager.GetDraft(contact.Folder);
         }
 
         /// <summary>Puts a given hero's correspondence on stage (used by "Write back" on an arrival).</summary>
@@ -127,6 +132,15 @@ namespace ImmersiveAI.UI.LetterWindow
         private void RefreshSelectionState()
         {
             SelectedName = _selected?.Name ?? string.Empty;
+
+            _relationText = _selected?.Hero == null ? string.Empty : ImmersiveChatBehavior.RelationLabel(_selected.Hero);
+            int rel = _selected?.Hero == null ? 0 : ImmersiveChatBehavior.RelationValue(_selected.Hero);
+            _relationColor = rel > 0 ? new Color(0.55f, 0.82f, 0.55f, 1f)
+                : rel < 0 ? new Color(0.86f, 0.53f, 0.49f, 1f)
+                : new Color(0.78f, 0.75f, 0.68f, 1f);
+            OnPropertyChanged("RelationText");
+            OnPropertyChanged("HasRelation");
+            OnPropertyChanged("RelationColor");
 
             if (_selected == null)
             {
@@ -192,6 +206,23 @@ namespace ImmersiveAI.UI.LetterWindow
         public bool HasSelection => _selected != null;
 
         [DataSourceProperty]
+        public string RelationText
+        {
+            get => _relationText;
+            set { if (value != _relationText) { _relationText = value; OnPropertyChangedWithValue(value, "RelationText"); } }
+        }
+
+        [DataSourceProperty]
+        public bool HasRelation => !string.IsNullOrEmpty(_relationText);
+
+        [DataSourceProperty]
+        public Color RelationColor
+        {
+            get => _relationColor;
+            set { if (value != _relationColor) { _relationColor = value; OnPropertyChangedWithValue(value, "RelationColor"); } }
+        }
+
+        [DataSourceProperty]
         public string SelectedName
         {
             get => _selectedName;
@@ -223,6 +254,9 @@ namespace ImmersiveAI.UI.LetterWindow
                     OnPropertyChanged("CanSend");
                     OnPropertyChanged("HasDraft");
                     OnPropertyChanged("EntriesBottomMargin");
+
+                    if (_selected != null)
+                        LetterWindowManager.SetDraft(_selected.Folder, _inputText);
                 }
             }
         }

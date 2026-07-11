@@ -8,45 +8,60 @@
 -->
 <Prefab>
   <Window>
-    <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="264" SuggestedHeight="460" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginRight="12" MarginBottom="240">
+    <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="348" SuggestedHeight="460" HorizontalAlignment="Right" VerticalAlignment="Top" MarginRight="12" MarginTop="160">
       <Children>
 
-        <!-- the explanation, unfolded above the bar by a click (or hover) on the label.
+        <!-- the explanation, unfolded BELOW the bar by a click (or hover) on the label (the bar now
+             sits near the top of the screen, so the bubble opens downward rather than up — 2026.07.11).
              Layout scar tissue (2026.07.10 screenshot): the sprite rides the bubble widget ITSELF
              (stretch bg children inside a CoverChildren parent made the height collapse to the
              whole root), and the text is a FIXED-width, margin-free child (stretch text with a
              left margin clipped the first glyph of every line on this layer). -->
-        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="430" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="64" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.94" IsVisible="@IsHintShown">
+        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="430" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="64" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.94" IsVisible="@IsHintShown">
           <Children>
             <RichTextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="398" HorizontalAlignment="Center" MarginTop="12" MarginBottom="12" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#C9BFA8FF" Text="@HintText" />
           </Children>
         </Widget>
 
         <!-- the bar itself -->
-        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="264" SuggestedHeight="56" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+        <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="348" SuggestedHeight="56" HorizontalAlignment="Right" VerticalAlignment="Top">
           <Children>
             <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.82" />
 
             <!-- the label is itself the button that unfolds the explanation: click toggles it
                  (the road that provably works on this layer), hover shows/hides it where hover
                  events deign to fire -->
-            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="130" HorizontalAlignment="Left" Command.Click="ExecuteToggleHint" Command.HoverBegin="ExecuteBeginHint" Command.HoverEnd="ExecuteEndHint" DoNotPassEventsToChildren="true">
+            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="122" HorizontalAlignment="Left" Command.Click="ExecuteToggleHint" Command.HoverBegin="ExecuteBeginHint" Command.HoverEnd="ExecuteEndHint" DoNotPassEventsToChildren="true">
               <Children>
-                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="126" HorizontalAlignment="Center" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#C9BFA8FF" Brush.TextHorizontalAlignment="Center" Text="@LabelText" />
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="118" HorizontalAlignment="Center" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#C9BFA8FF" Brush.TextHorizontalAlignment="Center" Text="@LabelText" />
               </Children>
             </ButtonWidget>
 
-            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="134" Brush="Popup.Cancel.Button" Command.Click="ExecuteDecrease">
+            <!-- [0]: straight to "leave me be" -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="30" SuggestedHeight="34" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="124" Brush="Popup.Cancel.Button" Command.Click="ExecuteMin">
+              <Children>
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Center" Text="0" />
+              </Children>
+            </ButtonWidget>
+
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="158" Brush="Popup.Cancel.Button" Command.Click="ExecuteDecrease">
               <Children>
                 <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Text="-" />
               </Children>
             </ButtonWidget>
 
-            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="46" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="172" Brush="Popup.Description.Text" Brush.FontSize="21" Brush.FontColor="#E3B54AFF" Brush.TextHorizontalAlignment="Center" Text="@ValueText" />
+            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="46" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="196" Brush="Popup.Description.Text" Brush.FontSize="21" Brush.FontColor="#E3B54AFF" Brush.TextHorizontalAlignment="Center" Text="@ValueText" />
 
-            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="220" Brush="Popup.Cancel.Button" Command.Click="ExecuteIncrease">
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="244" Brush="Popup.Cancel.Button" Command.Click="ExecuteIncrease">
               <Children>
                 <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Center" Text="+" />
+              </Children>
+            </ButtonWidget>
+
+            <!-- [24]: straight to "glad of company every hour" -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="30" SuggestedHeight="34" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="284" Brush="Popup.Cancel.Button" Command.Click="ExecuteMax">
+              <Children>
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Center" Text="24" />
               </Children>
             </ButtonWidget>
 

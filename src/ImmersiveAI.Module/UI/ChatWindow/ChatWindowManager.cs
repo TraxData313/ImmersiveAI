@@ -35,6 +35,11 @@ namespace ImmersiveAI.UI.ChatWindow
         // Whose words await reading (stringId → true). Session-scoped by design.
         private static readonly HashSet<string> _unread = new HashSet<string>(StringComparer.Ordinal);
 
+        // Unsent drafts, per NPC (stringId → the line being composed) — kept when the window closes so
+        // stepping away to look up a castle's name and coming back does not lose what you were writing
+        // (Anton's ask, 2026.07.11). Session-scoped, like the unread marks; cleared once a line is sent.
+        private static readonly Dictionary<string, string> _drafts = new Dictionary<string, string>(StringComparer.Ordinal);
+
         // Frames left before the message list is nudged to its newest line (layout must run first).
         private static int _scrollCountdown;
 
@@ -63,6 +68,20 @@ namespace ImmersiveAI.UI.ChatWindow
         }
 
         internal static void ClearUnread(string heroStringId) => _unread.Remove(heroStringId);
+
+        // ------------------------------ unsent drafts ------------------------------
+
+        internal static string GetDraft(string heroStringId) =>
+            !string.IsNullOrEmpty(heroStringId) && _drafts.TryGetValue(heroStringId, out var d) ? d : string.Empty;
+
+        internal static void SetDraft(string heroStringId, string text)
+        {
+            if (string.IsNullOrEmpty(heroStringId)) return;
+            if (string.IsNullOrWhiteSpace(text)) _drafts.Remove(heroStringId);
+            else _drafts[heroStringId] = text;
+        }
+
+        internal static void ClearDraft(string heroStringId) => _drafts.Remove(heroStringId);
 
         /// <summary>Whether the player is looking at this very thread right now (so a "has answered"
         /// toast would only state the obvious).</summary>

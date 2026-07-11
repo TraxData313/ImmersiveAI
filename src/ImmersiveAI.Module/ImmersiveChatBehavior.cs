@@ -109,13 +109,18 @@ namespace ImmersiveAI
 
         private readonly struct PendingNotice
         {
-            public PendingNotice(double offeredGameDay, string situation)
+            public PendingNotice(double offeredGameDay, string situation, string greeting = "")
             {
                 OfferedGameDay = offeredGameDay;
                 Situation = situation;
+                Greeting = greeting ?? string.Empty;
             }
             public double OfferedGameDay { get; }
             public string Situation { get; }
+            /// <summary>The words the NPC already spoke when they reached out (face-to-face mode) — shown
+            /// as the opening line when the player clicks the notice into a conversation. Empty for the
+            /// accept/decline path, whose greeting is generated only after the player accepts.</summary>
+            public string Greeting { get; }
         }
 
         // How long a parked notice waits before the moment passes on its own.
@@ -1005,6 +1010,19 @@ namespace ImmersiveAI
             catch { return 0; }
         }
 
+        /// <summary>The NPC's current standing toward the player, for the windows to show beside the name
+        /// (Anton's ask, 2026.07.11 — the number, and its word, updating as an exchange moves it).</summary>
+        internal static int RelationValue(Hero npc) => GetStanding(npc);
+
+        /// <summary>The standing as a short line — "+23 · warm" — or empty when the hero is gone.</summary>
+        internal static string RelationLabel(Hero? npc)
+        {
+            if (npc == null || !npc.IsAlive) return string.Empty;
+            int r = GetStanding(npc);
+            var sign = r > 0 ? "+" : string.Empty;
+            return $"{sign}{r} · {PersonaBuilder.DescribeRelation(r)}";
+        }
+
         // Folds the NPC's own felt shift into the real game standing. They set it themselves, in
         // character, and what the player is shown is the FELT number — how much the moment moved that
         // heart — even when the standing is already pinned at the -100..100 rail (a soul at the deepest
@@ -1288,10 +1306,11 @@ namespace ImmersiveAI
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer)) { PassOnInitiation(npc); return; }
 
-                // They wish to. In the chat-window shape they simply come and speak — their words land in
-                // the window and wait there; otherwise the moment is offered to the player first and the
-                // approach narrated once they decide.
-                if (UsesChatWindowInitiations)
+                // They wish to. In the speak-first shapes (face-to-face or chat-window) they simply come
+                // and speak — their greeting is recorded now and a notice parked; clicking it either opens
+                // the face-to-face conversation or the window, per config. Otherwise the moment is offered
+                // to the player first and the approach narrated once they decide.
+                if (SpeaksFirstOnInitiation)
                 {
                     await DeliverFirstWordAsync(npc, situation, stranger).ConfigureAwait(false);
                     return;
@@ -1443,6 +1462,13 @@ namespace ImmersiveAI
             if (!self._pendingNotices.TryGetValue(npc.StringId, out var pending)) return;
             self._pendingNotices.Remove(npc.StringId);
 
+            // Face-to-face wins: click opens the old-style conversation on the greeting she already spoke.
+            if (self.UsesFaceToFaceInitiations)
+            {
+                self.OpenReachOutFaceToFace(npc, pending);
+                return;
+            }
+
             if (self.UsesChatWindowInitiations)
             {
                 UI.ChatWindow.ChatWindowManager.Open(npc);
@@ -1460,6 +1486,40 @@ namespace ImmersiveAI
             var self = Current;
             if (self == null || npc == null) return;
             self._pendingNotices.Remove(npc.StringId);
+        }
+
+        // The face-to-face reach-out click (Anton's ask, 2026.07.11): no accept/decline stands here — the
+        // player clicked because they want to see the person. Her greeting is already a recorded Angel turn
+        // (DeliverFirstWordAsync spoke it up front), so we simply open the conversation and show it, then
+        // fall into the ordinary talk loop. Dismissing the notice instead leaves that greeting unanswered
+        // in her memory — the stamps tell the story of the silence, nothing needs fabricating. Runs on the
+        // game thread (the notice click). Reuses the _pendingInitiation dialog lines like the accept path.
+        private void OpenReachOutFaceToFace(Hero npc, PendingNotice pending)
+        {
+            try
+            {
+                var greeting = string.IsNullOrWhiteSpace(pending.Greeting) ? "..." : pending.Greeting;
+
+                _currentNpc = npc;
+                _currentSituation = pending.Situation;
+                _lastNpcLine = greeting;
+                // The reach-out beat is already recorded; the goodbye needs no separate meeting note.
+                _conversationBeatNpcId = npc.StringId;
+                _pendingInitiation = true;
+                _recapReady = true;      // her opening words are already in hand — no "gathers thoughts" hold
+                _responseReady = true;
+                MBTextManager.SetTextVariable(RecapVar, greeting, false);
+
+                PersistSituation(npc, pending.Situation);
+                OpenConversationWith(npc);
+                // _pendingInitiation / _initiationInFlight clear when the opening line shows (OnInitiationDelivered).
+            }
+            catch (Exception ex)
+            {
+                _pendingInitiation = false;
+                _initiationInFlight = false;
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
         }
 
         // The player chose to receive them: open the real conversation and, now that they are welcomed, let
@@ -1756,28 +1816,45 @@ namespace ImmersiveAI
         private bool UsesChatWindowInitiations =>
             _config.EnableChatWindow && _config.SendInitiationsToChatWindow;
 
+        // When true, a reach-out records the NPC's greeting up front and parks a notice; clicking it opens
+        // the old-style face-to-face conversation (no accept/decline), and dismissing it simply leaves the
+        // greeting unanswered in memory. Takes precedence over the chat-window-message shape (Anton's ask,
+        // 2026.07.11). Either way the first word is recorded, so both use DeliverFirstWordAsync.
+        private bool UsesFaceToFaceInitiations => _config.OpenInitiationsFaceToFace;
+
+        // Both reach-out shapes that speak first (record the greeting, park a notice) rather than offering
+        // an accept/decline. Face-to-face wins for what the click does; the message shape is the fallback.
+        private bool SpeaksFirstOnInitiation => UsesFaceToFaceInitiations || UsesChatWindowInitiations;
+
         /// <summary>One row of the window's "those near you" list, gathered on the game thread.</summary>
         internal readonly struct ChatContactInfo
         {
-            public ChatContactInfo(Hero hero, bool hasHistory, double lastSpokenGameDay, string detail)
+            public ChatContactInfo(Hero hero, bool hasHistory, double lastSpokenGameDay, string detail, bool isHere)
             {
-                Hero = hero; HasHistory = hasHistory; LastSpokenGameDay = lastSpokenGameDay; Detail = detail;
+                Hero = hero; HasHistory = hasHistory; LastSpokenGameDay = lastSpokenGameDay; Detail = detail; IsHere = isHere;
             }
             public Hero Hero { get; }
             public bool HasHistory { get; }
             public double LastSpokenGameDay { get; }
             public string Detail { get; }
+            /// <summary>Whether they stand with the player right now (words can reach them) — false for a
+            /// remembered bond somewhere off across the map, who is shown but can only be written to.</summary>
+            public bool IsHere { get; }
         }
 
-        /// <summary>Everyone the player could speak with right now: the same co-location the reaching-out
-        /// uses (riding in the party, or in the same settlement) — anyone farther away writes letters
-        /// instead. Reads each known soul's memory file for ordering (friends first, newest bonds first).</summary>
+        /// <summary>Everyone the player could speak with — everyone co-located right now (party or same
+        /// settlement), AND every remembered bond who is away across the map (Anton's ask, 2026.07.11):
+        /// the away ones are shown too (tagged "away", their send grayed) so the window is the whole
+        /// social circle, not only whoever happens to be in the room. Reads each soul's memory file for
+        /// ordering (here first, then friends, then newest bonds).</summary>
         internal static List<ChatContactInfo> NearbyHeroesForChat()
         {
             var result = new List<ChatContactInfo>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             var self = Current;
             try
             {
+                // 1) Those here with the player — everyone co-located, history or not.
                 foreach (var hero in Hero.AllAliveHeroes)
                 {
                     if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner || hero.IsChild) continue;
@@ -1800,7 +1877,41 @@ namespace ImmersiveAI
                     var detail = hero.PartyBelongedTo == MobileParty.MainParty
                         ? "rides with you"
                         : "here in " + SituationBuilder.Place(hero);
-                    result.Add(new ChatContactInfo(hero, hasHistory, lastDay, detail));
+                    result.Add(new ChatContactInfo(hero, hasHistory, lastDay, detail, isHere: true));
+                    seen.Add(hero.StringId);
+                }
+
+                // 2) Remembered bonds who are away — walk the campaign's NPC folders for real history,
+                //    skip anyone already listed (they are here) or gone from the world. Shown so the
+                //    circle stays whole even when scattered; their send is grayed and points to a letter.
+                if (self != null)
+                {
+                    var root = NpcPaths.CampaignRoot;
+                    if (Directory.Exists(root))
+                    {
+                        foreach (var folder in Directory.GetDirectories(root))
+                        {
+                            var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
+                            if (!File.Exists(memFile)) continue;
+
+                            NpcMemory memory;
+                            try { memory = self._memoryStore.LoadFrom(memFile, string.Empty); }
+                            catch { continue; }
+
+                            var npcId = memory.NpcId;
+                            if (string.IsNullOrWhiteSpace(npcId) || memory.StoryRichness <= 0) continue;
+                            if (seen.Contains(npcId)) continue;
+
+                            var hero = FindAliveHero(npcId);
+                            if (hero == null || hero.IsChild) continue;   // the dead live on in the letter window
+                            if (IsCoLocated(hero)) continue;              // caught above already
+
+                            result.Add(new ChatContactInfo(
+                                hero, hasHistory: true, memory.LastConversationGameDay,
+                                Whereabouts(hero), isHere: false));
+                            seen.Add(npcId);
+                        }
+                    }
                 }
             }
             catch { /* a broken list is an empty list, never a crash */ }
@@ -1911,15 +2022,23 @@ namespace ImmersiveAI
                     bool viewing = UI.ChatWindow.ChatWindowManager.IsViewing(npc);
                     UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: true);
 
-                    // A quiet knock in the notice stack too, when the words are not already on stage —
-                    // clicking it opens the window on her thread (see OnMapNoticeInspected).
-                    if (!viewing && !UI.ChatWindow.ChatWindowManager.IsOpen
+                    // A knock in the notice stack: in the face-to-face shape it is the door to the
+                    // conversation (so it is parked even with the chat window open); in the message shape
+                    // it just points back to the window, so it is skipped when the window is already open.
+                    bool messageMode = !UsesFaceToFaceInitiations && UsesChatWindowInitiations;
+                    bool skipForOpenWindow = messageMode && UI.ChatWindow.ChatWindowManager.IsOpen;
+
+                    if (!viewing && !skipForOpenWindow
                         && _config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied)
                     {
-                        _pendingNotices[npc.StringId] = new PendingNotice(CampaignTime.Now.ToDays, situation);
+                        // The greeting rides on the parked notice so a face-to-face click can open the
+                        // conversation on the words she already spoke (no second greeting generated).
+                        _pendingNotices[npc.StringId] = new PendingNotice(CampaignTime.Now.ToDays, situation, words);
+                        var noticeLine = UsesFaceToFaceInitiations
+                            ? name + " wishes to speak with you."
+                            : name + " has words for you.";
                         Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
-                            new UI.ImmersiveChatMapNotification(npc,
-                                new TextObject("{=!}" + name + " has words for you.")));
+                            new UI.ImmersiveChatMapNotification(npc, new TextObject("{=!}" + noticeLine)));
                     }
                 });
             }

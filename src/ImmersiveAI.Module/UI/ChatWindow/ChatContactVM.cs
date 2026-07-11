@@ -29,11 +29,16 @@ namespace ImmersiveAI.UI.ChatWindow
         /// <summary>The last game day this one spoke with the player (-1 when never) — newest bonds first.</summary>
         public double LastSpokenGameDay { get; }
 
-        public ChatContactVM(Hero hero, bool hasHistory, double lastSpokenGameDay, string detail, Action<ChatContactVM> onSelect)
+        /// <summary>Whether they stand with the player right now — false for a remembered bond away across
+        /// the map, who is shown but can only be written to (their send is grayed).</summary>
+        public bool IsHere { get; }
+
+        public ChatContactVM(Hero hero, bool hasHistory, double lastSpokenGameDay, string detail, bool isHere, Action<ChatContactVM> onSelect)
         {
             Hero = hero;
             HasHistory = hasHistory;
             LastSpokenGameDay = lastSpokenGameDay;
+            IsHere = isHere;
             _onSelect = onSelect;
             _name = hero?.Name?.ToString() ?? "Unknown";
             _detail = detail ?? string.Empty;
@@ -69,6 +74,14 @@ namespace ImmersiveAI.UI.ChatWindow
             get => _detail;
             set { if (value != _detail) { _detail = value; OnPropertyChangedWithValue(value, "Detail"); } }
         }
+
+        /// <summary>A soft "(here)" / "(away)" tag beside the name — whether they can be spoken to now.</summary>
+        [DataSourceProperty]
+        public string PresenceText => IsHere ? "(here)" : "(away)";
+
+        /// <summary>Warm parchment for the present, cool grey for those away.</summary>
+        [DataSourceProperty]
+        public Color PresenceColor => IsHere ? new Color(0.74f, 0.90f, 0.86f, 1f) : new Color(0.56f, 0.60f, 0.66f, 1f);
 
         [DataSourceProperty]
         public bool HasUnread

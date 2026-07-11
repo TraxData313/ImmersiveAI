@@ -222,12 +222,19 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   thread via `PromptBuilder.IsComposeLetterBeat`/`TryExtractReceivedLetter` — markers that must stay
   word-for-word fragments of the Angel letter templates; both default on),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the chat window — see its
-  section below: a Gauntlet window over the map, hotkey default "O", listing everyone co-located;
-  the player writes first with no greeting ceremony, and NPC reach-outs land there as waiting spoken
-  messages instead of accept/decline popups; all default on),
+  section below: a Gauntlet window over the map, hotkey default "O", listing everyone co-located AND
+  every remembered bond who is away (tagged "(here)"/"(away)", the away ones' send grayed with a
+  point to a letter); the player writes first with no greeting ceremony; unsent drafts survive
+  closing the window; the NPC's relation points show beside their name and move with each exchange;
+  and NPC reach-outs land there as waiting spoken messages instead of accept/decline popups; all default on),
+  `OpenInitiationsFaceToFace` (default on, takes precedence over `SendInitiationsToChatWindow` for what
+  a reach-out notice CLICK does: opens the OLD-STYLE face-to-face conversation showing the greeting the
+  NPC already spoke — no accept/decline; X'ing the notice just leaves that recorded greeting unanswered,
+  the stamps telling the silence; the chat window is still reachable by hotkey to reply there instead),
   `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
   instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable;
-  with the chat window on, clicking the notice opens the window on that thread),
+  the click opens the face-to-face conversation, the chat window, or the accept/decline offer per the
+  two toggles above),
   `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
   a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +

@@ -195,6 +195,16 @@ namespace ImmersiveAI
         /// once, later, or let it lie. Set false to keep the old receive/decline offer flow.</summary>
         public bool SendInitiationsToChatWindow { get; set; } = true;
 
+        /// <summary>When true (the default), clicking an NPC's reach-out notice opens the old-style
+        /// face-to-face conversation with them — you see the person, not a window — showing the greeting
+        /// they already spoke. There is no accept/decline: if you cannot talk, simply dismiss the notice
+        /// (X it), and because their greeting is already a recorded beat, they see for themselves that
+        /// they came to you and you did not answer. You can still open the chat window (its hotkey) to
+        /// reply there instead. Takes precedence over <see cref="SendInitiationsToChatWindow"/> for what
+        /// the notice click does. Set false to keep the older behavior (chat-window message, or the
+        /// accept/decline offer).</summary>
+        public bool OpenInitiationsFaceToFace { get; set; } = true;
+
         /// <summary>When true, letters cross the map: an NPC far from the player (who therefore cannot
         /// walk over — see <see cref="EnableNpcInitiatedChats"/>) may write instead, at half their
         /// reaching-out chance; the letter travels real in-game days with the distance and survives

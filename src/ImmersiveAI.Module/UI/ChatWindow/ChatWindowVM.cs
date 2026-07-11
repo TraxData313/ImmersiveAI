@@ -24,6 +24,7 @@ namespace ImmersiveAI.UI.ChatWindow
         private static readonly Color NpcHeaderColor = new Color(0.74f, 0.90f, 0.86f, 1f);
 
         private readonly ModConfig _config;
+        private readonly string _letterHotkey;
 
         // The line sent but not yet answered, per NPC — shown in the thread while the reply is on
         // its way (the turn is only recorded once the answer is in), and restored into the input
@@ -35,6 +36,8 @@ namespace ImmersiveAI.UI.ChatWindow
         private ChatContactVM? _selected;
         private string _inputText = string.Empty;
         private string _selectedName = string.Empty;
+        private string _relationText = string.Empty;
+        private Color _relationColor = Colors.White;
         private string _overviewText = string.Empty;
         private bool _isOverviewShown = true;
         private bool _isWaiting;
@@ -42,6 +45,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public ChatWindowVM(ModConfig config)
         {
             _config = config;
+            _letterHotkey = string.IsNullOrWhiteSpace(config.LetterWindowHotkey) ? "U" : config.LetterWindowHotkey.Trim();
             RefreshContacts();
         }
 
@@ -55,11 +59,12 @@ namespace ImmersiveAI.UI.ChatWindow
             var list = new MBBindingList<ChatContactVM>();
 
             foreach (var info in ImmersiveChatBehavior.NearbyHeroesForChat()
-                         .OrderByDescending(i => i.HasHistory)
+                         .OrderByDescending(i => i.IsHere)
+                         .ThenByDescending(i => i.HasHistory)
                          .ThenByDescending(i => i.LastSpokenGameDay)
                          .ThenBy(i => i.Hero.Name?.ToString(), StringComparer.OrdinalIgnoreCase))
             {
-                var vm = new ChatContactVM(info.Hero, info.HasHistory, info.LastSpokenGameDay, info.Detail, OnContactSelected);
+                var vm = new ChatContactVM(info.Hero, info.HasHistory, info.LastSpokenGameDay, info.Detail, info.IsHere, OnContactSelected);
                 vm.HasUnread = ChatWindowManager.HasUnread(info.Hero.StringId);
                 list.Add(vm);
             }
@@ -88,6 +93,9 @@ namespace ImmersiveAI.UI.ChatWindow
 
             RefreshThread();
             RefreshSelectionState();
+
+            // Bring back whatever was being composed to this one before the window was last closed.
+            InputText = ChatWindowManager.GetDraft(contact.Hero.StringId);
         }
 
         /// <summary>Selects the thread of a given hero if they are in the list (used when the window
@@ -267,6 +275,22 @@ namespace ImmersiveAI.UI.ChatWindow
             OnOverviewLayoutChanged();
             IsWaiting = _selected != null && ImmersiveChatBehavior.IsQuickChatBusy(_selected.Hero);
             OnPropertyChanged("CanSend");
+            OnPropertyChanged("IsAway");
+            OnPropertyChanged("AwayNotice");
+
+            _relationText = _selected == null ? string.Empty : ImmersiveChatBehavior.RelationLabel(_selected.Hero);
+            _relationColor = RelationTint(_selected == null ? 0 : ImmersiveChatBehavior.RelationValue(_selected.Hero));
+            OnPropertyChanged("RelationText");
+            OnPropertyChanged("HasRelation");
+            OnPropertyChanged("RelationColor");
+        }
+
+        // Warm green when they hold you dear, cool red when they do not, plain parchment at neutral.
+        private static Color RelationTint(int relation)
+        {
+            if (relation > 0) return new Color(0.55f, 0.82f, 0.55f, 1f);
+            if (relation < 0) return new Color(0.86f, 0.53f, 0.49f, 1f);
+            return new Color(0.78f, 0.75f, 0.68f, 1f);
         }
 
         // ------------------------------ speaking ------------------------------
@@ -319,6 +343,23 @@ namespace ImmersiveAI.UI.ChatWindow
 
         [DataSourceProperty]
         public bool HasSelection => _selected != null;
+
+        [DataSourceProperty]
+        public string RelationText
+        {
+            get => _relationText;
+            set { if (value != _relationText) { _relationText = value; OnPropertyChangedWithValue(value, "RelationText"); } }
+        }
+
+        [DataSourceProperty]
+        public bool HasRelation => !string.IsNullOrEmpty(_relationText);
+
+        [DataSourceProperty]
+        public Color RelationColor
+        {
+            get => _relationColor;
+            set { if (value != _relationColor) { _relationColor = value; OnPropertyChangedWithValue(value, "RelationColor"); } }
+        }
 
         [DataSourceProperty]
         public string SelectedName
@@ -385,11 +426,23 @@ namespace ImmersiveAI.UI.ChatWindow
             {
                 if (value != _inputText)
                 {
+                    // The draft mirror appearing (or folding away) shrinks the thread from the bottom;
+                    // re-pin to the newest line so the NPC's last words stay in view above the box
+                    // (Anton's ask, 2026.07.11 — the mirror used to cover them until you scrolled).
+                    bool draftBefore = !string.IsNullOrWhiteSpace(_inputText);
                     _inputText = value ?? string.Empty;
+                    bool draftAfter = !string.IsNullOrWhiteSpace(_inputText);
+
                     OnPropertyChangedWithValue(value, "InputText");
                     OnPropertyChanged("CanSend");
                     OnPropertyChanged("HasDraft");
                     OnPropertyChanged("MessagesBottomMargin");
+
+                    if (draftBefore != draftAfter)
+                        ChatWindowManager.RequestScrollToBottom();
+
+                    if (_selected != null)
+                        ChatWindowManager.SetDraft(_selected.Hero.StringId, _inputText);
                 }
             }
         }
@@ -406,7 +459,16 @@ namespace ImmersiveAI.UI.ChatWindow
         public float MessagesBottomMargin => HasDraft ? 170f : 82f;
 
         [DataSourceProperty]
-        public bool CanSend => HasSelection && !_isWaiting && !string.IsNullOrWhiteSpace(_inputText);
+        public bool CanSend => HasSelection && (_selected?.IsHere ?? false) && !_isWaiting && !string.IsNullOrWhiteSpace(_inputText);
+
+        /// <summary>Whether the chosen one is away across the map — spoken words cannot reach them, so
+        /// the send is grayed and a gentle note points to a letter instead.</summary>
+        [DataSourceProperty]
+        public bool IsAway => HasSelection && !(_selected?.IsHere ?? false);
+
+        [DataSourceProperty]
+        public string AwayNotice =>
+            IsAway ? $"{SelectedName} is far from you now — send a letter (press {_letterHotkey}) to reach them." : string.Empty;
 
         [DataSourceProperty]
         public bool IsWaiting

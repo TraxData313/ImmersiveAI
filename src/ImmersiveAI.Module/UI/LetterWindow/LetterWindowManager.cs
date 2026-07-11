@@ -29,7 +29,24 @@ namespace ImmersiveAI.UI.LetterWindow
 
         private static int _scrollCountdown;
 
+        // Unsent letter drafts, per correspondent folder — kept when the window closes so stepping
+        // away and coming back does not lose a half-written letter (Anton's ask, 2026.07.11).
+        private static readonly System.Collections.Generic.Dictionary<string, string> _drafts =
+            new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal);
+
         internal static bool IsOpen => _layer != null;
+
+        // ------------------------------ unsent drafts ------------------------------
+
+        internal static string GetDraft(string folder) =>
+            !string.IsNullOrEmpty(folder) && _drafts.TryGetValue(folder, out var d) ? d : string.Empty;
+
+        internal static void SetDraft(string folder, string text)
+        {
+            if (string.IsNullOrEmpty(folder)) return;
+            if (string.IsNullOrWhiteSpace(text)) _drafts.Remove(folder);
+            else _drafts[folder] = text;
+        }
 
         internal static void Configure(ModConfig config)
         {

@@ -43,7 +43,12 @@
                                     </Widget>
                                     <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="72" MarginRight="30" StackLayout.LayoutMethod="VerticalTopToBottom">
                                       <Children>
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                                          <Children>
+                                            <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                            <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="8" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="@PresenceColor" Brush.TextHorizontalAlignment="Left" Text="@PresenceText" />
+                                          </Children>
+                                        </ListPanel>
                                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@Detail" />
                                       </Children>
                                     </ListPanel>
@@ -83,8 +88,13 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@HasSelection">
                   <Children>
 
-                    <!-- header: their name, and the deep-memory toggle -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="240" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                    <!-- header: their name, how their heart stands toward you, and the deep-memory toggle -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="240" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                      <Children>
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="16" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@RelationColor" Brush.TextHorizontalAlignment="Left" Text="@RelationText" IsVisible="@HasRelation" />
+                      </Children>
+                    </ListPanel>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginRight="44" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleOverview" IsVisible="@HasOverview">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Center" Text="@OverviewToggleText" />
@@ -157,6 +167,10 @@
                         </Widget>
                       </Children>
                     </Widget>
+
+                    <!-- when the chosen one is away across the map, a gentle note that words cannot reach
+                         them now — the send stays grayed; a letter is the road (see AwayNotice) -->
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" MarginBottom="86" MarginRight="210" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#B9A98BFF" Brush.TextHorizontalAlignment="Center" Text="@AwayNotice" IsVisible="@IsAway" />
 
                     <!-- your words -->
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="70" VerticalAlignment="Bottom" MarginRight="210" Sprite="General\CharacterCreation\name_input_area">
