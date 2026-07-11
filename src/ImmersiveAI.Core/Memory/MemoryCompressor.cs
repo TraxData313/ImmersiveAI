@@ -54,7 +54,7 @@ namespace ImmersiveAI.Core.Memory
         /// when there is nothing to drop, every recent turn is kept verbatim. Returns false only if
         /// there is no memory at all to reflect on, or the LLM returned nothing usable.
         /// </summary>
-        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, NpcSelf? self = null, int maxFacts = DefaultMaxKnownFacts, CancellationToken cancellationToken = default)
+        public async Task<bool> ReflectAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, NpcSelf? self = null, int maxFacts = DefaultMaxKnownFacts, NpcGoals? goals = null, int maxGoals = NpcGoals.DefaultMaxGoals, CancellationToken cancellationToken = default)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             if (keepMostRecent < 0) keepMostRecent = 0;
@@ -67,8 +67,9 @@ namespace ImmersiveAI.Core.Memory
                 return false;
 
             // When a self is supplied, the reflection also invites the NPC to look inward and, if they
-            // wish, revise who they feel themselves to be — this is how their self-concept grows.
-            var request = BuildReflectionRequest(memory, turns, systemVoiceName, self?.Text, maxFacts);
+            // wish, revise who they feel themselves to be — this is how their self-concept grows. When
+            // goals are supplied, it likewise invites them to rework the aims they carry.
+            var request = BuildReflectionRequest(memory, turns, systemVoiceName, self?.Text, maxFacts, goals?.Goals, maxGoals);
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
@@ -80,6 +81,12 @@ namespace ImmersiveAI.Core.Memory
             // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
             if (self != null && !string.IsNullOrWhiteSpace(parsed.Self) && !IsUnchangedMarker(parsed.Self))
                 self.Text = parsed.Self!.Trim();
+
+            // Goals are replace-all like the truths: a present GOALS section IS the whole of the aims
+            // they now carry (an empty one under "GOALS: none" releases them all); no section leaves
+            // them untouched, so a malformed reply can never cost them their aims.
+            if (goals != null && parsed.HasGoalsSection)
+                goals.SetAll(parsed.Goals, maxGoals);
 
             return true;
         }
@@ -198,7 +205,7 @@ namespace ImmersiveAI.Core.Memory
         /// summary and facts if there are none, while the recent turns stay with her. Same SUMMARY:/FACTS:
         /// reply contract as compression.
         /// </summary>
-        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null, string? selfText = null, int maxFacts = DefaultMaxKnownFacts)
+        public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null, string? selfText = null, int maxFacts = DefaultMaxKnownFacts, IReadOnlyList<string>? goals = null, int maxGoals = NpcGoals.DefaultMaxGoals)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
             var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
@@ -206,6 +213,10 @@ namespace ImmersiveAI.Core.Memory
             // A null self means "do not touch the self this time"; an empty (but non-null) self means the
             // NPC has one but has not yet put it into words, and is being invited to do so.
             var reflectOnSelf = selfText != null;
+
+            // A null goals list means "do not touch the aims this time"; an empty (but non-null) list means
+            // they carry none yet and are invited to name any that have taken shape.
+            var reflectOnGoals = goals != null;
 
             var freshTurns = memory.RecentTurns.Skip(turnsToFold.Count).ToList();
 
@@ -225,6 +236,20 @@ namespace ImmersiveAI.Core.Memory
                 {
                     sb.AppendLine("This is how you have seen yourself, in your own heart (keep it, refine it, or let it change as you have):");
                     sb.AppendLine(selfText!.Trim());
+                }
+            }
+
+            if (reflectOnGoals)
+            {
+                sb.AppendLine();
+                sb.AppendLine("And weigh, too, what you strive for — the aims you carry of your own will.");
+                if (goals!.Count == 0)
+                    sb.AppendLine("You have named no aim yet. If any longing has taken shape in you, you may set it down now.");
+                else
+                {
+                    sb.AppendLine("These are the aims you have been carrying (keep them, reshape them, let go of what is won or lost, take up what is new):");
+                    foreach (var goal in goals)
+                        sb.AppendLine("- " + goal);
                 }
             }
 
@@ -269,6 +294,14 @@ namespace ImmersiveAI.Core.Memory
                     ? "<a short paragraph, in your own first-person voice, of who you feel yourself to be — your spirit, your longings, what you hold dear.>"
                     : "<a short paragraph, in your own first-person voice, of who you feel yourself to be now — your spirit, your longings, what you hold dear. If nothing has changed, write: unchanged.>");
             }
+            if (reflectOnGoals)
+            {
+                if (maxGoals < 1) maxGoals = 1;
+                sb.AppendLine("GOALS:");
+                sb.AppendLine("- <an aim you strive for, in your own first-person voice, if any>");
+                sb.AppendLine($"Write your aims anew, in full — every one you mean to keep striving toward, each named once. "
+                    + $"What you do not write here you have set aside. Carry at most {maxGoals}; if you strive for nothing just now, write GOALS: none.");
+            }
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
         }
@@ -302,6 +335,7 @@ namespace ImmersiveAI.Core.Memory
             var summaryIdx = response.IndexOf("SUMMARY:", StringComparison.OrdinalIgnoreCase);
             var factsIdx = response.IndexOf("FACTS:", StringComparison.OrdinalIgnoreCase);
             var selfIdx = response.IndexOf("SELF:", StringComparison.OrdinalIgnoreCase);
+            var goalsIdx = response.IndexOf("GOALS:", StringComparison.OrdinalIgnoreCase);
 
             string summary;
             var facts = new List<string>();
@@ -309,40 +343,52 @@ namespace ImmersiveAI.Core.Memory
             if (summaryIdx < 0)
             {
                 // Model ignored the SUMMARY label; treat everything up to the first known section as summary.
-                var end = NextSection(0, response.Length, factsIdx, selfIdx);
+                var end = NextSection(0, response.Length, factsIdx, selfIdx, goalsIdx);
                 summary = response.Substring(0, end).Trim();
             }
             else
             {
                 var start = summaryIdx + "SUMMARY:".Length;
-                var end = NextSection(start, response.Length, factsIdx, selfIdx);
+                var end = NextSection(start, response.Length, factsIdx, selfIdx, goalsIdx);
                 summary = response.Substring(start, end - start).Trim();
             }
 
             if (factsIdx >= 0)
             {
-                // Facts run until the SELF section (if any), so a self paragraph is never mistaken for facts.
+                // Facts run until the next section (self or goals), so neither is mistaken for a fact.
                 var start = factsIdx + "FACTS:".Length;
-                var end = NextSection(start, response.Length, selfIdx);
-                var factsBlock = response.Substring(start, end - start);
-                facts = factsBlock
-                    .Split('\n')
-                    .Select(l => l.Trim())
-                    .Where(l => l.StartsWith("-"))
-                    .Select(l => l.TrimStart('-', ' ').Trim())
-                    .Where(l => l.Length > 0 && !string.Equals(l, "none", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                var end = NextSection(start, response.Length, selfIdx, goalsIdx);
+                facts = ParseBulletList(response.Substring(start, end - start));
             }
 
             string? self = null;
             if (selfIdx >= 0)
             {
-                var block = response.Substring(selfIdx + "SELF:".Length).Trim();
+                // Self runs until the goals section (if any), so a goals list is never folded into the self.
+                var start = selfIdx + "SELF:".Length;
+                var end = NextSection(start, response.Length, goalsIdx);
+                var block = response.Substring(start, end - start).Trim();
                 if (block.Length > 0) self = block;
             }
 
-            return new CompressionResult(summary.Length == 0 ? null : summary, facts, self, hasFactsSection: factsIdx >= 0);
+            var goals = new List<string>();
+            if (goalsIdx >= 0)
+                goals = ParseBulletList(response.Substring(goalsIdx + "GOALS:".Length));
+
+            return new CompressionResult(
+                summary.Length == 0 ? null : summary, facts, self,
+                hasFactsSection: factsIdx >= 0, goals: goals, hasGoalsSection: goalsIdx >= 0);
         }
+
+        // A "- item" bullet block, with a bare "none" honored as "the empty list" (a deliberate clearing).
+        private static List<string> ParseBulletList(string block) =>
+            block
+                .Split('\n')
+                .Select(l => l.Trim())
+                .Where(l => l.StartsWith("-"))
+                .Select(l => l.TrimStart('-', ' ').Trim())
+                .Where(l => l.Length > 0 && !string.Equals(l, "none", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
         // The earliest section-label position at or after <afterPos>, or <length> if none of them apply.
         // Used to bound one section's text so it never bleeds into the next (SUMMARY -> FACTS -> SELF).
@@ -369,12 +415,24 @@ namespace ImmersiveAI.Core.Memory
             /// absent section means the reply was malformed and her truths must stand untouched.</summary>
             public bool HasFactsSection { get; }
 
-            public CompressionResult(string? summary, List<string> facts, string? self = null, bool hasFactsSection = false)
+            /// <summary>The aims the NPC chose to carry on, if the reply carried a GOALS section
+            /// (replace semantics, exactly like <see cref="Facts"/>).</summary>
+            public List<string> Goals { get; }
+
+            /// <summary>True when the reply actually carried a GOALS section — the same replace/none
+            /// contract as <see cref="HasFactsSection"/>, so a malformed reply never wipes their aims.</summary>
+            public bool HasGoalsSection { get; }
+
+            public CompressionResult(
+                string? summary, List<string> facts, string? self = null, bool hasFactsSection = false,
+                List<string>? goals = null, bool hasGoalsSection = false)
             {
                 Summary = summary;
                 Facts = facts;
                 Self = self;
                 HasFactsSection = hasFactsSection;
+                Goals = goals ?? new List<string>();
+                HasGoalsSection = hasGoalsSection;
             }
         }
     }

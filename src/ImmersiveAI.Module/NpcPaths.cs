@@ -40,6 +40,7 @@ namespace ImmersiveAI
         public const string CustomInstructionsFileName = "custom_instructions.txt";
         public const string SituationFileName = "current_situation_info.txt";
         public const string SelfFileName = "self.txt";
+        public const string GoalsFileName = "goals.txt";
         public const string CorrespondenceFileName = "letters.txt";
         public const string LettersFileName = "_letters.json";
 
@@ -93,6 +94,10 @@ namespace ImmersiveAI
         public static string SituationFile(Hero npc) => Path.Combine(NpcFolder(npc), SituationFileName);
 
         public static string SelfFile(Hero npc) => Path.Combine(NpcFolder(npc), SelfFileName);
+
+        /// <summary>The NPC's own personal aims (see Core's NpcGoals), one per line; authored by them
+        /// mid-conversation (tend_goals) and reworked in reflection, folded into their prompt.</summary>
+        public static string GoalsFile(Hero npc) => Path.Combine(NpcFolder(npc), GoalsFileName);
 
         /// <summary>The human-readable log of every letter carried between this NPC and the player.</summary>
         public static string CorrespondenceFile(Hero npc) => Path.Combine(NpcFolder(npc), CorrespondenceFileName);
@@ -310,6 +315,11 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
                             folded into their prompt as 'Who you have become'. Safe to read; you may
                             edit it, but the next reflection may rewrite it. Delete it to re-seed
                             them afresh from their story.
+  goals.txt               - the NPC's OWN personal aims, one per line, what they strive for of their own
+                            will. Written by them (mid-conversation, and reworked when they reflect), not
+                            by you. Lines starting with # or // are ignored. Folded into their prompt as
+                            'What you strive for'. Safe to read; you may edit it, but the NPC may rewrite
+                            it. Delete it to clear their aims.
   letters.txt             - a plain log of every letter carried between you and this NPC, in both
                             directions. Read-only record; the letters themselves also live in the
                             NPC's memory.

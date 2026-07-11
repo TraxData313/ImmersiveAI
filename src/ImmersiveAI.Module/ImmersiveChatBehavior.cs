@@ -154,12 +154,14 @@ namespace ImmersiveAI
             if (CanSeekWisdom()) tools.Add(Tools.WebWisdom.Tool);
             bool heartRides = CanMoveHeart();
             if (heartRides) tools.Add(Tools.HeartTool.Tool);
+            bool goalsRide = CanTendGoals();
+            if (goalsRide) tools.Add(Tools.GoalTool.Tool);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
-            // The heart's hand is not a recall: it keeps at least one round even when the recall
-            // budget is zeroed out, or the offered tool could never be reached for.
-            int rounds = heartRides ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
+            // The heart's hand and the aims' hand are not recalls: they keep at least one round even when
+            // the recall budget is zeroed out, or the offered tool could never be reached for.
+            int rounds = (heartRides || goalsRide) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
                 call => ResolveToolAsync(call, npc, heart),
@@ -173,6 +175,9 @@ namespace ImmersiveAI
         {
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
+
+            if (call.Name == Tools.GoalTool.TendGoals)
+                return Task.FromResult(ResolveGoalEdit(call, npc));
 
             NotifyActivity(npc, call);
             return call.Name == Tools.WebWisdom.SeekWisdom
@@ -194,6 +199,25 @@ namespace ImmersiveAI
             return Tools.HeartTool.Felt;
         }
 
+        // One aim reworked by the NPC mid-reply: applied to their own goals file at once and saved.
+        // Touches only our own files (no campaign state), so it needs no game-thread marshaling; a
+        // change earns a soft notice, in the same voice as the other mid-thought activity lines.
+        private string ResolveGoalEdit(Core.Llm.ToolCall call, Hero npc)
+        {
+            var goals = LoadGoals(npc);
+            if (!Tools.GoalTool.Apply(call, goals, _config.MaxNpcGoals))
+                return Tools.GoalTool.NoChange;
+
+            SaveGoals(npc, goals);
+            if (_config.ShowNpcActivity)
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                MainThreadDispatcher.Enqueue(() => InformationManager.DisplayMessage(
+                    new InformationMessage($"{name} sets an aim in order…", ActivityColor)));
+            }
+            return Tools.GoalTool.Done;
+        }
+
         // The gift is real only when it is both enabled and the backend can carry tools.
         private bool CanRecallWorld() =>
             _config.EnableWorldRecall && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
@@ -206,6 +230,12 @@ namespace ImmersiveAI
         // tools — or this shape is turned off — the second, isolated feeling call remains the way.
         private bool CanMoveHeart() =>
             _config.EnableRelationshipChanges && _config.RelationshipChangesViaTool && _client is IToolChatClient;
+
+        // The aims' own hand (tend_goals) rides the same channel; needs a tool-capable backend. Even
+        // without it, reflection still lets them rework their aims — so the feature is never dark, only
+        // the mid-conversation shaping is.
+        private bool CanTendGoals() =>
+            _config.EnableNpcGoals && _client is IToolChatClient;
 
         // A soft side notice of what the NPC is doing mid-thought, in the same voice as the
         // reply-ready notice. Called from LLM background threads; the message is marshaled to the
@@ -302,6 +332,42 @@ namespace ImmersiveAI
                 File.WriteAllText(NpcPaths.SelfFile(npc), (text ?? string.Empty).Trim());
             }
             catch { /* best-effort; never block a conversation on saving the self */ }
+        }
+
+        // The NPC's own aims (goals.txt), one per line — theirs to keep in their prompt and to rework.
+        // Comment lines (# or //) and blanks are ignored, matching the other user-editable files.
+        private static NpcGoals LoadGoals(Hero npc)
+        {
+            var goals = new NpcGoals();
+            try
+            {
+                var path = NpcPaths.GoalsFile(npc);
+                if (!File.Exists(path)) return goals;
+                foreach (var raw in File.ReadAllLines(path))
+                {
+                    var line = raw.Trim();
+                    if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("//")) continue;
+                    // Reuse AddGoal's dedupe, but read the file whole (no cap) so a hand-edited list
+                    // is honored as written; the cap is enforced when they next rework their aims.
+                    if (!goals.Goals.Any(g => string.Equals(g, line, StringComparison.OrdinalIgnoreCase)))
+                        goals.Goals.Add(line);
+                }
+            }
+            catch { /* best-effort; an unreadable goals file just means no aims this session */ }
+            return goals;
+        }
+
+        private static void SaveGoals(Hero npc, NpcGoals goals)
+        {
+            try
+            {
+                Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
+                var lines = (goals?.Goals ?? new List<string>())
+                    .Where(g => !string.IsNullOrWhiteSpace(g))
+                    .Select(g => g.Trim());
+                File.WriteAllText(NpcPaths.GoalsFile(npc), string.Join(Environment.NewLine, lines));
+            }
+            catch { /* best-effort; never block a conversation on saving aims */ }
         }
 
         // No one begins as a blank page: when their self has never been written, the story the world
@@ -704,13 +770,16 @@ namespace ImmersiveAI
                     _config.MinRecentMemoryTokensAfterCompression);
 
                 // Reflection is also the moment the NPC looks inward and may revise who they feel
-                // themselves to be. We hand in their current self and let them rewrite it (or leave it).
+                // themselves to be, and rework the aims they carry. We hand in their current self and
+                // goals and let them rewrite them (or leave them).
                 var self = new NpcSelf { Text = LoadOrSeedSelf(npc) };
                 var selfBefore = self.Text;
+                var goals = _config.EnableNpcGoals ? LoadGoals(npc) : null;
+                var goalsBefore = goals != null ? string.Join("\n", goals.Goals) : null;
 
                 // Always reflect (rewrite the rolling summary and facts), even when nothing is old enough
                 // to fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
-                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self, _config.MaxKnownFacts)
+                var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self, _config.MaxKnownFacts, goals, _config.MaxNpcGoals)
                     .ConfigureAwait(false);
 
                 string outcome;
@@ -721,6 +790,9 @@ namespace ImmersiveAI
 
                     var selfChanged = !string.Equals(self.Text?.Trim() ?? string.Empty, selfBefore?.Trim() ?? string.Empty);
                     if (selfChanged) SaveSelf(npc, self.Text);
+
+                    if (goals != null && !string.Equals(string.Join("\n", goals.Goals), goalsBefore, StringComparison.Ordinal))
+                        SaveGoals(npc, goals);
 
                     outcome = selfChanged
                         ? "(I have turned it all over in my mind, set what matters into memory, and come to see myself a little more clearly.)"
@@ -1223,6 +1295,9 @@ namespace ImmersiveAI
 
                 double hourly = InitiationScorer.GroupHourlyChance(
                     _config.DailyInitiationRate, InitiationScorer.UnionPull(pulls));
+                // The world sleeps: no one crosses a dark camp at three in the morning. Undamped by day,
+                // divided down to /8 at the deepest night (letters are untouched — their write-hour is unseen).
+                hourly *= InitiationScorer.NightFactor(CampaignTime.Now.CurrentHourInDay);
                 if (_rng.NextDouble() >= hourly) return null;
 
                 int idx = InitiationPlanner.PickWeightedIndex(pulls, _rng.NextDouble());
@@ -1771,6 +1846,10 @@ namespace ImmersiveAI
                     sb.AppendLine($"All together: ~{hereTotal:0.00} visits/day expected from those here" +
                                   (hereTotal > 0.005 ? $" (about 1 every {(hereTotal > 0 ? 1.0 / hereTotal : 0):0.#} days)" : "") +
                                   $", and ~{awayTotal:0.00} letters/day from those away.");
+
+                    double nightFactor = InitiationScorer.NightFactor(CampaignTime.Now.CurrentHourInDay);
+                    if (nightFactor < 0.999)
+                        sb.AppendLine($"(The world sleeps — face-to-face reach-outs are at ×{nightFactor:0.00} of their daytime chance right now; letters ride on unaffected.)");
                 }
 
                 // Letters currently on the road, so a courier mid-journey is visible, not a mystery.
@@ -2113,6 +2192,8 @@ namespace ImmersiveAI
             // The NPC's own evolving self-concept (authored by them during reflection; first seeded from
             // the story the world tells of them), from its own file.
             persona.SelfConcept = LoadOrSeedSelf(npc);
+            // Their own aims, folded into the prompt as "What you strive for" — general to them, like the self.
+            if (_config.EnableNpcGoals) persona.Goals = LoadGoals(npc).Goals;
             // The player-configurable atmosphere line and roleplay guidance (tokens resolved here), and the
             // NPC's kin and house — all folded into the prompt so the world's feel and their family carry.
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
@@ -2122,6 +2203,7 @@ namespace ImmersiveAI
             persona.CanRecallWorld = CanRecallWorld();
             persona.CanSeekWisdom = CanSeekWisdom();
             persona.CanMoveHeart = CanMoveHeart();
+            persona.CanTendGoals = CanTendGoals();
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

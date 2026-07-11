@@ -28,7 +28,7 @@ You usually only need to open:
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
-- **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self).
+- **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband) + `WebWisdom` (Module, `seek_wisdom` — web search as "the sages' counsel") + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 
@@ -63,7 +63,8 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
                           ToolCall, ToolLoopRunner (the recall loop; no HTTP, no game deps)
   Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
   Memory/                 NpcMemory (3-layer per-person), NpcSelf (general self-concept),
-                          ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self)
+                          NpcGoals (general personal aims + fuzzy add/drop/revise/replace),
+                          ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self + goals)
   Prompts/                PromptBuilder (multi-turn message assembly + Angel letter lines), NpcPersona
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
@@ -71,6 +72,7 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
+  Tools/HeartTool.cs, Tools/GoalTool.cs  the heart's hand (move_heart) and the aims' hand (tend_goals)
   UI/                     MapNoticePatch (the one Harmony patch), ImmersiveChatMapNotification (+ save
                           definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
                           Portraits (shared dark-backdrop portrait codes), ChatWindow\ (the chat window:
@@ -237,6 +239,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   two toggles above),
   `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
   a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
+  `EnableNpcGoals` + `MaxNpcGoals` (personal goals — each NPC carries their own aims, what they strive
+  for of their own will, in a `goals.txt` beside `self.txt`; shaped one aim at a time mid-conversation
+  via the `tend_goals` native tool — `Tools\GoalTool`, add/drop/revise, tool-capable backends only, used
+  sparingly unlike the every-reply heart — and reworked wholesale in reflection (a `GOALS:` section with
+  the same replace/none contract as `FACTS:`, works on any backend); folded into the prompt as "What you
+  strive for" right after "Who you have become"; default on, cap 6, clamp 1..20),
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
   `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
   their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
@@ -279,6 +287,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     `Hero.SetHeroEncyclopediaTextAndLinks` paragraph, framed "So runs my story, as the world
     tells it:") — gathered by `BackstoryBuilder` (Module), shaped by `SelfSeedFormatter` (Core),
     seeded via `LoadOrSeedSelf`. Deleting `self.txt` re-seeds. Toggle: `SeedSelfFromWorldStory`.
+  - `goals.txt` — the NPC's OWN personal aims (`NpcGoals`), one per line — what they strive for of
+    their own will (win back a lost hall, see a child wed, be free of a lord). General to the NPC (like
+    the self), authored by them: one aim at a time mid-conversation via the `tend_goals` tool
+    (`GoalTool`), and reworked wholesale in reflection (the `GOALS:` section, replace-all like `FACTS:`).
+    Folded into the prompt as "What you strive for". Comment lines `#`/`//` ignored; deleting it clears
+    their aims. Toggle: `EnableNpcGoals` (cap `MaxNpcGoals`).
   - `letters.txt` — human-readable log of every letter carried between the player and this NPC,
     both directions, including "(read and let lie unanswered)" notes. Append-only record.
   - future per-NPC files go here too.
@@ -378,8 +392,14 @@ each bringing their own (the old per-NPC independent rolls summed: rate 0.777 wi
 stays quiet and `DailyInitiationRate` is the day's total for a full bond. Firing only happens at *safe* moments
 (`IsSafeToInitiate`/`InitiationBlockReason`: on the map, not in a scene/battle or a *non-settlement*
 encounter, not already talking — being **inside a settlement is fine**, that's where co-located NPCs are).
-A stuck-in-flight watchdog (`_initiationInFlightSince`, 3 min) self-heals a lost offer so one mishap can't
-silence the feature.
+**The world sleeps at night** (2026.07.11, Anton's ask): the group hourly chance is multiplied by
+`InitiationScorer.NightFactor(CampaignTime.Now.CurrentHourInDay)` — undamped through the day
+(`DawnHour` 06:00–`DuskHour` 22:00), then divided by a factor rising on a raised-cosine trough from 1 at
+dusk/dawn to `DeepestNightDivisor` (8) at the night's middle (~02:00), passing /2 in the shallow night —
+so no one crosses a dark camp at three in the morning. Continuous at the day's edges (no cliff at 22:00).
+FACE-TO-FACE only: letters are unaffected, since a distant hand's writing hour is never seen, only the
+arrival days later. A stuck-in-flight watchdog (`_initiationInFlightSince`, 3 min) self-heals a lost offer
+so one mishap can't silence the feature.
 
 When one is moved, the reaching-out plays out as **real Angel↔NPC turns recorded in her memory** — nothing
 hidden from her or from the player on inspect. The Angel is a first-class speaker in the same history stream:

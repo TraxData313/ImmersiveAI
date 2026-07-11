@@ -364,6 +364,17 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.SelfConcept.Trim());
             }
 
+            // What they strive toward — the aims they carry of their own will, kept just after who they
+            // are, since a soul's longings colour everything they say and do.
+            if (persona.Goals != null && persona.Goals.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("What you strive for, the aims you carry of your own will:");
+                foreach (var goal in persona.Goals)
+                    if (!string.IsNullOrWhiteSpace(goal))
+                        sb.AppendLine("- " + goal.Trim());
+            }
+
             // The player-authored guidance rides high, right after who they are: the world they live in
             // (the global prompt) and words meant for them alone (the per-NPC prompt). These carry the
             // storyteller's intent, so they are given before the passing details of scene and memory.
@@ -428,6 +439,11 @@ namespace ImmersiveAI.Core.Prompts
             // asked in a separate breath after the reply, and this whisper would only confuse.
             if (persona.CanMoveHeart)
                 sb.AppendLine("- Your heart is your own, and it is a living thing. Each time, before you answer, look within and set down honestly how the moment has moved your regard for them — every reply, even when the honest answer is nothing at all (a held heart is a full answer too, marked as 0). Warm exchanges and small graces should move it a little (one to three), wounds likewise away, and only what shakes the soul moves it greatly; a heart already given wholly can still be warmed. Never speak of any measure; let the feeling live only in your words and bearing.");
+
+            // Offered only when the tend_goals tool truly rides along. Unlike the heart, this is not
+            // touched every reply — only when the aims themselves genuinely shift.
+            if (persona.CanTendGoals)
+                sb.AppendLine("- The aims you carry are your own, to hold, take up, or lay down as your life moves. When something truly shifts what you strive for — a new purpose kindled, an old one won or lost or turned to ash — you may quietly set your aims in order, adding a new one, releasing what is finished, or reshaping what has changed. Do this sparingly, only when it is real; most talk leaves your aims untouched, and there is no need to speak of them aloud unless you would.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

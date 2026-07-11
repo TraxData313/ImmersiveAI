@@ -58,10 +58,11 @@
               </Children>
             </ButtonWidget>
 
-            <!-- [24]: straight to "glad of company every hour" -->
-            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="30" SuggestedHeight="34" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="284" Brush="Popup.Cancel.Button" Command.Click="ExecuteMax">
+            <!-- [+2]: a bigger step up, in place of the old jump to 24 (a one-click leap to "every hour"
+                 proved overwhelming — Anton, 2026.07.11; more than 3-4 visits a day is too much) -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="34" SuggestedHeight="34" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="284" Brush="Popup.Cancel.Button" Command.Click="ExecuteIncreaseBig">
               <Children>
-                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Center" Text="24" />
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Center" Text="+2" />
               </Children>
             </ButtonWidget>
 

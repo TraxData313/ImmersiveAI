@@ -6,8 +6,8 @@ namespace ImmersiveAI.UI.Socialness
     /// <summary>
     /// The little always-there hand on how social the player feels right now: a 0–24 stepper on the
     /// campaign map that edits <see cref="ModConfig.DailyInitiationRate"/> live and saves it, so
-    /// "leave me be" and "glad of company every hour" are one click away instead of a config-file
-    /// trip. 0 silences the reaching-out entirely; 24 means someone near is moved every hour (the
+    /// "leave me be" is one click ([0]) and a livelier pace a coarse [+2] nudge, instead of a
+    /// config-file trip. 0 silences the reaching-out entirely; 24 means someone near is moved every hour (the
     /// player's openness overriding faint bonds — the s² blend in InitiationScorer). Letters follow
     /// the same number at half weight, capped by MaxLettersInFlight so a social morning cannot bury
     /// a busy evening. A hover on the label unfolds the explanation.
@@ -26,17 +26,23 @@ namespace ImmersiveAI.UI.Socialness
         // value snaps to the 0.25 grid first, so a hand-edited 0.3 becomes 0.25/0.5, never 0.55.
         private const double Step = 0.25;
 
+        // The coarse step for the [+2] rail: a bigger nudge up without leaping to the max. Anton found
+        // more than 3–4 visits a day overwhelming (2026.07.11), so the old one-click jump to 24 was far
+        // too much; +2 lets the eager reach a lively-but-livable rate in a click or two, no more.
+        private const double BigStep = 2.0;
+
         public void ExecuteIncrease() =>
             SetRate(Math.Min(24.0, Snap(_config.DailyInitiationRate) + Step));
 
         public void ExecuteDecrease() =>
             SetRate(Math.Max(0.0, Snap(_config.DailyInitiationRate) - Step));
 
-        // Jump straight to "leave me be" or "glad of company every hour" (Anton's ask, 2026.07.11) —
-        // the [0] and [24] rails flanking the stepper, one click instead of many.
+        // The [0] rail jumps straight to "leave me be" (a legitimate one-click off); the [+2] rail is a
+        // coarse step up in its place, since a one-click leap to "every hour" proved overwhelming.
         public void ExecuteMin() => SetRate(0.0);
 
-        public void ExecuteMax() => SetRate(24.0);
+        public void ExecuteIncreaseBig() =>
+            SetRate(Math.Min(24.0, Snap(_config.DailyInitiationRate) + BigStep));
 
         private static double Snap(double value) => Math.Round(value / Step) * Step;
 

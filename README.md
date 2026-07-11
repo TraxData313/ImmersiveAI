@@ -53,6 +53,12 @@ Key Core concepts:
   relationship, while memory is branching toward per-person files (this player, later other NPCs).
   It begins not blank but seeded with the story the world already tells of them — a wanderer's
   tavern tale, a noble's repute — theirs to keep, refine, or release at every reflection.
+- `NpcGoals` — the NPC's *own* personal aims (`goals.txt`), what they strive for of their own will
+  (win back a lost hall, see a child wed, be free of a lord). General to them like the self, and
+  theirs to shape: one aim at a time mid-conversation through the `tend_goals` tool (add / drop /
+  revise), and wholesale when they gather their thoughts in reflection (a `GOALS:` section, replace-all
+  like their truths). Folded into the prompt as "What you strive for". Config: `EnableNpcGoals`,
+  `MaxNpcGoals` (default 6).
 - `PromptBuilder` / `SituationBuilder` — assemble the whole prompt in the second-person Angel
   voice: who they are, their self, the world's notes, the current situation, and their memory,
   followed by real user/assistant message history.

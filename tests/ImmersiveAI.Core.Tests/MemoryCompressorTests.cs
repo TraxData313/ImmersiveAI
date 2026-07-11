@@ -348,6 +348,72 @@ public class MemoryCompressorTests
         Assert.Equal("I am who I was.", self.Text); // marker never leaks in as a real self
     }
 
+    [Fact]
+    public void ParseResponse_GoalsSection_IsExtracted_AndSelfNeverLeaksIntoIt()
+    {
+        var result = MemoryCompressor.ParseResponse(
+            "SUMMARY:\nWe spoke of the war.\nFACTS:\n- The player spared my brother\nSELF:\nI am wearier than I was.\nGOALS:\n- Win back my father's hall\n- See my sister wed");
+
+        Assert.Equal("I am wearier than I was.", result.Self); // self did not swallow the goals
+        Assert.True(result.HasGoalsSection);
+        Assert.Equal(new[] { "Win back my father's hall", "See my sister wed" }, result.Goals);
+    }
+
+    [Fact]
+    public void ParseResponse_ReportsWhetherAGoalsSectionWasPresent_AndHonorsNone()
+    {
+        Assert.False(MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS:\n- f").HasGoalsSection);
+        var none = MemoryCompressor.ParseResponse("SUMMARY:\ns\nGOALS: none");
+        Assert.True(none.HasGoalsSection);
+        Assert.Empty(none.Goals);
+    }
+
+    [Fact]
+    public void BuildReflectionRequest_WithGoals_ShowsCurrentAimsAndAsksForGoals()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildReflectionRequest(
+            memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: null,
+            maxFacts: 10, goals: new[] { "Win back my father's hall" }, maxGoals: 4)[0].Content;
+
+        Assert.Contains("what you strive for", prompt);
+        Assert.Contains("Win back my father's hall", prompt); // current aims shown for reworking
+        Assert.Contains("GOALS:", prompt);                    // the answer slot is offered
+        Assert.Contains("at most 4", prompt);                 // the budget carried
+    }
+
+    [Fact]
+    public void BuildReflectionRequest_WithoutGoals_DoesNotAskForGoals()
+    {
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildReflectionRequest(memory, System.Array.Empty<ConversationTurn>())[0].Content;
+
+        Assert.DoesNotContain("GOALS:", prompt);
+        Assert.DoesNotContain("what you strive for", prompt);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_RepliedGoalsReplaceTheAims_AndAbsentSectionLeavesThemUntouched()
+    {
+        var memory = MemoryWithTurns(3);
+
+        // A present GOALS section replaces the aims wholesale (won ones released, new ones taken up).
+        var replacing = new FakeChatClient { Response = "SUMMARY:\nok\nGOALS:\n- Take back Sargot\n- Wed well" };
+        var goals = new NpcGoals();
+        goals.AddGoal("An old aim now finished");
+        await new MemoryCompressor(replacing).ReflectAsync(memory, keepMostRecent: 5, systemVoiceName: null, self: null, maxFacts: 10, goals: goals, maxGoals: 6);
+        Assert.Equal(new[] { "Take back Sargot", "Wed well" }, goals.Goals);
+
+        // No GOALS section at all → aims stand untouched (a malformed reply can't wipe them).
+        var silent = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS:\n- a truth" };
+        var kept = new NpcGoals();
+        kept.AddGoal("An aim that must survive");
+        await new MemoryCompressor(silent).ReflectAsync(MemoryWithTurns(3), keepMostRecent: 5, systemVoiceName: null, self: null, maxFacts: 10, goals: kept, maxGoals: 6);
+        Assert.Equal(new[] { "An aim that must survive" }, kept.Goals);
+    }
+
     [Theory]
     [InlineData("unchanged", true)]
     [InlineData("Unchanged.", true)]

@@ -266,6 +266,18 @@ namespace ImmersiveAI
         /// to begin unwritten.</summary>
         public bool SeedSelfFromWorldStory { get; set; } = true;
 
+        /// <summary>When true, NPCs carry their own personal aims — what they strive for of their own will
+        /// (win back a lost hall, see a child wed well, be free of a lord's leash) — held in a goals.txt
+        /// beside their self. They shape these two ways: one aim at a time mid-conversation, through the
+        /// tend_goals tool (needs a tool-capable backend), and wholesale when they gather their thoughts in
+        /// reflection (works on any backend). The aims are folded into their prompt as "What you strive
+        /// for". Set false to leave NPCs without aims of their own.</summary>
+        public bool EnableNpcGoals { get; set; } = true;
+
+        /// <summary>How many personal aims one NPC may carry at once (the tend_goals tool and reflection
+        /// both honor it). Kept small so the prompt stays lean and their striving stays focused.</summary>
+        public int MaxNpcGoals { get; set; } = 6;
+
         /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
         /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
         /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>
@@ -400,6 +412,10 @@ namespace ImmersiveAI
             // Truths budget: at least one, and a bound that keeps the prompt from silting up.
             if (MaxKnownFacts <= 0) MaxKnownFacts = 10;
             if (MaxKnownFacts > 30) MaxKnownFacts = 30;
+
+            // Aims budget: at least one aim when goals are on, and a small ceiling so striving stays focused.
+            if (MaxNpcGoals <= 0) MaxNpcGoals = 6;
+            if (MaxNpcGoals > 20) MaxNpcGoals = 20;
 
             // Recall rounds: 0 is a legitimate "none"; more than a handful only slows replies down.
             if (MaxRecallsPerReply < 0) MaxRecallsPerReply = 0;

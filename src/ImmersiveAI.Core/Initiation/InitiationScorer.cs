@@ -36,6 +36,16 @@ namespace ImmersiveAI.Core.Initiation
         /// <summary>A small floor so even a long-lost friend can, once in a great while, still reach out.</summary>
         public const double RecencyFloor = 0.05;
 
+        /// <summary>Hour the world wakes — before this the reaching-out is fully night-damped.</summary>
+        public const double DawnHour = 6.0;
+
+        /// <summary>Hour the world settles for the night — after this the damping begins.</summary>
+        public const double DuskHour = 22.0;
+
+        /// <summary>How much the reaching-out is divided at the very bottom of the night (~02:00): /8.
+        /// Shallow night passes through /2 on the way there, matching "sleep deepens through the night".</summary>
+        public const double DeepestNightDivisor = 8.0;
+
         /// <summary>A small floor on closeness so that someone the player speaks with often, but holds at a
         /// neutral standing, is not utterly silent — they may still, rarely, reach out. Standing still
         /// dominates (a maxed bond is far more likely), and frequency gates it (a near-stranger stays quiet
@@ -123,6 +133,34 @@ namespace ImmersiveAI.Core.Initiation
             if (chance < 0) chance = 0;
             if (chance > 1) chance = 1;
             return chance;
+        }
+
+        /// <summary>
+        /// How much the world being asleep dampens a face-to-face reach-out at this hour of day (0–24),
+        /// a multiplier in (0,1]. People do not cross a dark camp at three in the morning: the daytime
+        /// (<see cref="DawnHour"/>–<see cref="DuskHour"/>) is undamped (1.0), then through the night the
+        /// chance is divided by a factor rising smoothly from 1 at dusk/dawn to <see cref="DeepestNightDivisor"/>
+        /// at the night's middle (~02:00) — passing through /2 in the shallow night and reaching /8 at the
+        /// deepest. A raised-cosine trough keeps it continuous at the day's edges (no sudden drop at 22:00),
+        /// so evening chats fade gently rather than snapping shut. Letters are unaffected — a distant hand's
+        /// writing hour is never seen, only the arrival days later.
+        /// </summary>
+        public static double NightFactor(double hourOfDay)
+        {
+            // Fold any stray value into a single day so callers need not normalize.
+            hourOfDay %= 24.0;
+            if (hourOfDay < 0) hourOfDay += 24.0;
+
+            if (hourOfDay >= DawnHour && hourOfDay < DuskHour) return 1.0; // broad daylight, fully social
+
+            double nightLength = 24.0 - DuskHour + DawnHour;               // hours of night (dusk → dawn)
+            double sinceDusk = hourOfDay >= DuskHour ? hourOfDay - DuskHour : hourOfDay + (24.0 - DuskHour);
+            double progress = sinceDusk / nightLength;                     // 0 at dusk, 1 at dawn, 0.5 deepest
+
+            // Raised cosine: 0 at both night edges (flat, so it eases in from full day), 1 at the middle.
+            double nightness = (1.0 - Math.Cos(2.0 * Math.PI * progress)) / 2.0;
+            double divisor = 1.0 + (DeepestNightDivisor - 1.0) * nightness;
+            return 1.0 / divisor;
         }
 
         /// <summary>The recency multiplier: 1 when they spoke today, halving every

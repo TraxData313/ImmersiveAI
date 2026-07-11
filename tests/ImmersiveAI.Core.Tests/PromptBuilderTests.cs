@@ -33,6 +33,31 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_FoldsInTheNpcsAims_AsWhatTheyStriveFor()
+    {
+        var persona = Persona();
+        persona.Goals = new() { "Win back my father's hall", "See my sister safely wed" };
+
+        var system = new PromptBuilder().Build(persona, new NpcMemory(), "In the tavern.", "Vulgrim", "Hello")[0].Content;
+
+        Assert.Contains("What you strive for", system);
+        Assert.Contains("Win back my father's hall", system);
+        Assert.Contains("See my sister safely wed", system);
+    }
+
+    [Fact]
+    public void Build_OffersTheTendGoalsWhisper_OnlyWhenTheAimsHandRidesAlong()
+    {
+        var withTool = Persona();
+        withTool.CanTendGoals = true;
+        var on = new PromptBuilder().Build(withTool, new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.Contains("The aims you carry are your own", on);
+
+        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.DoesNotContain("The aims you carry are your own", off);
+    }
+
+    [Fact]
     public void BuildAngelPrompt_FramesTheAngelLineInTheConfiguredVoice()
     {
         var memory = new NpcMemory();

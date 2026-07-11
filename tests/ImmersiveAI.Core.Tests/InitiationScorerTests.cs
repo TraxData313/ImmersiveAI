@@ -114,6 +114,33 @@ public class InitiationScorerTests
     }
 
     [Fact]
+    public void NightFactor_IsFullByDay_AndDampedThroughTheNight()
+    {
+        // Broad daylight is undamped, all the way to the day's edges.
+        Assert.Equal(1.0, InitiationScorer.NightFactor(12.0), 5);
+        Assert.Equal(1.0, InitiationScorer.NightFactor(InitiationScorer.DawnHour), 5);   // 06:00 wakes
+        Assert.Equal(1.0, InitiationScorer.NightFactor(21.99), 5);                       // still evening-social
+
+        // The deepest night (~02:00) is the /8 floor.
+        double deepest = (InitiationScorer.DuskHour + (InitiationScorer.DawnHour + 24.0)) / 2.0 - 24.0; // 02:00
+        Assert.Equal(1.0 / InitiationScorer.DeepestNightDivisor, InitiationScorer.NightFactor(deepest), 3);
+
+        // Shallow night passes through roughly /2 (a few hours off the bottom).
+        Assert.Equal(0.5, InitiationScorer.NightFactor(23.0), 1);
+        Assert.Equal(0.5, InitiationScorer.NightFactor(5.0), 1);
+
+        // Continuous at the dusk edge — no cliff at 22:00 that snaps evening chats shut.
+        Assert.Equal(InitiationScorer.NightFactor(21.99), InitiationScorer.NightFactor(22.01), 2);
+
+        // Every hour stays a genuine multiplier in (0,1], and wrapping is handled.
+        for (double h = -5; h < 30; h += 0.25)
+        {
+            double f = InitiationScorer.NightFactor(h);
+            Assert.True(f > 0 && f <= 1.0);
+        }
+    }
+
+    [Fact]
     public void GroupHourlyChance_SocialnessOverride_VanishesAtEverydayRates()
     {
         // At everyday rates the bonds stay fully in charge: the s² blend adds only rate³/24³ per

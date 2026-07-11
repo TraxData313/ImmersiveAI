@@ -104,7 +104,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `RelationshipChangesViaTool` (relation shifts — by default the NPC moves her own heart mid-reply via
   the `move_heart` native tool; the second, isolated feeling call is the fallback shape),
   `EnableNpcInitiatedChats` (+ related initiation knobs; `DailyInitiationRate` doubles as the
-  socialness number, live-edited by the on-map stepper — `ShowSocialnessControl`),
+  socialness number, live-edited by the on-map stepper — `ShowSocialnessControl`; face-to-face
+  reach-outs are night-damped by `InitiationScorer.NightFactor` — undamped by day, /2 shallow night
+  to /8 at ~02:00, continuous at the day's edges; letters are unaffected),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world events & town gossip
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
   campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters)
@@ -116,6 +118,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
   messages instead of accept/decline popups),
   `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
+  `EnableNpcGoals` + `MaxNpcGoals` (personal aims in goals.txt: the `tend_goals` tool shapes them
+  one at a time mid-conversation, reflection reworks them wholesale via a `GOALS:` replace-all section),
   `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
   replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls),
   `NotifyOnMemoryRefactor` (soft notice when an NPC's compression reworks her deep memory),
@@ -145,6 +149,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     First seeded from the story the world tells of them: a wanderer's tavern tale or a noble's
     encyclopedia account (`BackstoryBuilder` Module + `SelfSeedFormatter` Core, hooked in
     `LoadOrSeedSelf`); deleting the file re-seeds. Toggle: `SeedSelfFromWorldStory`.
+  - `goals.txt` — the NPC's OWN personal aims (`NpcGoals`), one per line, what they strive for of
+    their own will. General to them like the self; authored by them via the `tend_goals` tool
+    (mid-conversation) and the reflection `GOALS:` section (wholesale, replace-all like FACTS).
+    Folded into the prompt as "What you strive for". Comment lines `#`/`//` ignored; deleting it
+    clears their aims. Toggle: `EnableNpcGoals`.
   - `letters.txt` — human-readable log of all letters carried between the player and this NPC.
   - future per-NPC files go here too.
 - `NPCs\campaign_<id>\_letters.json` — letters currently on the road (Core `LetterBag`); they
