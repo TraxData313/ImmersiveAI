@@ -19,10 +19,11 @@ MUST BE DONE FOR V1 RELEASE:
         sealed-letter flows), the odds view's session-cost line, log.txt filling, first-run popup
         (delete first_run_note_shown.txt + blank the key to see it), key-death quieting (wrong key →
         one amber notice, hourly flows silent, recovery on fixing it), and — if switching to OpenAI —
-        gpt-5.6-terra actually answering (needs the new max_completion_tokens shape).
+        gpt-5.6 actually answering (luna is the default now; needs the new max_completion_tokens shape).
     - [ ] Playtest the map-party farewell fix: click a lord's party on the map → enter the
         Immersive AI section → Farewell → should return to the map with NO engage menu; and the
         same talk inside a town must NOT walk you out of the gates.
+    - [ ] i need to set up antropic key to test the claude models if they work
 - [ ] steam release
     release to steam for everyone to enjoy with good descriptions; upload from tools\package.ps1's
     clean dist\ImmersiveAI layout

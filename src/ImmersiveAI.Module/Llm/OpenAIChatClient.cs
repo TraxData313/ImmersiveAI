@@ -33,7 +33,7 @@ namespace ImmersiveAI.Llm
         public OpenAIChatClient(string apiKey, string model, int maxTokens, string? reasoningEffort = null)
         {
             _apiKey = apiKey ?? "";
-            _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.6-terra" : model;
+            _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.6-luna" : model;
             _maxTokens = maxTokens > 0 ? maxTokens : 400;
             _reasoningEffort = (reasoningEffort ?? string.Empty).Trim();
         }

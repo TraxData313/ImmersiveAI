@@ -333,6 +333,14 @@ namespace ImmersiveAI.Tools
             var she = h.IsFemale;
             if (Safe(() => h.MapFaction?.Leader == h && h.MapFaction is Kingdom))
                 return she ? "ruler of her realm" : "ruler of his realm";
+            // The player's young clan is no noble house until it truly is: sworn to a crown makes a
+            // noble, a contract makes a sellsword captain, unsworn makes a free captain or adventurer.
+            if (Safe(() => h == Hero.MainHero && h.Clan != null && h.Clan.Kingdom == null))
+                return Safe(() => (h.PartyBelongedTo?.MemberRoster?.TotalManCount ?? 0) >= 15)
+                    ? "a free captain, sworn to no crown"
+                    : "a free adventurer, sworn to no crown";
+            if (Safe(() => h == Hero.MainHero && h.Clan?.IsUnderMercenaryService == true))
+                return "a sellsword captain under contract";
             if (Safe(() => h.Clan?.Leader == h)) return "head of a noble house";
             if (Safe(() => h.IsLord)) return she ? "a noblewoman" : "a nobleman";
             if (Safe(() => h.IsWanderer)) return "a wandering warrior who sells their sword";
@@ -409,6 +417,27 @@ namespace ImmersiveAI.Tools
             {
                 if (s.IsVillage && s.Village?.Bound != null)
                     lines.Add($"It lives in the shadow of {s.Village.Bound.Name}.");
+            });
+
+            // A village is known by what it sends to market — its true production, not a guess
+            // (the Cadugan playtest find: an iron village must never be recalled as farmland).
+            Try(() =>
+            {
+                var type = s.Village?.VillageType;
+                var primary = type?.PrimaryProduction?.Name?.ToString();
+                if (string.IsNullOrWhiteSpace(primary)) return;
+                var others = new List<string>();
+                foreach (var (item, _) in type.Productions)
+                {
+                    var n = item?.Name?.ToString();
+                    if (string.IsNullOrWhiteSpace(n) || n == primary) continue;
+                    if (!others.Contains(n)) others.Add(n);
+                    if (others.Count == 2) break;
+                }
+                var line = $"Its livelihood is {primary.ToLowerInvariant()}";
+                if (others.Count == 1) line += $", beside some {others[0].ToLowerInvariant()}";
+                else if (others.Count == 2) line += $", beside some {others[0].ToLowerInvariant()} and {others[1].ToLowerInvariant()}";
+                lines.Add(line + ".");
             });
 
             Try(() => lines.AddRange(FortificationLedger(s, asker)));

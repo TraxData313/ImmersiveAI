@@ -405,12 +405,12 @@ namespace ImmersiveAI.Personas
                 }
                 else if (leader != null)
                 {
-                    var duty = PartyDuty(h, party);
-                    var dutyClause = duty == null ? "" : $", and I serve as its {duty}";
+                    var duties = PartyDuties(h, party);
+                    var dutyClause = duties.Count == 0 ? "" : $", and I serve as its {JoinAnd(duties)}";
                     sentences.Add(men > 0
                         ? $"I ride with {leader.Name}'s {company}, some {men} strong{dutyClause}."
                         : $"I ride with {leader.Name}'s {company}{dutyClause}.");
-                    if (duty != null) sentences.Add(DutySentence(duty, h));
+                    foreach (var duty in duties) sentences.Add(DutySentence(duty, h));
                 }
                 else if (h.CurrentSettlement == null)
                     sentences.Add("I am upon the road.");
@@ -453,19 +453,27 @@ namespace ImmersiveAI.Personas
             return string.Join(" ", sentences);
         }
 
-        // The named duty this hero holds in the party they ride with — scout, surgeon, engineer,
-        // quartermaster — or null when they hold none. Best-effort against the live roles.
-        internal static string PartyDuty(Hero h, TaleWorlds.CampaignSystem.Party.MobileParty party)
+        // The named duties this hero holds in the party they ride with — scout, surgeon, engineer,
+        // quartermaster; one soul may carry several at once. Best-effort against the live roles.
+        internal static System.Collections.Generic.List<string> PartyDuties(Hero h, TaleWorlds.CampaignSystem.Party.MobileParty party)
         {
+            var duties = new System.Collections.Generic.List<string>();
             try
             {
-                if (party.EffectiveScout == h) return "scout";
-                if (party.EffectiveSurgeon == h) return "surgeon";
-                if (party.EffectiveEngineer == h) return "engineer";
-                if (party.EffectiveQuartermaster == h) return "quartermaster";
+                if (party.EffectiveScout == h) duties.Add("scout");
+                if (party.EffectiveSurgeon == h) duties.Add("surgeon");
+                if (party.EffectiveEngineer == h) duties.Add("engineer");
+                if (party.EffectiveQuartermaster == h) duties.Add("quartermaster");
             }
             catch { /* roles unavailable */ }
-            return null;
+            return duties;
+        }
+
+        // The duties joined for a label ("scout and surgeon"), or null when they hold none.
+        internal static string PartyDuty(Hero h, TaleWorlds.CampaignSystem.Party.MobileParty party)
+        {
+            var duties = PartyDuties(h, party);
+            return duties.Count == 0 ? null : JoinAnd(duties);
         }
 
         // What the duty MEANS, in the holder's own words, weighed with how good they honestly are
@@ -496,20 +504,34 @@ namespace ImmersiveAI.Personas
         // scout from his surgeon, and it lets him speak of his people's crafts truly.
         private static string HeldDuties(TaleWorlds.CampaignSystem.Party.MobileParty party, Hero leader)
         {
-            var parts = new System.Collections.Generic.List<string>();
+            // Grouped by holder — one soul may carry several duties, and a captain should say
+            // "Alandra is my scout and surgeon", not name her twice.
+            var order = new System.Collections.Generic.List<Hero>();
+            var held = new System.Collections.Generic.Dictionary<Hero, System.Collections.Generic.List<string>>();
             void Note(Func<Hero> pick, string duty)
             {
                 Try(() =>
                 {
                     var who = pick();
-                    if (who != null && who != leader) parts.Add($"{who.Name} is my {duty}");
+                    if (who == null || who == leader) return;
+                    if (!held.TryGetValue(who, out var list))
+                    {
+                        list = new System.Collections.Generic.List<string>();
+                        held[who] = list;
+                        order.Add(who);
+                    }
+                    list.Add(duty);
                 });
             }
             Note(() => party.EffectiveScout, "scout");
             Note(() => party.EffectiveSurgeon, "surgeon");
             Note(() => party.EffectiveEngineer, "engineer");
             Note(() => party.EffectiveQuartermaster, "quartermaster");
-            return parts.Count == 0 ? string.Empty : "In my company, " + JoinAnd(parts) + ".";
+            if (order.Count == 0) return string.Empty;
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (var who in order)
+                parts.Add($"{who.Name} is my {JoinAnd(held[who])}");
+            return "In my company, " + JoinAnd(parts) + ".";
         }
 
         // The mood paragraph: deterministic in the soul and the campaign day (see MoodTides in Core),
@@ -545,6 +567,10 @@ namespace ImmersiveAI.Personas
             Facts(partner, out string gender, out string age, out string culture, out string occ,
                   out string clan, out string kingdom);
 
+            // The game stamps the player "Lord" from their first day, but a landless newcomer with
+            // ten riders is no noble in anyone's eyes yet — name them what they truly are.
+            if (partner == Hero.MainHero) occ = PlayerStation(partner) ?? occ;
+
             var head = $"{them} is";
             if (culture != null && occ != null) head += $" {A(culture)} {culture} {occ}";
             else if (culture != null) head += $" of {culture} stock";
@@ -553,8 +579,8 @@ namespace ImmersiveAI.Personas
             head += GenderAgeClause(gender, age, false);
             sentences.Add(head.TrimEnd() + ".");
 
-            if (clan != null && kingdom != null) sentences.Add($"Their house is clan {clan}, sworn to {kingdom}.");
-            else if (clan != null) sentences.Add($"Their house is clan {clan}.");
+            var house = HouseLine(partner, clan, kingdom);
+            if (house != null) sentences.Add(house);
             else if (kingdom != null) sentences.Add($"They are sworn to {kingdom}.");
 
             // How far their name has traveled: what even a stranger would have heard of them.
@@ -585,6 +611,57 @@ namespace ImmersiveAI.Personas
             return string.Join(" ", sentences);
         }
 
+        // What the player truly is in the world's eyes. Sworn to a crown as a vassal makes a noble
+        // (or a crowned head); a mercenary contract makes a sellsword captain; free and unsworn makes
+        // an adventurer, or the captain of whatever band actually rides behind them. Null falls back
+        // to the plain occupation word. (Anton's ask, 2026.07.12: no "noble" at clan tier 0.)
+        private static string PlayerStation(Hero h)
+        {
+            try
+            {
+                var clan = h.Clan;
+                if (clan == null) return "free adventurer";
+                if (clan.Kingdom != null)
+                {
+                    if (Safe(() => clan.IsUnderMercenaryService)) return "sellsword captain";
+                    if (Safe(() => clan.Kingdom.Leader == h)) return h.IsFemale ? "crowned queen" : "crowned king";
+                    return h.IsFemale ? "noblewoman" : "nobleman";
+                }
+                int men = 0;
+                Try(() => men = TaleWorlds.CampaignSystem.Party.MobileParty.MainParty?.MemberRoster?.TotalManCount ?? 0);
+                if (men >= 40) return "free captain at the head of a warband";
+                if (men >= 15) return "free captain of a small band";
+                return "free adventurer";
+            }
+            catch { return null; }
+        }
+
+        // The partner's house, told with how far its name has truly risen — a tier-0 banner is
+        // "newly raised", not presumed a noble house — and honest about a mercenary contract.
+        private static string HouseLine(Hero partner, string clan, string kingdom)
+        {
+            if (clan == null) return null;
+            var sworn = kingdom == null ? null
+                : Safe(() => partner.Clan?.IsUnderMercenaryService == true)
+                    ? $", riding under contract in the pay of {kingdom}"
+                    : $", sworn to {kingdom}";
+            string fame = null;
+            Try(() => fame = ClanStandingWords(partner.Clan?.Tier ?? 0));
+            return $"Their house is clan {clan}{sworn}" + (fame == null ? "." : $" — {fame}.");
+        }
+
+        // The weight a clan's name carries, by tier — the same ladder the lords themselves live by.
+        private static string ClanStandingWords(int tier)
+        {
+            if (tier <= 0) return "a banner newly raised, its name not yet known to anyone";
+            if (tier == 1) return "a young name, only beginning to be spoken";
+            if (tier == 2) return "a small house on the rise";
+            if (tier == 3) return "a house of real standing among the lords";
+            if (tier == 4) return "an established house whose word carries weight";
+            if (tier == 5) return "a great house, its name known across the realms";
+            return "among the greatest houses of Calradia";
+        }
+
         // Pulls the raw identity facts (each best-effort) so the two describers can weave them into prose.
         private static void Facts(Hero h, out string gender, out string age, out string culture,
                                   out string occ, out string clan, out string kingdom)
@@ -596,6 +673,8 @@ namespace ImmersiveAI.Personas
             Try(() => { o = PrettyOccupation(h.Occupation.ToString()); });
             Try(() => { var xx = h.Clan?.Name?.ToString(); if (!string.IsNullOrWhiteSpace(xx)) cl = xx.Trim(); });
             Try(() => { var kk = h.Clan?.Kingdom?.Name?.ToString() ?? h.MapFaction?.Name?.ToString(); if (!string.IsNullOrWhiteSpace(kk)) k = kk.Trim(); });
+            // An unsworn clan IS its own map faction — never say "clan X, sworn to X" (Cadfin find).
+            if (k != null && cl != null && k == cl) k = null;
             gender = g; age = a; culture = c; occ = o; clan = cl; kingdom = k;
         }
 

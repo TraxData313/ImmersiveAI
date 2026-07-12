@@ -11,17 +11,19 @@ client, a second failure mode, and a second personality — postponed to post-V1
 
 | Role | Anthropic (default backend) | OpenAI |
 |---|---|---|
-| Everything | `claude-opus-4-8` — $5/$25 per MTok | `gpt-5.6-terra` — $2.50/$15 per MTok |
+| Everything | `claude-opus-4-8` — $5/$25 per MTok | `gpt-5.6-luna` — $1/$6 per MTok |
 
 - **Anthropic default stays `claude-opus-4-8`.** Best-in-class roleplay voice and the most
   reliable native tool calling we've seen (the recalls, move_heart). 200k context is plenty
   (the whole prompt sheet runs a few thousand tokens). Budget alternative: `claude-sonnet-5`
   at $3/$15 — strong, noticeably cheaper; worth offering in the Steam FAQ.
-- **OpenAI default moves `gpt-4o` → `gpt-5.6-terra`** (Anton's instinct, confirmed): Terra is
-  OpenAI's current mid-tier — GPT-5.5-level quality at half the price, 1M context, and a real
-  reasoning dial. gpt-4o is two generations old, was persistently shy with tools (the whole
-  move_heart saga), and at $2.50/$10 is barely cheaper than Terra. Sol ($5/$30) is overkill for
-  NPC chat; Luna ($1/$6) is the budget pick to mention on the page.
+- **OpenAI default is `gpt-5.6-luna`** (2026.07.12, Anton — revised from the day's earlier
+  terra pick before any release shipped): the whole 5.6 tier is sure-handed with the NPCs'
+  tools, so the cheap one wins the default for the fast-use player; terra ($2.50/$15) is the
+  stronger middle pick, sol ($5/$30) the flagship. The MCM dropdown now offers ONLY the three
+  5.6 models — gpt-4o and kin are markedly worse with the NPCs (the whole move_heart saga) and
+  live on solely as hand edits in config.json (a hand-set model still appears and works,
+  via the bridge's SelectOrAdd).
 - **`OpenAIReasoningEffort` = `low`** (new config): reasoning tokens are billed output, so
   conversation wants little of it — but a little makes tool use far more reliable than none.
   Players can set `none` for the cheapest/fastest replies or higher for cleverer companions.

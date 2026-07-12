@@ -42,6 +42,16 @@ namespace ImmersiveAI.Personas
 
             if (issue != null)
                 DescribeOwnIssue(issue, sentences);
+            else
+                // A notable with no issue says so to himself, so "do you need any work?" is met with
+                // honest small labor or a plain no — never an invented quest-shaped promise.
+                Try(() =>
+                {
+                    if (speaker.IsNotable)
+                        sentences.Add("No true trouble weighs on me in these days — nothing worth hiring " +
+                            "a fighting company for; if I set a willing visitor to anything, it would be " +
+                            "small everyday labor, paid in kind and a fair word.");
+                });
 
             // Quests they gave that ride on without an issue behind them (a lord's charge, a story
             // quest) — the issue's own quest is already told above, so it is not repeated here.

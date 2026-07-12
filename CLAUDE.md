@@ -109,7 +109,7 @@ lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin v
 tools/deploy.ps1          build + install into the game's Modules folder (DLLs + SubModule.xml + GUI)
 tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
 docs/steam-page-draft.md  the Workshop description draft (privacy/cost/AI disclosures) — finalize at release
-docs/models-and-costs.md  the model-selection decision (opus-4-8 / gpt-5.6-terra) + price table rationale
+docs/models-and-costs.md  the model-selection decision (opus-4-8 / gpt-5.6-luna) + price table rationale
 Directory.Build.props     shared MSBuild props; GameFolder points at the Bannerlord install
 ```
 
@@ -309,7 +309,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   autonomous rolls skip; the odds view ends with the session/day summary),
   `OpenAIReasoningEffort` (default "low"; gpt-5.x/o-series get `max_completion_tokens` +
   `reasoning_effort` instead of `max_tokens` — REQUIRED or gpt-5.6 400s; OpenAI default model is now
-  gpt-5.6-terra for fresh configs, existing configs deliberately unmigrated — see docs/models-and-costs.md),
+  gpt-5.6-luna for fresh configs (2026.07.12 — the MCM dropdown offers ONLY luna/terra/sol; older
+  models live on as config.json hand edits), existing configs deliberately unmigrated — see docs/models-and-costs.md),
   `ConfigVersion` (format stamp, 1 — future migrations key off it),
   `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
   "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
@@ -443,7 +444,12 @@ briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2
 
 **NPCs reaching out on their own.** The first way the NPCs *act* instead of only answering. Each hour
 (`OnHourlyTick`), **every hero co-located** with the player right now (`IsCoLocated` — in the player's
-party, or the same settlement; distant NPCs write letters instead) joins ONE bond-scaled group roll to
+party, or the same settlement AND not behind the keep's closed doors: `IsBehindClosedDoors` (2026.07.12)
+asks the game's own `SettlementAccessModel.CanMainHeroEnterLordsHall` (+ `Settlement.BribePaid` vs the
+bribe price, vanilla's own paid-bribe rule) for anyone the `LocationComplex` places in "lordshall"/
+"prison" — no leave to enter the keep means its souls are out of chat's and reach-outs' range, though a
+known one still shows "(away)" in the window pointing to a letter, which DOES find them; fail-open so a
+model hiccup never silences a keep; distant NPCs write letters instead) joins ONE bond-scaled group roll to
 reach out — including people never spoken with: everyone carries at least `InitiationPullFloor` (default
 0.1) of a full bond's pull, so a stranger may cross the room and begin their story (the Angel's desire
 question tells them honestly it would be a first acquaintance — `ReachOutDesireLine(stranger: true)` —
@@ -514,7 +520,10 @@ degrades gracefully: patch fails → `Applied` false → direct-inquiry fallback
 Gauntlet window over the map screen: hotkey (`ChatWindowHotkey`, default "O", parsed to `InputKey`),
 a "Speak with those near you" option in every town/castle/village menu, or an NPC's knock. Works
 anywhere the map is on stage — travelling, at sea, inside settlement menus — never in missions
-(`ChatWindowManager.CanOpenNow`: MapState, no conversation, no inquiry up). Left side lists everyone
+(`ChatWindowManager.CanOpenNow`: MapState, no conversation, no inquiry up, and no encyclopedia —
+that overlay never changes the GameState, so typing "o"/"u" in its SEARCH BOX would open the windows;
+`UI\MapOverlays.IsEncyclopediaOpen` reads MapScreen's flag by cached soft reflection, both windows'
+gates check it — 2026.07.12). Left side lists everyone
 co-located (same `IsCoLocated` as reach-outs; friends first by last-spoken, portraits via the shared
 `UI\Portraits.DarkCode`); the right side shows the chosen one's **deep-memory overview up top**
 (summary + held truths, collapsible — so a long story needs no scrolling) and the **recorded turns as

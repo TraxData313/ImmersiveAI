@@ -16,6 +16,7 @@ using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.GameState;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -1564,9 +1565,37 @@ namespace ImmersiveAI
 
                 var playerSettlement = Hero.MainHero?.CurrentSettlement ?? main.CurrentSettlement;
                 var npcSettlement = npc.CurrentSettlement ?? npc.PartyBelongedTo?.CurrentSettlement;
-                return playerSettlement != null && npcSettlement != null && playerSettlement == npcSettlement;
+                if (playerSettlement == null || npcSettlement == null || playerSettlement != npcSettlement)
+                    return false;
+                return !IsBehindClosedDoors(npc, npcSettlement);
             }
             catch { return false; }
+        }
+
+        // A soul may share the settlement yet sit behind doors the guards will not open: the lord's
+        // hall (or the dungeon) of a keep the player has no leave to enter. Words cannot cross that
+        // door — such a soul is out of chat's and reach-outs' range until the player gains access or
+        // pays the gate bribe; a letter still finds them. Judged by the game's own access model, the
+        // very logic behind the "pay a bribe to enter the keep" menu (vanilla honors a paid bribe via
+        // Settlement.BribePaid against the model's price, so we honor it the same way).
+        private static bool IsBehindClosedDoors(Hero npc, Settlement settlement)
+        {
+            try
+            {
+                if (settlement == null || !settlement.IsFortification) return false;
+                var whereabouts = settlement.LocationComplex?.GetLocationOfCharacter(npc)?.StringId;
+                if (whereabouts != "lordshall" && whereabouts != "prison") return false;
+
+                Campaign.Current.Models.SettlementAccessModel.CanMainHeroEnterLordsHall(settlement, out var access);
+                if (access.AccessLevel == TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel.AccessLevel.FullAccess)
+                    return false;
+                if (access.AccessLevel == TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel.AccessLevel.LimitedAccess
+                    && access.LimitedAccessSolution == TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel.LimitedAccessSolution.Bribe
+                    && settlement.BribePaid >= Campaign.Current.Models.BribeCalculationModel.GetBribeToEnterLordsHall(settlement))
+                    return false;   // the guards were paid this visit — the door stands open
+                return true;
+            }
+            catch { return false; }   // fail open: a model hiccup must never silence a whole keep
         }
 
         // The reaching-out as beats the NPC actually lives and remembers, never hidden from them. First the

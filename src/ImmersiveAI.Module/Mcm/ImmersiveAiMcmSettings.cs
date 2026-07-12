@@ -51,10 +51,10 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = true,
-            HintText = "Which GPT model to use when the backend is OpenAI. gpt-5.6-terra ($2.50/$15 per million tokens) is the recommended default — GPT-5.5-class at half the price; sol ($5/$30) is the flagship, luna ($1/$6) the budget pick. Older models (gpt-4o and kin) still work but are weaker with the NPCs' tools. A model set by hand in config.json also appears here.")]
+            HintText = "Which GPT model to use when the backend is OpenAI. gpt-5.6-luna ($1/$6 per million tokens) is the recommended default — quick, cheap, and sure-handed with the NPCs' tools; terra ($2.50/$15) is the stronger middle pick, sol ($5/$30) the flagship. Older models (gpt-4o and kin) are markedly worse with the NPCs, so they are left to config.json — one set by hand there still appears and works here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
-            new[] { "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.5", "gpt-5.1", "gpt-5", "gpt-4.1", "gpt-4o" }, 0);
+            new[] { "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol" }, 0);
 
         [SettingPropertyDropdown("OpenAI reasoning effort", Order = 5, RequireRestart = true,
             HintText = "How hard OpenAI's reasoning models (gpt-5.x) think on the mod's small inner calls (feelings, yes/no decisions, search refining). Spoken replies carry the NPCs' tools and run without reasoning regardless — OpenAI's chat API cannot combine the two. 'low' is a fine default; 'none' is cheapest. Ignored by older models like gpt-4o.")]

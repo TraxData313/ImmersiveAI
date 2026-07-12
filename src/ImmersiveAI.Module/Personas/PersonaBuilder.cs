@@ -155,12 +155,45 @@ namespace ImmersiveAI.Personas
                                "a blade at a glance.";
                     case Occupation.Headman:
                     case Occupation.RuralNotable:
-                        return "The village's needs are mine to carry: its fields and herds, its levies, and its " +
-                               "standing with the lords who hold the land.";
+                        return "The village's needs are mine to carry: its livelihood, its levies, and its " +
+                               "standing with the lords who hold the land." + VillageLivelihood(npc);
                 }
             }
             catch { /* no trade line */ }
             return string.Empty;
+        }
+
+        // What the village TRULY lives by, read from its real production — an iron-digging village's
+        // headman must never be handed "fields and herds" (the Cadugan playtest find, 2026.07.12:
+        // asked what Beglomuar specializes in, he answered grain because the old line said fields).
+        private static string VillageLivelihood(Hero npc)
+        {
+            try
+            {
+                var village = (npc.CurrentSettlement ?? npc.HomeSettlement)?.Village;
+                var type = village?.VillageType;
+                var primary = type?.PrimaryProduction?.Name?.ToString();
+                if (string.IsNullOrWhiteSpace(primary)) return string.Empty;
+
+                var others = new System.Collections.Generic.List<string>();
+                try
+                {
+                    foreach (var (item, _) in type.Productions)
+                    {
+                        var n = item?.Name?.ToString();
+                        if (string.IsNullOrWhiteSpace(n) || n == primary) continue;
+                        if (!others.Contains(n)) others.Add(n);
+                        if (others.Count == 2) break;
+                    }
+                }
+                catch { /* the primary alone serves */ }
+
+                var line = $" Our life and bread is the {primary.ToLowerInvariant()} we send to market";
+                if (others.Count == 1) line += $", beside some {others[0].ToLowerInvariant()}";
+                else if (others.Count == 2) line += $", beside some {others[0].ToLowerInvariant()} and {others[1].ToLowerInvariant()}";
+                return line + ".";
+            }
+            catch { return string.Empty; }
         }
 
         public static string DescribeRelation(int relation)

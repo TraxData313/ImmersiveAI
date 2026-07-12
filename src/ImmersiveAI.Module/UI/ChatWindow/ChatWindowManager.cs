@@ -193,6 +193,7 @@ namespace ImmersiveAI.UI.ChatWindow
                 if (mapState.MapConversationActive) return false;
                 if (Hero.OneToOneConversationHero != null) return false;
                 if (InformationManager.IsAnyInquiryActive()) return false;
+                if (MapOverlays.IsEncyclopediaOpen) return false;   // typing in its search box is not a hotkey
                 return Hero.MainHero != null && Hero.MainHero.IsAlive;
             }
             catch { return false; }
