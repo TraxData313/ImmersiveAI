@@ -139,6 +139,7 @@ namespace ImmersiveAI.UI.LetterWindow
                 if (Hero.OneToOneConversationHero != null) return false;
                 if (InformationManager.IsAnyInquiryActive()) return false;
                 if (MapOverlays.IsEncyclopediaOpen) return false;   // typing in its search box is not a hotkey
+                if (MapOverlays.IsTypingSomewhere) return false;    // any focused text field holds the keys
                 return Hero.MainHero != null && Hero.MainHero.IsAlive;
             }
             catch { return false; }

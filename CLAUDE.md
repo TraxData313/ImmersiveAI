@@ -534,10 +534,19 @@ a "Speak with those near you" option in every town/castle/village menu, or an NP
 anywhere the map is on stage — travelling, at sea, inside settlement menus — never in missions
 (`ChatWindowManager.CanOpenNow`: MapState, no conversation, no inquiry up, and no encyclopedia —
 that overlay never changes the GameState, so typing "o"/"u" in its SEARCH BOX would open the windows;
-`UI\MapOverlays.IsEncyclopediaOpen` reads MapScreen's flag by cached soft reflection, both windows'
-gates check it — 2026.07.12). Left side lists everyone
+`UI\MapOverlays.IsEncyclopediaOpen` reads MapScreen's flag by cached soft reflection — resolved by
+scanning loaded assemblies, NOT `Type.GetType("…, SandBox.View")`, which answers null for module-folder
+DLLs and silently disarmed the guard once; beside it `MapOverlays.IsTypingSomewhere`
+(`ScreenManager.FocusedLayer.IsFocusedOnInput()` — the engine's own any-text-field-focused signal)
+blocks the hotkeys whenever ANY overlay's text box holds the keys; both windows' gates check both —
+2026.07.12). Left side lists everyone
 co-located (same `IsCoLocated` as reach-outs; friends first by last-spoken, portraits via the shared
-`UI\Portraits.DarkCode`); the right side shows the chosen one's **deep-memory overview up top**
+`UI\Portraits.DarkCode`; a **search line above the list** (2026.07.12, both windows) refilters by
+name/detail as you type — the full list lives in the VM's `_allContacts`, `Contacts` is the searched
+view, and a knock/"Write back" clears a stale filter); the right side shows a grey **bond-stats line**
+under the chosen name (`ImmersiveChatBehavior.BondStatsLabel` — richness, days since last spoke, and
+the odds view's per-soul hourly reach-out/letter chance, night factor included; both windows show it)
+plus the chosen one's **deep-memory overview up top**
 (summary + held truths, collapsible — so a long story needs no scrolling) and the **recorded turns as
 a thread** (Angel beats rendered as soft gray narration — nothing she remembers is hidden), with an
 input line below. The player **writes first, with no arrival beat and no forced greeting** — the line
@@ -686,9 +695,10 @@ days by map distance (Core `LetterCourier`: 150 units/day, 0.25–10 day rails) 
 save/load in `campaign_<id>\_letters.json` (Core `LetterBag`, atomic writes) — a letter is a promise,
 unlike a live chat. Arrival: faced toast + pausing inquiry, "Write back" (opens the composer popup) or
 "Set it aside"; a letter whose writer died en route still arrives, marked so, with no write-back. The
-player can also send first: a "Send a letter by courier" option in every town/castle/village menu lists
-everyone with history (portraits; co-located people are disabled with "go and speak instead"; one courier
-per bond at a time). When the player's letter reaches the NPC, *reading it is a recorded moment* (the body
+player can also send first: a "Send a letter by courier" option in every town/castle/village menu opens
+the LETTER WINDOW itself (2026.07.12 — the same one hotkey "U" opens; the old recipient-picker popups
+remain only as the fallback when `EnableLetterWindow` is off or the window cannot come up; one courier
+per bond at a time, co-located people pointed to go and speak). When the player's letter reaches the NPC, *reading it is a recorded moment* (the body
 lives inside the Angel's line, so it enters memory even if they let it lie), and they may answer at most
 once per letter — correspondence is a chain of choices, not an echo. Undeliverable (recipient dead) comes
 back as a quiet notice. All beats are Angel turns in `memories.json`; each NPC folder keeps a plain
@@ -699,7 +709,8 @@ most one delivery per direction per hour. Test lever: "[test — trigger them to
 
 **The letter window (2026.07.11)** is the chat window's twin for correspondence (`UI\LetterWindow\`,
 prefab `ImmersiveLetterWindow.xml`, hotkey `LetterWindowHotkey` default "U"; the two managers yield to
-each other so one window is up at a time). It is a pure VIEW: correspondents enumerated from the
+each other so one window is up at a time; it carries the same search line and bond-stats line as the
+chat window — 2026.07.12). It is a pure VIEW: correspondents enumerated from the
 campaign's NPC folders (`CorrespondentsForLetters` — anyone with a letters.txt, even dead writers, plus
 everyone with real history), the correspondence parsed from letters.txt by Core `CorrespondenceLog.Parse`
 (letter cards with writer/stamp/provenance; asides as narration), the courier's road from the live
