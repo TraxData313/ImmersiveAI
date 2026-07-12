@@ -1389,6 +1389,31 @@ namespace ImmersiveAI
             try { OnLettersHourlyTick(); }
             catch { /* the post must never take down the hour */ }
 
+            // Self-heal a wedged PlayerEncounter: a half-real encounter left behind (e.g. by a talk
+            // once hung on a distant settlement's party — the Brunda wedge) makes that settlement
+            // ignore map clicks while everything else works. A LEGIT encounter always comes with a
+            // menu, a mission, a conversation, or the player standing in a settlement; one seen
+            // naked like this on TWO consecutive hourly ticks is a ghost, and finishing it frees
+            // the map. Conservative on purpose — one sighting alone is never acted on.
+            try
+            {
+                bool ghost = PlayerEncounter.Current != null
+                    && Campaign.Current?.CurrentMenuContext == null
+                    && Mission.Current == null
+                    && Hero.OneToOneConversationHero == null
+                    && Hero.MainHero?.CurrentSettlement == null
+                    && MobileParty.MainParty?.MapEvent == null;
+                if (ghost && _ghostEncounterSeen)
+                {
+                    _ghostEncounterSeen = false;
+                    PlayerEncounter.Finish(true);
+                    ModLog.Warn("Healed a wedged PlayerEncounter (no menu, mission, talk, or settlement carried it).");
+                }
+                else
+                    _ghostEncounterSeen = ghost;
+            }
+            catch { _ghostEncounterSeen = false; }
+
             if (!_config.EnableNpcInitiatedChats) return;
 
             // A dying key (or a reached daily cap) quiets the world's own movements: no reach-out
@@ -1771,7 +1796,8 @@ namespace ImmersiveAI
             var self = Current;
             if (self == null || npc == null) return false;
             return self._pendingNotices.TryGetValue(npc.StringId, out var pending)
-                && CampaignTime.Now.ToDays - pending.OfferedGameDay < NoticeLifetimeDays;
+                && CampaignTime.Now.ToDays - pending.OfferedGameDay < NoticeLifetimeDays
+                && IsCoLocated(npc);   // the knock cannot outlive the parting (see OnMapNoticeInspected)
         }
 
         /// <summary>The player clicked the notice: in the chat-window shape her words already wait in the
@@ -1784,6 +1810,19 @@ namespace ImmersiveAI
 
             if (!self._pendingNotices.TryGetValue(npc.StringId, out var pending)) return;
             self._pendingNotices.Remove(npc.StringId);
+
+            // The two may have parted since the knock (the player rode out of the town, or the NPC
+            // moved on). NEVER force a face-to-face across that distance: hanging the talk on a
+            // distant settlement's party spins up a half-real encounter that can wedge the map —
+            // clicks on that settlement die until the state clears (the Brunda find, 2026.07.12).
+            // Their greeting is already a recorded turn, so the window shows it honestly instead.
+            if (!IsCoLocated(npc))
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"Immersive AI: {npc.Name} is no longer near — their words wait in the chat window."));
+                if (self._config?.EnableChatWindow == true) UI.ChatWindow.ChatWindowManager.Open(npc);
+                return;
+            }
 
             // Face-to-face wins: click opens the old-style conversation on the greeting she already spoke.
             if (self.UsesFaceToFaceInitiations)
@@ -1978,8 +2017,15 @@ namespace ImmersiveAI
                 CharacterObject.PlayerCharacter, PartyBase.MainParty,
                 false, false, false, false, false, false);
 
+            // A settlement's party may host the scene ONLY when the player truly stands in that
+            // settlement — hung on it from outside, the engine spins up a settlement encounter
+            // that does not dissolve cleanly and the town stops answering map clicks (the Brunda
+            // wedge, 2026.07.12). Anywhere else, the player's own party carries the scene.
+            var npcSettlementParty = npc.CurrentSettlement != null
+                && npc.CurrentSettlement == Hero.MainHero?.CurrentSettlement
+                ? npc.CurrentSettlement.Party : null;
             var party = npc.PartyBelongedTo?.Party
-                        ?? npc.CurrentSettlement?.Party
+                        ?? npcSettlementParty
                         ?? PartyBase.MainParty;
 
             var npcData = new ConversationCharacterData(
@@ -1992,6 +2038,10 @@ namespace ImmersiveAI
         // True while a conversation WE forced onto the map is up and no encounter predated it — the
         // signal that whatever PlayerEncounter exists when the talk ends is ours to finish.
         private bool _finishEncounterAfterTalk;
+
+        // A stray PlayerEncounter sighted naked on the last hourly tick (see the self-heal in
+        // OnHourlyTick); a second consecutive sighting confirms the ghost and finishes it.
+        private bool _ghostEncounterSeen;
 
         // The mirror case: the PLAYER opened the talk by clicking a party on the map, so a real
         // PlayerEncounter hosts it. Vanilla's leave lines set LeaveEncounter so it dissolves with
