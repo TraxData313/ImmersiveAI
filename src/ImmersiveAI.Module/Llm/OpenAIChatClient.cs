@@ -124,13 +124,15 @@ namespace ImmersiveAI.Llm
 
             // OpenAI's "insufficient permissions" 401 shows up INTERMITTENTLY for a while after
             // the account's model access is changed (their ACL propagating — observed live
-            // 2026.07.12: the same request shape succeeding and failing seconds apart on
-            // gpt-5.6-terra). One short retry rides out the stale server; a truly bad key
-            // fails twice and is reported as before.
-            if (status == 401 && body.IndexOf("insufficient permissions", StringComparison.OrdinalIgnoreCase) >= 0)
+            // 2026.07.12: the same request shape succeeding and failing seconds apart, and
+            // one 1.5s retry still losing whole replies HOURS after the grant). Three retries
+            // with growing pauses ride out a stale server; a truly bad key fails them all and
+            // is reported as before.
+            for (int attempt = 1; attempt <= 3 && status == 401
+                 && body.IndexOf("insufficient permissions", StringComparison.OrdinalIgnoreCase) >= 0; attempt++)
             {
-                ModLog.Warn("OpenAI answered 401 'insufficient permissions' — retrying once (fresh access changes propagate slowly on their side).");
-                await Task.Delay(1500, cancellationToken).ConfigureAwait(false);
+                ModLog.Warn($"OpenAI answered 401 'insufficient permissions' — retry {attempt} of 3 (fresh access changes propagate slowly on their side).");
+                await Task.Delay(1500 * attempt, cancellationToken).ConfigureAwait(false);
                 (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
             }
 

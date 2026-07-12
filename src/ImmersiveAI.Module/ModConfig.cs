@@ -431,6 +431,9 @@ namespace ImmersiveAI
                 ["gpt-5.6-sol"] = new ModelPrice(5, 30),
                 ["gpt-5.6-terra"] = new ModelPrice(2.5, 15),
                 ["gpt-5.6-luna"] = new ModelPrice(1, 6),
+                ["gpt-5.5"] = new ModelPrice(1.25, 10),
+                ["gpt-5.5-mini"] = new ModelPrice(0.25, 2),   // explicit: would otherwise match "gpt-5"
+                ["gpt-5.5-nano"] = new ModelPrice(0.05, 0.4),
                 ["gpt-5"] = new ModelPrice(1.25, 10),
                 ["gpt-5-mini"] = new ModelPrice(0.25, 2),
                 ["gpt-4o"] = new ModelPrice(2.5, 10),
