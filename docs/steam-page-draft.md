@@ -64,10 +64,11 @@ All character dialogue in this mod is generated at play time by the AI model you
 
 ## [REQUIRED] Removing the mod mid-campaign
 
-Best done at a quiet moment: dismiss any Immersive AI map notices (the portrait knocks on the
-right side) and save before disabling the mod — a save carrying one of our notices references
-the mod's classes. Memories live outside the saves and are never lost either way.
-[VERIFY before release: load a notice-carrying save without the mod and record what happens.]
+Safe to remove at any time. A save carrying a pending Immersive AI notice (the portrait knocks
+on the right side) still loads without the mod — the game quietly discards the notice (verified
+against the game's own save-loading code, v1.4.7; you'll just see the usual "created with
+different modules" warning every modded save shows). Memories live outside the saves as plain
+files and are never lost either way — reinstall later and every character remembers you.
 
 ## Provenance
 
@@ -76,7 +77,7 @@ copied). Fully original source.
 
 ## Compatibility
 
-- Bannerlord [VERSION]. New campaigns and existing saves both work.
+- Bannerlord v1.4.7. New campaigns and existing saves both work.
 - Optional: Mod Configuration Menu (MCM) for in-game settings; without it, everything is in
   `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json`.
 - One light Harmony patch (bundled); no vanilla behavior is altered.
@@ -102,4 +103,8 @@ Changes apply on the next conversation. No restart.
       socialness stepper.
 - [ ] ~30s clip of a real conversation.
 - [ ] Workshop AI-content disclosure checkbox ticked.
-- [ ] Fill in [VERSION] and resolve the [VERIFY] uninstall note after the test.
+- [x] [VERSION] filled (v1.4.7) and the uninstall note resolved: the engine's load path tolerates
+      the missing notice type end-to-end (null-checked at every step, and
+      `CampaignInformationManager.OnGameLoaded` scrubs null notices itself) — verified by
+      decompiling TaleWorlds.SaveSystem/CampaignSystem, 2026.07.12. One in-game confirmation
+      remains on the playtest checklist for belt-and-braces.

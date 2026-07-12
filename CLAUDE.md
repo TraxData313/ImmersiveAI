@@ -523,7 +523,9 @@ patch so far (`UI\MapNoticePatch`, applied in `SubModule.OnSubModuleLoad`) is a 
 block in our override of `MapNotificationItem.xml` (`module\GUI\Prefabs\Map\` — same-name prefabs shadow
 SandBox's; vanilla items bind nothing there and are unaffected; re-copy + re-mark after game patches).
 **Save safety:** `InformationData` lives inside saves while a notice is up, so `ImmersiveAISaveDefiner`
-(base id 726401000) must keep the class registered — never remove or renumber without migrating. Everything
+(base id 726401000) must keep the class registered — never remove or renumber without migrating (the risk
+is at save-WRITE time; loading a notice-carrying save with the mod fully REMOVED is verified safe,
+2026.07.12 — the engine null-scrubs unknown saved types on load). Everything
 degrades gracefully: patch fails → `Applied` false → direct-inquiry fallback. Parked offers live in
 `_pendingNotices` (not persisted; a reload lets the moment pass via `IsValid`). Config:
 `UseMapNoticeForInitiations`.

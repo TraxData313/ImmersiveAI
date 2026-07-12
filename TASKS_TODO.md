@@ -1,28 +1,13 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] Release-defaults once-over + uninstall safety (the last hands-on pass before upload)
-    one pass before upload: DevMode false, sane socialness default, MCM soft-dep verified absent;
-    and VERIFY a save carrying a pending portrait notice loads with the mod removed (InformationData
-    lives inside saves) — if it breaks the load, the Steam page's uninstall note must say so plainly
-    (docs/steam-page-draft.md carries the [VERIFY] placeholder for the result).
 - [ ] Pre release:
     - [ ] Steam page assets: 3-4 honest screenshots (chat window, letter window, a reach-out notice, the
         socialness stepper), a 30s clip of a real conversation, and the "clean-room, no ChatAi code"
         provenance note stated plainly. - I, Anton, will make them and will let you know whem I have them
-    - [ ] Finalize the Workshop description from docs/steam-page-draft.md (privacy, costs, AI disclosure,
-        prompt-files story, English-UI/any-language note are all drafted there; fill [VERSION], resolve
-        the [VERIFY] uninstall note, tick Steam's AI-content disclosure on upload).
-    - [ ] Playtest checklist for the new roles wave: a scout answering "can we escape
-        them?", weigh_battle against a castle, a wife speaking of the children, a king receiving a
-        tier-0 stranger, and a caravan letter arriving as a field report.
-    - [ ] Playtest the info sections ("?" in the O and U windows) and the letter window itself.
-    - [ ] Playtest the 2026.07.12 morning batch: cost notices per exchange (and their absence on
-        sealed-letter flows), the odds view's session-cost line, log.txt filling, first-run popup
-        (delete first_run_note_shown.txt + blank the key to see it), key-death quieting (wrong key →
-        one amber notice, hourly flows silent, recovery on fixing it), and — if switching to OpenAI —
-        gpt-5.6 actually answering (luna is the default now; needs the new max_completion_tokens shape).
-    - [ ] Playtest the map-party farewell fix: click a lord's party on the map → enter the
-        Immersive AI section → Farewell → should return to the map with NO engage menu; and the
-        same talk inside a town must NOT walk you out of the gates.
+    - [ ] Run the V1 playtest checklist — docs/playtest-checklist-v1.md (Anton, in-game): the roles
+        wave (scout/weigh_battle/wife/king/caravan letter), the "?" info overlays + the letter window
+        end-to-end, the morning batch (cost notices, sealed flows quiet, odds cost line, log.txt,
+        first-run popup, key-death quieting, gpt-5.6 if on OpenAI), the map-party farewell fix, and
+        the one-line in-game uninstall confirmation (code says it loads fine — belt-and-braces).
     - [ ] i need to set up antropic key to test the claude models if they work
 - [ ] steam release
     release to steam for everyone to enjoy with good descriptions; upload from tools\package.ps1's

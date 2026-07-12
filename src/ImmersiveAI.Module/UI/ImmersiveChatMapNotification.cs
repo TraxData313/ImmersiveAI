@@ -13,9 +13,12 @@ namespace ImmersiveAI.UI
     ///
     /// InformationData subclasses are persisted inside the save while the notice is up, so this
     /// type MUST stay registered with the save system (<see cref="ImmersiveAISaveDefiner"/>) —
-    /// removing either class would corrupt any save carrying a live notice. After a load the
-    /// behavior's pending-offer state is gone, so <see cref="IsValid"/> turns false and the
-    /// stale notice cleans itself up.
+    /// with the mod installed, an unregistered live notice would fail at save-WRITE time.
+    /// Loading such a save with the mod fully removed is safe (verified against the v1.4.7
+    /// save-load code, 2026.07.12): every step of LoadContext tolerates the unknown type id,
+    /// and CampaignInformationManager.OnGameLoaded scrubs the resulting null notice itself.
+    /// After a load the behavior's pending-offer state is gone, so <see cref="IsValid"/> turns
+    /// false and the stale notice cleans itself up.
     /// </summary>
     public class ImmersiveChatMapNotification : InformationData
     {
