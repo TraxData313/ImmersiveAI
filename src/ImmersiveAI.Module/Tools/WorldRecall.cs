@@ -940,11 +940,17 @@ namespace ImmersiveAI.Tools
                     lines.Add($"The hurt mend {care}: the named heal some {named} points of vigor a day, the ranks some {ranks}.");
             });
 
-            // Only the captain carries the ledger of coin.
+            // The captain carries the ledger of coin — and the quartermaster keeps its books
+            // (the Brunda find, 2026.07.12: asked of the war chest, she rightly could not see it).
             Try(() =>
             {
-                if (!leading) return;
-                lines.Add($"Their keep runs some {party.TotalWage} denars a day in wages, and your own purse holds {asker.Gold}.");
+                if (leading)
+                {
+                    lines.Add($"Their keep runs some {party.TotalWage} denars a day in wages, and your own purse holds {asker.Gold}.");
+                    return;
+                }
+                if (leader != null && Safe(() => party.EffectiveQuartermaster == asker))
+                    lines.Add($"You keep the books yourself: the keep runs some {party.TotalWage} denars a day in wages, and the war chest — {leader.Name}'s purse — holds some {leader.Gold} denars.");
             });
 
             Try(() => lines.Add(CompanyDoing(party)));

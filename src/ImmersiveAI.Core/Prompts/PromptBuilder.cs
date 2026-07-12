@@ -282,6 +282,16 @@ namespace ImmersiveAI.Core.Prompts
             "scriptures, a word of the court or the road — but lightly, for the atmosphere of it; " +
             "plain, living speech first.";
 
+        /// <summary>The plain-page rule: replies land on a page that shows every mark exactly as
+        /// written — nothing is rendered — so pen-marks (**word**, dash-lists, headers) arrive as
+        /// literal clutter around the words. Told in-world: the voice carries, not the pen. New
+        /// lines are honored by the panel, so they stay the one shape speech may take.</summary>
+        public const string PlainSpeechGuidance =
+            "- I speak my words aloud; they are heard, not read from a page. So no marks of the pen " +
+            "ride in them — no asterisks or signs wrapped about a word, no dashes marshaling lists, " +
+            "no quotation marks fencing my own speech — my phrasing alone carries the weight. A new " +
+            "line for a new thought is all the shape my speech needs.";
+
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
         private static string LowerFirst(string s)
@@ -461,6 +471,7 @@ namespace ImmersiveAI.Core.Prompts
             sb.AppendLine("How should I speak:");
             sb.AppendLine(BrevityGuidance);
             sb.AppendLine(OldWorldToneGuidance);
+            sb.AppendLine(PlainSpeechGuidance);
 
             // The gift whispers are short first-person habits now, and they invite the free, unbidden
             // look too — a conversation may OPEN from something truly seen, not only answer with it.
