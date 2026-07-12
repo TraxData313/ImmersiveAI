@@ -208,12 +208,12 @@ namespace ImmersiveAI.UI.ChatWindow
                     }
                     else
                     {
-                        messages.Add(new ChatMessageVM(WithStamp(stamp, playerName),
-                            turn.PlayerLine, isNarration: false, PlayerHeaderColor));
+                        AddSpoken(messages, WithStamp(stamp, playerName),
+                            turn.PlayerLine, PlayerHeaderColor);
                     }
 
                     if (!string.IsNullOrWhiteSpace(turn.NpcLine))
-                        messages.Add(new ChatMessageVM(npcName, turn.NpcLine, isNarration: false, NpcHeaderColor));
+                        AddSpoken(messages, npcName, turn.NpcLine, NpcHeaderColor);
                 }
             }
 
@@ -226,7 +226,7 @@ namespace ImmersiveAI.UI.ChatWindow
             if (busy)
             {
                 if (_pendingLines.TryGetValue(npc.StringId, out var pendingLine))
-                    messages.Add(new ChatMessageVM(playerName, pendingLine, isNarration: false, PlayerHeaderColor));
+                    AddSpoken(messages, playerName, pendingLine, PlayerHeaderColor);
                 messages.Add(new ChatMessageVM(string.Empty, $"({npcName} considers your words…)", isNarration: true, Colors.White));
             }
             else
@@ -253,6 +253,32 @@ namespace ImmersiveAI.UI.ChatWindow
 
         private static string WithStamp(string stamp, string text) =>
             string.IsNullOrEmpty(stamp) ? text : $"[{stamp}]  {text}";
+
+        // A spoken message may carry small acted gestures between *asterisks* (the acting-out
+        // grammar — EmoteText): the words draw as the spoken card, each gesture as a soft
+        // narration line in its place, so actions look like actions and words like words. The
+        // header rides the first segment whatever it is — a reply that is all gesture still
+        // says whose act it was.
+        private static void AddSpoken(
+            MBBindingList<ChatMessageVM> messages, string header, string body, Color headerColor)
+        {
+            var segments = Core.Prompts.EmoteText.Split(body);
+            if (segments.Count == 0)
+            {
+                messages.Add(new ChatMessageVM(header, body, isNarration: false, headerColor));
+                return;
+            }
+            bool first = true;
+            foreach (var seg in segments)
+            {
+                var head = first ? header : string.Empty;
+                if (seg.IsGesture)
+                    messages.Add(new ChatMessageVM(head, $"*{seg.Text}*", isNarration: true, headerColor));
+                else
+                    messages.Add(new ChatMessageVM(head, seg.Text, isNarration: false, headerColor));
+                first = false;
+            }
+        }
 
         // The deep-memory overview: what she carries of the player beyond the verbatim thread — the
         // rolling summary and the truths she chose to hold — so a long story is readable at a glance.

@@ -2547,6 +2547,8 @@ namespace ImmersiveAI
             persona.CanTendGoals = CanTendGoals();
             persona.CanHoldTruths = CanHoldTruths();
             persona.CanSurveyField = CanSurveyField(npc);
+            // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
+            persona.EncourageActingOut = _config.EnableActingOut;
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

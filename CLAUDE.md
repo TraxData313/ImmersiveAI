@@ -272,6 +272,16 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   two toggles above),
   `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
   a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
+  `EnableActingOut` (2026.07.12: the acting-out grammar — NPCs invited to set a small acted gesture
+  between single *asterisks*, apart from their spoken words, as the ONE exception to the plain-speech
+  rule (`PromptBuilder.ActingOutGuidance`, right after `PlainSpeechGuidance` because it IS that rule's
+  exception); sparing by its own wording — one act, rarely two, always brief — the convention cuts both
+  ways (the player's *offered arm* was done, not said), and a gesture weighs what the heart has earned;
+  the chat window splits spoken bodies on the strict single-asterisk grammar (Core `EmoteText` — no
+  newline/`**`/space-padded spans, so markdown residue and stray math stay literal) and draws gestures
+  as soft gray narration between the spoken cards via `ChatWindowVM.AddSpoken`, the header riding the
+  first segment so an all-gesture reply still says whose act it was; face-to-face panel shows the
+  classic literal *starred* convention; default on),
   `EnableMoodSwings` + `EnableWomensCycle` (the passing weather of the heart — Core `MoodTides`, folded
   into the situation right after the self by `SituationBuilder.BuildMood`: every soul carries a daily
   humor from a 16-phrase palette, and women in their childbearing years (15–50, not with child) also

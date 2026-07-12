@@ -318,6 +318,15 @@ namespace ImmersiveAI
         /// as the reply-ready notice. Set false for silence while they think.</summary>
         public bool ShowNpcActivity { get; set; } = true;
 
+        /// <summary>When true, NPCs are invited to act out small gestures between *asterisks* —
+        /// *I smile and meet your eyes* — set apart from their spoken words, the one mark their
+        /// plain speech allows. The invitation itself keeps it sparing (one act, rarely two, always
+        /// brief) and tells them the convention cuts both ways: the player's *offered arm* was done,
+        /// not said. The chat window draws such gestures as soft gray narration between the spoken
+        /// words; in the face-to-face panel they read as the classic *starred* roleplay convention.
+        /// Set false for words alone.</summary>
+        public bool EnableActingOut { get; set; } = true;
+
         /// <summary>When true, every NPC carries a daily humor — bright, weary, restless, brooding,
         /// tender, bold — woven into their situation so the same soul meets you differently day to
         /// day. It is derived from who they are and what day it is (no dice, nothing stored): the

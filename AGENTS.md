@@ -118,6 +118,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
   messages instead of accept/decline popups),
   `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
+  `EnableActingOut` (the acting-out grammar: a small acted gesture between single *asterisks* apart
+  from the spoken words — the one exception to the plain-speech rule, sparing by its own wording,
+  cutting both ways; the chat window draws gestures as soft narration via Core `EmoteText` +
+  `ChatWindowVM.AddSpoken`),
   `EnableMoodSwings` + `EnableWomensCycle` (the passing weather of the heart — Core `MoodTides` in the
   situation after the self: a daily humor for everyone, and for women 15–50 not with child the body's
   monthly season, "the custom of women", in four turnings on a per-woman 26–30-day calendar that also

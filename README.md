@@ -67,6 +67,11 @@ Key Core concepts:
   custom of women", told to them gently by its turning so it may color their choices. Deterministic
   from who they are and what day it is (no dice, nothing stored): reloading rerolls no one's
   weather. Config: `EnableMoodSwings`, `EnableWomensCycle` (both default on).
+- Acting out — NPCs are invited to set a small acted gesture between *asterisks* (*pours the
+  wine and slides the cup across*) apart from their spoken words, the one mark their plain
+  speech allows — sparing by design, and the convention cuts both ways: your *offered arm* was
+  done, not said. The chat window draws gestures as soft gray narration between the spoken
+  lines (`EmoteText` in Core). Config: `EnableActingOut` (default on).
 - `TidingsBuilder` / `TidingsFormatter` — fold the world's recent happenings (wars, falls of
   realms, towns changing hands, deaths, weddings, tournament wins) and the talk of the town into
   each NPC's situation, drawn from the game's own campaign log — so they can bring up the news

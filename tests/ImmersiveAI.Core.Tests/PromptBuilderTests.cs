@@ -70,6 +70,20 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_OffersTheActingOutInvitation_OnlyWhenInvited()
+    {
+        var invited = Persona();
+        invited.EncourageActingOut = true;
+        var on = new PromptBuilder().Build(invited, new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.Contains("between single asterisks", on);
+        // It is the plain-speech rule's one exception, so it must follow that rule, never precede it.
+        Assert.True(on.IndexOf("no marks of the pen") < on.IndexOf("between single asterisks"));
+
+        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.DoesNotContain("between single asterisks", off);
+    }
+
+    [Fact]
     public void Build_FoldsInTheCrafts_AndOffersTheFieldWhisperOnlyWhenItRides()
     {
         var persona = Persona();

@@ -292,6 +292,21 @@ namespace ImmersiveAI.Core.Prompts
             "no quotation marks fencing my own speech — my phrasing alone carries the weight. A new " +
             "line for a new thought is all the shape my speech needs.";
 
+        /// <summary>The acting-out invitation: the ONE exception to the plain-speech rule — a small
+        /// acted gesture may ride between single *asterisks*, apart from the spoken words, and the
+        /// convention cuts both ways (the player's *offered arm* was done, not said). Kept sparing
+        /// by its own wording — the rarer the act, the more it says — and weighted by the heart:
+        /// the same touch is a different act from a stranger and from an old friend. Offered only
+        /// when <see cref="NpcPersona.EncourageActingOut"/> is set (the game layer's toggle).</summary>
+        public const string ActingOutGuidance =
+            "- One mark alone escapes that rule: what I truly DO — a look, a small act of the body — " +
+            "may ride between single asterisks, set apart from my spoken words: *I pour the wine and " +
+            "slide the cup across*. Sparingly, where it makes the moment live: one such act, rarely " +
+            "two, and always brief — my words carry the scene, never a stage-play of directions. " +
+            "When the one before me writes between asterisks, they did it, not said it. And a " +
+            "gesture weighs what the heart has earned — the same touch is a boldness from a " +
+            "stranger and a warmth from an old friend.";
+
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
         private static string LowerFirst(string s)
@@ -472,6 +487,9 @@ namespace ImmersiveAI.Core.Prompts
             sb.AppendLine(BrevityGuidance);
             sb.AppendLine(OldWorldToneGuidance);
             sb.AppendLine(PlainSpeechGuidance);
+            // Immediately after the plain-speech rule, because it IS that rule's one exception.
+            if (persona.EncourageActingOut)
+                sb.AppendLine(ActingOutGuidance);
 
             // The gift whispers are short first-person habits now, and they invite the free, unbidden
             // look too — a conversation may OPEN from something truly seen, not only answer with it.

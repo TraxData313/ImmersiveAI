@@ -89,6 +89,12 @@ namespace ImmersiveAI.Core.Prompts
         /// stay may be quietly kept. Even when false, reflection still rewrites their truths whole.</summary>
         public bool CanHoldTruths { get; set; }
 
+        /// <summary>True when this NPC is invited to act out small gestures between *asterisks* —
+        /// *I smile and meet their eyes* — as the one exception to the plain-speech rule (see
+        /// <see cref="PromptBuilder.ActingOutGuidance"/>). The chat window draws such spans as soft
+        /// narration; kept sparing by the guidance itself. Set from the game layer's EnableActingOut.</summary>
+        public bool EncourageActingOut { get; set; }
+
         /// <summary>True when this NPC rides with a company on the map and may cast their eyes over
         /// the country and weigh a battle (the field-craft tools ride along — see the game layer's
         /// FieldCraft: survey_surroundings and weigh_battle). Adds a whisper to look before judging
