@@ -632,8 +632,16 @@ namespace ImmersiveAI
             {
                 starter.AddGameMenuOption(menuId, "immersiveai_send_letter_" + menuId,
                     "{=ImmersiveAI_SendLetter}Send a letter by courier [Immersive AI]",
-                    OnLetterMenuCondition, _ => OnChooseLetterRecipient(), false, -1, false, null);
+                    OnLetterMenuCondition, _ => OnLetterMenuChosen(), false, -1, false, null);
             }
+        }
+
+        // The letter window is the letters' home (its own "?" already points here); the old
+        // recipient-picker popups only stand in when the window is off or cannot come up.
+        private void OnLetterMenuChosen()
+        {
+            if (_config.EnableLetterWindow && UI.LetterWindow.LetterWindowManager.Open()) return;
+            OnChooseLetterRecipient();
         }
 
         private bool OnLetterMenuCondition(MenuCallbackArgs args)
