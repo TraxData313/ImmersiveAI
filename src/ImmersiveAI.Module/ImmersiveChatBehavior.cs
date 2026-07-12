@@ -1292,6 +1292,51 @@ namespace ImmersiveAI
             return $"{sign}{r} · {PersonaBuilder.DescribeRelation(r)}";
         }
 
+        /// <summary>One soft grey line of the bond's own mechanics for the windows (Anton's ask,
+        /// 2026.07.12): the shared story's richness, its freshness, and the odds view's per-soul
+        /// chance — how likely this one is moved to seek the player out (or, away across the map,
+        /// to write) in a given hour, were they rolling alone. Same math as OnShowInitiationOdds.</summary>
+        internal static string BondStatsLabel(Hero? npc)
+        {
+            var self = Current;
+            if (self == null || npc == null || !npc.IsAlive) return string.Empty;
+            try
+            {
+                bool here = IsCoLocated(npc);
+                var known = MemoryIndex.Get(NpcPaths.MemoryFile(npc), self._memoryStore);
+                int richness = known?.Richness ?? 0;
+                double nowDay = CampaignTime.Now.ToDays;
+                double daysSince = known != null && known.LastTalkGameDay >= 0
+                    ? Math.Max(0, nowDay - known.LastTalkGameDay) : -1;
+
+                double pull = here
+                    ? self.CoLocatedPull(npc, nowDay)
+                    : InitiationScorer.Pull(richness, GetStanding(npc), Math.Max(0, daysSince), InPlayersService(npc));
+
+                var sb = new StringBuilder();
+                sb.Append(richness > 0
+                    ? $"spoke {richness} time{(richness == 1 ? "" : "s")}"
+                    : "no words shared yet");
+                if (daysSince >= 0) sb.Append($" · last {daysSince:0.#}d ago");
+
+                var cfg = self._config;
+                if (here && cfg.EnableNpcInitiatedChats)
+                {
+                    // The night factor rides along so the number is the truth of THIS hour.
+                    double hourly = cfg.DailyInitiationRate * pull / 24.0
+                        * InitiationScorer.NightFactor(CampaignTime.Now.CurrentHourInDay);
+                    sb.Append($" · pull {pull * 100:0.#}% — ~{hourly * 100:0.##}%/hour they seek you out");
+                }
+                else if (!here && cfg.EnableLetters)
+                {
+                    double hourly = Core.Letters.LetterCourier.WriteRateFactor * cfg.DailyInitiationRate * pull / 24.0;
+                    sb.Append($" · pull {pull * 100:0.#}% — ~{hourly * 100:0.##}%/hour they write to you");
+                }
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
+        }
+
         // Folds the NPC's own felt shift into the real game standing. They set it themselves, in
         // character, and what the player is shown is the FELT number — how much the moment moved that
         // heart — even when the standing is already pinned at the -100..100 rail (a soul at the deepest

@@ -23,12 +23,18 @@ namespace ImmersiveAI.UI.LetterWindow
         private readonly string _letterHotkey;
         private readonly string _chatHotkey;
 
+        // Every correspondent, unfiltered — Contacts is the searched VIEW over this.
+        private readonly System.Collections.Generic.List<LetterContactVM> _allContacts =
+            new System.Collections.Generic.List<LetterContactVM>();
+
         private MBBindingList<LetterContactVM> _contacts = new MBBindingList<LetterContactVM>();
         private MBBindingList<ChatMessageVM> _entries = new MBBindingList<ChatMessageVM>();
         private LetterContactVM? _selected;
         private string _inputText = string.Empty;
+        private string _searchText = string.Empty;
         private string _selectedName = string.Empty;
         private string _relationText = string.Empty;
+        private string _bondStatsText = string.Empty;
         private Color _relationColor = Colors.White;
         private string _statusText = string.Empty;
         private bool _canWrite;
@@ -46,20 +52,35 @@ namespace ImmersiveAI.UI.LetterWindow
         public void RefreshContacts()
         {
             var keepFolder = _selected?.Folder;
-            var list = new MBBindingList<LetterContactVM>();
+            _allContacts.Clear();
 
             foreach (var info in ImmersiveChatBehavior.CorrespondentsForLetters()
                          .OrderByDescending(i => i.HasLetters)
                          .ThenByDescending(i => i.LastSpokenGameDay)
                          .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase))
-                list.Add(new LetterContactVM(info, OnContactSelected));
+                _allContacts.Add(new LetterContactVM(info, OnContactSelected));
 
-            Contacts = list;
+            ApplyContactFilter();
 
-            var again = keepFolder == null ? null : list.FirstOrDefault(c => c.Folder == keepFolder);
+            var again = keepFolder == null ? null : _allContacts.FirstOrDefault(c => c.Folder == keepFolder);
             if (again != null) SelectContact(again);
             else if (_selected != null) { _selected = null; RefreshSelectionState(); }
         }
+
+        // The search line above the list: name-or-detail contains, so half a name or "caravan"
+        // both find their soul. A filtered-out selected correspondence stays on stage.
+        private void ApplyContactFilter()
+        {
+            var q = (_searchText ?? string.Empty).Trim();
+            var list = new MBBindingList<LetterContactVM>();
+            foreach (var c in _allContacts)
+                if (q.Length == 0 || MatchesSearch(c.Name, q) || MatchesSearch(c.Detail, q))
+                    list.Add(c);
+            Contacts = list;
+        }
+
+        private static bool MatchesSearch(string? text, string q) =>
+            text != null && text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
 
         private void OnContactSelected(LetterContactVM contact) => SelectContact(contact);
 
@@ -67,7 +88,7 @@ namespace ImmersiveAI.UI.LetterWindow
         {
             if (contact == null) return;
 
-            foreach (var c in Contacts) c.IsSelected = c == contact;
+            foreach (var c in _allContacts) c.IsSelected = c == contact;
             _selected = contact;
 
             RefreshCorrespondence();
@@ -81,8 +102,10 @@ namespace ImmersiveAI.UI.LetterWindow
         public void TrySelect(Hero hero)
         {
             if (hero == null) return;
-            var contact = Contacts.FirstOrDefault(c => c.Hero == hero);
-            if (contact != null) SelectContact(contact);
+            var contact = _allContacts.FirstOrDefault(c => c.Hero == hero);
+            if (contact == null) return;
+            if (!Contacts.Contains(contact)) SearchText = string.Empty; // "Write back" outranks a stale filter
+            SelectContact(contact);
         }
 
         // ------------------------------ the correspondence on stage ------------------------------
@@ -147,6 +170,8 @@ namespace ImmersiveAI.UI.LetterWindow
             OnPropertyChanged("RelationText");
             OnPropertyChanged("HasRelation");
             OnPropertyChanged("RelationColor");
+
+            BondStatsText = _selected == null ? string.Empty : ImmersiveChatBehavior.BondStatsLabel(_selected.Hero);
 
             if (_selected == null)
             {
@@ -222,6 +247,49 @@ namespace ImmersiveAI.UI.LetterWindow
 
         [DataSourceProperty]
         public bool HasRelation => !string.IsNullOrEmpty(_relationText);
+
+        /// <summary>The bond's own mechanics under the name — shared story, freshness, and the hourly
+        /// chance they are moved to write (the odds view's numbers for this one soul).</summary>
+        [DataSourceProperty]
+        public string BondStatsText
+        {
+            get => _bondStatsText;
+            set
+            {
+                if (value != _bondStatsText)
+                {
+                    _bondStatsText = value;
+                    OnPropertyChangedWithValue(value, "BondStatsText");
+                    OnPropertyChanged("HasBondStats");
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool HasBondStats => !string.IsNullOrEmpty(_bondStatsText);
+
+        /// <summary>The search line above the list — typing refilters the names at once.</summary>
+        [DataSourceProperty]
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (value != _searchText)
+                {
+                    _searchText = value ?? string.Empty;
+                    OnPropertyChangedWithValue(value, "SearchText");
+                    OnPropertyChanged("IsSearchEmpty");
+                    ApplyContactFilter();
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool IsSearchEmpty => string.IsNullOrEmpty(_searchText);
+
+        [DataSourceProperty]
+        public string SearchHintText => "Search…";
 
         [DataSourceProperty]
         public Color RelationColor
@@ -308,6 +376,7 @@ namespace ImmersiveAI.UI.LetterWindow
             "• A letter rides with a courier for real days — the farther away they are, the longer the road. A courier underway is noted at the end of the page.\n" +
             "• One courier per correspondent at a time: while yours rides, that road is taken until it arrives.\n" +
             "• Someone standing beside you needs no courier — the line under their name will point you to go and speak instead (press [" + _chatHotkey + "]).\n" +
+            "• The line above the list searches it — type part of a name. Under a chosen name: how much story you share, and the hour's chance they are moved to write to you.\n" +
             "• They may write to you first, and they may answer your letter — once — or let it lie unanswered. Both are remembered, and both are set down on this page.\n" +
             "• A sealed letter is a promise: it survives saving and loading, and arrives even if the world turns meanwhile.\n" +
             "\n" +

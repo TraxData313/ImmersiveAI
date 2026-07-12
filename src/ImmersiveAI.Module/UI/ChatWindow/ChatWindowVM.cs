@@ -32,12 +32,17 @@ namespace ImmersiveAI.UI.ChatWindow
         // box should the sending fail.
         private readonly Dictionary<string, string> _pendingLines = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        // Every soul the window knows of, unfiltered — Contacts is the searched VIEW over this.
+        private readonly List<ChatContactVM> _allContacts = new List<ChatContactVM>();
+
         private MBBindingList<ChatContactVM> _contacts = new MBBindingList<ChatContactVM>();
         private MBBindingList<ChatMessageVM> _messages = new MBBindingList<ChatMessageVM>();
         private ChatContactVM? _selected;
         private string _inputText = string.Empty;
+        private string _searchText = string.Empty;
         private string _selectedName = string.Empty;
         private string _relationText = string.Empty;
+        private string _bondStatsText = string.Empty;
         private Color _relationColor = Colors.White;
         private string _overviewText = string.Empty;
         private bool _isOverviewShown = true;
@@ -59,7 +64,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public void RefreshContacts()
         {
             var keepId = _selected?.Hero?.StringId;
-            var list = new MBBindingList<ChatContactVM>();
+            _allContacts.Clear();
 
             foreach (var info in ImmersiveChatBehavior.NearbyHeroesForChat()
                          .OrderByDescending(i => i.IsHere)
@@ -69,15 +74,31 @@ namespace ImmersiveAI.UI.ChatWindow
             {
                 var vm = new ChatContactVM(info.Hero, info.HasHistory, info.LastSpokenGameDay, info.Detail, info.IsHere, OnContactSelected);
                 vm.HasUnread = ChatWindowManager.HasUnread(info.Hero.StringId);
-                list.Add(vm);
+                _allContacts.Add(vm);
             }
 
-            Contacts = list;
+            ApplyContactFilter();
 
-            var again = keepId == null ? null : list.FirstOrDefault(c => c.Hero.StringId == keepId);
+            var again = keepId == null ? null : _allContacts.FirstOrDefault(c => c.Hero.StringId == keepId);
             if (again != null) SelectContact(again);
             else if (_selected != null) { _selected = null; RefreshSelectionState(); }
         }
+
+        // The search line above the list: a plain name-or-detail contains, so "scout", "Sargot",
+        // or half a name all find their soul. The selection is a thing apart from the view — a
+        // filtered-out selected thread stays on stage, only its row steps out of the list.
+        private void ApplyContactFilter()
+        {
+            var q = (_searchText ?? string.Empty).Trim();
+            var list = new MBBindingList<ChatContactVM>();
+            foreach (var c in _allContacts)
+                if (q.Length == 0 || MatchesSearch(c.Name, q) || MatchesSearch(c.Detail, q))
+                    list.Add(c);
+            Contacts = list;
+        }
+
+        private static bool MatchesSearch(string? text, string q) =>
+            text != null && text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
 
         private void OnContactSelected(ChatContactVM contact) => SelectContact(contact);
 
@@ -87,7 +108,7 @@ namespace ImmersiveAI.UI.ChatWindow
         {
             if (contact == null) return;
 
-            foreach (var c in Contacts) c.IsSelected = c == contact;
+            foreach (var c in _allContacts) c.IsSelected = c == contact;
             _selected = contact;
 
             contact.HasUnread = false;
@@ -106,8 +127,10 @@ namespace ImmersiveAI.UI.ChatWindow
         public void TrySelect(Hero hero)
         {
             if (hero == null) return;
-            var contact = Contacts.FirstOrDefault(c => c.Hero == hero);
-            if (contact != null) SelectContact(contact);
+            var contact = _allContacts.FirstOrDefault(c => c.Hero == hero);
+            if (contact == null) return;
+            if (!Contacts.Contains(contact)) SearchText = string.Empty; // the knock outranks a stale filter
+            SelectContact(contact);
         }
 
         /// <summary>Called when a thread changed underneath the window (a reply arrived, or an NPC's
@@ -121,7 +144,7 @@ namespace ImmersiveAI.UI.ChatWindow
             }
             else
             {
-                var contact = Contacts.FirstOrDefault(c => c.Hero.StringId == heroStringId);
+                var contact = _allContacts.FirstOrDefault(c => c.Hero.StringId == heroStringId);
                 if (contact != null) contact.HasUnread = true;
                 else RefreshContacts(); // someone new stepped into range with their first word
             }
@@ -321,6 +344,8 @@ namespace ImmersiveAI.UI.ChatWindow
             OnPropertyChanged("RelationText");
             OnPropertyChanged("HasRelation");
             OnPropertyChanged("RelationColor");
+
+            BondStatsText = _selected == null ? string.Empty : ImmersiveChatBehavior.BondStatsLabel(_selected.Hero);
         }
 
         // Warm green when they hold you dear, cool red when they do not, plain parchment at neutral.
@@ -394,6 +419,49 @@ namespace ImmersiveAI.UI.ChatWindow
         [DataSourceProperty]
         public bool HasRelation => !string.IsNullOrEmpty(_relationText);
 
+        /// <summary>The bond's own mechanics under the name — shared story, freshness, and the hourly
+        /// chance they are moved to come (the odds view's numbers for this one soul).</summary>
+        [DataSourceProperty]
+        public string BondStatsText
+        {
+            get => _bondStatsText;
+            set
+            {
+                if (value != _bondStatsText)
+                {
+                    _bondStatsText = value;
+                    OnPropertyChangedWithValue(value, "BondStatsText");
+                    OnPropertyChanged("HasBondStats");
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool HasBondStats => !string.IsNullOrEmpty(_bondStatsText);
+
+        /// <summary>The search line above the list — typing refilters the names at once.</summary>
+        [DataSourceProperty]
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (value != _searchText)
+                {
+                    _searchText = value ?? string.Empty;
+                    OnPropertyChangedWithValue(value, "SearchText");
+                    OnPropertyChanged("IsSearchEmpty");
+                    ApplyContactFilter();
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool IsSearchEmpty => string.IsNullOrEmpty(_searchText);
+
+        [DataSourceProperty]
+        public string SearchHintText => "Search…";
+
         [DataSourceProperty]
         public Color RelationColor
         {
@@ -446,10 +514,10 @@ namespace ImmersiveAI.UI.ChatWindow
         [DataSourceProperty]
         public bool ShowOverviewBlock => HasOverview && _isOverviewShown;
 
-        /// <summary>Where the thread begins vertically: right under the header, or under the unfolded
-        /// overview block. Bound as the thread's top margin so the layout reflows with the toggle.</summary>
+        /// <summary>Where the thread begins vertically: under the header and its bond line, or under
+        /// the unfolded overview block. Bound as the thread's top margin so the layout reflows.</summary>
         [DataSourceProperty]
-        public float MessagesTopMargin => ShowOverviewBlock ? 238f : 50f;
+        public float MessagesTopMargin => ShowOverviewBlock ? 256f : 68f;
 
         private void OnOverviewLayoutChanged()
         {
@@ -543,6 +611,8 @@ namespace ImmersiveAI.UI.ChatWindow
             "• Everyone in the same place as you — your own party, and the folk of the settlement you stand in — plus everyone you already hold a story with, wherever they are.\n" +
             "• (here) — they can hear you now. (away) — they are far across the map; spoken words cannot reach them, so the Send stays gray. A letter can: press [" + _letterHotkey + "].\n" +
             "• A gold dot ● means their words are waiting for you.\n" +
+            "• The line above the list searches it — type part of a name (or of the note under one).\n" +
+            "• Under a chosen name: how much story you share, how fresh it is, and the hour's chance they are moved to come to you (or, away, to write).\n" +
             "\n" +
             "HOW IT WORKS\n" +
             "• Enter sends; Escape closes. An unsent draft is kept — closing the window loses nothing.\n" +

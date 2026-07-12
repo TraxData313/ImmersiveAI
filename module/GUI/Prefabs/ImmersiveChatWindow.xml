@@ -24,7 +24,15 @@
 
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@TitleText" />
 
-                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="52">
+                <!-- search the list: type part of a name (the grey hint sits over the empty box) -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="38" VerticalAlignment="Top" MarginTop="46" Sprite="General\CharacterCreation\name_input_area">
+                  <Children>
+                    <EditableTextWidget Id="ContactSearch" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="10" MarginRight="10" MarginTop="6" MarginBottom="6" Brush="Review.NameInput.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Left" RealText="@SearchText" MaxLength="60" />
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="12" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#6E6A60FF" Brush.TextHorizontalAlignment="Left" Text="@SearchHintText" IsVisible="@IsSearchEmpty" />
+                  </Children>
+                </Widget>
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="92">
                   <Children>
 
                     <ScrollablePanel Id="ContactsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="ContactsClip" InnerPanel="ContactsClip\ContactsList" VerticalScrollbar="..\ContactsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
@@ -101,8 +109,11 @@
                       </Children>
                     </ButtonWidget>
 
+                    <!-- the bond's own mechanics: shared story, freshness, the hour's chance they come -->
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="42" MarginRight="240" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
+
                     <!-- the deep-memory overview: what lingers of you beyond the thread -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="50" IsVisible="@ShowOverviewBlock">
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="68" IsVisible="@ShowOverviewBlock">
                       <Children>
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.05" />
                         <ScrollablePanel Id="OverviewScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="10" MarginRight="18" MarginTop="8" MarginBottom="8" ClipRect="OverviewClip" InnerPanel="OverviewClip\OverviewBody" VerticalScrollbar="..\OverviewScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
