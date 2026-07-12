@@ -129,6 +129,9 @@ namespace ImmersiveAI
         {
             if (_letterWorkInFlight) return;
 
+            // A dying key (or a reached daily cap) quiets the post as it quiets the visits.
+            if (LlmGate.AutonomyQuiet || UsageLedger.DailyCapReached) return;
+
             try
             {
                 // The road toward the player can only hold so much at once: a social morning must not
@@ -144,30 +147,25 @@ namespace ImmersiveAI
                 var eligible = new List<Hero>();
                 var pulls = new List<double>();
 
-                foreach (var folder in Directory.GetDirectories(root))
+                // The cached index instead of re-parsing every memories.json each hour — a real
+                // difference once a campaign carries hundreds of remembered souls.
+                foreach (var known in MemoryIndex.All(root, NpcPaths.MemoryFileName, _memoryStore))
                 {
-                    var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
-                    if (!File.Exists(memFile)) continue;
+                    if (known.Richness <= 0) continue;
+                    if (_letterBag!.HasInFlightWith(known.NpcId)) continue;
 
-                    NpcMemory memory;
-                    try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
-                    catch { continue; }
-
-                    if (string.IsNullOrWhiteSpace(memory.NpcId) || memory.StoryRichness <= 0) continue;
-                    if (_letterBag!.HasInFlightWith(memory.NpcId)) continue;
-
-                    var hero = FindAliveHero(memory.NpcId);
+                    var hero = FindAliveHero(known.NpcId);
                     if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner) continue;
                     if (IsCoLocated(hero)) continue; // near enough to walk over — that is the other flow
 
-                    double daysSince = memory.LastConversationGameDay >= 0
-                        ? Math.Max(0, nowDay - memory.LastConversationGameDay)
+                    double daysSince = known.LastTalkGameDay >= 0
+                        ? Math.Max(0, nowDay - known.LastTalkGameDay)
                         : 0;
                     // One's own clan writes out of duty as much as affection: a party or caravan
                     // long on the road is exactly who should be sending word home, so their pull
                     // is floored instead of fading with the weeks away (see the scorer).
                     double pull = InitiationScorer.Pull(
-                        memory.StoryRichness, GetStanding(hero), daysSince, InPlayersService(hero));
+                        known.Richness, GetStanding(hero), daysSince, InPlayersService(hero));
                     if (pull <= 0) continue;
 
                     eligible.Add(hero);
@@ -196,6 +194,8 @@ namespace ImmersiveAI
         // composed with the full self (persona, memory, situation-apart, even the gift of recall).
         private async Task BeginNpcLetterAsync(Hero npc)
         {
+            // Quiet: the letter is sealed until it arrives — a cost notice now would break the seal.
+            using var _cost = UsageLedger.BeginInteraction("letter", npc?.Name?.ToString(), quiet: true);
             try
             {
                 var situation = SafeBuildApartSituation(npc);
@@ -559,6 +559,8 @@ namespace ImmersiveAI
         // a chain of real choices.
         private async Task AnswerPlayerLetterAsync(Letter letter)
         {
+            // Quiet: the answer rides the roads for days — its writing is not yet the player's news.
+            using var _cost = UsageLedger.BeginInteraction("letter reply", letter?.NpcName, quiet: true);
             Hero? npc = null;
             try
             {

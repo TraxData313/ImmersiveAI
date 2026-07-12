@@ -1,40 +1,45 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] info sections
-    maybe next to the O chat and U letter windows add a info, where there are, explanations, instructions and examples
-- [ ] discuss with Claude
-    get Fable to think of more TODOs that would be nice to have before we release a V1 to steam
-    FABLE'S V1 PROPOSALS (2026.07.12, the night shift — react to these, strike what you don't want):
-    - [ ] First-run experience: a player with no API key gets ONE clear, kind popup on first campaign
-        entry pointing at config.json / the MCM page (the health check already speaks, but a brand-new
-        Steam player needs the "here is where the key goes, here is where keys come from" version, once).
-    - [ ] Cost visibility: a rough per-session token/request counter (even just requests made + a soft
-        note in DevMode) — Steam players WILL ask "what is this costing me"; a config `MaxDailyRequests`
-        safety valve (default off) would calm the worried.
-    - [ ] Graceful key-death mid-session: today a 429/insufficient-quota mid-talk reads as a mute NPC
-        with an error toast; catch the classified error once and tell the player plainly, then quiet the
-        hourly flows (letters/reach-outs) until the next successful call so the log isn't a wall of red.
-    - [ ] The prompt-files story for players: NPCs\_README.txt exists, but a short "how to shape your
-        world" section in the Steam description + a sample global_prompt.txt with commented examples
-        would turn the folder from mystery to feature.
-    - [ ] Performance guard: MaybeStartNpcLetter and the odds view read EVERY memory file each hour/use;
-        fine at 30 NPCs, worth a cached index (id → richness/lastDay, invalidated on save) before Steam
-        players show up with 300-NPC campaigns.
-    - [ ] Localization pass at least for the dialog-option strings ({=ImmersiveAI_*} ids exist — decide
-        V1 ships English-only and say so, or wire the XML).
-    - [ ] Version + migration stamp inside config.json (a "ConfigVersion": 1) so V1.1 can migrate
-        defaults without clobbering hand-edits.
-    - [ ] A "panic switch": one MCM toggle / config key that disables ALL autonomous behavior (reach-outs,
-        letters, notices) in one move for players who only want the talk-when-I-talk experience.
+- [ ] Release-defaults once-over + uninstall safety (the last hands-on pass before upload)
+    one pass before upload: DevMode false, sane socialness default, MCM soft-dep verified absent;
+    and VERIFY a save carrying a pending portrait notice loads with the mod removed (InformationData
+    lives inside saves) — if it breaks the load, the Steam page's uninstall note must say so plainly
+    (docs/steam-page-draft.md carries the [VERIFY] placeholder for the result).
+- [ ] Pre release:
     - [ ] Steam page assets: 3-4 honest screenshots (chat window, letter window, a reach-out notice, the
         socialness stepper), a 30s clip of a real conversation, and the "clean-room, no ChatAi code"
-        provenance note stated plainly.
-    - [ ] Playtest checklist for the new roles wave before release: a scout answering "can we escape
+        provenance note stated plainly. - I, Anton, will make them and will let you know whem I have them
+    - [ ] Finalize the Workshop description from docs/steam-page-draft.md (privacy, costs, AI disclosure,
+        prompt-files story, English-UI/any-language note are all drafted there; fill [VERSION], resolve
+        the [VERIFY] uninstall note, tick Steam's AI-content disclosure on upload).
+    - [ ] Playtest checklist for the new roles wave: a scout answering "can we escape
         them?", weigh_battle against a castle, a wife speaking of the children, a king receiving a
         tier-0 stranger, and a caravan letter arriving as a field report.
+    - [ ] Playtest the info sections ("?" in the O and U windows) and the letter window itself.
+    - [ ] Playtest the 2026.07.12 morning batch: cost notices per exchange (and their absence on
+        sealed-letter flows), the odds view's session-cost line, log.txt filling, first-run popup
+        (delete first_run_note_shown.txt + blank the key to see it), key-death quieting (wrong key →
+        one amber notice, hourly flows silent, recovery on fixing it), and — if switching to OpenAI —
+        gpt-5.6-terra actually answering (needs the new max_completion_tokens shape).
+    - [ ] Playtest the map-party farewell fix: click a lord's party on the map → enter the
+        Immersive AI section → Farewell → should return to the map with NO engage menu; and the
+        same talk inside a town must NOT walk you out of the gates.
 - [ ] steam release
-    release to steam for everyone to enjoy with good descriptions
+    release to steam for everyone to enjoy with good descriptions; upload from tools\package.ps1's
+    clean dist\ImmersiveAI layout
 
 POST V1 or NOT FULLY DECIDED:
+- [ ] OpenAI /v1/responses migration
+    the chat-completions endpoint refuses function tools + reasoning together on gpt-5.6 (hit live
+    2026.07.12), so tool-carrying replies run at reasoning "none" for now; the /v1/responses API
+    lifts that limit (reasoning WITH tools) and is OpenAI's forward path — a contained rework of
+    OpenAIChatClient's payload/response shapes when it's worth it.
+- [ ] Utility model split (cost saving)
+    a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
+    desire yes/no, search refining — cuts roughly a third of cost; parked until the ledger's real
+    numbers say it's worth the second client (see docs/models-and-costs.md).
+- [ ] Localization wiring
+    V1 ships English-only UI and says so on the page; the {=ImmersiveAI_*} ids exist if we ever wire
+    the XML. (The NPCs already answer in whatever language the player writes — stated proudly on the page.)
 - [ ] "Send letter" in hero's encyclopedia
     Milestone 2 GUI, letters chapter, the remaining half: a "Send letter" button on the encyclopedia hero page — needs swapping `EncyclopediaHeroPageVM` for a subclass (patch the page-VM factory) + overriding the big hero-page prefab to add the button; simplest wiring now is the button opening the letter window (2026.07.10) preselected on that hero. The letter-writing screen half is DONE — the letter window's composer (correspondence alongside, draft mirror, "Seal and send") covers it.
 - [ ] Actions for the NPCs:

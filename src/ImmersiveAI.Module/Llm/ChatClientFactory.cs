@@ -12,7 +12,7 @@ namespace ImmersiveAI.Llm
             var maxTokens = maxTokensOverride ?? config?.MaxTokens ?? 400;
 
             if (config != null && config.Backend == "OpenAI")
-                return new OpenAIChatClient(config.OpenAIApiKey, config.OpenAIModel, maxTokens);
+                return new OpenAIChatClient(config.OpenAIApiKey, config.OpenAIModel, maxTokens, config.OpenAIReasoningEffort);
 
             // Default to Anthropic
             return new AnthropicChatClient(

@@ -23,12 +23,28 @@ namespace ImmersiveAI
         public static string GlobalPromptPath => Path.Combine(RootDirectory, "global_prompt.txt");
 
         private const string GlobalTemplate =
-@"# Immersive AI - Global Prompt
-# This text is added to EVERY NPC's instructions. Put world-wide rules here.
-# Lines starting with # or // are ignored.
+@"# Immersive AI - Global Prompt: how to shape your whole world
 #
-# Example:
+# Whatever you write here (except lines starting with # or //, which are ignored)
+# is added to EVERY character's mind, woven into how they see their world and speak.
+# Keep it short - a few plain sentences carry further than a page of rules, and
+# too many rules make every soul answer the same.
+#
+# Things people do with this file (remove the leading '# ' to use one):
+#
 #   The world is harsh and medieval. People speak plainly and fear their lords.
+#
+#   Everyone is aware the year is one of famine; food and coin weigh on every mind.
+#
+#   People speak in short sentences, rarely more than two or three at a time.
+#
+#   Answer in the language the traveler speaks to you, whatever it may be.
+#
+# Each character ALSO has their own file - custom_instructions.txt inside their
+# folder under NPCs\ - for things only they should carry (""You secretly resent
+# the player"", ""You stutter when nervous""). This file is the world; that file
+# is the person. Changes take effect the next time you speak with someone -
+# no restart needed.
 ";
 
         /// <summary>Reads the global prompt, creating a commented template on first run. Returns the text with comment lines stripped.</summary>

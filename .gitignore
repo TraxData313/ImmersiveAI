@@ -5,3 +5,5 @@ obj/
 .idea/
 TestResults/
 .nuget-test-appdata/
+
+dist/

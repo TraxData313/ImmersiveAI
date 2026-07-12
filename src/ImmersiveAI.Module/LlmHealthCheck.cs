@@ -41,10 +41,13 @@ namespace ImmersiveAI
                 var model = openAi ? config?.OpenAIModel : config?.AnthropicModel;
 
                 // The commonest case, and the one an API call can't diagnose kindly: no key at all.
+                // A brand-new install also gets the one-time first-run guide popup — the "here is
+                // where keys come from, here is where one goes" version of this message.
                 if (string.IsNullOrWhiteSpace(apiKey))
                 {
                     Report($"Immersive AI: no {backend} API key is set — the NPCs cannot speak. Add your key to "
                         + ModConfig.ConfigFilePath + " and restart the game.", WarnColor);
+                    if (config != null) FirstRunGuide.MaybeShow(config);
                     return;
                 }
 
@@ -61,10 +64,12 @@ namespace ImmersiveAI
                 }
 
                 var quiet = string.IsNullOrWhiteSpace(model) ? backend : $"{backend} · {model}";
+                ModLog.Info($"Health check OK — connected to {quiet}.");
                 Report($"Immersive AI: connected to {quiet}. The world is listening.", OkColor);
             }
             catch (Exception ex)
             {
+                ModLog.Error("health check", ex);
                 Report("Immersive AI: " + Diagnose(ex, config), WarnColor);
             }
         }
@@ -81,6 +86,20 @@ namespace ImmersiveAI
                 return "could not reach the AI service — check your internet connection, then restart the game.";
 
             var msg = ex.Message ?? string.Empty;
+
+            // A reasoning model that spent its whole token budget thinking before it could speak
+            // (the client adds headroom for this, so seeing it means an extreme effort/budget mix).
+            if (Mentions(msg, "max_tokens or model output limit"))
+                return "the model spent its whole token budget thinking before it could answer. Raise MaxTokens or lower OpenAIReasoningEffort in " + configPath + ", then restart the game.";
+
+            // OpenAI's "insufficient permissions" is a VALID key that may not use the asked-for
+            // model (project model-access list, restricted key scopes, or an unverified org) —
+            // pointing at the key would send the player hunting the wrong problem.
+            if (Mentions(msg, "insufficient permissions") || Mentions(msg, "must be verified") || Mentions(msg, "does not have access to model"))
+            {
+                var model = config?.Backend == "OpenAI" ? config?.OpenAIModel : config?.AnthropicModel;
+                return $"your API key is valid but not allowed to use the model '{model}'. In your provider's console, check the project's model access and the key's permissions (or verify the organization), or pick another model — then restart the game.";
+            }
 
             if (Mentions(msg, "401") || Mentions(msg, "403") || msg.IndexOf("api key", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "the AI service rejected your API key. Check the key in " + configPath + " and restart the game.";

@@ -12,13 +12,28 @@ namespace ImmersiveAI
     /// </summary>
     public sealed class ModConfig
     {
+        /// <summary>The config format's version stamp, so a later release can migrate defaults
+        /// without clobbering hand-edits (Normalize keys migrations off it). Do not edit.</summary>
+        public int ConfigVersion { get; set; } = 1;
+
         public string Backend { get; set; } = "Anthropic"; // "Anthropic" or "OpenAI"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-opus-4-8";
 
         public string OpenAIApiKey { get; set; } = "";
-        public string OpenAIModel { get; set; } = "gpt-4o";
+        public string OpenAIModel { get; set; } = "gpt-5.6-terra";
+
+        /// <summary>How hard OpenAI's reasoning models (gpt-5.x and the o-series) think before
+        /// speaking: "none", "minimal", "low", "medium", "high", "xhigh", or "max". Applies to
+        /// the calls that carry NO tools (the feeling number, yes/no desires, search refining);
+        /// tool-carrying replies are forced to "none" automatically — OpenAI's chat API refuses
+        /// function tools + reasoning together (their /v1/responses API would lift this; post-V1).
+        /// Reasoning spends extra (billed) output tokens, and the thinking counts against the
+        /// API's token budget, so the client quietly adds effort-scaled headroom on top of
+        /// <see cref="MaxTokens"/> — MaxTokens stays the SPOKEN reply's budget. Ignored for
+        /// models without the dial (gpt-4o and older). Empty = let the API default.</summary>
+        public string OpenAIReasoningEffort { get; set; } = "low";
 
         public int MaxTokens { get; set; } = 400;
 
@@ -36,6 +51,38 @@ namespace ImmersiveAI
         /// means more room on a larger model. Add a line here when a new model ships; anything
         /// unmatched falls back to a conservative 128000.</summary>
         public Dictionary<string, int> ModelContextWindows { get; set; } = DefaultModelContextWindows();
+
+        /// <summary>One model's rates, in USD per MILLION tokens, for the cost notices.</summary>
+        public sealed class ModelPrice
+        {
+            public double InputPerMTok { get; set; }
+            public double OutputPerMTok { get; set; }
+            public ModelPrice() { }
+            public ModelPrice(double inputPerMTok, double outputPerMTok)
+            {
+                InputPerMTok = inputPerMTok; OutputPerMTok = outputPerMTok;
+            }
+        }
+
+        /// <summary>Known model prices (USD per million tokens), editable without touching code:
+        /// the key is matched against the configured model id (longest match wins), the same way
+        /// <see cref="ModelContextWindows"/> is. Feeds the per-interaction cost notices
+        /// (<see cref="ShowCostNotices"/>); a model with no match still shows its tokens, just no
+        /// price. Prices change — check your provider's page and edit here when they do.</summary>
+        public Dictionary<string, ModelPrice> ModelPrices { get; set; } = DefaultModelPrices();
+
+        /// <summary>When true, every interaction that spoke to the AI closes with one soft gray
+        /// notice of what it took — "Name — message: 2,431 → 156 tokens, 3 calls, ~$0.014" — so
+        /// what this world costs is never a mystery. Tool rounds, the heart's weighing, and
+        /// memory work all ride inside their interaction's line. The same lines also go to
+        /// log.txt, and daily totals persist in usage.json. Set false for a quiet map.</summary>
+        public bool ShowCostNotices { get; set; } = true;
+
+        /// <summary>A safety valve for the worried: at most this many AI requests per real day
+        /// (all sessions together, tracked in usage.json). When reached, the world goes quiet —
+        /// autonomous flows stop rolling and direct words answer with a plain explanation —
+        /// until the day turns or the cap is raised. 0 (the default) means no cap.</summary>
+        public int MaxDailyRequests { get; set; } = 0;
 
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
         /// compression: the rolling summary, her lasting truths, her sense of self). Kept apart from
@@ -361,7 +408,35 @@ namespace ImmersiveAI
                 ["gpt-5.1"] = 400000,
                 ["gpt-5.4"] = 400000,
                 ["gpt-5.5"] = 400000,
+                ["gpt-5.6"] = 1000000,
                 ["claude"] = 200000,
+                ["claude-opus-4"] = 1000000,
+                ["claude-sonnet-5"] = 1000000,
+                ["claude-sonnet-4-6"] = 1000000,
+            };
+
+        /// <summary>The built-in model → price table (USD per million tokens; verified 2026.07).
+        /// Longest key contained in the model id wins, so "gpt-5.6-terra" beats "gpt-5.6".
+        /// Users edit/extend the copy in config.json; missing built-ins are re-added on load.</summary>
+        public static Dictionary<string, ModelPrice> DefaultModelPrices() =>
+            new Dictionary<string, ModelPrice>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Anthropic
+                ["claude-opus-4"] = new ModelPrice(5, 25),
+                ["claude-sonnet"] = new ModelPrice(3, 15),
+                ["claude-haiku"] = new ModelPrice(1, 5),
+                ["claude-fable-5"] = new ModelPrice(10, 50),
+                // OpenAI
+                ["gpt-5.6"] = new ModelPrice(5, 30),          // the bare alias routes to Sol
+                ["gpt-5.6-sol"] = new ModelPrice(5, 30),
+                ["gpt-5.6-terra"] = new ModelPrice(2.5, 15),
+                ["gpt-5.6-luna"] = new ModelPrice(1, 6),
+                ["gpt-5"] = new ModelPrice(1.25, 10),
+                ["gpt-5-mini"] = new ModelPrice(0.25, 2),
+                ["gpt-4o"] = new ModelPrice(2.5, 10),
+                ["gpt-4o-mini"] = new ModelPrice(0.15, 0.6),
+                ["gpt-4.1"] = new ModelPrice(2, 8),
+                ["gpt-4.1-mini"] = new ModelPrice(0.4, 1.6),
             };
 
         public static string ConfigDirectory =>
@@ -413,7 +488,21 @@ namespace ImmersiveAI
 
         public void Normalize()
         {
+            // The version stamp: pre-stamp configs (the field missing deserializes as 0) are the
+            // V1 format too — everything else Normalize does IS the migration for them.
+            if (ConfigVersion < 1) ConfigVersion = 1;
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
+            // The reasoning dial only knows these words; a typo falls back to the calm default.
+            var effort = (OpenAIReasoningEffort ?? string.Empty).Trim().ToLowerInvariant();
+            OpenAIReasoningEffort = effort == "" || effort == "none" || effort == "minimal" || effort == "low"
+                || effort == "medium" || effort == "high" || effort == "xhigh" || effort == "max"
+                ? effort
+                : "low";
+
+            // The daily request cap: negative is a typo; 0 stays "no cap".
+            if (MaxDailyRequests < 0) MaxDailyRequests = 0;
 
             // The hotkeys must name real keys; anything unparseable falls back to the defaults.
             if (string.IsNullOrWhiteSpace(ChatWindowHotkey)) ChatWindowHotkey = "O";
@@ -451,6 +540,11 @@ namespace ImmersiveAI
             if (ModelContextWindows == null) ModelContextWindows = DefaultModelContextWindows();
             foreach (var pair in DefaultModelContextWindows())
                 if (!ModelContextWindows.ContainsKey(pair.Key)) ModelContextWindows[pair.Key] = pair.Value;
+
+            // The price table follows the same contract as the context-window table.
+            if (ModelPrices == null) ModelPrices = DefaultModelPrices();
+            foreach (var pair in DefaultModelPrices())
+                if (!ModelPrices.ContainsKey(pair.Key)) ModelPrices[pair.Key] = pair.Value;
 
             // Memory-writing budget: never below the spoken budget (that would make reflection the
             // narrowest voice she has), never runaway.

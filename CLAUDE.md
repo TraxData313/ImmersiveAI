@@ -96,11 +96,20 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   Mcm/                    ImmersiveAiMcmSettings + McmBridge: the in-game MCM settings menu (SOFT dependency —
                           absent MCM = config.json only; present = a live two-way editor over a subset, config.json still master)
   MainThreadDispatcher.cs marshals async LLM results back to the game thread
+  UsageLedger.cs          the cost ledger: per-call tokens from the clients, per-interaction cost
+                          notices, daily cap (usage.json); LlmGate.cs the dying-key circuit breaker
+                          (quiets reach-outs/letters on 401/429/5xx, one plain notice, success reopens);
+                          ModLog.cs rolling log.txt diagnostics; FirstRunGuide.cs the once-per-install
+                          no-key popup; MemoryIndex.cs write-stamp-cached (id, richness, lastDay) over
+                          memories.json for the hourly rolls and the odds view
 tests/ImmersiveAI.Core.Tests/  xUnit tests for Core (net8.0)
 module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)
 module/GUI/               Gauntlet prefab overrides (MapNotificationItem.xml — the portrait notice)
 lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin via deploy.ps1
 tools/deploy.ps1          build + install into the game's Modules folder (DLLs + SubModule.xml + GUI)
+tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
+docs/steam-page-draft.md  the Workshop description draft (privacy/cost/AI disclosures) — finalize at release
+docs/models-and-costs.md  the model-selection decision (opus-4-8 / gpt-5.6-terra) + price table rationale
 Directory.Build.props     shared MSBuild props; GameFolder points at the Bannerlord install
 ```
 
@@ -243,7 +252,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   same QueueLetter road and rules as the courier menu; "Write back" on an arrival opens it, popup
   fallback when it cannot; letter beats ALSO render as "✉ by letter" cards inside the chat window's
   thread via `PromptBuilder.IsComposeLetterBeat`/`TryExtractReceivedLetter` — markers that must stay
-  word-for-word fragments of the Angel letter templates; both default on),
+  word-for-word fragments of the Angel letter templates; BOTH windows carry a "?" info overlay beside
+  the X (2026.07.12: what the window is, how it works, what to try — texts in the VMs' `InfoText` with
+  hotkey names read live from config; Escape folds the overlay first, a second press closes; Enter-to-
+  send suppressed while it is open); both default on),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the chat window — see its
   section below: a Gauntlet window over the map, hotkey default "O", listing everyone co-located AND
   every remembered bond who is away (tagged "(here)"/"(away)", the away ones' send grayed with a
@@ -285,9 +297,20 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `NotifyOnMemoryRefactor` (a soft activity-style notice the moment an NPC's automatic compression
   reworks her deep memory — "…turns over old memories of you, and settles them deeper"; default on),
   `ModelContextWindows` (user-editable model → context-window dict — gpt-4o 128k, gpt-4.1 1M,
-  gpt-5.x 400k, claude 200k — that the `MaxRecentMemoryPercent` family scales against; longest key
-  contained in the model id wins, unknown models fall back to 128k, missing built-ins are re-added on
-  load; `MemoryTokenProfile.Resolve` reads it, so a new model is one config line, no redeploy),
+  gpt-5.x 400k, gpt-5.6 1M, claude 200k/1M — that the `MaxRecentMemoryPercent` family scales against;
+  longest key contained in the model id wins, unknown models fall back to 128k, missing built-ins are
+  re-added on load; `MemoryTokenProfile.Resolve` reads it, so a new model is one config line, no redeploy),
+  `ModelPrices` + `ShowCostNotices` + `MaxDailyRequests` (the cost ledger, 2026.07.12 — `UsageLedger`:
+  both clients report the API-measured tokens of every call; an AsyncLocal interaction scope folds a
+  whole flow into ONE soft "✒ Name — message: in → out tokens, calls, ~$" notice (spoiler flows —
+  reach-out desire, letter compose/reply — bill quiet to log+totals only, never breaking a sealed
+  letter); prices per MTok from `ModelPrices` (longest-key match, editable), daily counter persists in
+  usage.json so `MaxDailyRequests` (0 = off) survives restarts — at the cap clients throw plainly and
+  autonomous rolls skip; the odds view ends with the session/day summary),
+  `OpenAIReasoningEffort` (default "low"; gpt-5.x/o-series get `max_completion_tokens` +
+  `reasoning_effort` instead of `max_tokens` — REQUIRED or gpt-5.6 400s; OpenAI default model is now
+  gpt-5.6-terra for fresh configs, existing configs deliberately unmigrated — see docs/models-and-costs.md),
+  `ConfigVersion` (format stamp, 1 — future migrations key off it),
   `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
   "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
   panel in the chat window; set true when working on the mod — Anton keeps it true).

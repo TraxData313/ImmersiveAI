@@ -749,13 +749,13 @@ namespace ImmersiveAI
             {
                 starter.AddPlayerLine("immersiveai_test_reach", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestReach}Let us part now. [Immersive AI • test — trigger them to reach out to you]",
-                    null, OnDebugForceReachOut, 95);
+                    null, () => { OnDebugForceReachOut(); RequestLeaveFromPartyEncounter(); }, 95);
 
                 // Same lever for the letter flow: after parting, this very NPC weighs writing to you
                 // (co-located, so the letter arrives within hours — the whole loop is testable at once).
                 starter.AddPlayerLine("immersiveai_test_letter", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestLetter}Let us part now. [Immersive AI • test — trigger them to write you a letter]",
-                    () => _config.EnableLetters, OnDebugForceLetter, 93);
+                    () => _config.EnableLetters, () => { OnDebugForceLetter(); RequestLeaveFromPartyEncounter(); }, 93);
 
                 // Diagnostic: show, for every NPC the player has a history with, whether they are co-located
                 // right now and their computed daily chance of reaching out — so it is clear why the world is
@@ -768,13 +768,22 @@ namespace ImmersiveAI
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
+            // The consequence mirrors vanilla's own leave lines: a talk begun by clicking a party
+            // on the map lives inside a PlayerEncounter, and unless leave is requested the closing
+            // conversation drops the player into the engage menu ("Attack / Send troops / Leave")
+            // against whoever they just spoke with (Anton's Jarlinna repro, 2026.07.12: vanilla
+            // farewell = fine, ours = bug — vanilla sets the flag, ours never did).
             starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "close_window",
-                "{=ImmersiveAI_Done}Farewell.", null, null, 100);
+                "{=ImmersiveAI_Done}Farewell.", null, RequestLeaveFromPartyEncounter, 100);
 
             // Await state, reply is in -> show it and return to the menu.
             // Registered before the "still thinking" line so it wins when the condition holds.
             starter.AddDialogLine("immersiveai_reply", "immersiveai_await", "immersiveai_input",
                 "{=!}{" + ResponseVar + "}", () => _responseReady, null);
+
+            // (RequestLeaveFromPartyEncounter lives below with the other encounter care —
+            // every close_window line above must carry it, or a map-party talk ends in the
+            // engage menu against the very person just spoken with.)
 
             // Await state, still waiting -> keep the NPC's last line on screen (re-readable while the
             // player types) with a gentle note that they are considering, instead of a bare holding line.
@@ -875,6 +884,8 @@ namespace ImmersiveAI
 
         private async Task RecapAsync(Hero npc)
         {
+            // One bill for the whole greeting (recall rounds and the heart ride inside).
+            using var _cost = UsageLedger.BeginInteraction("greeting", npc?.Name?.ToString());
             try
             {
                 var ctx = BuildContext(npc);
@@ -929,6 +940,7 @@ namespace ImmersiveAI
 
         private async Task UpdateMemoryAsync(Hero npc)
         {
+            using var _cost = UsageLedger.BeginInteraction("memory work", npc?.Name?.ToString());
             try
             {
                 var memory = LoadMemory(npc);
@@ -1139,6 +1151,7 @@ namespace ImmersiveAI
             }
             catch (Exception ex)
             {
+                ModLog.Error("conversation reply for " + (npc?.Name?.ToString() ?? "?"), ex);
                 var message = ex.Message;
                 _lastNpcLine = "(...I cannot find the words. " + message + ")";
                 MainThreadDispatcher.Enqueue(() =>
@@ -1170,6 +1183,10 @@ namespace ImmersiveAI
         // outcome their own way and fold a not-yet-applied felt shift in on the game thread.
         private async Task<TurnOutcome> ExecutePlayerTurnAsync(Hero npc, string playerInput, string? situationOverride = null)
         {
+            // One bill for the whole exchange: the spoken reply with its tool rounds, the feeling
+            // question, and any compression all land on this line ("message: X → Y tokens, ~$Z").
+            using var _cost = UsageLedger.BeginInteraction("message", npc?.Name?.ToString());
+
             var ctx = BuildContext(npc, situationOverride);
             var memory = ctx.Memory;
 
@@ -1373,6 +1390,10 @@ namespace ImmersiveAI
 
             if (!_config.EnableNpcInitiatedChats) return;
 
+            // A dying key (or a reached daily cap) quiets the world's own movements: no reach-out
+            // rolls while the service is refusing calls — the player's own words still try at once.
+            if (LlmGate.AutonomyQuiet || UsageLedger.DailyCapReached) return;
+
             // Self-heal a stuck in-flight flag: if an offer was ever lost (e.g. dismissed by a scene change
             // without its callback firing), a single mishap must never silence the whole feature forever.
             if (_initiationInFlight && (DateTime.UtcNow - _initiationInFlightSince) > TimeSpan.FromMinutes(3))
@@ -1494,18 +1515,15 @@ namespace ImmersiveAI
         {
             double floor = _config.InitiationPullFloor;
 
-            var memFile = NpcPaths.MemoryFile(hero);
-            if (!File.Exists(memFile)) return floor * StrangerStationFactor(hero);
+            // The cached index instead of re-parsing the file every hour (self-invalidates on
+            // the file's write stamp, so a just-saved exchange is seen at once).
+            var known = MemoryIndex.Get(NpcPaths.MemoryFile(hero), _memoryStore);
+            if (known == null || known.Richness <= 0) return floor * StrangerStationFactor(hero);
 
-            NpcMemory memory;
-            try { memory = _memoryStore.LoadFrom(memFile, hero.StringId); }
-            catch { return floor * StrangerStationFactor(hero); }
-            if (memory.StoryRichness <= 0) return floor * StrangerStationFactor(hero);
-
-            double daysSince = memory.LastConversationGameDay >= 0
-                ? Math.Max(0, nowDay - memory.LastConversationGameDay)
+            double daysSince = known.LastTalkGameDay >= 0
+                ? Math.Max(0, nowDay - known.LastTalkGameDay)
                 : 0;
-            return Math.Max(floor, InitiationScorer.Pull(memory.StoryRichness, GetStanding(hero), daysSince));
+            return Math.Max(floor, InitiationScorer.Pull(known.Richness, GetStanding(hero), daysSince));
         }
 
         // How readily a STRANGER of this station approaches the player: 1 for equals and commoners,
@@ -1558,6 +1576,8 @@ namespace ImmersiveAI
         // decided — see DeliverApproachAsync via OnInitiationAccepted / OnInitiationDeclinedByPlayer.
         private async Task BeginInitiationAsync(Hero npc)
         {
+            // Quiet: a notice here would reveal her private weighing before (or without) any knock.
+            using var _cost = UsageLedger.BeginInteraction("reaching out", npc?.Name?.ToString(), quiet: true);
             try
             {
                 // Capture the situation now and reuse it for the beats to come; the offer pauses the game,
@@ -1845,6 +1865,7 @@ namespace ImmersiveAI
         // Angel turn either way. Runs after the player's choice, so the approach truthfully reflects it.
         private async Task DeliverApproachAsync(Hero npc, bool welcomed)
         {
+            using var _cost = UsageLedger.BeginInteraction("approach", npc?.Name?.ToString());
             try
             {
                 var ctx = BuildContext(npc, _currentSituation);
@@ -1943,6 +1964,23 @@ namespace ImmersiveAI
         // signal that whatever PlayerEncounter exists when the talk ends is ours to finish.
         private bool _finishEncounterAfterTalk;
 
+        // The mirror case: the PLAYER opened the talk by clicking a party on the map, so a real
+        // PlayerEncounter hosts it. Vanilla's leave lines set LeaveEncounter so it dissolves with
+        // the words; every close_window line of OURS must do the same (consequence on the exit
+        // options) or the player lands in "Attack / Send troops / Leave" against their own friend.
+        // A settlement encounter is left alone — requesting leave inside a town would walk the
+        // player out of its gates just for ending a chat.
+        private static void RequestLeaveFromPartyEncounter()
+        {
+            try
+            {
+                bool inSettlement = Hero.MainHero?.CurrentSettlement != null;
+                if (PlayerEncounter.Current != null && !inSettlement)
+                    PlayerEncounter.LeaveEncounter = true;
+            }
+            catch { /* best-effort; worst case is the old engage menu */ }
+        }
+
         // She has spoken her opening; drop the interception so the rest of the conversation is ordinary.
         private void OnInitiationDelivered()
         {
@@ -1989,36 +2027,29 @@ namespace ImmersiveAI
 
                 if (Directory.Exists(root))
                 {
-                    foreach (var folder in Directory.GetDirectories(root))
+                    foreach (var known in MemoryIndex.All(root, NpcPaths.MemoryFileName, _memoryStore))
                     {
-                        var memFile = Path.Combine(folder, NpcPaths.MemoryFileName);
-                        if (!File.Exists(memFile)) continue;
+                        knownIds.Add(known.NpcId);
 
-                        NpcMemory memory;
-                        try { memory = _memoryStore.LoadFrom(memFile, string.Empty); }
-                        catch { continue; }
-                        if (string.IsNullOrWhiteSpace(memory.NpcId)) continue;
-                        knownIds.Add(memory.NpcId);
-
-                        var hero = FindAliveHero(memory.NpcId);
-                        var name = hero?.Name?.ToString() ?? memory.NpcName;
-                        if (string.IsNullOrWhiteSpace(name)) name = memory.NpcId;
+                        var hero = FindAliveHero(known.NpcId);
+                        var name = hero?.Name?.ToString() ?? known.NpcName;
+                        if (string.IsNullOrWhiteSpace(name)) name = known.NpcId;
 
                         if (hero == null) { sb.AppendLine($"• {name}: not found in the world (dead or away)."); shown++; continue; }
 
                         bool coLocated = IsCoLocated(hero);
                         int relation = GetStanding(hero);
-                        double daysSince = memory.LastConversationGameDay >= 0
-                            ? Math.Max(0, nowDay - memory.LastConversationGameDay) : 0;
+                        double daysSince = known.LastTalkGameDay >= 0
+                            ? Math.Max(0, nowDay - known.LastTalkGameDay) : 0;
                         // Away NPCs show their LETTER pull, duty floors included (see the letter roll).
-                        double pull = InitiationScorer.Pull(memory.StoryRichness, relation, daysSince,
+                        double pull = InitiationScorer.Pull(known.Richness, relation, daysSince,
                             !coLocated && InPlayersService(hero));
                         if (coLocated) pull = Math.Max(floor, pull); // presence alone lifts to the floor
                         double alone = Math.Min(1, _config.DailyInitiationRate * pull);
                         (coLocated ? herePulls : awayPulls).Add(pull);
 
                         sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
-                                      $"standing {relation}, richness {memory.StoryRichness}, last spoke {daysSince:0.#}d ago");
+                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago");
                         if (coLocated)
                             sb.AppendLine($"    → pull {pull * 100:0.0}% of a full bond (alone that would be ~{alone:0.00} visits/day; here it is their share of the group's total)");
                         else
@@ -2085,6 +2116,12 @@ namespace ImmersiveAI
             {
                 sb.AppendLine("(Could not read the odds: " + ex.Message + ")");
             }
+
+            // What the world has cost so far — the numbers behind the cost notices, in one line.
+            sb.AppendLine();
+            sb.AppendLine(UsageLedger.SessionSummary());
+            if (LlmGate.AutonomyQuiet)
+                sb.AppendLine("NOTE: the AI service was refusing calls a moment ago — reach-outs and letters are quiet until a call succeeds.");
 
             ShowScrollPopup("Who might seek you out", sb.ToString().Trim());
             MBTextManager.SetTextVariable(InfoVar, "(You weigh who might come to you.)", false);
@@ -2300,6 +2337,7 @@ namespace ImmersiveAI
         // it ("Ava sees you and says…"); the notice stack keeps a quiet knock that opens the window.
         private async Task DeliverFirstWordAsync(Hero npc, string situation, bool stranger)
         {
+            using var _cost = UsageLedger.BeginInteraction("first word", npc?.Name?.ToString());
             try
             {
                 var ctx = BuildContext(npc, situation);

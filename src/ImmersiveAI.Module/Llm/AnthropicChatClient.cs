@@ -71,6 +71,8 @@ namespace ImmersiveAI.Llm
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("Anthropic API key is not set. Add it to " + ModConfig.ConfigFilePath);
+            if (!UsageLedger.CanCall(out var capReason))
+                throw new InvalidOperationException(capReason);
 
             var system = string.Join("\n\n", messages.Where(m => m.Role == ChatRole.System).Select(m => m.Content));
 
@@ -96,13 +98,35 @@ namespace ImmersiveAI.Llm
                 request.Headers.Add("anthropic-version", "2023-06-01");
                 request.Content = new StringContent(payload.ToString(Formatting.None), Encoding.UTF8, "application/json");
 
-                using (var response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false))
+                HttpResponseMessage response;
+                try
+                {
+                    response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // The connection itself failed (or timed out) — quiet the autonomous flows.
+                    LlmGate.ReportFailure(0, "Anthropic", ex.Message);
+                    throw;
+                }
+                using (response)
                 {
                     var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     if (!response.IsSuccessStatusCode)
+                    {
+                        LlmGate.ReportFailure((int)response.StatusCode, "Anthropic", body);
                         throw new InvalidOperationException($"Anthropic request failed ({(int)response.StatusCode}): {Truncate(body, 400)}");
+                    }
 
                     var json = JObject.Parse(body);
+
+                    // The API measures its own tokens — hand them to the ledger, and tell the
+                    // gate the road is open again.
+                    UsageLedger.RecordCall(_model,
+                        (int?)json.SelectToken("usage.input_tokens") ?? 0,
+                        (int?)json.SelectToken("usage.output_tokens") ?? 0);
+                    LlmGate.ReportSuccess();
+
                     var stopReason = (string?)json["stop_reason"];
                     if (stopReason == "refusal")
                         throw new InvalidOperationException("The model declined to answer this request.");

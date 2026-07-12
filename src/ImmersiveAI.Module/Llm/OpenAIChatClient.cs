@@ -23,17 +23,46 @@ namespace ImmersiveAI.Llm
         private readonly string _apiKey;
         private readonly string _model;
         private readonly int _maxTokens;
+        private readonly string _reasoningEffort;
 
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
-        public OpenAIChatClient(string apiKey, string model, int maxTokens)
+        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? reasoningEffort = null)
         {
             _apiKey = apiKey ?? "";
-            _model = string.IsNullOrWhiteSpace(model) ? "gpt-4o" : model;
+            _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.6-terra" : model;
             _maxTokens = maxTokens > 0 ? maxTokens : 400;
+            _reasoningEffort = (reasoningEffort ?? string.Empty).Trim();
+        }
+
+        // The gpt-5.x family and the o-series reject the classic max_tokens in favor of
+        // max_completion_tokens, and carry the reasoning_effort dial; older models keep the
+        // classic shape. Getting this wrong is a hard 400, so it keys off the model id.
+        private bool IsReasoningFamily =>
+            _model.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase)
+            || _model.StartsWith("o1", StringComparison.OrdinalIgnoreCase)
+            || _model.StartsWith("o3", StringComparison.OrdinalIgnoreCase)
+            || _model.StartsWith("o4", StringComparison.OrdinalIgnoreCase);
+
+        // Reasoning models spend their THINKING against max_completion_tokens too, so the
+        // configured MaxTokens (meant as the spoken reply's budget) gets headroom on top —
+        // otherwise a small budget dies mid-thought with "Could not finish the message"
+        // (2026.07.12, found by the 16-token health-check ping killing gpt-5.6-terra).
+        private int EffectiveMaxTokens(string effort)
+        {
+            if (!IsReasoningFamily) return _maxTokens;
+            switch (effort)
+            {
+                case "none": return _maxTokens;
+                case "minimal":
+                case "low": return _maxTokens + 512;
+                case "medium":
+                case "": return _maxTokens + 1024;  // "" lets the API pick; give it medium's room
+                default: return _maxTokens + 2048;  // high / xhigh / max think long
+            }
         }
 
         public async Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
@@ -61,13 +90,25 @@ namespace ImmersiveAI.Llm
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("OpenAI API key is not set. Add it to " + ModConfig.ConfigFilePath);
+            if (!UsageLedger.CanCall(out var capReason))
+                throw new InvalidOperationException(capReason);
+
+            // gpt-5.6 on chat completions refuses function tools + reasoning together (live error,
+            // 2026.07.12: "Function tools with reasoning_effort are not supported… use /v1/responses
+            // or set reasoning_effort to 'none'"). Migrating to /v1/responses is a post-V1 task;
+            // until then every tool-carrying call rides at 'none' and plain calls (the feeling
+            // number, yes/no desires, search refining) keep the configured effort.
+            var effort = _reasoningEffort;
+            if (tools != null && tools.Count > 0) effort = "none";
 
             var payload = new JObject
             {
                 ["model"] = _model,
-                ["max_tokens"] = _maxTokens,
+                [IsReasoningFamily ? "max_completion_tokens" : "max_tokens"] = EffectiveMaxTokens(effort),
                 ["messages"] = BuildTurns(messages),
             };
+            if (IsReasoningFamily && effort.Length > 0)
+                payload["reasoning_effort"] = effort;
 
             if (tools != null && tools.Count > 0)
             {
@@ -77,31 +118,77 @@ namespace ImmersiveAI.Llm
                 if (!allowToolUse) payload["tool_choice"] = "none";
             }
 
+            var payloadText = payload.ToString(Formatting.None);
+
+            var (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+
+            // OpenAI's "insufficient permissions" 401 shows up INTERMITTENTLY for a while after
+            // the account's model access is changed (their ACL propagating — observed live
+            // 2026.07.12: the same request shape succeeding and failing seconds apart on
+            // gpt-5.6-terra). One short retry rides out the stale server; a truly bad key
+            // fails twice and is reported as before.
+            if (status == 401 && body.IndexOf("insufficient permissions", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                ModLog.Warn("OpenAI answered 401 'insufficient permissions' — retrying once (fresh access changes propagate slowly on their side).");
+                await Task.Delay(1500, cancellationToken).ConfigureAwait(false);
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (status < 200 || status >= 300)
+            {
+                LlmGate.ReportFailure(status, "OpenAI", body);
+                throw new InvalidOperationException($"OpenAI request failed ({status}): {Truncate(body, 400)}");
+            }
+
+            var json = JObject.Parse(body);
+
+            // The API measures its own tokens — hand them to the ledger, and tell the
+            // gate the road is open again.
+            UsageLedger.RecordCall(_model,
+                (int?)json.SelectToken("usage.prompt_tokens") ?? 0,
+                (int?)json.SelectToken("usage.completion_tokens") ?? 0);
+            LlmGate.ReportSuccess();
+
+            var message = json.SelectToken("choices[0].message");
+
+            var text = ((string?)message?["content"] ?? string.Empty).Trim();
+
+            var calls = (message?["tool_calls"] as JArray ?? new JArray())
+                .Where(c => (string?)c["type"] == "function")
+                .Select(c => new ToolCall(
+                    (string?)c["id"] ?? "",
+                    (string?)c.SelectToken("function.name") ?? "",
+                    (string?)c.SelectToken("function.arguments") ?? "{}"))
+                .ToList();
+
+            return new ChatResult(text, calls);
+        }
+
+        /// <summary>One POST to the chat endpoint: status + body, never throwing on an API error
+        /// status (the caller decides about retries). A failed CONNECTION still throws, after
+        /// telling the gate.</summary>
+        private async Task<(int Status, string Body)> PostOnceAsync(string payloadText, CancellationToken cancellationToken)
+        {
             using (var request = new HttpRequestMessage(HttpMethod.Post, Endpoint))
             {
                 request.Headers.Add("Authorization", "Bearer " + _apiKey);
-                request.Content = new StringContent(payload.ToString(Formatting.None), Encoding.UTF8, "application/json");
+                request.Content = new StringContent(payloadText, Encoding.UTF8, "application/json");
 
-                using (var response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false))
+                HttpResponseMessage response;
+                try
+                {
+                    response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // The connection itself failed (or timed out) — quiet the autonomous flows.
+                    LlmGate.ReportFailure(0, "OpenAI", ex.Message);
+                    throw;
+                }
+                using (response)
                 {
                     var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    if (!response.IsSuccessStatusCode)
-                        throw new InvalidOperationException($"OpenAI request failed ({(int)response.StatusCode}): {Truncate(body, 400)}");
-
-                    var json = JObject.Parse(body);
-                    var message = json.SelectToken("choices[0].message");
-
-                    var text = ((string?)message?["content"] ?? string.Empty).Trim();
-
-                    var calls = (message?["tool_calls"] as JArray ?? new JArray())
-                        .Where(c => (string?)c["type"] == "function")
-                        .Select(c => new ToolCall(
-                            (string?)c["id"] ?? "",
-                            (string?)c.SelectToken("function.name") ?? "",
-                            (string?)c.SelectToken("function.arguments") ?? "{}"))
-                        .ToList();
-
-                    return new ChatResult(text, calls);
+                    return ((int)response.StatusCode, body);
                 }
             }
         }
