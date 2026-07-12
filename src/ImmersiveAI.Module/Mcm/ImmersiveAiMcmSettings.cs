@@ -51,10 +51,10 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = true,
-            HintText = "Which GPT model to use when the backend is OpenAI. gpt-5.6-luna ($1/$6 per million tokens) is the recommended default — quick, cheap, and sure-handed with the NPCs' tools; gpt-5.4-mini ($0.75/$4.50) is the steady previous-generation fallback if 5.6 misbehaves; terra ($2.50/$15) is the stronger middle pick, sol ($5/$30) the current flagship, gpt-5.5 ($5/$30) the previous flagship, gpt-5.4 ($2.50/$15) its workhorse, and gpt-5.4-nano ($0.20/$1.25) the cheapest of all. Anything older (gpt-4o and kin) is markedly worse with the NPCs, so it is left to config.json — one set by hand there still appears and works here.")]
+            HintText = "Which GPT model to use when the backend is OpenAI. gpt-5.4-mini ($0.75/$4.50 per million tokens) is the recommended default — cheap, steady, and proven with the NPCs' tools; gpt-5.6-luna ($1/$6) is the newer-generation pick (fresh accounts sometimes see access hiccups in its first hours); terra ($2.50/$15) is the stronger middle pick, sol ($5/$30) the current flagship, gpt-5.5 ($5/$30) the previous flagship, gpt-5.4 ($2.50/$15) its workhorse, and gpt-5.4-nano ($0.20/$1.25) the cheapest of all. Anything older (gpt-4o and kin) is markedly worse with the NPCs, so it is left to config.json — one set by hand there still appears and works here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
-            new[] { "gpt-5.6-luna", "gpt-5.4-mini", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
+            new[] { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
 
         [SettingPropertyDropdown("OpenAI reasoning effort", Order = 5, RequireRestart = true,
             HintText = "How hard OpenAI's reasoning models (gpt-5.x) think on the mod's small inner calls (feelings, yes/no decisions, search refining). Spoken replies carry the NPCs' tools and run without reasoning regardless — OpenAI's chat API cannot combine the two. 'low' is a fine default; 'none' is cheapest. Ignored by older models like gpt-4o.")]

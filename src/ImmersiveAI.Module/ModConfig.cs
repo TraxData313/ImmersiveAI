@@ -22,7 +22,7 @@ namespace ImmersiveAI
         public string AnthropicModel { get; set; } = "claude-opus-4-8";
 
         public string OpenAIApiKey { get; set; } = "";
-        public string OpenAIModel { get; set; } = "gpt-5.6-luna";
+        public string OpenAIModel { get; set; } = "gpt-5.4-mini";
 
         /// <summary>How hard OpenAI's reasoning models (gpt-5.x and the o-series) think before
         /// speaking: "none", "minimal", "low", "medium", "high", "xhigh", or "max". Applies to

@@ -109,7 +109,7 @@ lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin v
 tools/deploy.ps1          build + install into the game's Modules folder (DLLs + SubModule.xml + GUI)
 tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
 docs/steam-page-draft.md  the Workshop description draft (privacy/cost/AI disclosures) — finalize at release
-docs/models-and-costs.md  the model-selection decision (opus-4-8 / gpt-5.6-luna) + price table rationale
+docs/models-and-costs.md  the model-selection decision (opus-4-8 / gpt-5.4-mini) + price table rationale
 Directory.Build.props     shared MSBuild props; GameFolder points at the Bannerlord install
 ```
 
@@ -309,8 +309,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   autonomous rolls skip; the odds view ends with the session/day summary),
   `OpenAIReasoningEffort` (default "low"; gpt-5.x/o-series get `max_completion_tokens` +
   `reasoning_effort` instead of `max_tokens` — REQUIRED or gpt-5.6 400s; OpenAI default model is now
-  gpt-5.6-luna for fresh configs (2026.07.12 — the MCM dropdown offers ONLY luna/terra/sol; older
-  models live on as config.json hand edits), existing configs deliberately unmigrated — see docs/models-and-costs.md),
+  gpt-5.4-mini for fresh configs (2026.07.12, settled by live play after terra → luna both stumbled on
+  access-propagation 401s; the MCM dropdown offers 5.4-mini/luna/terra/sol/5.5/5.4/5.4-nano — NO 5.5
+  mini/nano exist; older models live on as config.json hand edits), existing configs deliberately
+  unmigrated — see docs/models-and-costs.md),
   `ConfigVersion` (format stamp, 1 — future migrations key off it),
   `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
   "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
