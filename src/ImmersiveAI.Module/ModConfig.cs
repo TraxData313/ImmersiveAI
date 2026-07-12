@@ -406,8 +406,10 @@ namespace ImmersiveAI
                 ["gpt-4.1"] = 1000000,
                 ["gpt-5"] = 400000,
                 ["gpt-5.1"] = 400000,
-                ["gpt-5.4"] = 400000,
-                ["gpt-5.5"] = 400000,
+                ["gpt-5.4"] = 1000000,        // the full model; mini/nano below stay at 400k
+                ["gpt-5.4-mini"] = 400000,
+                ["gpt-5.4-nano"] = 400000,
+                ["gpt-5.5"] = 1000000,
                 ["gpt-5.6"] = 1000000,
                 ["claude"] = 200000,
                 ["claude-opus-4"] = 1000000,
@@ -431,9 +433,10 @@ namespace ImmersiveAI
                 ["gpt-5.6-sol"] = new ModelPrice(5, 30),
                 ["gpt-5.6-terra"] = new ModelPrice(2.5, 15),
                 ["gpt-5.6-luna"] = new ModelPrice(1, 6),
-                ["gpt-5.5"] = new ModelPrice(1.25, 10),
-                ["gpt-5.5-mini"] = new ModelPrice(0.25, 2),   // explicit: would otherwise match "gpt-5"
-                ["gpt-5.5-nano"] = new ModelPrice(0.05, 0.4),
+                ["gpt-5.5"] = new ModelPrice(5, 30),          // flagship tier; no mini/nano siblings exist
+                ["gpt-5.4"] = new ModelPrice(2.5, 15),
+                ["gpt-5.4-mini"] = new ModelPrice(0.75, 4.5), // explicit: would otherwise match "gpt-5"
+                ["gpt-5.4-nano"] = new ModelPrice(0.2, 1.25),
                 ["gpt-5"] = new ModelPrice(1.25, 10),
                 ["gpt-5-mini"] = new ModelPrice(0.25, 2),
                 ["gpt-4o"] = new ModelPrice(2.5, 10),
