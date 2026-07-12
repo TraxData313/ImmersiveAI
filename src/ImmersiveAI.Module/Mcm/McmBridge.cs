@@ -77,6 +77,7 @@ namespace ImmersiveAI.Mcm
             SelectOrAdd(s.AnthropicModel, c.AnthropicModel);
             s.OpenAIApiKey = c.OpenAIApiKey ?? string.Empty;
             SelectOrAdd(s.OpenAIModel, c.OpenAIModel);
+            SelectOrAdd(s.OpenAIReasoningEffort, c.OpenAIReasoningEffort);
             s.MaxTokens = Clamp(c.MaxTokens, 100, 2000);
 
             s.EnableChatWindow = c.EnableChatWindow;
@@ -93,6 +94,9 @@ namespace ImmersiveAI.Mcm
             s.MaxNpcGoals = Clamp(c.MaxNpcGoals, 1, 20);
             s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
 
+            s.ShowCostNotices = c.ShowCostNotices;
+            s.MaxDailyRequests = Clamp(c.MaxDailyRequests, 0, 2000);
+
             s.DevMode = c.DevMode;
         }
 
@@ -104,6 +108,7 @@ namespace ImmersiveAI.Mcm
             c.AnthropicModel = s.AnthropicModel.SelectedValue ?? c.AnthropicModel;
             c.OpenAIApiKey = s.OpenAIApiKey ?? string.Empty;
             c.OpenAIModel = s.OpenAIModel.SelectedValue ?? c.OpenAIModel;
+            c.OpenAIReasoningEffort = s.OpenAIReasoningEffort.SelectedValue ?? c.OpenAIReasoningEffort;
             c.MaxTokens = s.MaxTokens;
 
             c.EnableChatWindow = s.EnableChatWindow;
@@ -119,6 +124,9 @@ namespace ImmersiveAI.Mcm
             c.MaxKnownFacts = s.MaxKnownFacts;
             c.MaxNpcGoals = s.MaxNpcGoals;
             c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;
+
+            c.ShowCostNotices = s.ShowCostNotices;
+            c.MaxDailyRequests = s.MaxDailyRequests;
 
             c.DevMode = s.DevMode;
         }

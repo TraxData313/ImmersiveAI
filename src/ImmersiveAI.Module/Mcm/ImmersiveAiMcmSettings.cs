@@ -40,7 +40,7 @@ namespace ImmersiveAI.Mcm
         public string AnthropicApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = true,
-            HintText = "Which Claude model to use. Opus is the most capable (and the default); Sonnet is a lighter, cheaper choice; Haiku is the fastest and cheapest.")]
+            HintText = "Which Claude model to use. Opus 4.8 ($5/$25 per million tokens) is the most capable and the default; Sonnet 5 ($3/$15) is a strong cheaper choice; Haiku 4.5 ($1/$5) is the fastest and cheapest. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(
             new[] { "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-fable-5" }, 0);
@@ -51,12 +51,18 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = true,
-            HintText = "Which GPT model to use when the backend is OpenAI.")]
+            HintText = "Which GPT model to use when the backend is OpenAI. gpt-5.6-terra ($2.50/$15 per million tokens) is the recommended default — GPT-5.5-class at half the price; sol ($5/$30) is the flagship, luna ($1/$6) the budget pick. Older models (gpt-4o and kin) still work but are weaker with the NPCs' tools. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
-            new[] { "gpt-4o", "gpt-4.1", "gpt-5", "gpt-5.1", "gpt-5.5" }, 0);
+            new[] { "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.5", "gpt-5.1", "gpt-5", "gpt-4.1", "gpt-4o" }, 0);
 
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 5, RequireRestart = true,
+        [SettingPropertyDropdown("OpenAI reasoning effort", Order = 5, RequireRestart = true,
+            HintText = "How hard OpenAI's reasoning models (gpt-5.x) think on the mod's small inner calls (feelings, yes/no decisions, search refining). Spoken replies carry the NPCs' tools and run without reasoning regardless — OpenAI's chat API cannot combine the two. 'low' is a fine default; 'none' is cheapest. Ignored by older models like gpt-4o.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> OpenAIReasoningEffort { get; set; } = new Dropdown<string>(
+            new[] { "none", "minimal", "low", "medium", "high" }, 2);
+
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 6, RequireRestart = true,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;
@@ -105,8 +111,8 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableWorldRecall { get; set; } = true;
 
-        [SettingPropertyBool("Seek the sages' counsel (web search)", Order = 4, RequireRestart = false,
-            HintText = "NPCs may search the internet mid-reply when asked how something in the world is done (via DuckDuckGo, no key needed). Turn off if you prefer they answer only from what they know.")]
+        [SettingPropertyBool("All they have read and heard (web search)", Order = 4, RequireRestart = false,
+            HintText = "NPCs may quietly search the internet mid-reply when asked how something in the world is done — framed to them as their own reading and hearsay. Uses DuckDuckGo, no key needed; the search queries leave your machine, so turn this off if you prefer everything to stay between you and your AI provider.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableWebSearch { get; set; } = true;
 
@@ -125,11 +131,23 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool RevertMemoriesWithSaves { get; set; } = true;
 
+        // ── Costs ───────────────────────────────────────────────────────────────────
+
+        [SettingPropertyBool("Show cost notices", Order = 0, RequireRestart = false,
+            HintText = "After each exchange, a soft gray line shows what it took: tokens in/out, number of calls, and the price when the model's rates are known. The same lines also go to log.txt, and daily totals persist in usage.json.")]
+        [SettingPropertyGroup("Costs", GroupOrder = 3)]
+        public bool ShowCostNotices { get; set; } = true;
+
+        [SettingPropertyInteger("Daily request cap (0 = none)", 0, 2000, "0", Order = 1, RequireRestart = false,
+            HintText = "A safety valve: at most this many AI requests per real day, across all sessions. When reached, the world goes quiet until the day turns or the cap is raised. 0 means no cap.")]
+        [SettingPropertyGroup("Costs", GroupOrder = 3)]
+        public int MaxDailyRequests { get; set; } = 0;
+
         // ── Advanced ────────────────────────────────────────────────────────────────
 
         [SettingPropertyBool("Developer mode", Order = 0, RequireRestart = false,
             HintText = "Shows the mod's test levers and the 'reveal the whole of your mind' prompt inspector. Leave OFF for normal play.")]
-        [SettingPropertyGroup("Advanced", GroupOrder = 3)]
+        [SettingPropertyGroup("Advanced", GroupOrder = 4)]
         public bool DevMode { get; set; } = false;
 
         /// <summary>A curated set of map-safe keys for the window hotkeys, with <paramref name="preferred"/>
