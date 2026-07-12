@@ -76,7 +76,7 @@ namespace ImmersiveAI.UI.LetterWindow
 
             try
             {
-                _vm = new LetterWindowVM();
+                _vm = new LetterWindowVM(_config!);
                 _layer = new GauntletLayer("ImmersiveLetterWindow", 4500);
                 _movie = _layer.LoadMovie("ImmersiveLetterWindow", _vm);
                 _layer.InputRestrictions.SetInputRestrictions();
@@ -176,7 +176,13 @@ namespace ImmersiveAI.UI.LetterWindow
             }
 
             var input = _layer?.Input;
-            if (input != null && input.IsKeyReleased(InputKey.Escape)) { Close(); return; }
+            if (input != null && input.IsKeyReleased(InputKey.Escape))
+            {
+                // Escape folds the info overlay first; only a second press closes the window.
+                if (_vm != null && _vm.IsInfoShown) _vm.IsInfoShown = false;
+                else Close();
+                return;
+            }
 
             if (_scrollCountdown > 0 && --_scrollCountdown == 0)
                 ScrollEntriesToBottom();

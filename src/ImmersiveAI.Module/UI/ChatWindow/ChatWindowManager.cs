@@ -234,8 +234,15 @@ namespace ImmersiveAI.UI.ChatWindow
             var input = _layer?.Input;
             if (input != null)
             {
-                if (input.IsKeyReleased(InputKey.Escape)) { Close(); return; }
-                if (input.IsKeyReleased(InputKey.Enter) || input.IsKeyReleased(InputKey.NumpadEnter))
+                if (input.IsKeyReleased(InputKey.Escape))
+                {
+                    // Escape folds the info overlay first; only a second press closes the window.
+                    if (_vm != null && _vm.IsInfoShown) _vm.IsInfoShown = false;
+                    else Close();
+                    return;
+                }
+                if ((input.IsKeyReleased(InputKey.Enter) || input.IsKeyReleased(InputKey.NumpadEnter))
+                    && _vm?.IsInfoShown != true)
                     _vm?.ExecuteSend();
             }
 

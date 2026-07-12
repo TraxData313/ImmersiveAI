@@ -20,6 +20,9 @@ namespace ImmersiveAI.UI.LetterWindow
         private static readonly Color PlayerHeaderColor = new Color(0.85f, 0.75f, 0.55f, 1f);
         private static readonly Color NpcHeaderColor = new Color(0.74f, 0.90f, 0.86f, 1f);
 
+        private readonly string _letterHotkey;
+        private readonly string _chatHotkey;
+
         private MBBindingList<LetterContactVM> _contacts = new MBBindingList<LetterContactVM>();
         private MBBindingList<ChatMessageVM> _entries = new MBBindingList<ChatMessageVM>();
         private LetterContactVM? _selected;
@@ -29,9 +32,12 @@ namespace ImmersiveAI.UI.LetterWindow
         private Color _relationColor = Colors.White;
         private string _statusText = string.Empty;
         private bool _canWrite;
+        private bool _isInfoShown;
 
-        public LetterWindowVM()
+        public LetterWindowVM(ModConfig config)
         {
+            _letterHotkey = string.IsNullOrWhiteSpace(config.LetterWindowHotkey) ? "U" : config.LetterWindowHotkey.Trim();
+            _chatHotkey = string.IsNullOrWhiteSpace(config.ChatWindowHotkey) ? "O" : config.ChatWindowHotkey.Trim();
             RefreshContacts();
         }
 
@@ -177,6 +183,8 @@ namespace ImmersiveAI.UI.LetterWindow
 
         public void ExecuteClose() => LetterWindowManager.Close();
 
+        public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
+
         // ------------------------------ bound properties ------------------------------
 
         [DataSourceProperty]
@@ -273,5 +281,44 @@ namespace ImmersiveAI.UI.LetterWindow
 
         [DataSourceProperty]
         public bool CanSend => HasSelection && _canWrite && !string.IsNullOrWhiteSpace(_inputText);
+
+        // ------------------------------ the info overlay ------------------------------
+
+        /// <summary>The "?" overlay: what this window is, how letters travel, what to try. Escape
+        /// folds it away before closing the window (the manager checks this flag first).</summary>
+        [DataSourceProperty]
+        public bool IsInfoShown
+        {
+            get => _isInfoShown;
+            set { if (value != _isInfoShown) { _isInfoShown = value; OnPropertyChangedWithValue(value, "IsInfoShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string InfoButtonText => "?";
+
+        [DataSourceProperty]
+        public string InfoTitleText => "Letters — how they work";
+
+        [DataSourceProperty]
+        public string InfoText =>
+            "Letters cross the distances spoken words cannot: anyone you hold a story with can be written to, however far the roads run — and the letters you have exchanged stay readable here, even when the writer is gone.\n" +
+            $"Open this window anywhere on the map with [{_letterHotkey}], with \"Send a letter by courier\" in a town, castle, or village — or with \"Write back\" when a letter reaches you.\n" +
+            "\n" +
+            "HOW LETTERS TRAVEL\n" +
+            "• A letter rides with a courier for real days — the farther away they are, the longer the road. A courier underway is noted at the end of the page.\n" +
+            "• One courier per correspondent at a time: while yours rides, that road is taken until it arrives.\n" +
+            "• Someone standing beside you needs no courier — the line under their name will point you to go and speak instead (press [" + _chatHotkey + "]).\n" +
+            "• They may write to you first, and they may answer your letter — once — or let it lie unanswered. Both are remembered, and both are set down on this page.\n" +
+            "• A sealed letter is a promise: it survives saving and loading, and arrives even if the world turns meanwhile.\n" +
+            "\n" +
+            "WRITING\n" +
+            "• The writing line below holds a single line; the tall mirror above it shows the whole letter as it grows.\n" +
+            "• Enter does NOT send here — a letter deserves a deliberate seal. Press \"Seal and send\" when it is ready.\n" +
+            "• An unfinished letter is kept when the window closes; come back and it waits in the writing line.\n" +
+            "\n" +
+            "WHAT TO TRY\n" +
+            "• Ask a far-off companion how their errand fares — a caravan master in your service will write you back a field report.\n" +
+            "• Write to a lord you fought beside, or to kin you have not seen in a season.\n" +
+            "• The words you send become part of how they remember you — a letter can move a heart across the whole map.";
     }
 }

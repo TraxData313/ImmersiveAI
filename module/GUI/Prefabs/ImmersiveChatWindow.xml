@@ -190,6 +190,44 @@
               </Children>
             </Widget>
 
+            <!-- the info overlay: what this window is, how it works, what to try (the "?" button) -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsInfoShown">
+              <Children>
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
+                  <Children>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@InfoTitleText" />
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="54">
+                      <Children>
+                        <ScrollablePanel Id="InfoScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="InfoClip" InnerPanel="InfoClip\InfoBody" VerticalScrollbar="..\InfoScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                          <Children>
+                            <Widget Id="InfoClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                              <Children>
+                                <RichTextWidget Id="InfoBody" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="18" Brush.FontColor="#C9BFA8FF" Text="@InfoText" />
+                              </Children>
+                            </Widget>
+                          </Children>
+                        </ScrollablePanel>
+                        <ScrollbarWidget Id="InfoScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="InfoScrollbarHandle" MinValue="0" MaxValue="100">
+                          <Children>
+                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                            <BrushWidget Id="InfoScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                          </Children>
+                        </ScrollbarWidget>
+                      </Children>
+                    </Widget>
+                  </Children>
+                </Widget>
+              </Children>
+            </Widget>
+
+            <!-- info toggle ("?") — sits beside the close button, above the overlay -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="34" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="48" Command.Click="ExecuteToggleInfo">
+              <Children>
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Center" Text="@InfoButtonText" />
+              </Children>
+            </ButtonWidget>
+
             <!-- close -->
             <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="34" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="8" Command.Click="ExecuteClose">
               <Children>

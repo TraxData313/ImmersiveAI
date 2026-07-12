@@ -25,6 +25,7 @@ namespace ImmersiveAI.UI.ChatWindow
 
         private readonly ModConfig _config;
         private readonly string _letterHotkey;
+        private readonly string _chatHotkey;
 
         // The line sent but not yet answered, per NPC — shown in the thread while the reply is on
         // its way (the turn is only recorded once the answer is in), and restored into the input
@@ -40,12 +41,14 @@ namespace ImmersiveAI.UI.ChatWindow
         private Color _relationColor = Colors.White;
         private string _overviewText = string.Empty;
         private bool _isOverviewShown = true;
+        private bool _isInfoShown;
         private bool _isWaiting;
 
         public ChatWindowVM(ModConfig config)
         {
             _config = config;
             _letterHotkey = string.IsNullOrWhiteSpace(config.LetterWindowHotkey) ? "U" : config.LetterWindowHotkey.Trim();
+            _chatHotkey = string.IsNullOrWhiteSpace(config.ChatWindowHotkey) ? "O" : config.ChatWindowHotkey.Trim();
             RefreshContacts();
         }
 
@@ -322,6 +325,8 @@ namespace ImmersiveAI.UI.ChatWindow
 
         public void ExecuteToggleOverview() => IsOverviewShown = !IsOverviewShown;
 
+        public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
+
         // ------------------------------ bound properties ------------------------------
 
         [DataSourceProperty]
@@ -485,5 +490,46 @@ namespace ImmersiveAI.UI.ChatWindow
             get => _isWaiting;
             set { if (value != _isWaiting) { _isWaiting = value; OnPropertyChangedWithValue(value, "IsWaiting"); OnPropertyChanged("CanSend"); } }
         }
+
+        // ------------------------------ the info overlay ------------------------------
+
+        /// <summary>The "?" overlay: what this window is, how it works, what to try. Escape folds
+        /// it away before closing the window (the manager checks this flag first).</summary>
+        [DataSourceProperty]
+        public bool IsInfoShown
+        {
+            get => _isInfoShown;
+            set { if (value != _isInfoShown) { _isInfoShown = value; OnPropertyChangedWithValue(value, "IsInfoShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string InfoButtonText => "?";
+
+        [DataSourceProperty]
+        public string InfoTitleText => "Words with those near you — how it works";
+
+        [DataSourceProperty]
+        public string InfoText =>
+            "This window is for quick words with those who share your road — no ceremony, no scene: choose a face, write, and send.\n" +
+            $"Open it anywhere on the map with [{_chatHotkey}], with \"Speak with those near you\" in a town, castle, or village — or by answering someone's knock.\n" +
+            "\n" +
+            "WHO IS LISTED\n" +
+            "• Everyone in the same place as you — your own party, and the folk of the settlement you stand in — plus everyone you already hold a story with, wherever they are.\n" +
+            "• (here) — they can hear you now. (away) — they are far across the map; spoken words cannot reach them, so the Send stays gray. A letter can: press [" + _letterHotkey + "].\n" +
+            "• A gold dot ● means their words are waiting for you.\n" +
+            "\n" +
+            "HOW IT WORKS\n" +
+            "• Enter sends; Escape closes. An unsent draft is kept — closing the window loses nothing.\n" +
+            "• Every exchange is a real, remembered moment: they will carry it, and it can move their heart toward or away from you — that is the number beside their name.\n" +
+            "• The soft gray lines are the story's stage directions; nothing they remember of you is hidden.\n" +
+            "• Letters between you appear as ✉ cards in their place in the thread; a letter still on the road stays sealed until it arrives.\n" +
+            "• With the SOCIALNESS dial above zero (lower-right of the map), people may seek you out on their own — their greeting waits here unread.\n" +
+            "\n" +
+            "WHAT TO TRY\n" +
+            "• Ask your surgeon how the wounded fare, or your scout whether you could outrun that war party to the east.\n" +
+            "• Ask a merchant what grain fetches in this town, or a lord what he makes of the war.\n" +
+            "• Tell someone what you saw on the road today — or simply ask how they slept. They remember kindness.\n" +
+            "\n" +
+            "An answer takes a few breaths to arrive — it is being truly thought, not picked from a list.";
     }
 }
