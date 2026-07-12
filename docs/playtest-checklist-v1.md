@@ -9,6 +9,15 @@ Remember it ships **false** by default — a fresh install is already correct, n
 
 ---
 
+## 0. Fresh-install smoke test (the new subscriber's first five minutes)
+
+- [ ] Rename `Configs\ImmersiveAI` away entirely (keep it — it's your real data), boot the game,
+      enter a campaign.
+      *Pass:* the folder is recreated (config.json, NPCs\_README.txt, global_prompt.txt),
+      the first-run no-key guide shows once and points at config.json plainly, and the startup
+      health check reports the missing key in friendly words — no errors, no mute mystery.
+      Then restore your real folder.
+
 ## 1. The roles wave (crafts, duties, field-craft — shipped 2026.07.12, unplaytested)
 
 - [ ] **A scout answering "can we escape them?"** — travel with a party that has a scout

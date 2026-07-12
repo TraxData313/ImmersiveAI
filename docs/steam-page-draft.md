@@ -70,6 +70,18 @@ against the game's own save-loading code, v1.4.7; you'll just see the usual "cre
 different modules" warning every modded save shows). Memories live outside the saves as plain
 files and are never lost either way — reinstall later and every character remembers you.
 
+## If characters are silent (troubleshooting)
+
+- **Read the startup message.** When a campaign loads, the mod tests your connection and says
+  plainly what it found — "connected", a missing/wrong key, or a network problem — and where to
+  fix it. Fix `config.json` and restart; the check runs again.
+- **Check the log.** `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt`
+  records every call and every error in plain words.
+- **A wrong or dead key shows ONE amber notice**, then goes quiet instead of erroring hourly.
+  Fixing the key brings everything back — no restart needed for conversations you start.
+- Still stuck? Post the last lines of `log.txt` in the comments — the mod never logs your key
+  (a provider's own error message shows at most a fragment the provider already redacted).
+
 ## Provenance
 
 A clean-room rewrite inspired by the ChatAi mod (studied via decompilation only — no code
