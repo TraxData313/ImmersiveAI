@@ -27,6 +27,8 @@ Copy-Item (Join-Path $outDir "ImmersiveAI.dll") $binDir -Force
 Copy-Item (Join-Path $outDir "ImmersiveAI.Core.dll") $binDir -Force
 Copy-Item (Join-Path $outDir "Newtonsoft.Json.dll") $binDir -Force -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $outDir "0Harmony.dll") $binDir -Force -ErrorAction SilentlyContinue
+# MIT obliges the notice to travel with the DLL it covers.
+Copy-Item (Join-Path $repoRoot "lib\0Harmony.LICENSE.txt") $binDir -Force -ErrorAction SilentlyContinue
 
 # GUI assets — contents-into-ensured-destination, same trap-avoidance as deploy.ps1.
 $guiSource = Join-Path $repoRoot "module\GUI"

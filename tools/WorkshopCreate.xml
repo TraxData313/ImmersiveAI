@@ -1,0 +1,26 @@
+<Tasks>
+    <CreateItem/>
+    <UpdateItem>
+        <!-- First-time Steam Workshop upload. Run with Steam open and logged in:
+               TaleWorlds.MountAndBlade.SteamWorkshop.exe "<this file's full path>"
+             (exe lives in the game's bin\Win64_Shipping_Client).
+             CAUTION, uploader quirks (decompiled 2026.07.13): the root <Tasks> element must be
+             the FIRST node of this file - an <?xml?> declaration or a comment above/beside it
+             makes the tool parse ZERO tasks and exit as if successful. Comments are only safe
+             HERE, inside UpdateItem (and inside GetItem). The item TITLE is read from the
+             module's SubModule.xml <Name>, not from this file. The tool ends by writing
+             steam_workshop_uploader.txt to the working directory and crashing on a harmless
+             press-any-key read when run non-interactively - judge success by "Item created.
+             Item ID is ..." + "Uploading done!" in the output, not the exit code. -->
+        <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
+        <ItemDescription Value="Every character, a living mind. NPCs converse through the AI model you configure (bring your own Anthropic/OpenAI key) with persistent layered memory, their own goals, moods and voices - they remember you, reach out to you, and write you letters. Full description incoming."/>
+        <Tags>
+            <Tag Value="Utility" />
+            <Tag Value="Native" />
+            <Tag Value="Singleplayer" />
+            <Tag Value="v1.4.7" />
+        </Tags>
+        <Image Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\Screenshots\preview_thumbnail.jpg"/>
+        <Visibility Value="Private"/>
+    </UpdateItem>
+</Tasks>

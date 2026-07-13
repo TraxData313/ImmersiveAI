@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1024px; height: 1024px; overflow: hidden; }
+  .canvas {
+    position: relative;
+    width: 1024px; height: 1024px;
+    background: #0d0a07;
+    font-family: 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  }
+  .art {
+    position: absolute; inset: 0;
+    background-image: url('file:///C:/Users/Trax/Documents/BannerlordMods/ImmersiveAI/Screenshots/1_face_to_face_conversation.jpg');
+    background-size: 2100px auto;
+    background-position: -472px -260px;
+    background-repeat: no-repeat;
+    filter: brightness(1.55) contrast(1.05) saturate(1.15);
+  }
+  /* vignette + bottom fade for the title block */
+  .shade {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 120% 90% at 42% 32%, rgba(0,0,0,0) 35%, rgba(13,10,7,0.55) 78%, rgba(13,10,7,0.9) 100%),
+      linear-gradient(to bottom, rgba(13,10,7,0.25) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 36%, rgba(13,10,7,0.7) 50%, rgba(13,10,7,1) 62%);
+  }
+  /* the gold frame, like the game's dialog box */
+  .frame {
+    position: absolute; inset: 22px;
+    border: 3px solid rgba(214, 178, 94, 0.85);
+    border-radius: 26px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 0 60px rgba(0,0,0,0.35);
+  }
+  .titleblock {
+    position: absolute; left: 0; right: 0; bottom: 64px;
+    text-align: center;
+  }
+  .ornament {
+    color: #d6b25e; font-size: 30px; letter-spacing: 14px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+    margin-bottom: 10px;
+  }
+  h1 {
+    color: #e8c874;
+    font-size: 118px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    font-variant: small-caps;
+    line-height: 1;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.95), 0 0 45px rgba(232, 200, 116, 0.28);
+  }
+  .tagline {
+    margin-top: 20px;
+    color: #f0e4c8;
+    font-size: 41px;
+    font-style: italic;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.95);
+  }
+  .features {
+    margin-top: 26px;
+    color: #cdb27a;
+    font-size: 27px;
+    font-variant: small-caps;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.95);
+  }
+  .features .dot { color: #8a7448; padding: 0 12px; }
+  /* small quote bubble anchored to her — the living-words hook */
+  .quote {
+    position: absolute; top: 96px; right: 72px;
+    max-width: 400px;
+    background: rgba(16, 12, 8, 0.82);
+    border: 2px solid rgba(214, 178, 94, 0.75);
+    border-radius: 18px;
+    padding: 22px 28px;
+    color: #f3ead4;
+    font-size: 31px;
+    line-height: 1.35;
+    font-style: italic;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+  }
+  .quote .who {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-variant: small-caps;
+    letter-spacing: 2px;
+    color: #d6b25e;
+    font-size: 26px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="art"></div>
+    <div class="shade"></div>
+    <div class="quote">
+      &ldquo;Your return lifts my heart. I&rsquo;ve thought of you often since we last spoke&hellip;&rdquo;
+      <span class="who">— spoken, not scripted</span>
+    </div>
+    <div class="frame"></div>
+    <div class="titleblock">
+      <div class="ornament">✦ ✦ ✦</div>
+      <h1>Immersive AI</h1>
+      <div class="tagline">They remember you. They feel. They seek you out.</div>
+      <div class="features">AI dialogue <span class="dot">·</span> living memory <span class="dot">·</span> letters <span class="dot">·</span> distinct voices</div>
+    </div>
+  </div>
+</body>
+</html>

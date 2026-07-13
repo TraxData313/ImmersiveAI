@@ -21,6 +21,8 @@ Copy-Item (Join-Path $outDir "ImmersiveAI.dll") $binDir -Force
 Copy-Item (Join-Path $outDir "ImmersiveAI.Core.dll") $binDir -Force
 Copy-Item (Join-Path $outDir "Newtonsoft.Json.dll") $binDir -Force -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $outDir "0Harmony.dll") $binDir -Force -ErrorAction SilentlyContinue
+# MIT obliges the notice to travel with the DLL it covers.
+Copy-Item (Join-Path $repoRoot "lib\0Harmony.LICENSE.txt") $binDir -Force -ErrorAction SilentlyContinue
 
 # GUI assets (prefab overrides such as the portrait map notice, the chat window) ride along with
 # the module. Copy the folder's CONTENTS into an ensured destination: Copy-Item with a folder
