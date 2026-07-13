@@ -109,7 +109,7 @@ lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin v
 tools/deploy.ps1          build + install into the game's Modules folder (DLLs + SubModule.xml + GUI)
 tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
 docs/steam-page-draft.md  the Workshop description draft (privacy/cost/AI disclosures) — finalize at release
-docs/models-and-costs.md  the model-selection decision (opus-4-8 / gpt-5.4-mini) + price table rationale
+docs/models-and-costs.md  the model-selection decision (haiku-4-5 / gpt-5.4-mini) + price table rationale
 Directory.Build.props     shared MSBuild props; GameFolder points at the Bannerlord install
 ```
 
@@ -133,7 +133,9 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
-- **Anthropic is the default backend**, model `claude-opus-4-8`. Clients use raw `HttpClient`
+- **Anthropic is the default backend**, model `claude-haiku-4-5` (2026.07.13, price-matched to
+  the OpenAI default gpt-5.4-mini after live play priced opus-4-8 at ~3¢/exchange; the MCM
+  dropdown offers sonnet-5 / opus-4-8 / fable-5 as the step-ups). Clients use raw `HttpClient`
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
   Both clients also implement `IToolChatClient` (native tool/function calling — the recall);
   plain `IChatClient` stays the base so test fakes and simple calls remain untouched. Once a
@@ -317,8 +319,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   letter); prices per MTok from `ModelPrices` (longest-key match, editable), daily counter persists in
   usage.json so `MaxDailyRequests` (0 = off) survives restarts — at the cap clients throw plainly and
   autonomous rolls skip; the odds view ends with the session/day summary),
-  `OpenAIReasoningEffort` (default "low"; gpt-5.x/o-series get `max_completion_tokens` +
-  `reasoning_effort` instead of `max_tokens` — REQUIRED or gpt-5.6 400s; OpenAI default model is now
+  **reasoning is OFF everywhere, hardcoded** (2026.07.13, Anton's call after Opus NPCs answered "..."
+  — silent thinking ate the spoken budget/time: OpenAI clients send `reasoning_effort: "none"`,
+  Anthropic sends `thinking: {"type":"disabled"}` EXPLICITLY — sonnet-5 thinks by default when the
+  field is omitted — except fable/mythos where explicit disabled is a hard 400 and the field stays
+  omitted; the old `OpenAIReasoningEffort` config key is gone and ignored on load, no MCM dial;
+  gpt-5.x/o-series still get `max_completion_tokens` instead of `max_tokens` — REQUIRED or gpt-5.6
+  400s; OpenAI default model is now
   gpt-5.4-mini for fresh configs (2026.07.12, settled by live play after terra → luna both stumbled on
   access-propagation 401s; the MCM dropdown offers 5.4-mini/luna/terra/sol/5.5/5.4/5.4-nano — NO 5.5
   mini/nano exist; older models live on as config.json hand edits), existing configs deliberately

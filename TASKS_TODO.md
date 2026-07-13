@@ -16,9 +16,10 @@ MUST BE DONE FOR V1 RELEASE:
 POST V1 or NOT FULLY DECIDED:
 - [ ] OpenAI /v1/responses migration
     the chat-completions endpoint refuses function tools + reasoning together on gpt-5.6 (hit live
-    2026.07.12), so tool-carrying replies run at reasoning "none" for now; the /v1/responses API
-    lifts that limit (reasoning WITH tools) and is OpenAI's forward path — a contained rework of
-    OpenAIChatClient's payload/response shapes when it's worth it.
+    2026.07.12); the /v1/responses API lifts that limit and is OpenAI's forward path — a contained
+    rework of OpenAIChatClient's payload/response shapes when it's worth it. NOTE 2026.07.13:
+    reasoning was removed entirely on every backend (Anton's call — thinking NPCs answered "...");
+    this task only matters if reasoning ever comes back, so it is parked deeper.
 - [ ] Utility model split (cost saving)
     a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
     desire yes/no, search refining — cuts roughly a third of cost; parked until the ledger's real

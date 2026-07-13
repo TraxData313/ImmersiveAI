@@ -87,10 +87,10 @@ namespace ImmersiveAI
 
             var msg = ex.Message ?? string.Empty;
 
-            // A reasoning model that spent its whole token budget thinking before it could speak
-            // (the client adds headroom for this, so seeing it means an extreme effort/budget mix).
+            // A model that spent its whole token budget before it could speak (reasoning is sent
+            // OFF everywhere since 2026.07.13, so seeing this means MaxTokens is set very low).
             if (Mentions(msg, "max_tokens or model output limit"))
-                return "the model spent its whole token budget thinking before it could answer. Raise MaxTokens or lower OpenAIReasoningEffort in " + configPath + ", then restart the game.";
+                return "the model ran out of token budget before it could answer. Raise MaxTokens in " + configPath + ", then restart the game.";
 
             // OpenAI's "insufficient permissions" is a VALID key that may not use the asked-for
             // model (project model-access list, restricted key scopes, or an unverified org) —

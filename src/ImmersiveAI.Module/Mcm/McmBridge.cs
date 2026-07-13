@@ -77,7 +77,6 @@ namespace ImmersiveAI.Mcm
             SelectOrAdd(s.AnthropicModel, c.AnthropicModel);
             s.OpenAIApiKey = c.OpenAIApiKey ?? string.Empty;
             SelectOrAdd(s.OpenAIModel, c.OpenAIModel);
-            SelectOrAdd(s.OpenAIReasoningEffort, c.OpenAIReasoningEffort);
             s.MaxTokens = Clamp(c.MaxTokens, 100, 2000);
 
             s.EnableChatWindow = c.EnableChatWindow;
@@ -108,7 +107,6 @@ namespace ImmersiveAI.Mcm
             c.AnthropicModel = s.AnthropicModel.SelectedValue ?? c.AnthropicModel;
             c.OpenAIApiKey = s.OpenAIApiKey ?? string.Empty;
             c.OpenAIModel = s.OpenAIModel.SelectedValue ?? c.OpenAIModel;
-            c.OpenAIReasoningEffort = s.OpenAIReasoningEffort.SelectedValue ?? c.OpenAIReasoningEffort;
             c.MaxTokens = s.MaxTokens;
 
             c.EnableChatWindow = s.EnableChatWindow;

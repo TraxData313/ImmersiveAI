@@ -23,19 +23,17 @@ namespace ImmersiveAI.Llm
         private readonly string _apiKey;
         private readonly string _model;
         private readonly int _maxTokens;
-        private readonly string _reasoningEffort;
 
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
-        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? reasoningEffort = null)
+        public OpenAIChatClient(string apiKey, string model, int maxTokens)
         {
             _apiKey = apiKey ?? "";
             _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.4-mini" : model;
             _maxTokens = maxTokens > 0 ? maxTokens : 400;
-            _reasoningEffort = (reasoningEffort ?? string.Empty).Trim();
         }
 
         // The gpt-5.x family and the o-series reject the classic max_tokens in favor of
@@ -46,24 +44,6 @@ namespace ImmersiveAI.Llm
             || _model.StartsWith("o1", StringComparison.OrdinalIgnoreCase)
             || _model.StartsWith("o3", StringComparison.OrdinalIgnoreCase)
             || _model.StartsWith("o4", StringComparison.OrdinalIgnoreCase);
-
-        // Reasoning models spend their THINKING against max_completion_tokens too, so the
-        // configured MaxTokens (meant as the spoken reply's budget) gets headroom on top —
-        // otherwise a small budget dies mid-thought with "Could not finish the message"
-        // (2026.07.12, found by the 16-token health-check ping killing gpt-5.6-terra).
-        private int EffectiveMaxTokens(string effort)
-        {
-            if (!IsReasoningFamily) return _maxTokens;
-            switch (effort)
-            {
-                case "none": return _maxTokens;
-                case "minimal":
-                case "low": return _maxTokens + 512;
-                case "medium":
-                case "": return _maxTokens + 1024;  // "" lets the API pick; give it medium's room
-                default: return _maxTokens + 2048;  // high / xhigh / max think long
-            }
-        }
 
         public async Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
         {
@@ -93,22 +73,19 @@ namespace ImmersiveAI.Llm
             if (!UsageLedger.CanCall(out var capReason))
                 throw new InvalidOperationException(capReason);
 
-            // gpt-5.6 on chat completions refuses function tools + reasoning together (live error,
-            // 2026.07.12: "Function tools with reasoning_effort are not supported… use /v1/responses
-            // or set reasoning_effort to 'none'"). Migrating to /v1/responses is a post-V1 task;
-            // until then every tool-carrying call rides at 'none' and plain calls (the feeling
-            // number, yes/no desires, search refining) keep the configured effort.
-            var effort = _reasoningEffort;
-            if (tools != null && tools.Count > 0) effort = "none";
-
+            // Reasoning is OFF for good (2026.07.13, Anton's call): silent thinking spends billed
+            // tokens against the reply's budget and slows every answer — an NPC that "thinks" too
+            // long answers with silence. "none" is sent explicitly because omitting the dial lets
+            // the API default to reasoning. (It also sidesteps gpt-5.6's refusal to combine
+            // function tools with reasoning on chat completions, hit live 2026.07.12.)
             var payload = new JObject
             {
                 ["model"] = _model,
-                [IsReasoningFamily ? "max_completion_tokens" : "max_tokens"] = EffectiveMaxTokens(effort),
+                [IsReasoningFamily ? "max_completion_tokens" : "max_tokens"] = _maxTokens,
                 ["messages"] = BuildTurns(messages),
             };
-            if (IsReasoningFamily && effort.Length > 0)
-                payload["reasoning_effort"] = effort;
+            if (IsReasoningFamily)
+                payload["reasoning_effort"] = "none";
 
             if (tools != null && tools.Count > 0)
             {

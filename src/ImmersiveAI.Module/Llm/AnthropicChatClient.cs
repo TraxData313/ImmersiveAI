@@ -42,7 +42,7 @@ namespace ImmersiveAI.Llm
         public AnthropicChatClient(string apiKey, string model, int maxTokens)
         {
             _apiKey = apiKey ?? "";
-            _model = string.IsNullOrWhiteSpace(model) ? "claude-opus-4-8" : model;
+            _model = string.IsNullOrWhiteSpace(model) ? "claude-haiku-4-5" : model;
             _maxTokens = maxTokens > 0 ? maxTokens : 400;
         }
 
@@ -83,6 +83,15 @@ namespace ImmersiveAI.Llm
                 ["messages"] = BuildTurns(messages),
             };
             if (system.Length > 0) payload["system"] = system;
+
+            // Thinking is explicitly OFF (2026.07.13, Anton's call): silent reasoning spends the
+            // spoken reply's small token budget and slows the answer — the NPC "thinks" and the
+            // player gets "...". Explicit, not omitted, because sonnet-5 runs ADAPTIVE thinking by
+            // default when the field is absent. Fable/Mythos are the one exception: thinking is
+            // always on there and an explicit "disabled" is a hard 400, so they keep the omission.
+            if (_model.IndexOf("fable", StringComparison.OrdinalIgnoreCase) < 0
+                && _model.IndexOf("mythos", StringComparison.OrdinalIgnoreCase) < 0)
+                payload["thinking"] = new JObject { ["type"] = "disabled" };
 
             if (tools != null && tools.Count > 0)
             {

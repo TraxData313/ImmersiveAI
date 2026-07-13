@@ -71,7 +71,7 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
-- **Anthropic is the default backend**, model `Codex-opus-4-8`. Clients use raw `HttpClient`
+- **Anthropic is the default backend**, model `claude-haiku-4-5`. Clients use raw `HttpClient`
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
 - **Async LLM calls never touch UI directly.** Background results are queued via
   `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`.

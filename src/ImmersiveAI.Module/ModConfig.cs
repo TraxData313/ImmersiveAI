@@ -19,21 +19,15 @@ namespace ImmersiveAI
         public string Backend { get; set; } = "Anthropic"; // "Anthropic" or "OpenAI"
 
         public string AnthropicApiKey { get; set; } = "";
-        public string AnthropicModel { get; set; } = "claude-opus-4-8";
+        public string AnthropicModel { get; set; } = "claude-haiku-4-5";
 
         public string OpenAIApiKey { get; set; } = "";
         public string OpenAIModel { get; set; } = "gpt-5.4-mini";
 
-        /// <summary>How hard OpenAI's reasoning models (gpt-5.x and the o-series) think before
-        /// speaking: "none", "minimal", "low", "medium", "high", "xhigh", or "max". Applies to
-        /// the calls that carry NO tools (the feeling number, yes/no desires, search refining);
-        /// tool-carrying replies are forced to "none" automatically — OpenAI's chat API refuses
-        /// function tools + reasoning together (their /v1/responses API would lift this; post-V1).
-        /// Reasoning spends extra (billed) output tokens, and the thinking counts against the
-        /// API's token budget, so the client quietly adds effort-scaled headroom on top of
-        /// <see cref="MaxTokens"/> — MaxTokens stays the SPOKEN reply's budget. Ignored for
-        /// models without the dial (gpt-4o and older). Empty = let the API default.</summary>
-        public string OpenAIReasoningEffort { get; set; } = "low";
+        // NOTE (2026.07.13): reasoning/thinking is switched OFF for good on every model — the
+        // clients send OpenAI reasoning_effort "none" and Anthropic thinking "disabled" themselves.
+        // Silent thinking spent the reply's token budget and the NPC answered with "...". The old
+        // OpenAIReasoningEffort key in existing config.json files is simply ignored on load.
 
         public int MaxTokens { get; set; } = 400;
 
@@ -508,13 +502,6 @@ namespace ImmersiveAI
             if (ConfigVersion < 1) ConfigVersion = 1;
 
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
-
-            // The reasoning dial only knows these words; a typo falls back to the calm default.
-            var effort = (OpenAIReasoningEffort ?? string.Empty).Trim().ToLowerInvariant();
-            OpenAIReasoningEffort = effort == "" || effort == "none" || effort == "minimal" || effort == "low"
-                || effort == "medium" || effort == "high" || effort == "xhigh" || effort == "max"
-                ? effort
-                : "low";
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;

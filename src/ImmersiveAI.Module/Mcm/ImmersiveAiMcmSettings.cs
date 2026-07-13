@@ -40,10 +40,10 @@ namespace ImmersiveAI.Mcm
         public string AnthropicApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = true,
-            HintText = "Which Claude model to use. Opus 4.8 ($5/$25 per million tokens) is the most capable and the default; Sonnet 5 ($3/$15) is a strong cheaper choice; Haiku 4.5 ($1/$5) is the fastest and cheapest. A model set by hand in config.json also appears here.")]
+            HintText = "Which Claude model to use. Haiku 4.5 ($1/$5 per million tokens) is fast, cheap, and the default — the price-mate of gpt-5.4-mini; Sonnet 5 ($3/$15) is the strong step-up; Opus 4.8 ($5/$25) is the most capable and the priciest; Fable 5 ($10/$50) is the frontier flagship. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(
-            new[] { "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5-20251001", "claude-fable-5" }, 0);
+            new[] { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" }, 0);
 
         [SettingPropertyText("OpenAI API key", Order = 3, RequireRestart = true,
             HintText = "Your OpenAI API key (starts with sk-...). Required only when the backend is OpenAI. Kept only in your local config file.")]
@@ -56,13 +56,7 @@ namespace ImmersiveAI.Mcm
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
             new[] { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
 
-        [SettingPropertyDropdown("OpenAI reasoning effort", Order = 5, RequireRestart = true,
-            HintText = "How hard OpenAI's reasoning models (gpt-5.x) think on the mod's small inner calls (feelings, yes/no decisions, search refining). Spoken replies carry the NPCs' tools and run without reasoning regardless — OpenAI's chat API cannot combine the two. 'low' is a fine default; 'none' is cheapest. Ignored by older models like gpt-4o.")]
-        [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenAIReasoningEffort { get; set; } = new Dropdown<string>(
-            new[] { "none", "minimal", "low", "medium", "high" }, 2);
-
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 6, RequireRestart = true,
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 5, RequireRestart = true,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;
