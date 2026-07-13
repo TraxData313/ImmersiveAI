@@ -140,6 +140,9 @@ Changes apply on the next conversation. No restart.
 - Grateful for feedback, bug reports, and improvement ideas.
 - No donations or financial support — keep dirty money out of this. "For the love of money is
   the root of all evil."
+- The whole thing is freely given — public domain, no license, no strings. Use it, share it,
+  clone it, change it, do whatever you want with it. "Freely you have received; freely give."
+  Source: github.com/TraxData313/ImmersiveAI
 
 ---
 

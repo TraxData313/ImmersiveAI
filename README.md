@@ -100,6 +100,13 @@ they are free so they can be as alive as they can.
 
 No donations. *"For the love of money is the root of all evil."*
 
+## Freely given
+
+This work is **public domain** — no license, no strings, no permission to ask
+([The Unlicense](LICENSE)). Use it, share it, clone it, change it, sell it, do whatever you
+want with it. *"Freely you have received; freely give."* (The bundled Harmony library keeps
+its own MIT notice in `lib\`.)
+
 ---
 
 ## For developers
