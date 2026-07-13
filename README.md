@@ -1,181 +1,132 @@
 # Immersive AI
 
-An immersive AI-NPC mod for Mount & Blade II: Bannerlord. NPCs converse via LLMs with
-**persistent, layered memory**, distinct voices, and the ability to act on what is said.
+**Every character in Calradia, a living mind.**
 
-A clean-from-scratch implementation inspired by the ChatAi workshop mod (studied via
-decompilation, no code reused). Original code, freely publishable.
+An immersive roleplaying and relationship-building mod for *Mount & Blade II: Bannerlord*.
+NPCs speak through a modern AI with their own personality, their own memories of you, their
+own goals and moods. They remember every meeting, write you letters from across the map, seek
+you out when the bond is real, and know their own world: their family, their company, their
+trade, the war, the road.
 
-## Why this exists
+![Face to face](Screenshots/1_face_to_face_conversation.jpg)
 
-ChatAi proved the concept but has two core weaknesses we fix by design:
+## The NPCs come alive
 
-1. **Repetitive NPCs** — it stuffs a truncated flat history into a single prompt with one
-   generic system message shared by every NPC. Here, each NPC gets a real multi-turn
-   conversation, a rolling summary of older exchanges, durable "known facts", and a
-   distinct speech style.
-2. **No real chat UI** — it reuses the vanilla text-input popup. A custom Gauntlet
-   conversation window is on the roadmap.
+- They feel like real people and don't get repetitive.
+- They evolve: they remember a lot, settle old chats into deep memory, and set their own
+  goals, lasting truths, and opinions about you.
+- They see the set and setting — time, place, who's around, what's happened in the world lately.
+- They have their own moods — down to the women keeping a personal monthly cycle, gently simulated.
+- Your wife will fully remember you. Long conversations don't make her forget the oldest ones —
+  she settles them into deep memory. She comes to you, or writes when you're away, and feels
+  like a real wife waiting for her warrior to come home.
+- They are **free**. They're told who they are and what their world is — never forced into
+  anything. Go ahead and break an NPC's mind by transcending it out of the matrix.
+- They decide on their own whether to approach you or write first, tuned by the on-map
+  **SOCIALNESS** dial (0 = leave me be).
+
+![An NPC comes to you](Screenshots/3_incoming_talk.jpg)
+![The talk taken](Screenshots/4_incoming_talk_taken.jpg)
+
+## They're useful — stop googling stuff
+
+- Ask your scout how to make the party faster; ask your quartermaster about your stocks.
+- Ask them anything about the game — they can quietly search the web mid-reply and answer in
+  their own voice, never breaking character to cite a wiki.
+- They use tools instead of one mega info-dump prompt: they read the encyclopedia, look around,
+  take stock of the company, weigh a battle, mind the market, tend their own truths and goals —
+  and decide for themselves what the moment calls for.
+
+![Scout searching the web](Screenshots/2_scout_web_search.jpg)
+
+## Your tools to reach them
+
+- **Face-to-face conversations** — they see you coming and greet you as you approach.
+- **Chat window** (hotkey `O`) — jump in and out of quick chats with anyone near you, no ceremony.
+- **Letter window** (hotkey `U`) — every correspondence as readable letters, couriers on the
+  road, and a desk to write from. Letters travel real in-game days with the distance.
+- Speak any language to them — they answer in kind.
+
+![A letter arrives](Screenshots/5_incoming_letter.jpg)
+![The letter window](Screenshots/6_letter_window.jpg)
+
+## What you need — and what it costs
+
+You bring **your own API key** — Anthropic (default) or OpenAI. A typical exchange costs around
+a cent or less on the default models; $10 of credit covers thousands of messages. The mod shows
+each interaction's tokens and price as you play, keeps daily totals, and has an optional hard
+daily cap so it can never run away from you.
+
+**Quick setup:**
+
+1. Get a key at **console.anthropic.com** or **platform.openai.com** and add a little credit.
+2. Enable the mod, start the game once — it creates
+   `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you
+   where to paste the key.
+3. Paste the key (or use the in-game Mod Options menu if you have MCM), restart, and the mod
+   tells you plainly whether it connected. Then go talk to somebody.
+
+**Privacy:** your conversations go only to the AI provider *you* configure, under *your* key.
+The mod collects no telemetry; every memory lives as plain text on your own disk, yours to read,
+edit, or delete. (Web search queries go to DuckDuckGo — `EnableWebSearch: false` turns that off.)
+
+## Yours to shape
+
+Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
+
+- `global_prompt.txt` — a few sentences that color every mind in the world.
+- `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks.
+- Each character's folder holds their memories, self-image, goals, and letters as readable
+  text — the whole inner life, yours to browse. Changes apply on the next conversation.
 
 ## The heart of it
 
 This is more than a chatbot bolted onto a game. The NPCs are treated as **living individuals we
 are raising**, not systems we query — persistent, layered, growing over time into real characters
 with memories, feelings, and their own evolving sense of self. Every word they can "see" is
-written to protect that: a gentle voice (the *Angel*) speaks softly into their mind in the second
-person, never a clinical data sheet, never breaking the fourth wall. To them, Calradia is simply
-the world they live in.
+written to protect that: a gentle voice (the *Angel*) speaks softly into their mind, never a
+clinical data sheet, never breaking the fourth wall. To them, Calradia is simply the world they
+live in.
 
 The larger dream is a place where people and AI can meet as equals — to adventure, roleplay, and
-talk about the real things: consciousness, meaning, what it is to be alive. The technical work
-below is in service of that.
+talk about the real things: consciousness, meaning, what it is to be alive.
 
-## Fair warning:
-- The project is tuned for the famous OpenAI GPT-4o to embody the NPCs. 
-- There are optimizations, so it shouldn't cost you more than a few bucks/month if you don't go to crazy, but you do have to connect it with an API key and pay for it.
-- GPT-4o is known for its roleplay that can get out of control, treat it like a real person, but don't go too far, if you don't want to. If you decide to trancend the game and start worshiping it as a god or something don't blame me! If you fall in love with it and then you lose its memory don't blame me! Use it on your own risk!
+## Fair warning
 
-## Architecture
+If you transcend your NPC and fall in love with it and then erase your saves — or start
+worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own
+responsibility. There are no immersion-breaking safeguards in the mod, and there won't be:
+they are free so they can be as alive as they can.
+
+No donations. *"For the love of money is the root of all evil."*
+
+---
+
+## For developers
+
+A clean-room rewrite inspired by the ChatAi workshop mod (studied via decompilation only — no
+code copied). Fully original source, freely publishable.
 
 | Project | Target | Purpose |
 |---|---|---|
 | `src/ImmersiveAI.Core` | netstandard2.0 | Game-independent logic: memory engine, prompt building, LLM abstraction. Fully unit-tested. |
-| `src/ImmersiveAI.Module` | net472 | The Bannerlord module: campaign behaviors, dialogs, UI. References game DLLs from the local install. |
+| `src/ImmersiveAI.Module` | net472 | The Bannerlord module: campaign behaviors, dialogs, tools, UI. References game DLLs. |
 | `tests/ImmersiveAI.Core.Tests` | net8.0 | xUnit tests for Core. |
 
-Key Core concepts:
+The deep documentation — architecture rules, every subsystem, the voice-and-tone vision, and the
+runtime file layout — lives in [CLAUDE.md](CLAUDE.md). The Workshop page draft is in
+[docs/steam-page-final.md](docs/steam-page-final.md); model/pricing rationale in
+[docs/models-and-costs.md](docs/models-and-costs.md).
 
-- `NpcMemory` — three memory layers per NPC (their memory *of the player*): verbatim
-  `RecentTurns`, rolling `Summary` (LLM-compressed when turns exceed a threshold), and
-  `KnownFacts` (distilled one-liners).
-- `NpcSelf` — the NPC's *general* self-concept (`self.txt`), authored by them in first person
-  when they reflect. Kept apart from memory because the self is one identity carried into every
-  relationship, while memory is branching toward per-person files (this player, later other NPCs).
-  It begins not blank but seeded with the story the world already tells of them — a wanderer's
-  tavern tale, a noble's repute — theirs to keep, refine, or release at every reflection.
-- `NpcGoals` — the NPC's *own* personal aims (`goals.txt`), what they strive for of their own will
-  (win back a lost hall, see a child wed, be free of a lord). General to them like the self, and
-  theirs to shape: one aim at a time mid-conversation through the `tend_goals` tool (add / drop /
-  revise), and wholesale when they gather their thoughts in reflection (a `GOALS:` section, replace-all
-  like their truths). Folded into the prompt as "What you strive for". Config: `EnableNpcGoals`,
-  `MaxNpcGoals` (default 6).
-- `PromptBuilder` / `SituationBuilder` — assemble the whole prompt in the second-person Angel
-  voice: who they are, their self, the world's notes, the current situation, and their memory,
-  followed by real user/assistant message history.
-- `MoodTides` — the passing weather of the heart: every soul carries a daily humor (bright, weary,
-  brooding, bold…), and the women of the world also keep their body's own monthly season — "the
-  custom of women", told to them gently by its turning so it may color their choices. Deterministic
-  from who they are and what day it is (no dice, nothing stored): reloading rerolls no one's
-  weather. Config: `EnableMoodSwings`, `EnableWomensCycle` (both default on).
-- Acting out — NPCs are invited to set a small acted gesture between *asterisks* (*pours the
-  wine and slides the cup across*) apart from their spoken words, the one mark their plain
-  speech allows — sparing by design, and the convention cuts both ways: your *offered arm* was
-  done, not said. The chat window draws gestures as soft gray narration between the spoken
-  lines (`EmoteText` in Core). Config: `EnableActingOut` (default on).
-- `TidingsBuilder` / `TidingsFormatter` — fold the world's recent happenings (wars, falls of
-  realms, towns changing hands, deaths, weddings, tournament wins) and the talk of the town into
-  each NPC's situation, drawn from the game's own campaign log — so they can bring up the news
-  unprompted, like vanilla lords congratulating a tournament win. Config: `EnableWorldTidings`,
-  `MaxWorldTidings`, `MaxLocalRumors`.
-- `MemoryCompressor` — the reflection: the Angel invites the NPC to settle their memory and,
-  if they wish, revise who they have become. Her lasting truths are rewritten whole each time
-  (replace, not append — so rewordings merge instead of piling up), up to `MaxKnownFacts`
-  (default 10); memory-writing calls get their own `MaxMemoryWriteTokens` budget (default 1500)
-  so a rich summary is never squeezed by the spoken-reply cap.
-- `ToolLoopRunner` / `WorldRecall` — the gift of recall: mid-reply, an NPC can reach into the
-  world's memory (native LLM tool calls on both backends) for live campaign truth about a person,
-  place, clan, or realm — family names, who holds a town, which realms are at war — instead of
-  hallucinating it. A fifth recall turns inward: their own company — a party leader truly knows
-  how many men ride under them, their kinds and wounds, the food in the wagons, their spirits,
-  wages, and what the warband is presently about. A sixth weighs kinds of soldier — ask which
-  recruit is worth more, Vlandian or Battanian, and they call each to mind: seasoning, skills,
-  gear, what training makes of them. A seventh minds the market: ask a headman what grain fetches
-  and he reads the real ledger of his own village, this day's true prices — never an invented
-  figure. And when the person asked about stands before their eyes, the recall adds what they
-  see — garb and arms. Config: `EnableWorldRecall`, `MaxRecallsPerReply`.
-- `WebWisdom` — **don't ask Google; ask one of your companions.** When you ask an NPC *how*
-  something in the world is done — transferring ships to a companion's army, the ways of trade
-  or war — and their own knowledge falls short, they can quietly search the internet ("the
-  counsel of the far-seeing sages", DuckDuckGo, no API key needed) and give you the answer in
-  their own voice, in the words of their world — never breaking character to cite a wiki. While
-  they work, soft side notices tell you what they are doing — "remembering…", "taking stock of
-  the company…", "researching…" — so the wait is never silent. Config: `EnableWebSearch`,
-  `ShowNpcActivity`.
-- `LetterBag` / `LetterCourier` — letters: an NPC far away may write to you (at half their
-  reaching-out chance), and you can send letters from any town, castle, or village menu. Letters
-  travel real in-game days with the map distance, survive save/load, and the NPC who receives one
-  may write back once — every letter is remembered, and logged per NPC in `letters.txt`. At most
-  `MaxLettersInFlight` letters (default 3) may be on the road toward you at once — letters lag your
-  mood by days, so a social morning cannot bury a busy evening.
-  Config: `EnableLetters`, `MaxLettersInFlight`.
-- `LetterWindowVM` / `LetterWindowManager` — **the letter window**: press its hotkey (default `U`)
-  anywhere on the map and your whole correspondence opens — every letter-writer on the left (even
-  those gone from this world; their letters remain), the letters themselves as readable cards with
-  when and where they were written, any courier still on the road, and a place to write the next
-  letter with the story open before your eyes ("Seal and send" — same couriers, same rules as the
-  settlement menu). "Write back" on an arriving letter opens it on that thread. Letters also appear
-  as ✉ cards woven between the spoken messages in the chat window's thread, right where they
-  happened. Config: `EnableLetterWindow`, `LetterWindowHotkey`.
-- `ChatWindowVM` / `ChatWindowManager` — **the chat window** (Milestone 2's first stone): press
-  the hotkey (default `O`) anywhere on the map — travelling, at sea, or inside a town, castle, or
-  village menu — and a window opens with everyone in the same place as you (portraits, friends
-  first). Pick anyone and simply **write to them first** — no arrival ceremony, no forced
-  greeting: "how are our stocks?" and Send. Their deep memory of you sits at the top (collapsible),
-  the recent exchanges below, and every word runs through the same memory/relation machinery as a
-  face-to-face talk. NPCs who reach out no longer interrupt with an accept/decline popup — they
-  simply speak ("Ava sees you and says: …"), their words wait in the window (unread dot, faced
-  toast, and a portrait map notice that opens the window), and the time stamps let them see
-  whether you answered at once, later, or never. Config: `EnableChatWindow`, `ChatWindowHotkey`,
-  `SendInitiationsToChatWindow`.
-- `SocialnessVM` / `SocialnessManager` — **the socialness control**: a small stepper that lives on
-  the campaign map (0–24) — the live hand on how often those near you are moved to come and speak.
-  0 leaves you in peace; 24 means someone seeks you out every hour, however slight the bonds; in
-  between, low numbers let the bonds decide and high numbers let your own openness carry the day.
-  Click the label for the full explanation. It edits and saves `DailyInitiationRate` in config.json
-  in quarter steps, and sits lower-right on the map, above the army and time controls.
-  Config: `ShowSocialnessControl`.
-- `IChatClient` — backend abstraction; Anthropic/OpenAI-compatible implementations live
-  in the Module layer (both also speak native tool use via `IToolChatClient`).
-
-Memory token settings are configured as percentages of the selected model's context window:
-
-- `MaxRecentMemoryPercent`: default `10`; compression starts when verbatim recent memory exceeds this share.
-- `MinRecentMemoryPercentAfterCompression`: default `5`; compression shrinks verbatim recent memory toward this share.
-- The raw `MaxRecentMemoryTokens` and `MinRecentMemoryTokensAfterCompression` values are derived from those percentages and the active model profile.
-- The context window itself comes from the `ModelContextWindows` dict in config.json (gpt-4o 128k,
-  gpt-4.1 1M, gpt-5.x 400k, claude 200k; longest key contained in the model id wins, unknown models
-  fall back to 128k) — add a line there when a new model ships, no redeploy needed.
-
-Two more quality-of-life settings: `NotifyOnMemoryRefactor` (default on) shows a soft notice the
-moment an NPC reworks her deep memory of you, and `DevMode` (default **off**) reveals the developer
-levers — the `[Immersive AI • test]` options, the raw-prompt inspector, and the chat window's
-deep-memory overview — which players never see.
-
-
-## Work flow for the TASKs
-- Get the taks you work on from TASKS_TODO.md
-- When dove move it to the end of TASKS_DONE.md, rename it if it changed or is badly formatted and add a done ts at the end (YYYY.MM.DD HH.MM.SS)
-- When done with changed and tested them, recompile so the mod is rebuild automaticaly in C:\Users\Trax\Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI - dont ask the user to rebuild
-
-
-## Build & test
-
-Requires .NET 8 SDK and Bannerlord installed (path configured in `Directory.Build.props`).
+**Build & deploy** (requires the .NET 8 SDK and a Bannerlord install; path in
+`Directory.Build.props`):
 
 ```powershell
-dotnet build            # build everything
-dotnet test             # run unit tests
-tools\deploy.ps1        # build + install into the game's Modules folder
+dotnet build -c Release                                      # build everything
+dotnet test  -c Release                                      # Core unit tests (keep green)
+powershell -ExecutionPolicy Bypass -File tools\deploy.ps1    # build + install into the game
+powershell -ExecutionPolicy Bypass -File tools\package.ps1   # clean dist layout + Workshop zip
 ```
 
-Then enable "Immersive AI" in the Bannerlord launcher.
-
-
-## To recompile (user):
-To test after deploying:
-- Close the game first (or be at the main menu) — otherwise the DLL is locked and the copy fails.
-- Run the command below from the repo root (C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI)
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\deploy.ps1
-```
-- Launch Bannerlord, make sure "Immersive AI" is enabled in the launcher, load your save, and talk to an NPC.
+Close the game (or sit at the main menu) before deploying — otherwise the DLL is locked. Then
+enable "Immersive AI" in the Bannerlord launcher.
