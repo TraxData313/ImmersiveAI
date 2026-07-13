@@ -138,6 +138,47 @@ public class ToolLoopRunnerTests
     }
 
     [Fact]
+    public async Task WordsSpokenBesideTheToolCall_SurviveASilentFinalRound()
+    {
+        // Haiku's habit: the greeting rides IN the same round as move_heart, and the forced
+        // final round has nothing left to say. The spoken words must not be dropped for "".
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("Well met, battle brother.",
+            new[] { new ToolCall("c1", "recall_person", "{\"name\":\"Vulgrim\"}") }));
+        client.Script.Enqueue(new ChatResult("   "));
+
+        var text = await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("r"));
+
+        Assert.Equal("Well met, battle brother.", text);
+    }
+
+    [Fact]
+    public async Task AFinalRoundThatSpeaks_StillWinsOverEarlierWords()
+    {
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("Hmm, let me think on her.",
+            new[] { new ToolCall("c1", "recall_person", "{\"name\":\"Rhagaea\"}") }));
+        client.Script.Enqueue(new ChatResult("She is the empress."));
+
+        var text = await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("r"));
+
+        Assert.Equal("She is the empress.", text);
+    }
+
+    [Fact]
+    public async Task SilenceInEveryRound_StaysAnHonestEmpty()
+    {
+        // If no round ever spoke, the caller's own "..." fallback should tell the truth.
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("", new[] { new ToolCall("c1", "recall_person", "{}") }));
+        client.Script.Enqueue(new ChatResult(""));
+
+        var text = await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("r"));
+
+        Assert.Equal("", text);
+    }
+
+    [Fact]
     public async Task CallerMessagesAreNotMutated()
     {
         var client = new ScriptedToolClient();

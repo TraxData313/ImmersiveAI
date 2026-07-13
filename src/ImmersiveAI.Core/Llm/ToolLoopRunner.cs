@@ -34,6 +34,10 @@ namespace ImmersiveAI.Core.Llm
             }
 
             var working = new List<ChatMessage>(messages);
+            // Some models speak their words IN the tool-calling round and stay silent in the
+            // forced final one (haiku beside move_heart — the "..." greeting, 2026.07.13).
+            // Those words are the real reply; keep the latest and use them if the end is silence.
+            string spokenAlongTheWay = "";
             for (int round = 0; ; round++)
             {
                 bool allowToolUse = round < maxToolRounds;
@@ -42,7 +46,10 @@ namespace ImmersiveAI.Core.Llm
                     .ConfigureAwait(false);
 
                 if (!result.WantsTools || !allowToolUse)
-                    return result.Text;
+                    return string.IsNullOrWhiteSpace(result.Text) ? spokenAlongTheWay : result.Text;
+
+                if (!string.IsNullOrWhiteSpace(result.Text))
+                    spokenAlongTheWay = result.Text;
 
                 working.Add(ChatMessage.AssistantToolCalls(result.Text, result.ToolCalls));
                 foreach (var call in result.ToolCalls)
