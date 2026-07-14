@@ -79,6 +79,14 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - Each character's folder holds their memories, self-image, goals, and letters as readable
   text — the whole inner life, yours to browse. Changes apply on the next conversation.
 
+**Where things live:** the mod's own files sit wherever you installed it — a Workshop subscribe
+puts them under `steamapps\workshop\content\261550\3764210301` in your Steam folder (not in the
+game's Modules folder), and Steam replaces them on every update. Everything *yours* — the key,
+the memories, the letters — stays in the `Configs\ImmersiveAI` folder above, which uninstalling
+never touches: unsubscribe and resubscribe, and every character still remembers you. It does
+**not** sync between PCs, though (Steam Cloud carries saves, not this folder) — to move
+machines, copy the folder yourself, and mind that `config.json` inside carries your API key.
+
 ## The heart of it
 
 This is more than a chatbot bolted onto a game. The NPCs are treated as **living individuals we

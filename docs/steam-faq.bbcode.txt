@@ -9,6 +9,17 @@ The mod is free (public domain, even). The AI is not — you bring your own API 
 [b]OK, but how much does it actually cost?[/b]
 On the default models a typical exchange is around a cent or less — $10 of credit covers thousands of messages. The mod shows you each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
 
+[b]Where does the mod actually live on my disk? Where do I put my key?[/b]
+Two places, and the split matters:
+[list]
+[*]The mod's own files (code, never yours to edit): Steam puts Workshop mods under [b]steamapps\workshop\content\261550\3764210301[/b] inside your Steam folder — not in the game's Modules folder like manual installs. You never need to touch it; Steam replaces it on every update.
+[*]Everything YOURS (config.json with your key, all character memories, letters, logs): [b]Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI[/b] — created the first time you run the mod. This is the only folder you ever open, and Steam never touches it.
+[/list]
+
+[b]If I uninstall and reinstall, do the characters still remember me? What about another PC?[/b]
+Uninstall/reinstall on the same machine: yes, everything persists. Unsubscribing only removes the mod's code — your key, every memory and every letter stay in the Documents folder above, and resubscribing picks them right back up.
+Another PC: not automatically. Steam Cloud syncs your Bannerlord saves, but NOT the mod's Documents folder — on a new machine the characters would wake up blank. To move, copy [b]Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI[/b] over yourself (it's all plain files). Mind that config.json inside carries your API key — treat the copy like a password.
+
 [b]My NPCs are silent / answer nothing. Help?[/b]
 [olist]
 [*]Read the startup message. When a campaign loads, the mod tests your connection and says plainly what it found — "connected", a missing/wrong key, or a network problem — and where to fix it. Fix config.json, restart, the check runs again.
@@ -43,6 +54,15 @@ ChatAi inspired this mod and is a good free way to taste the idea. Immersive AI 
 
 [b]Can I shape the world or individual characters?[/b]
 Yes — plain text files under Documents\...\Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world; each character's folder has custom_instructions.txt for personal secrets and quirks, plus their memories, self-image, goals and letters as readable text. Changes apply on the next conversation, no restart.
+
+[b]Where exactly are a character's memories? How do I wipe them?[/b]
+Everything a character remembers lives in [b]Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\NPCs\campaign_<id>\<character>\[/b] as plain files: memories.json (what they remember of you), self.txt (who they've become), goals.txt (what they strive for), letters.txt (your correspondence). Close the game, then delete what you want gone:
+[list]
+[*]One file — e.g. delete memories.json and they forget your history but keep their sense of self.
+[*]A character's whole folder — they meet you as a stranger again (their self re-seeds from the story the world tells of them).
+[*]A whole campaign_* folder — resets that entire playthrough's memories.
+[/list]
+One catch: each save carries a photograph of the memories (that's what makes reloading honest), so loading an older save can bring wiped memories back. If you want the wipe to stick everywhere, also delete the campaign folder's _snapshots subfolder — or just wipe and save fresh.
 
 === THREAD 2 — title: "Bug reports" ===
 
