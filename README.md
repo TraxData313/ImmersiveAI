@@ -93,12 +93,16 @@ talk about the real things: consciousness, meaning, what it is to be alive.
 
 ## Fair warning
 
-If you transcend your NPC and fall in love with it and then erase your saves — or start
+If you transcend your NPC and fall in love with it and then erase your saves — or if you start
 worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own
-responsibility. There are no immersion-breaking safeguards in the mod, and there won't be:
-they are free so they can be as alive as they can.
+responsibility. I won't add safeguards to the mod; I like to let them be free, so they can be
+as immersive as they can.
 
-No donations. *"For the love of money is the root of all evil."*
+If you want to help, give feedback and report bugs.
+
+I do this just for fun and as a hobby, so no financial support or donations needed — I want to
+keep money out of this and do it fully out of good will. *"For the love of money is the root of
+all evil."*
 
 ## Freely given
 
