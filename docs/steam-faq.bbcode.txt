@@ -1,0 +1,63 @@
+Two Workshop discussion threads (item page -> Discussions -> Start a New Discussion, then pin).
+Same BBCode dialect as the description.
+
+=== THREAD 1 — title: "FAQ — read before asking" ===
+
+[b]Is it free?[/b]
+The mod is free (public domain, even). The AI is not — you bring your own API key (Anthropic by default, or OpenAI) and put a few bucks on it. No key, no talking NPCs. See the description for the five-minute setup.
+
+[b]OK, but how much does it actually cost?[/b]
+On the default models a typical exchange is around a cent or less — $10 of credit covers thousands of messages. The mod shows you each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
+
+[b]My NPCs are silent / answer nothing. Help?[/b]
+[olist]
+[*]Read the startup message. When a campaign loads, the mod tests your connection and says plainly what it found — "connected", a missing/wrong key, or a network problem — and where to fix it. Fix config.json, restart, the check runs again.
+[*]Check Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt — every call and every error, in plain words.
+[*]A wrong or dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Fix the key and everything comes back.
+[/olist]
+Still stuck? Post the last lines of log.txt in the Bug reports thread — the mod never logs your key.
+
+[b]Which model should I pick?[/b]
+The defaults (claude-haiku-4-5 / gpt-5.4-mini) are chosen to be cheap and good — start there. If you want deeper roleplay and don't mind paying a few cents per exchange, step up through the dropdown (sonnet, opus, fable on Anthropic). Any model id your provider serves can also be typed into config.json by hand.
+
+[b]Where do my conversations go? (privacy)[/b]
+To the AI provider YOU configured, under YOUR key and their terms — nowhere else. With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn EnableWebSearch off to keep everything between you and your provider. The mod itself collects no telemetry whatsoever. All memories are plain files on your own disk, yours to read, edit, or delete.
+
+[b]Can I add it to an existing campaign? Remove it mid-campaign?[/b]
+Yes and yes. Existing saves work. Removing is safe at any time — even a save carrying a pending Immersive AI notice loads fine without the mod (the game quietly discards it; you'll just see the usual "different modules" warning every modded save shows). Memories live outside the saves and survive either way — reinstall later and every character remembers you.
+
+[b]Why do my NPCs remember things a reload should have undone?[/b]
+They don't — each save photographs their memories and loading rewinds them with it (RevertMemoriesWithSaves, on by default). A reload truly un-remembers a bad turn.
+
+[b]Nobody ever approaches me or writes to me. Broken?[/b]
+Probably just honest: a fresh game is quiet because nobody knows you yet. Approaches scale with real history — how much you've talked, how strongly they feel about you, how recently you spoke. Raise the on-map SOCIALNESS dial to invite more (0 = leave me be), spend time talking, and give letters a few in-game days to travel. Keeps in mind: people also sleep at night.
+
+[b]Does it work with other mods? With War Sails?[/b]
+It touches almost nothing of vanilla (one light Harmony patch, bundled), so it coexists peacefully with most things. War Sails is neither required nor conflicting — DLC characters get minds like everyone else.
+
+[b]Can I speak my own language?[/b]
+Yes — speak anything to them and they answer in kind. The mod's own UI (windows, notices) is English for now.
+
+[b]How is this different from ChatAi?[/b]
+ChatAi inspired this mod and is a good free way to taste the idea. Immersive AI is a clean-room rewrite (no code copied) built around what ChatAi doesn't do: persistent layered memory that survives long conversations, NPCs with their own goals, moods and voices, native tool use (they look things up instead of hallucinating), NPCs that approach YOU and write letters, a chat window and a letter window. The trade: you bring your own key.
+
+[b]Can I shape the world or individual characters?[/b]
+Yes — plain text files under Documents\...\Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world; each character's folder has custom_instructions.txt for personal secrets and quirks, plus their memories, self-image, goals and letters as readable text. Changes apply on the next conversation, no restart.
+
+=== THREAD 2 — title: "Bug reports" ===
+
+Found something broken? Post it here — I'm grateful for every report.
+
+Please include:
+[olist]
+[*]The last ~20 lines of Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt (it records every call and error in plain words, and it NEVER contains your key — safe to paste).
+[*]Your backend and model (from config.json or the Mod Options menu).
+[*]What you did, what you expected, what happened instead.
+[/olist]
+
+Known quirks already on the list:
+[list]
+[*]In the face-to-face panel, a slow reply can briefly show "..." — click "(wait for them to answer)" again and the words arrive. The chat window (hotkey O) doesn't have this.
+[/list]
+
+One rule: keep your API key out of screenshots and pastes. I will never ask for it.
