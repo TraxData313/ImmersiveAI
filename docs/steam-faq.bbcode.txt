@@ -78,10 +78,16 @@ Found something broken? Post it here — I'm grateful for every report.
 
 Please include:
 [olist]
-[*]The last ~20 lines of Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt (it records every call and error in plain words, and it NEVER contains your key — safe to paste).
+[*]The last ~20 lines of Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt (it records every call and error in plain words, and it NEVER contains your key or your conversations — safe to paste).
 [*]Your backend and model (from config.json or the Mod Options menu).
 [*]What you did, what you expected, what happened instead.
 [/olist]
+
+[b]Longer logs[/b] don't fit in Steam comments. Two good roads:
+[list]
+[*]Best: open an issue at [url=https://github.com/TraxData313/ImmersiveAI/issues]github.com/TraxData313/ImmersiveAI/issues[/url] — you can attach the whole log.txt as a file there, and the report stays findable for the next person with the same problem.
+[*]Steam-only: paste it at [url=https://privatebin.net/]privatebin.net[/url] and post the link here. Set the expiration to [b]1 week[/b] — shorter and the link may die before I get to it.
+[/list]
 
 Known quirks already on the list:
 [list]
