@@ -43,8 +43,16 @@ They don't — each save photographs their memories and loading rewinds them wit
 [b]Nobody ever approaches me or writes to me. Broken?[/b]
 Probably just honest: a fresh game is quiet because nobody knows you yet. Approaches scale with real history — how much you've talked, how strongly they feel about you, how recently you spoke. Raise the on-map SOCIALNESS dial to invite more (0 = leave me be), spend time talking, and give letters a few in-game days to travel. Keeps in mind: people also sleep at night.
 
-[b]Does it work with other mods? With War Sails?[/b]
-It touches almost nothing of vanilla (one light Harmony patch, bundled), so it coexists peacefully with most things. War Sails is neither required nor conflicting — DLC characters get minds like everyone else.
+[b]Compatibility — game version, other mods, requirements?[/b]
+[list]
+[*][b]Game version:[/b] built and tested on the current live version (v1.4.7). Older game versions are untested and unlikely to work — the mod uses current APIs.
+[*][b]Requires:[/b] nothing but the base game and your API key. Harmony comes bundled inside the mod — no separate Harmony, ButterLib or UIExtenderEx downloads. MCM (Mod Configuration Menu) is optional: with it you get an in-game settings menu, without it everything is set in config.json.
+[*][b]Other mods:[/b] it replaces no vanilla behavior (one light Harmony postfix is all), so it coexists peacefully with overhauls and most everything else. Characters added by other mods get minds like everyone else — personalities are built from live game data, whoever put them in the world.
+[*][b]War Sails:[/b] neither required nor conflicting.
+[*][b]Load order:[/b] nothing to arrange — the launcher sorts it automatically (after the game modules, and after MCM if you have it).
+[*][b]Singleplayer only.[/b]
+[/list]
+Adding to an existing campaign or removing mid-campaign is covered above — both are safe.
 
 [b]Can I speak my own language?[/b]
 Yes — speak anything to them and they answer in kind. The mod's own UI (windows, notices) is English for now.
