@@ -32,7 +32,9 @@ You usually only need to open:
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 
-Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
+Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
+installs as **"Immersive AI (dev)"** (`Modules\ImmersiveAI.Dev`), its own identity beside the Steam
+Workshop copy (item 3764210301); enable one or the other in the launcher, never both.
 Always `dotnet test` after touching Core. Don't crack open the decompiled ChatAi reference unless
 you need a specific TaleWorlds API — it's at `..\reference\ChatAi-decompiled`, consult, never copy.
 
@@ -106,7 +108,9 @@ tests/ImmersiveAI.Core.Tests/  xUnit tests for Core (net8.0)
 module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)
 module/GUI/               Gauntlet prefab overrides (MapNotificationItem.xml — the portrait notice)
 lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin via deploy.ps1
-tools/deploy.ps1          build + install into the game's Modules folder (DLLs + SubModule.xml + GUI)
+tools/deploy.ps1          build + install into the game as Modules\ImmersiveAI.Dev — "Immersive AI (dev)",
+                          its own Id so it coexists with the Workshop copy (enable only ONE); keep the
+                          script ASCII-only (BOM-less .ps1 + em-dash bytes = smart quote = PS 5.1 parse error)
 tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
 docs/steam-page-draft.md  the Workshop description draft (privacy/cost/AI disclosures) — finalize at release
 docs/models-and-costs.md  the model-selection decision (haiku-4-5 / gpt-5.4-mini) + price table rationale
@@ -195,9 +199,12 @@ dotnet test  -c Release                        # run Core unit tests (must stay 
 powershell -ExecutionPolicy Bypass -File tools\deploy.ps1   # build + install into the game
 ```
 
-`deploy.ps1` compiles the module and copies `SubModule.xml` + the DLLs into
-`<GameFolder>\Modules\ImmersiveAI\bin\Win64_Shipping_Client\`. After deploying, enable
-"Immersive AI" in the Bannerlord launcher.
+`deploy.ps1` compiles the module and installs it as **`Modules\ImmersiveAI.Dev`** with a patched
+manifest (Id `ImmersiveAI.Dev`, name "Immersive AI (dev)") so it can sit beside the Steam Workshop
+copy in the launcher — enable "Immersive AI (dev)" to test local changes, the plain "Immersive AI"
+to test what players get, never both at once (same behaviors, same config folder). The script also
+removes any stale `Modules\ImmersiveAI` from older deploys. `package.ps1` keeps the real
+`ImmersiveAI` identity for Workshop uploads.
 
 **Always run `dotnet test` after changing Core.** Game-integration code can't be unit-tested,
 so it is verified by the user playtesting; write Core logic to be testable and keep coverage.

@@ -147,5 +147,7 @@ powershell -ExecutionPolicy Bypass -File tools\deploy.ps1    # build + install i
 powershell -ExecutionPolicy Bypass -File tools\package.ps1   # clean dist layout + Workshop zip
 ```
 
-Close the game (or sit at the main menu) before deploying — otherwise the DLL is locked. Then
-enable "Immersive AI" in the Bannerlord launcher.
+Close the game (or sit at the main menu) before deploying — otherwise the DLL is locked.
+`deploy.ps1` installs the local build as **"Immersive AI (dev)"** (module id `ImmersiveAI.Dev`),
+so it can sit beside a Steam Workshop subscription in the launcher — enable the (dev) entry to
+test your changes, the plain one to test the shipped mod, never both at once.
