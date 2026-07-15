@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="Describe what changed in this release." />
+        <ChangeNotes Value="v1.0.0 release build. Letter window key moved from U to Y (War Sails uses U for the ship manager at sea). Configs still on the old default switch automatically; a hand-picked key is left untouched. You can change it any time in the MCM settings or config.json." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

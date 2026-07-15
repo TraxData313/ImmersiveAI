@@ -1,18 +1,3 @@
-MUST BE DONE FOR V1 RELEASE:
-- [ ] Steam (Anton's hands): the letter-window key moved U -> Y — update every place on Steam that names it:
-    1. Workshop description — item 3764210301 -> Owner Controls -> "Edit title & description":
-       replace the letter-window bullet with
-       `[*]A letter window (hotkey [b]Y[/b]) — your whole correspondence, and a desk to write from.`
-       (or paste the whole of docs/steam-page-final.bbcode.txt over the description — it is fully current).
-    2. Change Notes on the next build upload — tell existing players the key moved, e.g.:
-       "Letter window key moved from U to Y (War Sails uses U for the ship manager at sea).
-       Configs still on the old default switch automatically; a hand-picked key is left untouched.
-       You can change it any time in the MCM settings or config.json."
-    3. Any pinned Steam discussion / FAQ comment you posted — skim for a "U" mention (the repo
-       copies of the FAQ docs are clean, so likely nothing to do).
-    4. Screenshots on the page — if any shows the letter window's "?" overlay or a caption naming
-       the U key, retake/re-caption it (the overlay reads the key live, so a new screenshot will say Y).
-
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
     Leaders of the player's clan parties take orders through conversation or letters via a

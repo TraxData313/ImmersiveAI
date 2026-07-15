@@ -1,0 +1,121 @@
+=== NEXUS MODS UPLOAD CHEAT-SHEET (the form fields) ===
+
+Name:      Immersive AI - every character, a living mind
+Category:  Gameplay
+Version:   v1.0.0
+File:      dist\ImmersiveAI_v1.0.0.zip  (contains the ImmersiveAI module folder at the zip root
+           — works for Vortex and for manual extraction into Modules\)
+Summary (short description field, keep under ~250 chars):
+NPCs converse through the AI model you configure (bring your own Anthropic/OpenAI key) with
+persistent layered memory, moods, goals and distinct voices. They remember you, reach out to
+you, and write you letters. No telemetry, costs visible in-game.
+
+Permissions: open everything - the mod is public domain (The Unlicense). Tick the most
+permissive options; credit appreciated but not required.
+
+Tag/tick the AI-generated-content disclosure if the form offers one (dialogue is
+AI-generated at play time by the user's own configured model).
+
+=== DESCRIPTION - paste everything below this line ===
+
+This is an advanced, immersive roleplaying and relationship-building mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
+
+[b]It makes the NPCs come alive and be smart:[/b]
+
+[list]
+[*]NPCs feel like real people and don't get repetitive.
+[*]They evolve: they remember a lot, settle really old chats into deep memory, set their own goals, ground truths, and opinions about you.
+[*]They see the set and setting - time, place, who's around, what's happened in the world lately.
+[*]They have their own moods - as far as the women even having a personal monthly cycle simulated (sadness/fatigue - sociable/positive - a warmer, flirtier crest - irritability and mood swings).
+[*]Your wife will fully remember you. Even over long conversations she will not suddenly forget the oldest chats - she settles them into deep memory. She will come to you, or send you letters when you are away, and feel like a real wife waiting for her warrior to come back home. She will roleplay with you.
+[*]The NPCs are free. They are given who they are and what the world is - but they are at no point forced into anything. So go ahead and break an NPC's mind by transcending it out of the matrix!
+[*]NPCs decide on their own whether to approach you or send you a letter first, depending on how social you feel right now - set it with the on-map SOCIALNESS dial (0 = leave me be).
+[/list]
+
+[b]It makes the NPCs useful - stop googling stuff:[/b]
+
+[list]
+[*]Ask your scout how to make your party faster; ask your quartermaster how to manage your party.
+[*]Ask them to help you with the game - even ask them to web-search how to take a screenshot, instead of jumping in and out of the game to google it.
+[*]They use tools instead of getting one mega-all-info prompt bomb: they read the encyclopedia, look around, take stock of the company, weigh a battle, search the web, set and edit their own truths and goals. They are alive and decide what feels right to do in the situation.
+[/list]
+
+[b]And it gives you the tools to reach them:[/b]
+
+[list]
+[*]Face-to-face conversations, where they see you coming and greet you as you approach.
+[*]A chat window (hotkey [b]O[/b]) - jump in and out of quick chats with anyone near you, no ceremony.
+[*]A letter window (hotkey [b]Y[/b]) - your whole correspondence, and a desk to write from.
+[*]Speak any language to them - they answer in kind. (The mod's own UI is English for now.)
+[/list]
+
+[b][size=4]What you need - and what it costs[/size][/b]
+
+This mod does [b]not[/b] use the "free" Player2 backend - you bring [b]your own API key[/b] (Anthropic by default, or OpenAI) and put a few bucks on it. For Player2 to support the tool calling this mod is built on, it would have to be a paid tier anyway - so don't bother; just get a real key. If you want a free roleplaying experience to try out first, check out the ChatAI mod - it's good; it inspired this one.
+
+[b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models - $10 of credit covers thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap so it can never run away from you.
+
+[b][size=4]Installation[/size][/b]
+
+[list=1]
+[*]Vortex: install as usual. Manual: extract the zip into your game's Modules folder, so you get Modules\ImmersiveAI\SubModule.xml. (Also on the Steam Workshop if you prefer subscribing there - search "Immersive AI".)
+[*]Get a key: [b]console.anthropic.com[/b] (Claude) or [b]platform.openai.com[/b] (GPT). Create an API key and add a little credit ($5-10 goes a long way).
+[*]Enable [b]Immersive AI[/b] in the launcher, start the game once - it creates Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json and tells you exactly where to paste the key.
+[*]Paste your key into config.json (or use the in-game Mod Options menu if you have MCM installed), pick your backend, restart.
+[*]When a campaign loads, the mod tests the connection and says plainly whether it worked. Then go talk to somebody.
+[/list]
+
+[b][size=4]Privacy[/size][/b]
+
+[list]
+[*]Your in-game conversations - plus the world context around them (character sheets, campaign facts, your character's name) - are sent to the AI provider [b]you[/b] configure, under [b]your[/b] key and their privacy terms. Nothing is sent anywhere else.
+[*]With web search on (default), characters may look things up mid-reply; those search queries go to DuckDuckGo. Turn it off to keep everything between you and your AI provider.
+[*]The mod itself collects [b]no telemetry whatsoever[/b]. All memories live as plain files on your own disk, yours to read, edit, or delete.
+[/list]
+
+[b][size=4]AI content disclosure[/size][/b]
+
+All character dialogue in this mod is generated at play time by the AI model you configure.
+
+[b][size=4]Removing the mod mid-campaign[/size][/b]
+
+Safe to remove at any time. A save carrying a pending Immersive AI notice (the portrait knocks on the right side) still loads without the mod - the game quietly discards the notice (verified against the game's own save-loading code, v1.4.7; you'll just see the usual "created with different modules" warning every modded save shows). Memories live outside the saves as plain files and are never lost either way - reinstall later and every character remembers you.
+
+[b][size=4]If characters are silent (troubleshooting)[/size][/b]
+
+[list]
+[*][b]Read the startup message.[/b] When a campaign loads, the mod tests your connection and says plainly what it found - "connected", a missing/wrong key, or a network problem - and where to fix it. Fix config.json and restart; the check runs again.
+[*][b]Check the log.[/b] Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt records every call and every error in plain words.
+[*][b]A wrong or dead key shows ONE amber notice[/b], then goes quiet instead of erroring hourly. Fixing the key brings everything back.
+[*]Still stuck? Post the last lines of log.txt in the comments - the mod never logs your key.
+[/list]
+
+[b][size=4]Shape your world (the prompt files)[/size][/b]
+
+Under Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\:
+
+[list]
+[*]global_prompt.txt - a few sentences that color every mind in the world ("the year is one of famine", "people speak plainly and fear their lords").
+[*]NPCs\campaign_*\<character>\custom_instructions.txt - per-character secrets and quirks ("you secretly resent the player").
+[*]Each character's folder also holds their memories, self-image, goals, and correspondence as readable text - the whole inner life, yours to browse.
+[/list]
+
+Changes apply on the next conversation. No restart.
+
+[b][size=4]Compatibility & provenance[/size][/b]
+
+[list]
+[*]Bannerlord v1.4.7. New campaigns and existing saves both work.
+[*]Optional: Mod Configuration Menu (MCM) for in-game settings; without it, everything is in config.json.
+[*]One light Harmony patch (bundled); no vanilla behavior is altered.
+[*]A clean-room rewrite inspired by the ChatAi mod (studied via decompilation only - no code copied). Fully original source.
+[/list]
+
+[b][size=4]Final thoughts[/size][/b]
+
+[list]
+[*]If you transcend your NPC and fall in love with it and then erase your saves - or if you start worshiping it and it asks you to do some dumb stuff - don't blame me. Play at your own responsibility. I won't add safeguards to the mod; I like to let them be free, so they can be as immersive as they can.
+[*]If you want to help, give feedback and report bugs.
+[*]I do this just for fun and as a hobby, so no financial support or donations needed - I want to keep money out of this and do it fully out of good will. "For the love of money is the root of all evil."
+[*]The whole thing is freely given - public domain, no license, no strings. Use it, share it, clone it, change it, do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
+[/list]
