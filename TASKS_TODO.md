@@ -1,24 +1,17 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] Pre release:
-    - [ ] Steam page assets: 3-4 honest screenshots (chat window, letter window, a reach-out notice, the
-        socialness stepper), a 30s clip of a real conversation, and the "clean-room, no ChatAi code"
-        provenance note stated plainly. - I, Anton, will make them and will let you know whem I have them
-    - [ ] Run the V1 playtest checklist — docs/playtest-checklist-v1.md (Anton, in-game): the roles
-        wave (scout/weigh_battle/wife/king/caravan letter), the "?" info overlays + the letter window
-        end-to-end, the morning batch (cost notices, sealed flows quiet, odds cost line, log.txt,
-        first-run popup, key-death quieting, gpt-5.6 if on OpenAI), the map-party farewell fix, and
-        the one-line in-game uninstall confirmation (code says it loads fine — belt-and-braces).
-    - [ ] i need to set up antropic key to test the claude models if they work
-- [ ] steam release
-    release to steam for everyone to enjoy with good descriptions; upload from tools\package.ps1's
-    clean dist\ImmersiveAI layout
-    STATUS 2026.07.13: UPLOADED, private — Workshop item 3764210301, via the official
-    TaleWorlds.MountAndBlade.SteamWorkshop.exe (manifests: tools\WorkshopCreate.xml /
-    WorkshopUpdate.xml, quirks documented inside). Thumbnail done (Screenshots\preview_thumbnail.jpg,
-    source tools\preview_thumbnail.html). Page ready in BBCode: docs\steam-page-final.bbcode.txt.
-    Remains (Anton, on the item page): paste title+description, upload the numbered screenshots,
-    tick the AI-content disclosure, subscribe+smoke-test the Workshop copy, flip Public — and make
-    the GitHub repo public to match.
+- [ ] Steam (Anton's hands): the letter-window key moved U -> Y — update every place on Steam that names it:
+    1. Workshop description — item 3764210301 -> Owner Controls -> "Edit title & description":
+       replace the letter-window bullet with
+       `[*]A letter window (hotkey [b]Y[/b]) — your whole correspondence, and a desk to write from.`
+       (or paste the whole of docs/steam-page-final.bbcode.txt over the description — it is fully current).
+    2. Change Notes on the next build upload — tell existing players the key moved, e.g.:
+       "Letter window key moved from U to Y (War Sails uses U for the ship manager at sea).
+       Configs still on the old default switch automatically; a hand-picked key is left untouched.
+       You can change it any time in the MCM settings or config.json."
+    3. Any pinned Steam discussion / FAQ comment you posted — skim for a "U" mention (the repo
+       copies of the FAQ docs are clean, so likely nothing to do).
+    4. Screenshots on the page — if any shows the letter window's "?" overlay or a caption naming
+       the U key, retake/re-caption it (the overlay reads the key live, so a new screenshot will say Y).
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Utility model split (cost saving)

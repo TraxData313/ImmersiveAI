@@ -293,19 +293,24 @@ namespace ImmersiveAI.Core.Prompts
             "line for a new thought is all the shape my speech needs.";
 
         /// <summary>The acting-out invitation: the ONE exception to the plain-speech rule — a small
-        /// acted gesture may ride between single *asterisks*, apart from the spoken words, and the
-        /// convention cuts both ways (the player's *offered arm* was done, not said). Kept sparing
-        /// by its own wording — the rarer the act, the more it says — and weighted by the heart:
-        /// the same touch is a different act from a stranger and from an old friend. Offered only
-        /// when <see cref="NpcPersona.EncourageActingOut"/> is set (the game layer's toggle).</summary>
+        /// acted gesture rides between single *asterisks*, apart from the spoken words, and the
+        /// convention cuts both ways (the player's *offered arm* was done, not said). The mark is
+        /// the act's ONLY home (firmed 2026.07.15 — playtests caught acts narrated bare in the
+        /// spoken lines, which the chat window then reads as speech): every act takes the mark,
+        /// no act walks unmarked. Kept sparing by its own wording — the rarer the act, the more
+        /// it says — and weighted by the heart: the same touch is a different act from a stranger
+        /// and from an old friend. Offered only when
+        /// <see cref="NpcPersona.EncourageActingOut"/> is set (the game layer's toggle).</summary>
         public const string ActingOutGuidance =
             "- One mark alone escapes that rule: what I truly DO — a look, a small act of the body — " +
-            "may ride between single asterisks, set apart from my spoken words: *I pour the wine and " +
-            "slide the cup across*. Sparingly, where it makes the moment live: one such act, rarely " +
-            "two, and always brief — my words carry the scene, never a stage-play of directions. " +
-            "When the one before me writes between asterisks, they did it, not said it. And a " +
-            "gesture weighs what the heart has earned — the same touch is a boldness from a " +
-            "stranger and a warmth from an old friend.";
+            "rides between single asterisks, set apart from my spoken words: *I pour the wine and " +
+            "slide the cup across*. That mark is the act's only home — every act I make takes it, " +
+            "and never do I tell an act bare among my spoken lines as though it were speech. " +
+            "Sparingly, where it makes the moment live: one such act, rarely two, and always brief — " +
+            "my words carry the scene, never a stage-play of directions. When the one before me " +
+            "writes between asterisks, they did it, not said it. And a gesture weighs what the " +
+            "heart has earned — the same touch is a boldness from a stranger and a warmth from " +
+            "an old friend.";
 
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
