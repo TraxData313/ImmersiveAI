@@ -25,8 +25,8 @@ trade, the war, the road.
 - They decide on their own whether to approach you or write first, tuned by the on-map
   **SOCIALNESS** dial (0 = leave me be).
 
-![An NPC comes to you](Screenshots/3_incoming_talk.jpg)
-![The talk taken](Screenshots/4_incoming_talk_taken.jpg)
+![An NPC comes to you](Screenshots/5_incoming_talk.jpg)
+![The talk taken](Screenshots/6_incoming_talk_taken.jpg)
 
 ## They're useful — stop googling stuff
 
