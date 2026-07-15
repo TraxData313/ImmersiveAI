@@ -49,13 +49,13 @@ Remember it ships **false** by default — a fresh install is already correct, n
       *Pass:* text is accurate (hotkeys shown match config), Escape folds the overlay first
       (second Escape closes the window), Enter does NOT send while the overlay is open.
       - can you add line that lets people know the NPCs can search the web, and if they are not doing so when the player wants to, explicitly ask them search/research "How does one transfer ships to another party?" will let them know that you want them to check that in the web.
-- [x] **"?" info overlay in the letter window (U)** — same drill.
+- [x] **"?" info overlay in the letter window (Y — was U until War Sails claimed it)** — same drill.
 - [ ] **The letter window itself** (built overnight 2026.07.11, still unplaytested end-to-end):
       correspondents all listed (including any dead writer), letter cards render with stamps and
       provenance, courier-on-the-road note shows for an in-flight letter, search line filters,
       bond-stats line shows under the name, "Seal and send" queues a real courier, "Write back"
       on an arrival opens the window preselected, one-courier-per-bond rule holds, and the two
-      windows yield to each other (O while U is open, and back).
+      windows yield to each other (O while Y is open, and back).
 - [x] **Letter beats in the chat thread** — a correspondence NPC's chat thread shows the
       "✉ by letter" cards between spoken messages; an in-flight compose shows sealed
       ("rides toward you still"), never the body.

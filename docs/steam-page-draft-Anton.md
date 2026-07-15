@@ -23,7 +23,7 @@ It makes the NPCs feel useful you - don't google stuff anymore
 It gives the player the tools to interact with them:
 - Face to face conversations, where the NPCs see you coming and greet you as you approach
 - Chat window that opens by default with "O" button, where you can quickly jump in and out of chats
-- Letter window - "U" button, for managing your letters
+- Letter window - "Y" button, for managing your letters
 
 
 I does not use the "free" Player2 back end - you have to add a few bucks into OpeanAI or Claude to use it, takes about a cent per message, so 10$ will cover maybe up to 10 000 messages. For the Player2 to support features like the tool calling used here it must be a payed tier, so don't bother - just get OpenAI or Claude API key. If you want free roleplaying exp to try out check out the ChatAI mod - it's good, I got inspired from it to make this one, as an AI enigneer who knows the capabilities of the modern LLMs and how to use them.

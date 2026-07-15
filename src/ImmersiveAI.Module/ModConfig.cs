@@ -179,8 +179,9 @@ namespace ImmersiveAI
 
         /// <summary>The key that opens (and closes) the letter window on the map. A single letter or
         /// an InputKey name, like <see cref="ChatWindowHotkey"/>. Chosen not to collide with the
-        /// vanilla map keys.</summary>
-        public string LetterWindowHotkey { get; set; } = "U";
+        /// vanilla map keys ("U" was the first default, until War Sails claimed it for the ship
+        /// manager at sea — the V2 migration moves old-default configs to "Y").</summary>
+        public string LetterWindowHotkey { get; set; } = "Y";
 
         /// <summary>At most how many letters may be ON THE ROAD toward the player at once, across all
         /// writers. Letters take in-game days to arrive, so a social morning must not turn into a
@@ -501,6 +502,16 @@ namespace ImmersiveAI
             // V1 format too — everything else Normalize does IS the migration for them.
             if (ConfigVersion < 1) ConfigVersion = 1;
 
+            // V2: War Sails claims "U" on the campaign map (the ship manager at sea), so the letter
+            // window's default key moved to "Y". Only a config still sitting on the old default
+            // follows; any other hand-picked key is honored as it stands.
+            if (ConfigVersion < 2)
+            {
+                if (string.Equals((LetterWindowHotkey ?? string.Empty).Trim(), "U", StringComparison.OrdinalIgnoreCase))
+                    LetterWindowHotkey = "Y";
+                ConfigVersion = 2;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
@@ -509,7 +520,7 @@ namespace ImmersiveAI
             // The hotkeys must name real keys; anything unparseable falls back to the defaults.
             if (string.IsNullOrWhiteSpace(ChatWindowHotkey)) ChatWindowHotkey = "O";
             ChatWindowHotkey = ChatWindowHotkey.Trim();
-            if (string.IsNullOrWhiteSpace(LetterWindowHotkey)) LetterWindowHotkey = "U";
+            if (string.IsNullOrWhiteSpace(LetterWindowHotkey)) LetterWindowHotkey = "Y";
             LetterWindowHotkey = LetterWindowHotkey.Trim();
 
             // A null (rather than blank) atmosphere line would trip token substitution; treat it as "unset"

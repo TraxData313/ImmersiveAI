@@ -76,7 +76,7 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyDropdown("Letter window key", Order = 2, RequireRestart = true,
             HintText = "The key that opens and closes the letter window on the map.")]
         [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
-        public Dropdown<string> LetterWindowHotkey { get; set; } = HotkeyChoices("U");
+        public Dropdown<string> LetterWindowHotkey { get; set; } = HotkeyChoices("Y");
 
         [SettingPropertyBool("Notify when a reply is ready", Order = 3, RequireRestart = false,
             HintText = "Shows a short notice the moment an NPC's answer arrives, so you need not click 'wait' and guess whether it has come.")]

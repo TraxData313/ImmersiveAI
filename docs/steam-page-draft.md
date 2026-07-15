@@ -28,7 +28,7 @@ world: their family, their company, their trade, the war, the road.
   can honestly answer "can we outrun them?"; a merchant quotes the town's real prices.
 - **They act.** Characters seek you out when the bond moves them (tune it with the on-map
   SOCIALNESS dial, 0 = leave me be). Distant friends — and your own caravans and governors —
-  write letters that travel real in-game days. A letter window (hotkey U) keeps every
+  write letters that travel real in-game days. A letter window (hotkey Y) keeps every
   correspondence.
 - **Their hearts move.** Each exchange can shift how they regard you — the real game relation,
   set by them, in character.

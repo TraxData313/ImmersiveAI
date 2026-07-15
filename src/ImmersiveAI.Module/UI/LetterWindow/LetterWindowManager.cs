@@ -58,7 +58,7 @@ namespace ImmersiveAI.UI.LetterWindow
         {
             return Enum.TryParse<InputKey>((name ?? string.Empty).Trim(), ignoreCase: true, out var key)
                 ? key
-                : InputKey.U;
+                : InputKey.Y;
         }
 
         // ------------------------------ open / close ------------------------------

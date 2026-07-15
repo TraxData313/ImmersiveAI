@@ -111,7 +111,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   folded into the situation), `EnableWorldRecall` + `MaxRecallsPerReply` (NPC tool-use: live
   campaign lookups mid-reply), `EnableLetters` (distance-travelling, save/load-surviving letters)
   + `MaxLettersInFlight` (cap on letters riding toward the player at once, default 3)
-  + `EnableLetterWindow` + `LetterWindowHotkey` (the letter window, hotkey "U" — correspondence as
+  + `EnableLetterWindow` + `LetterWindowHotkey` (the letter window, hotkey "Y" since 2026.07.15 —
+  was "U", now War Sails' ship manager; ConfigVersion-2 migration moves old-default configs — correspondence as
   letter cards from letters.txt via Core `CorrespondenceLog`, composer on the courier-menu road;
   letter beats also render as ✉ cards in the chat window's thread),
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the map chat window:
@@ -185,7 +186,7 @@ entered and reports a missing/wrong key or a dead connection in plain, actionabl
 NPCs also act on their own: co-located ones may reach out for a face-to-face talk (bond-scaled
 hourly rolls); distant ones may WRITE — letters travel real in-game days by map distance,
 persist in `_letters.json`, and the player can send letters from town/castle/village menus
-("Send a letter by courier" — it opens the letter window, hotkey "U"; the old picker popups are
+("Send a letter by courier" — it opens the letter window, hotkey "Y"; the old picker popups are
 only the fallback), with the NPC answering at most once per letter. Mid-reply, NPCs
 can also reach into the world's memory (native tool calls via `WorldRecall`) for live campaign
 truth about people, places, clans, and realms, instead of hallucinating. Reaching-out offers

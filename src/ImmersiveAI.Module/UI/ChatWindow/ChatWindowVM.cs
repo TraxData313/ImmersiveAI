@@ -52,7 +52,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public ChatWindowVM(ModConfig config)
         {
             _config = config;
-            _letterHotkey = string.IsNullOrWhiteSpace(config.LetterWindowHotkey) ? "U" : config.LetterWindowHotkey.Trim();
+            _letterHotkey = string.IsNullOrWhiteSpace(config.LetterWindowHotkey) ? "Y" : config.LetterWindowHotkey.Trim();
             _chatHotkey = string.IsNullOrWhiteSpace(config.ChatWindowHotkey) ? "O" : config.ChatWindowHotkey.Trim();
             RefreshContacts();
         }

@@ -7,7 +7,7 @@ namespace ImmersiveAI.UI
     /// <summary>
     /// Soft eyes on map overlays the GameState cannot see. The encyclopedia lives as a layer OVER
     /// MapState — the state never changes while it is up — so typing into its search box would trip
-    /// the windows' raw hotkey polls ("O"/"U" opening a window mid-word). Vanilla gates its escape
+    /// the windows' raw hotkey polls ("O"/"Y" opening a window mid-word). Vanilla gates its escape
     /// menu on the same flag (MapScreen.EncyclopediaScreenManager.IsEncyclopediaOpen); we read it by
     /// cached reflection because SandBox.View is deliberately not referenced — if a game patch ever
     /// reshapes MapScreen, this answers false and the hotkeys merely lose the encyclopedia guard

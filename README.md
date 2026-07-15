@@ -43,7 +43,7 @@ trade, the war, the road.
 
 - **Face-to-face conversations** — they see you coming and greet you as you approach.
 - **Chat window** (hotkey `O`) — jump in and out of quick chats with anyone near you, no ceremony.
-- **Letter window** (hotkey `U`) — every correspondence as readable letters, couriers on the
+- **Letter window** (hotkey `Y`) — every correspondence as readable letters, couriers on the
   road, and a desk to write from. Letters travel real in-game days with the distance.
 - Speak any language to them — they answer in kind.
 

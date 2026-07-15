@@ -47,7 +47,7 @@ treating them right.
 
 - Face-to-face conversations, where they see you coming and greet you as you approach.
 - A chat window (hotkey **O**) — jump in and out of quick chats with anyone near you, no ceremony.
-- A letter window (hotkey **U**) — your whole correspondence, and a desk to write from.
+- A letter window (hotkey **Y**) — your whole correspondence, and a desk to write from.
 - Speak any language to them — they answer in kind. (The mod's own UI is English for now.)
 
 ## [REQUIRED] What you need — and what it costs

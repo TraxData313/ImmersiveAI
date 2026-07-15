@@ -30,7 +30,7 @@ This is an advanced, immersive roleplaying and relationship-building mod. I buil
 [list]
 [*]Face-to-face conversations, where they see you coming and greet you as you approach.
 [*]A chat window (hotkey [b]O[/b]) — jump in and out of quick chats with anyone near you, no ceremony.
-[*]A letter window (hotkey [b]U[/b]) — your whole correspondence, and a desk to write from.
+[*]A letter window (hotkey [b]Y[/b]) — your whole correspondence, and a desk to write from.
 [*]Speak any language to them — they answer in kind. (The mod's own UI is English for now.)
 [/list]
 

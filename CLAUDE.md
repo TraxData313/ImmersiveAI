@@ -83,7 +83,8 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           ChatWindowVM/ChatContactVM/ChatMessageVM + ChatWindowManager — layer lifecycle,
                           hotkey/Enter/Escape polling, unread marks, scroll-to-bottom), LetterWindow\
                           (the letter window: LetterWindowVM/LetterContactVM + LetterWindowManager —
-                          the chat window's twin for correspondence, hotkey "U"), Socialness\
+                          the chat window's twin for correspondence, hotkey "Y" — was "U" until
+                          War Sails claimed it for the ship manager, V2 config migration), Socialness\
                           (the on-map socialness stepper: SocialnessVM + SocialnessManager — the layer
                           claims the mouse ONLY while hovered (HitTest per tick, 2026.07.12); a resting
                           claim broke the map's right-drag camera)
@@ -255,7 +256,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   the player at once — letters lag the socialness mood by days, so the cap, not the moment's mood,
   protects the later busier self; spontaneous writes only, player-invited replies ride free; default 3)
   + `EnableLetterWindow` + `LetterWindowHotkey` (the letter window — the chat window's twin, hotkey
-  default "U", one of the two windows open at a time: every correspondent listed even when the writer
+  default "Y" since 2026.07.15 — was "U", which War Sails binds to the ship manager at sea; the
+  ConfigVersion-2 migration moves configs still on the old default, hand-picked keys untouched —
+  one of the two windows open at a time: every correspondent listed even when the writer
   has died, the whole correspondence as letter cards parsed from letters.txt by Core `CorrespondenceLog`,
   a courier on the road noted at the end, and a composer with a tall draft mirror, "Seal and send",
   same QueueLetter road and rules as the courier menu; "Write back" on an arrival opens it, popup
@@ -337,7 +340,7 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   access-propagation 401s; the MCM dropdown offers 5.4-mini/luna/terra/sol/5.5/5.4/5.4-nano — NO 5.5
   mini/nano exist; older models live on as config.json hand edits), existing configs deliberately
   unmigrated — see docs/models-and-costs.md),
-  `ConfigVersion` (format stamp, 1 — future migrations key off it),
+  `ConfigVersion` (format stamp, 2 — migrations key off it; V2 = the letter hotkey's U→Y move),
   `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
   "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
   panel in the chat window; set true when working on the mod — Anton keeps it true).
@@ -549,7 +552,7 @@ Gauntlet window over the map screen: hotkey (`ChatWindowHotkey`, default "O", pa
 a "Speak with those near you" option in every town/castle/village menu, or an NPC's knock. Works
 anywhere the map is on stage — travelling, at sea, inside settlement menus — never in missions
 (`ChatWindowManager.CanOpenNow`: MapState, no conversation, no inquiry up, and no encyclopedia —
-that overlay never changes the GameState, so typing "o"/"u" in its SEARCH BOX would open the windows;
+that overlay never changes the GameState, so typing "o"/"y" in its SEARCH BOX would open the windows;
 `UI\MapOverlays.IsEncyclopediaOpen` reads MapScreen's flag by cached soft reflection — resolved by
 scanning loaded assemblies, NOT `Type.GetType("…, SandBox.View")`, which answers null for module-folder
 DLLs and silently disarmed the guard once; beside it `MapOverlays.IsTypingSomewhere`
@@ -712,7 +715,7 @@ save/load in `campaign_<id>\_letters.json` (Core `LetterBag`, atomic writes) —
 unlike a live chat. Arrival: faced toast + pausing inquiry, "Write back" (opens the composer popup) or
 "Set it aside"; a letter whose writer died en route still arrives, marked so, with no write-back. The
 player can also send first: a "Send a letter by courier" option in every town/castle/village menu opens
-the LETTER WINDOW itself (2026.07.12 — the same one hotkey "U" opens; the old recipient-picker popups
+the LETTER WINDOW itself (2026.07.12 — the same one the letter hotkey opens; the old recipient-picker popups
 remain only as the fallback when `EnableLetterWindow` is off or the window cannot come up; one courier
 per bond at a time, co-located people pointed to go and speak). When the player's letter reaches the NPC, *reading it is a recorded moment* (the body
 lives inside the Angel's line, so it enters memory even if they let it lie), and they may answer at most
@@ -724,7 +727,7 @@ most one delivery per direction per hour. Test lever: "[test — trigger them to
 `EnableLetters`.
 
 **The letter window (2026.07.11)** is the chat window's twin for correspondence (`UI\LetterWindow\`,
-prefab `ImmersiveLetterWindow.xml`, hotkey `LetterWindowHotkey` default "U"; the two managers yield to
+prefab `ImmersiveLetterWindow.xml`, hotkey `LetterWindowHotkey` default "Y"; the two managers yield to
 each other so one window is up at a time; it carries the same search line and bond-stats line as the
 chat window — 2026.07.12). It is a pure VIEW: correspondents enumerated from the
 campaign's NPC folders (`CorrespondentsForLetters` — anyone with a letters.txt, even dead writers, plus
