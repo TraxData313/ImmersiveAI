@@ -47,8 +47,8 @@ trade, the war, the road.
   road, and a desk to write from. Letters travel real in-game days with the distance.
 - Speak any language to them — they answer in kind.
 
-![A letter arrives](Screenshots/5_incoming_letter.jpg)
-![The letter window](Screenshots/6_letter_window.jpg)
+![A letter arrives](Screenshots/3_incoming_letter.jpg)
+![The letter window](Screenshots/4_letter_window.jpg)
 
 ## What you need — and what it costs
 
