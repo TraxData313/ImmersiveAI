@@ -1,4 +1,5 @@
 MUST BE DONE FOR V1 RELEASE:
+- [ ] When the NPC see info about me I want them to see married to (list if like me uses poligamy from marry anyone) father of kids list, son of Father and Mother name. Sam think the NPCs shoul know about themselfes, I think they might already do, but please check
 - [ ] Steam (Anton's hands): the letter-window key moved U -> Y — update every place on Steam that names it:
     1. Workshop description — item 3764210301 -> Owner Controls -> "Edit title & description":
        replace the letter-window bullet with
@@ -14,6 +15,22 @@ MUST BE DONE FOR V1 RELEASE:
        the U key, retake/re-caption it (the overlay reads the key live, so a new screenshot will say Y).
 
 POST V1 or NOT FULLY DECIDED:
+- [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
+    Leaders of the player's clan parties take orders through conversation or letters via a
+    `set_party_course` native tool (v1 verbs: patrol / escort_player / go_to / hold / resume) —
+    and being persons, may negotiate or refuse; a mailed order takes effect when the courier arrives
+    (compose/reply already ride CompleteSpokenAsync with tools — zero extra plumbing).
+    The verified-on-v1.4.7 technique: do NOT fight the AI with SetMoveX/DoNotMakeNewDecisions —
+    inject the order into the party's own hourly deliberation (`CampaignEvents.AiHourlyTickEvent`
+    → `PartyThinkParams.AddBehaviorScore` with `AIBehaviorData`, score 15f wins; `AiBehavior` enum
+    is in TaleWorlds.CampaignSystem.Party; naval routing free via Helpers.AiHelper). No Harmony
+    needed. Orders persist as plain strings in SyncData (no new saveable classes); they clear
+    honestly on army-join/capture/party-death/target-turned-enemy/unreachable, and EVERY
+    set/change/lapse fires a colored InformationManager.DisplayMessage — the left-side line AND
+    the permanent event-log entry Anton asked for. Cut from v1: raid, besiege, disband, caravans,
+    other lords. Reference source (MIT, supports exactly v1.4.0–1.4.7, studied 2026.07.15):
+    ..\reference\Bannerlord.PartyAI; prior art: Finer Party Controls (closed, clan-screen panel +
+    the "Thinks" framework that exists precisely because naive SetMove is unstable).
 - [ ] Utility model split (cost saving)
     a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
     desire yes/no, search refining — cuts roughly a third of cost; parked until the ledger's real
