@@ -935,17 +935,15 @@ namespace ImmersiveAI
             return true;
         }
 
-        // "Write back" on an arrived letter: the letter window with the thread on stage where it can
-        // open (next tick, once the inquiry is gone), the old two-beat composer popups where not.
+        // "Write back" on an arrived letter: the letter window with the thread on stage, retried
+        // across ticks until the closing inquiry lets go (a single next-tick try raced
+        // IsAnyInquiryActive and lost to the popups — 2026.07.15); the old two-beat composer
+        // popups only where the window truly cannot come up.
         private void OpenWriteBack(Hero npc)
         {
             if (_config.EnableLetterWindow)
             {
-                MainThreadDispatcher.Enqueue(() =>
-                {
-                    if (!UI.LetterWindow.LetterWindowManager.Open(npc))
-                        OpenLetterComposer(npc);
-                });
+                UI.LetterWindow.LetterWindowManager.OpenWhenClear(npc, OpenLetterComposer);
                 return;
             }
             OpenLetterComposer(npc);

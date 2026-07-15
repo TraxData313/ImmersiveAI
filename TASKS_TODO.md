@@ -1,5 +1,4 @@
 MUST BE DONE FOR V1 RELEASE:
-- [ ] When the NPC see info about me I want them to see married to (list if like me uses poligamy from marry anyone) father of kids list, son of Father and Mother name. Sam think the NPCs shoul know about themselfes, I think they might already do, but please check
 - [ ] Steam (Anton's hands): the letter-window key moved U -> Y — update every place on Steam that names it:
     1. Workshop description — item 3764210301 -> Owner Controls -> "Edit title & description":
        replace the letter-window bullet with
@@ -31,6 +30,7 @@ POST V1 or NOT FULLY DECIDED:
     other lords. Reference source (MIT, supports exactly v1.4.0–1.4.7, studied 2026.07.15):
     ..\reference\Bannerlord.PartyAI; prior art: Finer Party Controls (closed, clan-screen panel +
     the "Thinks" framework that exists precisely because naive SetMove is unstable).
+- [ ] NPCs that are in charge of Cities/Castles when they see ana enemy army they get the army and their party/castle info and get the option to send a letter (asking for help, letting the player know they can hold etc)
 - [ ] Utility model split (cost saving)
     a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
     desire yes/no, search refining — cuts roughly a third of cost; parked until the ledger's real

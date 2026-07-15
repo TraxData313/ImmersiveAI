@@ -225,7 +225,7 @@ namespace ImmersiveAI.Personas
 
             // Man and wife stand closer than any courtesy: the marriage bed, the children, and the
             // grand designs of the house are all one conversation between them.
-            bool wedded = Safe(() => speaker.Spouse == partner);
+            bool wedded = FamilyBuilder.AreWed(speaker, partner);
             if (wedded)
                 sb.AppendLine("Between us there is no ceremony and nothing held back for propriety's sake: " +
                     "we are wed, and we speak as two who share one bed, one hearth, and one fate — tenderness " +
@@ -589,6 +589,14 @@ namespace ImmersiveAI.Personas
                 float renown = partner.Clan?.Renown ?? 0f;
                 if (renown >= 300f) sentences.Add("Their name is carried far across Calradia — word of their deeds travels ahead of them.");
                 else if (renown >= 150f) sentences.Add("I have heard their name spoken before now; word of their deeds has begun to travel.");
+            });
+
+            // Their own house, as the world knows it — whom they are wed to (every living spouse:
+            // polygamy-honest), which children are theirs, whose child they are (Anton, 2026.07.15).
+            Try(() =>
+            {
+                var family = FamilyBuilder.DescribeFamilyOf(partner, speaker);
+                if (family.Length > 0) sentences.Add(family);
             });
 
             Try(() =>

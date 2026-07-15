@@ -40,14 +40,17 @@ namespace ImmersiveAI.Personas
                     lines.Add($"I am the {child} of {Describe(mother)}.");
             });
 
-            // Spouse.
+            // Spouse — every living one: polygamy mods (Marry Anyone) park further wives in
+            // ExSpouses while both live on wed, so the single Spouse slot alone is not the truth.
             Try(() =>
             {
-                var spouse = npc.Spouse;
-                if (spouse == null) return;
-                lines.Add(spouse.IsAlive
-                    ? $"I am wed to {DescribePerson(spouse)}."
-                    : $"I was wed to {NameOf(spouse)}, now passed.");
+                var spouses = SpousesOf(npc);
+                if (spouses.Count == 1)
+                    lines.Add($"I am wed to {DescribePerson(spouses[0])}.");
+                else if (spouses.Count > 1)
+                    lines.Add($"I am wed to {JoinAnd(spouses.Select(DescribePerson).ToList())} — all joined to me in marriage.");
+                else if (npc.Spouse != null)
+                    lines.Add($"I was wed to {NameOf(npc.Spouse)}, now passed.");
             });
 
             // Living children, with their ages so the years show — named WITH their other parent
@@ -117,12 +120,13 @@ namespace ImmersiveAI.Personas
                 else
                     lines.Add($"My clan is {clanName}.");
 
-                // Close kin already named above (spouse, children, parents, siblings) stay out of
+                // Close kin already named above (spouses, children, parents, siblings) stay out of
                 // the clan roll — Menja must not appear twice, once as "my child" and once as a
                 // clanswoman (Anton's Thyrsif snapshot, 2026.07.12).
+                var wed = SpousesOf(npc);
                 var kin = clan.Heroes?
                     .Where(h => h != null && h.IsAlive && h != npc && h != leader
-                        && !Safe(() => h == npc.Spouse || h == npc.Father || h == npc.Mother
+                        && !Safe(() => wed.Contains(h) || h == npc.Father || h == npc.Mother
                             || h.Father == npc || h.Mother == npc
                             || (npc.Siblings != null && npc.Siblings.Contains(h))))
                     .Select(MemberClause)
@@ -155,7 +159,7 @@ namespace ImmersiveAI.Personas
             if (speaker == null || other == null || speaker == other) return null;
             try
             {
-                if (speaker.Spouse == other) return other.IsFemale ? "my wife" : "my husband";
+                if (AreWed(speaker, other)) return other.IsFemale ? "my wife" : "my husband";
                 if (speaker.Father == other) return "my father";
                 if (speaker.Mother == other) return "my mother";
                 if (other.Father == speaker || other.Mother == speaker)
@@ -178,6 +182,105 @@ namespace ImmersiveAI.Personas
             }
             catch { /* no kinship surfaced */ }
             return null;
+        }
+
+        /// <summary>
+        /// Whether the two are joined in marriage — either Spouse slot, or a living pair a polygamy
+        /// mod (Marry Anyone) parked in ExSpouses. The living check keeps an unmodded game honest:
+        /// vanilla marriages end only at the grave, so a vanilla "ex" is a widow's loss, not a wife.
+        /// </summary>
+        public static bool AreWed(Hero a, Hero b)
+        {
+            if (a == null || b == null || a == b) return false;
+            if (Safe(() => a.Spouse == b || b.Spouse == a)) return true;
+            return Safe(() => a.IsAlive && b.IsAlive
+                && ((a.ExSpouses != null && a.ExSpouses.Contains(b))
+                    || (b.ExSpouses != null && b.ExSpouses.Contains(a))));
+        }
+
+        /// <summary>
+        /// Someone's family told in the third person, for another's eyes — whom they are wed to
+        /// (every living spouse, polygamy-honest), which children are theirs (grouped by the other
+        /// parent, like the first-person block), and whose child they are. The beholder is named
+        /// "me" wherever they appear, so a wife reads "wed to me", not her own name as a stranger's.
+        /// Folded into the situation's meeting block so every NPC knows the player's own house.
+        /// </summary>
+        public static string DescribeFamilyOf(Hero person, Hero beholder)
+        {
+            if (person == null) return string.Empty;
+            var sentences = new List<string>();
+            var name = NameOf(person);
+            var they = person.IsFemale ? "She" : "He";
+
+            Try(() =>
+            {
+                var spouses = SpousesOf(person);
+                var names = spouses.Select(s => s == beholder ? "me" : NameOf(s)).ToList();
+                if (names.Count == 1)
+                    sentences.Add($"{name} is wed to {names[0]}.");
+                else if (names.Count > 1)
+                    sentences.Add($"{name} is wed to {JoinAnd(names)} — more than one joined to them in marriage.");
+                else if (person.Spouse != null)
+                    sentences.Add($"{name} was wed to {NameOf(person.Spouse)}, now passed.");
+            });
+
+            Try(() =>
+            {
+                var kids = person.Children?
+                    .Where(c => c != null && c.IsAlive)
+                    .ToList();
+                if (kids == null || kids.Count == 0) return;
+
+                var groups = kids
+                    .GroupBy(c => OtherParentName(person, c, beholder) ?? string.Empty)
+                    .Select(g =>
+                    {
+                        var clauses = g.Select(ChildClause).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                        if (clauses.Count == 0) return null;
+                        var body = JoinAnd(clauses);
+                        return g.Key.Length == 0 ? body : $"with {g.Key}: {body}";
+                    })
+                    .Where(s => s != null)
+                    .ToList();
+                if (groups.Count == 0) return;
+
+                var parent = person.IsFemale ? "mother" : "father";
+                sentences.Add(kids.Count == 1
+                    ? $"{they} is {parent} to one child, {groups[0]}."
+                    : $"{they} is {parent} to children — {string.Join("; ", groups)}.");
+            });
+
+            Try(() =>
+            {
+                var father = person.Father;
+                var mother = person.Mother;
+                var child = person.IsFemale ? "daughter" : "son";
+                if (father != null && mother != null)
+                    sentences.Add($"{they} is the {child} of {Describe(father)} and {Describe(mother)}.");
+                else if (father != null)
+                    sentences.Add($"{they} is the {child} of {Describe(father)}.");
+                else if (mother != null)
+                    sentences.Add($"{they} is the {child} of {Describe(mother)}.");
+            });
+
+            return string.Join(" ", sentences);
+        }
+
+        /// <summary>Every living spouse — the Spouse slot first, then living "exes", where polygamy
+        /// mods park further wives while both live on wed (a living ex in an unmodded game is next
+        /// to none). Dead spouses are the caller's own story to tell.</summary>
+        private static List<Hero> SpousesOf(Hero h)
+        {
+            var list = new List<Hero>();
+            if (h == null) return list;
+            Try(() => { if (h.Spouse != null && h.Spouse.IsAlive) list.Add(h.Spouse); });
+            Try(() =>
+            {
+                if (h.ExSpouses == null) return;
+                foreach (var ex in h.ExSpouses)
+                    if (ex != null && ex.IsAlive && !list.Contains(ex)) list.Add(ex);
+            });
+            return list;
         }
 
         // "Yfinja (leading a warband of her own)" — a clan member named with what they are about,
@@ -230,14 +333,16 @@ namespace ImmersiveAI.Personas
             return age > 0 ? $"{name}, {gender} of some {age} years" : $"{name}, {gender}";
         }
 
-        // The child's OTHER parent, as the speaker would name them — for the "with Vulgrim" grouping.
-        // Null when the other parent is unknown (the clause then reads plainly).
-        private static string OtherParentName(Hero speaker, Hero child)
+        // The child's OTHER parent, as the speaker would name them — for the "with Vulgrim" grouping;
+        // the beholder (when given) is named "me". Null when the other parent is unknown (the clause
+        // then reads plainly).
+        private static string OtherParentName(Hero speaker, Hero child, Hero beholder = null)
         {
             try
             {
                 var other = child.Father == speaker ? child.Mother : child.Father;
                 if (other == null || other == speaker) return null;
+                if (other == beholder) return "me";
                 var name = other.Name?.ToString()?.Trim();
                 if (string.IsNullOrWhiteSpace(name)) return null;
                 return other.IsAlive ? name : $"{name} (now passed)";

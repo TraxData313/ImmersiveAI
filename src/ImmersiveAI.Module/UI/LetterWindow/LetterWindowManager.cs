@@ -104,6 +104,54 @@ namespace ImmersiveAI.UI.LetterWindow
             TearDown();
         }
 
+        // ---------------------- "Write back" — an open retried across ticks ----------------------
+
+        // A single next-tick try raced the closing "Write back" inquiry — IsAnyInquiryActive() was
+        // still true one tick later — so the window silently lost to the popup composer (Anton,
+        // 2026.07.15). The ask is parked here instead and retried each tick until the map is clear;
+        // the fallback fires only when the window truly cannot come up.
+        private static Hero? _pendingOpen;
+        private static int _pendingTicks;
+        private static Action<Hero>? _pendingFallback;
+
+        /// <summary>Opens the window on this hero's correspondence as soon as the map is clear
+        /// (the arrival inquiry may still be closing), falling back after ~2s of trying.
+        /// Game thread only.</summary>
+        internal static void OpenWhenClear(Hero npc, Action<Hero>? fallback)
+        {
+            if (npc == null) return;
+            _pendingOpen = npc;
+            _pendingTicks = 120;
+            _pendingFallback = fallback;
+        }
+
+        private static void TickPendingOpen()
+        {
+            var npc = _pendingOpen;
+            if (npc == null) return;
+            if (Campaign.Current == null) { ClearPendingOpen(); return; }   // the moment has passed
+            if (IsOpen) { _vm?.TrySelect(npc); ClearPendingOpen(); return; }
+            if (CanOpenNow())
+            {
+                var fallback = _pendingFallback;
+                bool opened = Open(npc);
+                ClearPendingOpen();
+                if (!opened) fallback?.Invoke(npc);
+                return;
+            }
+            if (--_pendingTicks > 0) return;
+            var fb = _pendingFallback;
+            ClearPendingOpen();
+            fb?.Invoke(npc);
+        }
+
+        private static void ClearPendingOpen()
+        {
+            _pendingOpen = null;
+            _pendingTicks = 0;
+            _pendingFallback = null;
+        }
+
         private static void TearDown()
         {
             try
@@ -153,6 +201,7 @@ namespace ImmersiveAI.UI.LetterWindow
         {
             try
             {
+                if (_pendingOpen != null) TickPendingOpen();
                 if (IsOpen) TickOpen();
                 else TickClosed();
             }
