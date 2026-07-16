@@ -35,10 +35,7 @@ namespace ImmersiveAI
         {
             try
             {
-                var openAi = config != null && config.Backend == "OpenAI";
-                var backend = openAi ? "OpenAI" : "Anthropic";
-                var apiKey = openAi ? config?.OpenAIApiKey : config?.AnthropicApiKey;
-                var model = openAi ? config?.OpenAIModel : config?.AnthropicModel;
+                var backend = SelectBackend(config, out var apiKey, out var model);
 
                 // The commonest case, and the one an API call can't diagnose kindly: no key at all.
                 // A brand-new install also gets the one-time first-run guide popup — the "here is
@@ -97,7 +94,7 @@ namespace ImmersiveAI
             // pointing at the key would send the player hunting the wrong problem.
             if (Mentions(msg, "insufficient permissions") || Mentions(msg, "must be verified") || Mentions(msg, "does not have access to model"))
             {
-                var model = config?.Backend == "OpenAI" ? config?.OpenAIModel : config?.AnthropicModel;
+                SelectBackend(config, out _, out var model);
                 return $"your API key is valid but not allowed to use the model '{model}'. In your provider's console, check the project's model access and the key's permissions (or verify the organization), or pick another model — then restart the game.";
             }
 
@@ -127,6 +124,34 @@ namespace ImmersiveAI
                     return true;
             }
             return false;
+        }
+
+        /// <summary>The configured backend's display name, key, and model — so every notice names
+        /// the service the player actually points at. A custom OpenAI-compatible endpoint (NanoGPT,
+        /// a local server) is named by host; OpenRouter is its own first-class backend.</summary>
+        private static string SelectBackend(ModConfig config, out string apiKey, out string model)
+        {
+            switch (config?.Backend)
+            {
+                case "OpenAI":
+                    apiKey = config.OpenAIApiKey; model = config.OpenAIModel;
+                    if (config.OpenAIBaseUrl != null
+                        && !string.Equals(config.OpenAIBaseUrl, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase))
+                        return "OpenAI-compatible (" + HostOf(config.OpenAIBaseUrl) + ")";
+                    return "OpenAI";
+                case "OpenRouter":
+                    apiKey = config.OpenRouterApiKey; model = config.OpenRouterModel;
+                    return "OpenRouter";
+                default:
+                    apiKey = config?.AnthropicApiKey; model = config?.AnthropicModel;
+                    return "Anthropic";
+            }
+        }
+
+        private static string HostOf(string url)
+        {
+            try { return new Uri(url).Host; }
+            catch { return url; }
         }
 
         private static bool Mentions(string haystack, string needle) =>

@@ -30,9 +30,9 @@ namespace ImmersiveAI.Mcm
         // is built at game start, so changing them asks for a restart to take effect.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = true,
-            HintText = "Which LLM service the NPCs think with. Anthropic (Claude) is the default and what the mod is tuned for; OpenAI (GPT) also works. Set the matching API key below.")]
+            HintText = "Which AI service the NPCs think with. Anthropic (Claude) is the default; OpenAI (GPT) also works; OpenRouter reaches BOTH Claude and GPT models with one key from openrouter.ai. Set the matching API key below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(new[] { "Anthropic", "OpenAI" }, 0);
+        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(new[] { "Anthropic", "OpenAI", "OpenRouter" }, 0);
 
         [SettingPropertyText("Anthropic API key", Order = 1, RequireRestart = true,
             HintText = "Your Claude API key (starts with sk-ant-...). Get one at console.anthropic.com. Required when the backend is Anthropic. Kept only in your local config file.")]
@@ -40,7 +40,7 @@ namespace ImmersiveAI.Mcm
         public string AnthropicApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = true,
-            HintText = "Which Claude model to use. Haiku 4.5 ($1/$5 per million tokens) is fast, cheap, and the default — the price-mate of gpt-5.4-mini; Sonnet 5 ($3/$15) is the strong step-up; Opus 4.8 ($5/$25) is the most capable and the priciest; Fable 5 ($10/$50) is the frontier flagship. A model set by hand in config.json also appears here.")]
+            HintText = "Haiku 4.5 ($1/$5 per MTok) is the fast, cheap default. Sonnet 5 ($3/$15) is the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(
             new[] { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" }, 0);
@@ -51,12 +51,42 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = true,
-            HintText = "Which GPT model to use when the backend is OpenAI. gpt-5.4-mini ($0.75/$4.50 per million tokens) is the recommended default — cheap, steady, and proven with the NPCs' tools; gpt-5.6-luna ($1/$6) is the newer-generation pick (fresh accounts sometimes see access hiccups in its first hours); terra ($2.50/$15) is the stronger middle pick, sol ($5/$30) the current flagship, gpt-5.5 ($5/$30) the previous flagship, gpt-5.4 ($2.50/$15) its workhorse, and gpt-5.4-nano ($0.20/$1.25) the cheapest of all. Anything older (gpt-4o and kin) is markedly worse with the NPCs, so it is left to config.json — one set by hand there still appears and works here.")]
+            HintText = "gpt-5.4-mini ($0.75/$4.50 per MTok) is the proven default. luna ($1/$6) is newer, terra ($2.50/$15) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
             new[] { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
 
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 5, RequireRestart = true,
+        [SettingPropertyText("OpenRouter API key", Order = 5, RequireRestart = true,
+            HintText = "Your OpenRouter key (starts with sk-or-...). Get one at openrouter.ai — one key and a little credit reaches both Claude and GPT models at the providers' own prices. Required only when the backend is OpenRouter.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string OpenRouterApiKey { get; set; } = string.Empty;
+
+        [SettingPropertyDropdown("OpenRouter model", Order = 6, RequireRestart = true,
+            HintText = "Which model when the backend is OpenRouter — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tools, same prices as going direct. gpt-5.4-mini and claude-haiku-4.5 are the proven picks; deepseek-v4-flash the cheapest. Any other id from openrouter.ai/models set in config.json also appears here.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(new[]
+        {
+            "openai/gpt-5.4-mini",
+            "anthropic/claude-haiku-4.5",
+            "deepseek/deepseek-v4-flash",
+            "google/gemini-2.5-flash",
+            "google/gemini-3.5-flash",
+            "mistralai/mistral-large-2512",
+            "anthropic/claude-sonnet-5",
+            "openai/gpt-5.6-luna",
+            "openai/gpt-5.6-terra",
+            "x-ai/grok-4.5",
+            "anthropic/claude-opus-4.8",
+            "anthropic/claude-fable-5",
+            "openai/gpt-5.4-nano",
+        }, 0);
+
+        [SettingPropertyText("Custom endpoint (advanced)", Order = 7, RequireRestart = true,
+            HintText = "Empty = the real OpenAI. For another OpenAI-compatible service (NanoGPT, a local server), paste its base URL ending in /v1, put its key in the OpenAI key field, and set its model id in config.json. For OpenRouter just pick the OpenRouter backend above instead.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string OpenAIBaseUrl { get; set; } = string.Empty;
+
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 8, RequireRestart = true,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;

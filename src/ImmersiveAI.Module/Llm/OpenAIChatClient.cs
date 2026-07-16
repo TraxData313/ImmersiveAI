@@ -13,28 +13,42 @@ using Newtonsoft.Json.Linq;
 namespace ImmersiveAI.Llm
 {
     /// <summary>OpenAI chat-completions client (raw HTTP, .NET Framework compatible). Supports
-    /// native function calling, which carries the NPCs' "recall the world" ability.</summary>
+    /// native function calling, which carries the NPCs' "recall the world" ability. The endpoint
+    /// is configurable (<see cref="ModConfig.OpenAIBaseUrl"/>), so the same client speaks to any
+    /// OpenAI-compatible service — OpenRouter, NanoGPT, a local server.</summary>
     public sealed class OpenAIChatClient : IToolChatClient
     {
-        private const string Endpoint = "https://api.openai.com/v1/chat/completions";
-
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
 
         private readonly string _apiKey;
         private readonly string _model;
         private readonly int _maxTokens;
+        private readonly string _endpoint;
+        private readonly string _label;
 
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
-        public OpenAIChatClient(string apiKey, string model, int maxTokens)
+        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? endpoint = null, string? providerLabel = null)
         {
             _apiKey = apiKey ?? "";
             _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.4-mini" : model;
             _maxTokens = maxTokens > 0 ? maxTokens : 400;
+            _endpoint = string.IsNullOrWhiteSpace(endpoint) ? ModConfig.DefaultOpenAIEndpoint : endpoint;
+            // Errors and log lines name the true provider ("OpenRouter request failed…"), so a
+            // router problem never sends the player checking their OpenAI account.
+            _label = string.IsNullOrWhiteSpace(providerLabel) ? "OpenAI" : providerLabel;
         }
+
+        private bool IsOpenRouter =>
+            _endpoint.IndexOf("openrouter.ai", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        // A provider-prefixed id ("openai/gpt-5.4-mini") is the OpenRouter/NanoGPT convention: the
+        // request rides through a router that translates parameters per provider. Those get the
+        // universal shape (classic max_tokens), never the OpenAI-only fields below.
+        private bool IsRoutedModel => _model.IndexOf('/') >= 0;
 
         // The gpt-5.x family and the o-series reject the classic max_tokens in favor of
         // max_completion_tokens, and carry the reasoning_effort dial; older models keep the
@@ -69,7 +83,7 @@ namespace ImmersiveAI.Llm
             CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
-                throw new InvalidOperationException("OpenAI API key is not set. Add it to " + ModConfig.ConfigFilePath);
+                throw new InvalidOperationException(_label + " API key is not set. Add it to " + ModConfig.ConfigFilePath);
             if (!UsageLedger.CanCall(out var capReason))
                 throw new InvalidOperationException(capReason);
 
@@ -78,14 +92,20 @@ namespace ImmersiveAI.Llm
             // long answers with silence. "none" is sent explicitly because omitting the dial lets
             // the API default to reasoning. (It also sidesteps gpt-5.6's refusal to combine
             // function tools with reasoning on chat completions, hit live 2026.07.12.)
+            var reasoningFamily = !IsRoutedModel && IsReasoningFamily;
             var payload = new JObject
             {
                 ["model"] = _model,
-                [IsReasoningFamily ? "max_completion_tokens" : "max_tokens"] = _maxTokens,
+                [reasoningFamily ? "max_completion_tokens" : "max_tokens"] = _maxTokens,
                 ["messages"] = BuildTurns(messages),
             };
-            if (IsReasoningFamily)
+            if (reasoningFamily)
                 payload["reasoning_effort"] = "none";
+            else if (IsRoutedModel)
+                // The routers' own unified reasoning switch (documented as ignored by models that
+                // cannot reason) — without it, a routed gpt-5.x thinks at its default effort and
+                // spends the spoken budget on silence, the very "..." bug of 2026.07.13.
+                payload["reasoning"] = new JObject { ["enabled"] = false };
 
             if (tools != null && tools.Count > 0)
             {
@@ -99,6 +119,19 @@ namespace ImmersiveAI.Llm
 
             var (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
 
+            // Some routed models cannot have their thinking turned off — fable, grok-4.5 and
+            // gemini-3.5 all answer 400 "Reasoning is mandatory for this endpoint" (verified live
+            // 2026.07.16). Drop the reasoning field and let such a model think as it must: better
+            // a thoughtful reply than a refused one, and no per-model list to keep.
+            if (status == 400 && payload["reasoning"] != null
+                && body.IndexOf("Reasoning is mandatory", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                payload.Remove("reasoning");
+                payloadText = payload.ToString(Formatting.None);
+                ModLog.Warn($"{_label}: '{_model}' cannot run with reasoning disabled — retrying with its own thinking allowed.");
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
+
             // OpenAI's "insufficient permissions" 401 shows up INTERMITTENTLY for a while after
             // the account's model access is changed (their ACL propagating — observed live
             // 2026.07.12: the same request shape succeeding and failing seconds apart, and
@@ -108,15 +141,15 @@ namespace ImmersiveAI.Llm
             for (int attempt = 1; attempt <= 3 && status == 401
                  && body.IndexOf("insufficient permissions", StringComparison.OrdinalIgnoreCase) >= 0; attempt++)
             {
-                ModLog.Warn($"OpenAI answered 401 'insufficient permissions' — retry {attempt} of 3 (fresh access changes propagate slowly on their side).");
+                ModLog.Warn($"{_label} answered 401 'insufficient permissions' — retry {attempt} of 3 (fresh access changes propagate slowly on their side).");
                 await Task.Delay(1500 * attempt, cancellationToken).ConfigureAwait(false);
                 (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
             }
 
             if (status < 200 || status >= 300)
             {
-                LlmGate.ReportFailure(status, "OpenAI", body);
-                throw new InvalidOperationException($"OpenAI request failed ({status}): {Truncate(body, 400)}");
+                LlmGate.ReportFailure(status, _label, body);
+                throw new InvalidOperationException($"{_label} request failed ({status}): {Truncate(body, 400)}");
             }
 
             var json = JObject.Parse(body);
@@ -148,9 +181,16 @@ namespace ImmersiveAI.Llm
         /// telling the gate.</summary>
         private async Task<(int Status, string Body)> PostOnceAsync(string payloadText, CancellationToken cancellationToken)
         {
-            using (var request = new HttpRequestMessage(HttpMethod.Post, Endpoint))
+            using (var request = new HttpRequestMessage(HttpMethod.Post, _endpoint))
             {
                 request.Headers.Add("Authorization", "Bearer " + _apiKey);
+                if (IsOpenRouter)
+                {
+                    // OpenRouter's optional app attribution — shows the mod by name in the user's
+                    // own activity view instead of an anonymous key.
+                    request.Headers.Add("HTTP-Referer", "https://www.nexusmods.com/mountandblade2bannerlord/mods/12119");
+                    request.Headers.Add("X-Title", "Immersive AI (Bannerlord)");
+                }
                 request.Content = new StringContent(payloadText, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response;
@@ -161,7 +201,7 @@ namespace ImmersiveAI.Llm
                 catch (Exception ex)
                 {
                     // The connection itself failed (or timed out) — quiet the autonomous flows.
-                    LlmGate.ReportFailure(0, "OpenAI", ex.Message);
+                    LlmGate.ReportFailure(0, _label, ex.Message);
                     throw;
                 }
                 using (response)

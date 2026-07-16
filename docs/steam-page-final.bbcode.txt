@@ -38,6 +38,8 @@ This is an advanced, immersive roleplaying and relationship-building mod. I buil
 
 This mod does [b]not[/b] use the "free" Player2 backend — you bring [b]your own API key[/b] (Anthropic by default, or OpenAI) and put a few bucks on it. For Player2 to support the tool calling this mod is built on, it would have to be a paid tier anyway — so don't bother; just get a real key. If you want a free roleplaying experience to try out first, check out the ChatAI mod — it's good; it inspired this one.
 
+[b]OpenRouter works out of the box[/b] (since v1.1.0): pick the OpenRouter backend in Mod Options, paste one key from openrouter.ai, choose a model — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tool calling, at the providers' own prices. Other OpenAI-compatible services (NanoGPT, or a local Ollama/LM Studio server at your own risk) connect through the Custom endpoint option; heads-up that the mod is built on native tool calling, and small local models are often shaky there. The connection check at campaign start tells you plainly whether your setup works.
+
 [b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models — $10 of credit covers thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap so it can never run away from you.
 
 [h1]Quick setup (five minutes)[/h1]

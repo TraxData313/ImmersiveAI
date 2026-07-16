@@ -214,6 +214,21 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
+  `OpenRouterApiKey` + `OpenRouterModel` (2026.07.16, asked for on Nexus — OpenRouter as a FIRST-CLASS
+  backend, `Backend: "OpenRouter"`: the same OpenAIChatClient pointed at `ModConfig.OpenRouterEndpoint`
+  with label "OpenRouter" in every error; one sk-or- key reaches GPT and Claude alike, ids in
+  OpenRouter's own dotted spelling ("anthropic/claude-haiku-4.5"); MCM has the key field + a curated
+  model dropdown verified against the live /models catalog; live-tested with Anton's key — plain
+  replies, native tool calling, reasoning-off all pass; the client sends OpenRouter's attribution
+  headers only when the endpoint host is openrouter.ai),
+  `OpenAIBaseUrl` (same day — the OpenAI backend's endpoint; default the real
+  OpenAI, point it at any OTHER OpenAI-compatible service instead: NanoGPT/local Ollama, paste
+  the base URL ending in /v1 and Normalize completes it to /chat/completions; router model ids like
+  "openai/gpt-5.4-mini" get the universal request shape — classic max_tokens + the routers'
+  `reasoning: {enabled:false}` — while bare ids on the default endpoint keep today's exact shape;
+  the health check names a custom host, the MCM "Custom endpoint (advanced)" field shows blank for
+  the default; price/context tables match router ids by containment for free, including the dotted
+  claude slugs: "claude-haiku"/"claude-opus-4" are substrings of the router forms),
   `AtmosphereLine` (the configurable opening identity line, supports `{name}`) + `RoleplayGuidance`
   (world-wide tone/roleplay guidance, offered as freedom), `NotifyWhenReplyReady` (short "has answered"
   ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),

@@ -99,6 +99,11 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
+  `OpenRouterApiKey` + `OpenRouterModel` (OpenRouter as a first-class backend, `Backend: "OpenRouter"` —
+  one key reaches GPT and Claude, ids in OpenRouter's dotted spelling like "anthropic/claude-haiku-4.5"),
+  `OpenAIBaseUrl` (the OpenAI backend's endpoint — default the real OpenAI; any other OpenAI-compatible
+  service works: paste a base URL ending in /v1, Normalize completes it; router ids like
+  "openai/gpt-5.4-mini" get classic max_tokens + `reasoning: {enabled:false}`),
   `AtmosphereLine` + `RoleplayGuidance` (configurable opening line + world-wide tone/roleplay guidance),
   `NotifyWhenReplyReady` + `ShowConversationInMessageLog`, `EnableRelationshipChanges` +
   `RelationshipChangesViaTool` (relation shifts — by default the NPC moves her own heart mid-reply via

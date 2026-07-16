@@ -2,9 +2,11 @@
 
 Name:      Immersive AI - every character, a living mind
 Category:  Gameplay
-Version:   v1.0.0
-File:      dist\ImmersiveAI_v1.0.0.zip  (contains the ImmersiveAI module folder at the zip root
+Version:   v1.1.0
+File:      dist\ImmersiveAI_v1.1.0.zip  (contains the ImmersiveAI module folder at the zip root
            — works for Vortex and for manual extraction into Modules\)
+Changelog: paste the newest section of CHANGELOG.md (repo root) into the version's
+           changelog field when uploading the file.
 Summary (short description field, keep under ~250 chars):
 NPCs converse through the AI model you configure (bring your own Anthropic/OpenAI key) with
 persistent layered memory, moods, goals and distinct voices. They remember you, reach out to
@@ -52,6 +54,8 @@ This is an advanced, immersive roleplaying and relationship-building mod. I buil
 [b][size=4]What you need - and what it costs[/size][/b]
 
 This mod does [b]not[/b] use the "free" Player2 backend - you bring [b]your own API key[/b] (Anthropic by default, or OpenAI) and put a few bucks on it. For Player2 to support the tool calling this mod is built on, it would have to be a paid tier anyway - so don't bother; just get a real key. If you want a free roleplaying experience to try out first, check out the ChatAI mod - it's good; it inspired this one.
+
+[b]OpenRouter works out of the box[/b] (since v1.1.0): pick the OpenRouter backend in Mod Options, paste one key from openrouter.ai, choose a model - GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tool calling, at the providers' own prices. Other OpenAI-compatible services (NanoGPT, or a local Ollama/LM Studio server at your own risk) connect through the Custom endpoint option; heads-up that the mod is built on native tool calling, and small local models are often shaky there. The connection check at campaign start tells you plainly whether your setup works.
 
 [b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models - $10 of credit covers thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap so it can never run away from you.
 

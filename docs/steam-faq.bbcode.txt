@@ -9,6 +9,9 @@ The mod is free (public domain, even). The AI is not — you bring your own API 
 [b]OK, but how much does it actually cost?[/b]
 On the default models a typical exchange is around a cent or less — $10 of credit covers thousands of messages. The mod shows you each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
 
+[b]Can I use OpenRouter / NanoGPT / a local LLM?[/b]
+Since v1.1.0, yes. [b]OpenRouter is a built-in backend[/b]: pick it in Mod Options, paste one key from openrouter.ai, choose a model from the dropdown — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tool calling, at the providers' own prices (any other id from openrouter.ai/models set in config.json appears in the dropdown too). Other OpenAI-compatible services connect through [b]Custom endpoint[/b] in Mod Options: paste the base URL ending in /v1, put that service's key in the OpenAI key field, set its model id in config.json. One caveat: the mod is built on native tool calling — NanoGPT and small local models (Ollama/LM Studio) can be shaky there; local is possible, unsupported, at your own risk. The connection check at campaign start tells you plainly whether your setup works.
+
 [b]Where does the mod actually live on my disk? Where do I put my key?[/b]
 Two places, and the split matters:
 [list]

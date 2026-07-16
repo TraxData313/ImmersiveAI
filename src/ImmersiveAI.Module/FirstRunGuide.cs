@@ -31,15 +31,18 @@ namespace ImmersiveAI
                     "Immersive AI showed its first-run key guide on " + DateTime.Now + ".\r\n" +
                     "Delete this file to see that popup once more.\r\n");
 
-                var openAi = config?.Backend == "OpenAI";
+                var keyField = config?.Backend == "OpenAI" ? "OpenAIApiKey"
+                    : config?.Backend == "OpenRouter" ? "OpenRouterApiKey"
+                    : "AnthropicApiKey";
                 var body =
                     "Immersive AI gives every character a real, remembering mind — but the minds speak " +
                     "through an AI service, with YOUR OWN key, and no key is set yet. Until one is, the world stays silent.\n\n" +
-                    "1. GET A KEY — console.anthropic.com (Anthropic, the default) or platform.openai.com (OpenAI). " +
-                    "Both bill by use: an evening of conversation is typically well under a dollar, and the mod " +
+                    "1. GET A KEY — console.anthropic.com (Anthropic, the default), platform.openai.com (OpenAI), " +
+                    "or openrouter.ai (one key for many models). " +
+                    "All bill by use: an evening of conversation is typically well under a dollar, and the mod " +
                     "shows you each exchange's cost as you play.\n\n" +
                     "2. PUT IT HERE — open:\n" + ModConfig.ConfigFilePath + "\n" +
-                    (openAi ? "and paste the key into \"OpenAIApiKey\"." : "and paste the key into \"AnthropicApiKey\".") +
+                    "and paste the key into \"" + keyField + "\"." +
                     " (With the Mod Configuration Menu installed, the key can also be set in-game under Mod Options.)\n\n" +
                     "3. RESTART THE GAME — a short \"connected\" notice will greet you when the world is listening.";
 

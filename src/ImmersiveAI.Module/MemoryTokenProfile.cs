@@ -46,9 +46,9 @@ namespace ImmersiveAI
         public static MemoryTokenProfile Resolve(ModConfig config)
         {
             var backend = config?.Backend ?? "Anthropic";
-            var model = (backend == "OpenAI"
-                ? config?.OpenAIModel ?? ""
-                : config?.AnthropicModel ?? "").ToLowerInvariant();
+            var model = ((backend == "OpenAI" ? config?.OpenAIModel
+                : backend == "OpenRouter" ? config?.OpenRouterModel
+                : config?.AnthropicModel) ?? "").ToLowerInvariant();
 
             // The configured (user-editable) model table decides; the longest key contained in the
             // model id wins, so "gpt-5.1" beats "gpt-5" for gpt-5.1-mini and "claude" catches every

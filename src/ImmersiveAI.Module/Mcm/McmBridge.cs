@@ -77,6 +77,12 @@ namespace ImmersiveAI.Mcm
             SelectOrAdd(s.AnthropicModel, c.AnthropicModel);
             s.OpenAIApiKey = c.OpenAIApiKey ?? string.Empty;
             SelectOrAdd(s.OpenAIModel, c.OpenAIModel);
+            s.OpenRouterApiKey = c.OpenRouterApiKey ?? string.Empty;
+            SelectOrAdd(s.OpenRouterModel, c.OpenRouterModel);
+            // The endpoint shows blank while it is the real OpenAI — the field is for the exception.
+            s.OpenAIBaseUrl = string.Equals(c.OpenAIBaseUrl, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : (c.OpenAIBaseUrl ?? string.Empty);
             s.MaxTokens = Clamp(c.MaxTokens, 100, 2000);
 
             s.EnableChatWindow = c.EnableChatWindow;
@@ -107,6 +113,12 @@ namespace ImmersiveAI.Mcm
             c.AnthropicModel = s.AnthropicModel.SelectedValue ?? c.AnthropicModel;
             c.OpenAIApiKey = s.OpenAIApiKey ?? string.Empty;
             c.OpenAIModel = s.OpenAIModel.SelectedValue ?? c.OpenAIModel;
+            c.OpenRouterApiKey = s.OpenRouterApiKey ?? string.Empty;
+            c.OpenRouterModel = s.OpenRouterModel.SelectedValue ?? c.OpenRouterModel;
+            // Blank means the real OpenAI; Normalize (run by the caller) completes a pasted /v1 base.
+            c.OpenAIBaseUrl = string.IsNullOrWhiteSpace(s.OpenAIBaseUrl)
+                ? ModConfig.DefaultOpenAIEndpoint
+                : s.OpenAIBaseUrl.Trim();
             c.MaxTokens = s.MaxTokens;
 
             c.EnableChatWindow = s.EnableChatWindow;

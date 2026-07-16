@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.0.0 release build. Letter window key moved from U to Y (War Sails uses U for the ship manager at sea). Configs still on the old default switch automatically; a hand-picked key is left untouched. You can change it any time in the MCM settings or config.json." />
+        <ChangeNotes Value="v1.1.0 - OpenRouter is now a built-in backend (most requested): pick OpenRouter in Mod Options, paste one key from openrouter.ai, choose a model from the dropdown - GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified working with the NPCs' tool calling, at the providers' own prices (deepseek-v4-flash is the cheapest of all). Also: a Custom endpoint option lets the OpenAI backend point at any other OpenAI-compatible service (NanoGPT, or a local Ollama/LM Studio server at your own risk - small local models are often shaky with the mod's tool calling). The connection check at campaign start names the service it reached, so you know at once whether your setup works. MCM tooltips shortened so they no longer overflow. Existing setups are untouched." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

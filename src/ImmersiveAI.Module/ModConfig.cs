@@ -16,13 +16,38 @@ namespace ImmersiveAI
         /// without clobbering hand-edits (Normalize keys migrations off it). Do not edit.</summary>
         public int ConfigVersion { get; set; } = 1;
 
-        public string Backend { get; set; } = "Anthropic"; // "Anthropic" or "OpenAI"
+        public string Backend { get; set; } = "Anthropic"; // "Anthropic", "OpenAI" or "OpenRouter"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-haiku-4-5";
 
+        /// <summary>OpenRouter as a first-class backend (2026.07.16, asked for on Nexus): one key at
+        /// openrouter.ai reaches both GPT and Claude models (and hundreds more) through their
+        /// OpenAI-compatible door. Model ids are provider-prefixed ("openai/gpt-5.4-mini",
+        /// "anthropic/claude-haiku-4.5" — note the dot, OpenRouter's own spelling); the price and
+        /// context tables match them by containment. Live-verified 2026.07.16: plain replies,
+        /// native tool calling, and reasoning-off all work through the router.</summary>
+        public string OpenRouterApiKey { get; set; } = "";
+        public string OpenRouterModel { get; set; } = "openai/gpt-5.4-mini";
+
+        public const string OpenRouterEndpoint = "https://openrouter.ai/api/v1/chat/completions";
+
         public string OpenAIApiKey { get; set; } = "";
         public string OpenAIModel { get; set; } = "gpt-5.4-mini";
+
+        /// <summary>The default (real OpenAI) chat-completions endpoint the OpenAI backend speaks to.</summary>
+        public const string DefaultOpenAIEndpoint = "https://api.openai.com/v1/chat/completions";
+
+        /// <summary>Where the OpenAI-shaped requests go. The default is the real OpenAI; point it at
+        /// any OpenAI-compatible service instead — OpenRouter (https://openrouter.ai/api/v1), NanoGPT
+        /// (https://nano-gpt.com/api/v1), or a local server such as Ollama/LM Studio
+        /// (http://localhost:11434/v1) — with that service's key in <see cref="OpenAIApiKey"/> and its
+        /// model id in <see cref="OpenAIModel"/> (router ids like "openai/gpt-5.4-mini" work; the cost
+        /// and context tables match them by containment). A base URL ending in /v1 is completed to the
+        /// full /chat/completions path on load. The NPCs' full abilities need a service and model that
+        /// carry native tool calling — OpenRouter with mainstream models does; small local models
+        /// usually stumble there.</summary>
+        public string OpenAIBaseUrl { get; set; } = DefaultOpenAIEndpoint;
 
         // NOTE (2026.07.13): reasoning/thinking is switched OFF for good on every model — the
         // clients send OpenAI reasoning_effort "none" and Anthropic thinking "disabled" themselves.
@@ -419,6 +444,8 @@ namespace ImmersiveAI
                 ["claude-opus-4"] = 1000000,
                 ["claude-sonnet-5"] = 1000000,
                 ["claude-sonnet-4-6"] = 1000000,
+                ["gemini"] = 1000000,
+                ["grok"] = 256000,
             };
 
         /// <summary>The built-in model → price table (USD per million tokens; verified 2026.07).
@@ -447,6 +474,13 @@ namespace ImmersiveAI
                 ["gpt-4o-mini"] = new ModelPrice(0.15, 0.6),
                 ["gpt-4.1"] = new ModelPrice(2, 8),
                 ["gpt-4.1-mini"] = new ModelPrice(0.4, 1.6),
+                // Via OpenRouter (2026.07.16, read from the live catalog): the dropdown's other
+                // families. Containment matches the prefixed ids ("google/gemini-2.5-flash").
+                ["gemini-2.5-flash"] = new ModelPrice(0.3, 2.5),
+                ["gemini-3.5-flash"] = new ModelPrice(1.5, 9),
+                ["deepseek-v4-flash"] = new ModelPrice(0.1, 0.2),
+                ["grok-4.5"] = new ModelPrice(2, 6),
+                ["mistral-large-2512"] = new ModelPrice(0.5, 1.5),
             };
 
         public static string ConfigDirectory =>
@@ -513,6 +547,22 @@ namespace ImmersiveAI
             }
 
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
+            // The OpenAI-compatible endpoint: blank means the real OpenAI; a pasted base URL ending
+            // in /v1 (the way every provider states it) is completed to the full chat-completions
+            // path, and a missing scheme becomes https — so "openrouter.ai/api/v1" just works.
+            if (string.IsNullOrWhiteSpace(OpenAIBaseUrl)) OpenAIBaseUrl = DefaultOpenAIEndpoint;
+            OpenAIBaseUrl = OpenAIBaseUrl.Trim().TrimEnd('/');
+            if (OpenAIBaseUrl.IndexOf("://", StringComparison.Ordinal) < 0)
+                OpenAIBaseUrl = "https://" + OpenAIBaseUrl;
+            if (!OpenAIBaseUrl.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+                OpenAIBaseUrl += "/chat/completions";
+
+            // The OpenRouter model: blank falls back to the default; ids are trimmed so a pasted
+            // trailing space can't 400 the router.
+            OpenRouterApiKey = (OpenRouterApiKey ?? string.Empty).Trim();
+            OpenRouterModel = (OpenRouterModel ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-5.4-mini";
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;
