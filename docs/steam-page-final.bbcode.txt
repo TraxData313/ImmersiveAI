@@ -71,8 +71,7 @@ Safe to remove at any time — even a save carrying a pending Immersive AI notic
 
 [list]
 [*][b]Read the startup message.[/b] When a campaign loads, the mod tests your connection and says plainly what it found and where to fix it. Fix config.json and restart; the check runs again.
-[*][b]Check the log.[/b] Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt records every call and every error in plain words.
-[*][b]A wrong or dead key shows ONE amber notice[/b], then goes quiet; fixing the key brings everything back.
+[*][b]Check the log[/b] — log.txt in the config folder records every call and every error in plain words.
 [*]Still stuck? Post the last lines of log.txt — it never contains your key.
 [/list]
 
@@ -83,7 +82,7 @@ Under Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\:
 [list]
 [*]global_prompt.txt — a few sentences that color every mind in the world ("the year is one of famine").
 [*]NPCs\campaign_*\<character>\custom_instructions.txt — per-character secrets and quirks.
-[*]Each character's folder also holds their memories, self-image, goals, and correspondence as readable text — the whole inner life, yours to browse.
+[*]Each character's folder also holds their memories, self-image, goals, and correspondence as readable text — yours to browse.
 [/list]
 
 Changes apply on the next conversation. No restart.
@@ -92,7 +91,7 @@ Changes apply on the next conversation. No restart.
 
 [list]
 [*]Bannerlord v1.4.7. New campaigns and existing saves both work.
-[*]Optional: Mod Configuration Menu (MCM) for in-game settings; without it, everything is in config.json.
+[*]Optional: MCM for in-game settings; without it, everything is in config.json.
 [*]One light Harmony patch (bundled); no vanilla behavior is altered.
 [*]A clean-room rewrite inspired by the ChatAi mod — no code copied, fully original source.
 [/list]
