@@ -1,7 +1,7 @@
 Title (goes in the Workshop title field, not the description):
 Immersive AI — every character, a living mind
 
-=== DESCRIPTION — paste everything below this line (Steam caps it at 8000 chars — re-measure after edits!) ===
+=== DESCRIPTION — paste everything below this line (Steam caps it at 8000 UTF-8 BYTES, em-dashes cost 3 each — re-measure after every edit!) ===
 
 This is an advanced, immersive roleplaying and relationship-building mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
 
