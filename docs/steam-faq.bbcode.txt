@@ -4,13 +4,23 @@ Same BBCode dialect as the description.
 === THREAD 1 — title: "FAQ — read before asking" ===
 
 [b]Is it free?[/b]
-The mod is free (public domain, even). The AI is not — you bring your own API key (Anthropic by default, or OpenAI) and put a few bucks on it. No key, no talking NPCs. See the description for the five-minute setup.
+The mod is free (public domain, even). The AI mostly is not — you bring your own API key (Anthropic by default, OpenAI, or OpenRouter — one key there reaches many models) and put a few bucks on it. The one truly free road is running a local model on your own machine, if your PC can carry one — see the local-models question below. No key and no local model, no talking NPCs. See the description for the five-minute setup.
 
 [b]OK, but how much does it actually cost?[/b]
 On the default models a typical exchange is around a cent or less — $10 of credit covers thousands of messages. The mod shows you each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
 
 [b]Can I use OpenRouter / NanoGPT / a local LLM?[/b]
-Since v1.1.0, yes. [b]OpenRouter is a built-in backend[/b]: pick it in Mod Options, paste one key from openrouter.ai, choose a model from the dropdown — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tool calling, at the providers' own prices (any other id from openrouter.ai/models set in config.json appears in the dropdown too). Other OpenAI-compatible services connect through [b]Custom endpoint[/b] in Mod Options: paste the base URL ending in /v1, put that service's key in the OpenAI key field, set its model id in config.json. One caveat: the mod is built on native tool calling — NanoGPT and small local models (Ollama/LM Studio) can be shaky there; local is possible, unsupported, at your own risk. The connection check at campaign start tells you plainly whether your setup works.
+All of them. [b]OpenRouter is a built-in backend[/b] (since v1.1.0): pick it in Mod Options, paste one key from openrouter.ai, choose a model from the dropdown — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tool calling, at the providers' own prices (any other id from openrouter.ai/models set in config.json appears in the dropdown too). Other OpenAI-compatible cloud services (NanoGPT…) connect through [b]Custom endpoint[/b] in Mod Options: paste the base URL ending in /v1, put that service's key in the OpenAI key field, set its model id in config.json. The connection check at campaign start tells you plainly whether your setup works.
+
+[b]Local models — what to expect?[/b]
+[b]Local is a built-in backend too[/b] (since v1.2.0, experimental): pick [b]Local[/b] in Mod Options, run [b]LM Studio[/b] (the default, localhost:1234) or [b]Ollama[/b] (paste http://localhost:11434/v1 as the local server URL), set the exact model id your server serves and the context length you loaded it with. Free, private, nothing leaves your PC. The honest rules:
+[list]
+[*]The model [b]must[/b] carry native tool calling ("tool use") — the mod is built on it. Worth a try: [b]Qwen3.6-35B-A3B[/b] (instruct — the strongest local tool-caller right now), [b]GPT-OSS-20B[/b], [b]Mistral Small 24B[/b]. Small 8B-class models will talk but fumble the tools.
+[*]Realistic hardware to even think about it: a dedicated GPU with [b]12–16+ GB VRAM[/b] (RTX 4070-class and up) and [b]32 GB RAM[/b]. Below that, stay on the cloud backends.
+[*]Local replies are [b]slow[/b] — the face-to-face panel can feel broken on the long wait; the chat window (hotkey [b]O[/b]) handles it far better, so live there when running local.
+[*]Load the model with [b]16k+ context[/b] and mirror it in the mod's Local context length setting; if relations never move, set RelationshipChangesViaTool to false in config.json.
+[*]Replies arriving as "…" mean the model is [b]thinking silently[/b] instead of speaking (hybrid reasoners like Qwen do this by default) — turn the model's thinking OFF in your server (LM Studio has a per-model toggle) or load a non-thinking [b]instruct[/b] build. log.txt says so in plain words when it happens.
+[/list]
 
 [b]Where does the mod actually live on my disk? Where do I put my key?[/b]
 Two places, and the split matters:
@@ -32,10 +42,10 @@ Another PC: not automatically. Steam Cloud syncs your Bannerlord saves, but NOT 
 Still stuck? Post the last lines of log.txt in the Bug reports thread — the mod never logs your key.
 
 [b]Which model should I pick?[/b]
-The defaults (claude-haiku-4-5 / gpt-5.4-mini) are chosen to be cheap and good — start there. If you want deeper roleplay and don't mind paying a few cents per exchange, step up through the dropdown (sonnet, opus, fable on Anthropic). Any model id your provider serves can also be typed into config.json by hand.
+The defaults (claude-haiku-4-5 / gpt-5.4-mini) are chosen to be cheap and good — start there. If you want deeper roleplay and don't mind paying a few cents per exchange, step up through the dropdown (sonnet, opus, fable on Anthropic). Any model id your provider serves can also be typed into config.json by hand. Going local: Qwen3.6-35B-A3B (instruct) is the strongest tool-caller that fits a 16 GB card right now.
 
 [b]Where do my conversations go? (privacy)[/b]
-To the AI provider YOU configured, under YOUR key and their terms — nowhere else. With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn EnableWebSearch off to keep everything between you and your provider. The mod itself collects no telemetry whatsoever. All memories are plain files on your own disk, yours to read, edit, or delete.
+To the AI provider YOU configured, under YOUR key and their terms — nowhere else (and with the Local backend, they never leave your machine at all). With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn EnableWebSearch off to keep everything between you and your provider. The mod itself collects no telemetry whatsoever. All memories are plain files on your own disk, yours to read, edit, or delete.
 
 [b]Can I add it to an existing campaign? Remove it mid-campaign?[/b]
 Yes and yes. Existing saves work. Removing is safe at any time — even a save carrying a pending Immersive AI notice loads fine without the mod (the game quietly discards it; you'll just see the usual "different modules" warning every modded save shows). Memories live outside the saves and survive either way — reinstall later and every character remembers you.
@@ -49,7 +59,7 @@ Probably just honest: a fresh game is quiet because nobody knows you yet. Approa
 [b]Compatibility — game version, other mods, requirements?[/b]
 [list]
 [*][b]Game version:[/b] built and tested on the current live version (v1.4.7). Older game versions are untested and unlikely to work — the mod uses current APIs.
-[*][b]Requires:[/b] nothing but the base game and your API key. Harmony comes bundled inside the mod — no separate Harmony, ButterLib or UIExtenderEx downloads. MCM (Mod Configuration Menu) is optional: with it you get an in-game settings menu, without it everything is set in config.json.
+[*][b]Requires:[/b] nothing but the base game and an AI to think with — your API key, or a local model. Harmony comes bundled inside the mod — no separate Harmony, ButterLib or UIExtenderEx downloads. MCM (Mod Configuration Menu) is optional: with it you get an in-game settings menu, without it everything is set in config.json.
 [*][b]Other mods:[/b] it replaces no vanilla behavior (one light Harmony postfix is all), so it coexists peacefully with overhauls and most everything else. Characters added by other mods get minds like everyone else — personalities are built from live game data, whoever put them in the world.
 [*][b]War Sails:[/b] neither required nor conflicting.
 [*][b]Load order:[/b] nothing to arrange — the launcher sorts it automatically (after the game modules, and after MCM if you have it).
@@ -61,7 +71,7 @@ Adding to an existing campaign or removing mid-campaign is covered above — bot
 Yes — speak anything to them and they answer in kind. The mod's own UI (windows, notices) is English for now.
 
 [b]How is this different from ChatAi?[/b]
-ChatAi inspired this mod and is a good free way to taste the idea. Immersive AI is a clean-room rewrite (no code copied) built around what ChatAi doesn't do: persistent layered memory that survives long conversations, NPCs with their own goals, moods and voices, native tool use (they look things up instead of hallucinating), NPCs that approach YOU and write letters, a chat window and a letter window. The trade: you bring your own key.
+ChatAi inspired this mod and is a good free way to taste the idea. Immersive AI is a clean-room rewrite (no code copied) built around what ChatAi doesn't do: persistent layered memory that survives long conversations, NPCs with their own goals, moods and voices, native tool use (they look things up instead of hallucinating), NPCs that approach YOU and write letters, a chat window and a letter window. The trade: you bring your own key (or a local model and the machine to run it).
 
 [b]Can I shape the world or individual characters?[/b]
 Yes — plain text files under Documents\...\Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world; each character's folder has custom_instructions.txt for personal secrets and quirks, plus their memories, self-image, goals and letters as readable text. Changes apply on the next conversation, no restart.
@@ -94,7 +104,7 @@ Please include:
 
 Known quirks already on the list:
 [list]
-[*]In the face-to-face panel, a slow reply can briefly show "..." — click "(wait for them to answer)" again and the words arrive. The chat window (hotkey O) doesn't have this.
+[*]In the face-to-face panel, a slow reply can briefly show "..." — click "(wait for them to answer)" again and the words arrive. The chat window (hotkey O) doesn't have this. Local models stretch the wait a lot — prefer the chat window when running local.
 [/list]
 
 One rule: keep your API key out of screenshots and pastes. I will never ask for it.

@@ -20,6 +20,13 @@ namespace ImmersiveAI.Llm
                 return new OpenAIChatClient(config.OpenRouterApiKey, config.OpenRouterModel, maxTokens,
                     ModConfig.OpenRouterEndpoint, "OpenRouter");
 
+            // Local: the same client speaking to a server on the player's own machine (LM Studio,
+            // Ollama, llama.cpp). Keyless is normal there; errors name "Local AI" so a dead server
+            // never sends anyone checking a cloud account.
+            if (config != null && config.Backend == "Local")
+                return new OpenAIChatClient(config.LocalApiKey, config.LocalModel, maxTokens,
+                    config.LocalEndpoint, "Local AI", isLocal: true);
+
             // Default to Anthropic
             return new AnthropicChatClient(
                 config?.AnthropicApiKey ?? "",

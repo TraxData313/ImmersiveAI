@@ -83,6 +83,10 @@ namespace ImmersiveAI.Mcm
             s.OpenAIBaseUrl = string.Equals(c.OpenAIBaseUrl, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
                 : (c.OpenAIBaseUrl ?? string.Empty);
+            // The local endpoint shows its real value — where the server listens IS the information.
+            s.LocalEndpoint = c.LocalEndpoint ?? string.Empty;
+            s.LocalModel = c.LocalModel ?? string.Empty;
+            s.LocalContextWindow = Clamp(c.LocalContextWindow, 2048, 131072);
             s.MaxTokens = Clamp(c.MaxTokens, 100, 2000);
 
             s.EnableChatWindow = c.EnableChatWindow;
@@ -119,6 +123,12 @@ namespace ImmersiveAI.Mcm
             c.OpenAIBaseUrl = string.IsNullOrWhiteSpace(s.OpenAIBaseUrl)
                 ? ModConfig.DefaultOpenAIEndpoint
                 : s.OpenAIBaseUrl.Trim();
+            // Blank means LM Studio's default door; Normalize completes a pasted /v1 base here too.
+            c.LocalEndpoint = string.IsNullOrWhiteSpace(s.LocalEndpoint)
+                ? ModConfig.DefaultLocalEndpoint
+                : s.LocalEndpoint.Trim();
+            c.LocalModel = (s.LocalModel ?? string.Empty).Trim();
+            c.LocalContextWindow = s.LocalContextWindow;
             c.MaxTokens = s.MaxTokens;
 
             c.EnableChatWindow = s.EnableChatWindow;

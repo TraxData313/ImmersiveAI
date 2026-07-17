@@ -30,9 +30,9 @@ namespace ImmersiveAI.Mcm
         // is built at game start, so changing them asks for a restart to take effect.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = true,
-            HintText = "Which AI service the NPCs think with. Anthropic (Claude) is the default; OpenAI (GPT) also works; OpenRouter reaches BOTH Claude and GPT models with one key from openrouter.ai. Set the matching API key below.")]
+            HintText = "Which AI service the NPCs think with. Anthropic (Claude) is the default; OpenAI (GPT) also works; OpenRouter reaches both with one key from openrouter.ai; Local speaks to a model on YOUR machine (LM Studio/Ollama) — free and private, no key, but weaker with the NPCs' tools.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(new[] { "Anthropic", "OpenAI", "OpenRouter" }, 0);
+        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(new[] { "Anthropic", "OpenAI", "OpenRouter", "Local" }, 0);
 
         [SettingPropertyText("Anthropic API key", Order = 1, RequireRestart = true,
             HintText = "Your Claude API key (starts with sk-ant-...). Get one at console.anthropic.com. Required when the backend is Anthropic. Kept only in your local config file.")]
@@ -81,12 +81,27 @@ namespace ImmersiveAI.Mcm
             "openai/gpt-5.4-nano",
         }, 0);
 
-        [SettingPropertyText("Custom endpoint (advanced)", Order = 7, RequireRestart = true,
-            HintText = "Empty = the real OpenAI. For another OpenAI-compatible service (NanoGPT, a local server), paste its base URL ending in /v1, put its key in the OpenAI key field, and set its model id in config.json. For OpenRouter just pick the OpenRouter backend above instead.")]
+        [SettingPropertyText("Local server URL", Order = 7, RequireRestart = true,
+            HintText = "Where your local AI server listens, when the backend is Local. LM Studio: http://localhost:1234/v1 (start its server on the Developer tab). Ollama: http://localhost:11434/v1. Blank resets to the LM Studio default. A key, if your server wants one, goes in LocalApiKey in config.json.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string LocalEndpoint { get; set; } = string.Empty;
+
+        [SettingPropertyText("Local model id", Order = 8, RequireRestart = true,
+            HintText = "The EXACT id your local server serves — LM Studio shows it on its server page (e.g. qwen/qwen3-30b-a3b), Ollama uses the name you pulled (e.g. qwen3:30b). Prefer an instruct model that carries native tool calling; small models go shy of the NPCs' tools.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string LocalModel { get; set; } = string.Empty;
+
+        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 9, RequireRestart = true,
+            HintText = "The context window your server ACTUALLY loads the model with (LM Studio's context-length setting; Ollama's num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public int LocalContextWindow { get; set; } = 16384;
+
+        [SettingPropertyText("Custom endpoint (advanced)", Order = 10, RequireRestart = true,
+            HintText = "Empty = the real OpenAI. For another OpenAI-compatible CLOUD service (NanoGPT…), paste its base URL ending in /v1, put its key in the OpenAI key field, and set its model id in config.json. For OpenRouter or a local server, pick those backends above instead.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIBaseUrl { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 8, RequireRestart = true,
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 11, RequireRestart = true,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;

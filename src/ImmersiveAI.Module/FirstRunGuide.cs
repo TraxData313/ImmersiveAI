@@ -40,7 +40,9 @@ namespace ImmersiveAI
                     "1. GET A KEY — console.anthropic.com (Anthropic, the default), platform.openai.com (OpenAI), " +
                     "or openrouter.ai (one key for many models). " +
                     "All bill by use: an evening of conversation is typically well under a dollar, and the mod " +
-                    "shows you each exchange's cost as you play.\n\n" +
+                    "shows you each exchange's cost as you play. " +
+                    "(No key at all? Set Backend to \"Local\" and run a model on your own machine with " +
+                    "LM Studio or Ollama — free and private, though small models make weaker company.)\n\n" +
                     "2. PUT IT HERE — open:\n" + ModConfig.ConfigFilePath + "\n" +
                     "and paste the key into \"" + keyField + "\"." +
                     " (With the Mod Configuration Menu installed, the key can also be set in-game under Mod Options.)\n\n" +

@@ -52,11 +52,30 @@ treating them right.
 
 ## [REQUIRED] What you need — and what it costs
 
-This mod does **not** use the "free" Player2 backend — you bring **your own API key** (Anthropic
-by default, or OpenAI) and put a few bucks on it. For Player2 to support the tool calling this
-mod is built on, it would have to be a paid tier anyway — so don't bother; just get a real key.
-If you want a free roleplaying experience to try out first, check out the ChatAI mod — it's
-good; it inspired this one.
+This mod does **not** use the "free" Player2 backend — you bring **your own API key**: Anthropic
+(Claude, the default), OpenAI (GPT), or OpenRouter (one key from openrouter.ai reaches GPT,
+Claude, Gemini, Grok, DeepSeek and Mistral — all verified with the NPCs' tool calling, at the
+providers' own prices). Put a few bucks on it and you're set. Or bring no key at all and run a
+local model — see below. For Player2 to support the tool calling this mod is built on, it would
+have to be a paid tier anyway — so don't bother; just get a real key. If you want a free
+roleplaying experience to try out first, check out the ChatAI mod — it's good; it inspired this
+one.
+
+**Local models work too** (since v1.2.0, experimental): pick the **Local** backend in Mod
+Options and the NPCs think through **LM Studio** or **Ollama** on your own machine — free,
+private, no key, nothing leaves your PC. Three honest rules. One: the model **must** carry
+native tool calling ("tool use") — the mod is built on it; worth a try are **Qwen3.6-35B-A3B**
+(instruct — the strongest local tool-caller right now), **GPT-OSS-20B** and **Mistral Small
+24B**. Two: you need real hardware to even think about it — a dedicated GPU with 12–16+ GB VRAM
+(RTX 4070-class and up) and 32 GB RAM; below that, stay on the cloud backends. Three: local
+replies are slow — the face-to-face panel can feel broken on the long wait, so live in the chat
+window (hotkey **O**) instead, it waits happily. Load the model with 16k+ context and mirror
+that in the mod's Local context length setting; if relations never move on a small model, set
+`RelationshipChangesViaTool` to false in config.json.
+
+Other OpenAI-compatible cloud services (NanoGPT and friends) connect through the Custom endpoint
+option. Whatever you pick, the connection check at campaign start tells you plainly whether your
+setup works.
 
 **Costs are yours and visible.** A typical exchange costs around a cent or less on the default
 models — $10 of credit covers thousands of messages. The mod shows each interaction's tokens and
@@ -65,8 +84,9 @@ away from you.
 
 ## Quick setup (five minutes)
 
-1. Get a key: **console.anthropic.com** (Claude) or **platform.openai.com** (GPT). Create an API
-   key and add a little credit ($5–10 goes a long way).
+1. Get a key: **console.anthropic.com** (Claude), **platform.openai.com** (GPT), or
+   **openrouter.ai** (one key, many models). Create an API key and add a little credit
+   ($5–10 goes a long way). Running a local model instead? No key — skip this step.
 2. Install the mod, enable **Immersive AI** in the launcher, start the game once — it creates
    `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you
    exactly where to paste the key.
@@ -79,7 +99,8 @@ away from you.
 
 - Your in-game conversations — plus the world context around them (character sheets, campaign
   facts, your character's name) — are sent to the AI provider **you** configure, under **your**
-  key and their privacy terms. Nothing is sent anywhere else.
+  key and their privacy terms. Nothing is sent anywhere else. (With the Local backend, they
+  never leave your machine at all.)
 - With web search on (default), characters may look things up mid-reply; those search queries go
   to DuckDuckGo. Turn it off to keep everything between you and your AI provider.
 - The mod itself collects **no telemetry whatsoever**. All memories live as plain files on your

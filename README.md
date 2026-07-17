@@ -52,14 +52,22 @@ trade, the war, the road.
 
 ## What you need — and what it costs
 
-You bring **your own API key** — Anthropic (default) or OpenAI. A typical exchange costs around
-a cent or less on the default models; $10 of credit covers thousands of messages. The mod shows
-each interaction's tokens and price as you play, keeps daily totals, and has an optional hard
-daily cap so it can never run away from you.
+You bring **your own API key** — Anthropic (default), OpenAI, or OpenRouter. A typical exchange
+costs around a cent or less on the default models; $10 of credit covers thousands of messages.
+The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an
+optional hard daily cap so it can never run away from you.
+
+Prefer no key and no cloud at all? Set `Backend` to `"Local"` and the NPCs think through a model
+running on your own machine via **LM Studio** or **Ollama** — free and private. Fair warning:
+the NPCs' full abilities lean on native tool calling, which small local models are shaky at;
+pick a tool-capable instruct model, set `LocalContextWindow` to what your server really loads,
+and expect a rougher ride than the hosted defaults.
 
 **Quick setup:**
 
-1. Get a key at **console.anthropic.com** or **platform.openai.com** and add a little credit.
+1. Get a key at **console.anthropic.com**, **platform.openai.com**, or **openrouter.ai**
+   (one key, many models) and add a little credit — or skip the key and run a local model
+   (`Backend: "Local"`, see above).
 2. Enable the mod, start the game once — it creates
    `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you
    where to paste the key.

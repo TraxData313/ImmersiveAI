@@ -18,20 +18,28 @@ namespace ImmersiveAI.Llm
     /// OpenAI-compatible service — OpenRouter, NanoGPT, a local server.</summary>
     public sealed class OpenAIChatClient : IToolChatClient
     {
-        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
+        // No timeout on the shared client itself — each request carries its own (see PostOnceAsync):
+        // 90s for cloud services, minutes for a local server, where a big model's first request
+        // (loading, prompt-crunching on home hardware) honestly takes that long (2026.07.17,
+        // Anton's Qwen-35B test dying at the old flat 90s).
+        private static readonly HttpClient Http = new HttpClient { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
+
+        private static readonly TimeSpan CloudRequestTimeout = TimeSpan.FromSeconds(90);
+        private static readonly TimeSpan LocalRequestTimeout = TimeSpan.FromMinutes(5);
 
         private readonly string _apiKey;
         private readonly string _model;
         private readonly int _maxTokens;
         private readonly string _endpoint;
         private readonly string _label;
+        private readonly bool _isLocal;
 
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
-        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? endpoint = null, string? providerLabel = null)
+        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? endpoint = null, string? providerLabel = null, bool isLocal = false)
         {
             _apiKey = apiKey ?? "";
             _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.4-mini" : model;
@@ -40,6 +48,9 @@ namespace ImmersiveAI.Llm
             // Errors and log lines name the true provider ("OpenRouter request failed…"), so a
             // router problem never sends the player checking their OpenAI account.
             _label = string.IsNullOrWhiteSpace(providerLabel) ? "OpenAI" : providerLabel;
+            // A local server (LM Studio, Ollama) legitimately runs keyless, and speaks no router
+            // dialect — the two graces below key off this.
+            _isLocal = isLocal;
         }
 
         private bool IsOpenRouter =>
@@ -82,7 +93,7 @@ namespace ImmersiveAI.Llm
             bool allowToolUse,
             CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(_apiKey))
+            if (string.IsNullOrWhiteSpace(_apiKey) && !_isLocal)
                 throw new InvalidOperationException(_label + " API key is not set. Add it to " + ModConfig.ConfigFilePath);
             if (!UsageLedger.CanCall(out var capReason))
                 throw new InvalidOperationException(capReason);
@@ -101,10 +112,12 @@ namespace ImmersiveAI.Llm
             };
             if (reasoningFamily)
                 payload["reasoning_effort"] = "none";
-            else if (IsRoutedModel)
+            else if (IsRoutedModel && !_isLocal)
                 // The routers' own unified reasoning switch (documented as ignored by models that
                 // cannot reason) — without it, a routed gpt-5.x thinks at its default effort and
-                // spends the spoken budget on silence, the very "..." bug of 2026.07.13.
+                // spends the spoken budget on silence, the very "..." bug of 2026.07.13. Local
+                // servers (whose LM Studio ids are slashed too) know no such field and the strict
+                // ones 400 on it — there, thinking is governed by which model the user loads.
                 payload["reasoning"] = new JObject { ["enabled"] = false };
 
             if (tools != null && tools.Count > 0)
@@ -173,6 +186,26 @@ namespace ImmersiveAI.Llm
                     (string?)c.SelectToken("function.arguments") ?? "{}"))
                 .ToList();
 
+            // Local hybrid thinkers (Qwen3.x and kin) cannot be told reasoning-off through this
+            // API — some leak their thinking into content as <think> blocks, others speak ONLY
+            // into a separate reasoning channel and leave content empty (Anton's live find,
+            // 2026.07.17: 2,912 billed tokens arriving as "..."). Strip the leaked blocks, and
+            // when a reply thought without ever speaking, say so in the log in words the tester
+            // can act on. Cloud backends are untouched.
+            if (_isLocal)
+            {
+                var beforeStrip = text;
+                text = StripThinkBlocks(text).Trim();
+                if (text.Length == 0 && calls.Count == 0)
+                {
+                    var reasoning = ((string?)message?["reasoning_content"] ?? (string?)message?["reasoning"] ?? "").Trim();
+                    if (reasoning.Length > 0 || beforeStrip.Length > 0)
+                        ModLog.Warn("Local AI: the model spent its whole answer thinking and never spoke. " +
+                            "Disable the model's thinking in your server (LM Studio has a per-model toggle) " +
+                            "or load a non-thinking 'instruct' build.");
+                }
+            }
+
             return new ChatResult(text, calls);
         }
 
@@ -181,9 +214,13 @@ namespace ImmersiveAI.Llm
         /// telling the gate.</summary>
         private async Task<(int Status, string Body)> PostOnceAsync(string payloadText, CancellationToken cancellationToken)
         {
+            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
             using (var request = new HttpRequestMessage(HttpMethod.Post, _endpoint))
             {
-                request.Headers.Add("Authorization", "Bearer " + _apiKey);
+                timeout.CancelAfter(_isLocal ? LocalRequestTimeout : CloudRequestTimeout);
+                // A keyless local server gets no Authorization header at all (some reject "Bearer ").
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                    request.Headers.Add("Authorization", "Bearer " + _apiKey);
                 if (IsOpenRouter)
                 {
                     // OpenRouter's optional app attribution — shows the mod by name in the user's
@@ -196,7 +233,7 @@ namespace ImmersiveAI.Llm
                 HttpResponseMessage response;
                 try
                 {
-                    response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                    response = await Http.SendAsync(request, timeout.Token).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -291,6 +328,20 @@ namespace ImmersiveAI.Llm
                 });
             }
             return arr;
+        }
+
+        /// <summary>Removes &lt;think&gt;…&lt;/think&gt; spans a local hybrid model leaked into its
+        /// spoken content. An UNCLOSED &lt;think&gt; means the token budget died mid-thought —
+        /// nothing after it was ever speech, so the tail goes too.</summary>
+        private static string StripThinkBlocks(string text)
+        {
+            if (text.IndexOf("<think", StringComparison.OrdinalIgnoreCase) < 0) return text;
+            var stripped = System.Text.RegularExpressions.Regex.Replace(
+                text, "<think>[\\s\\S]*?</think>", string.Empty,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var open = stripped.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
+            if (open >= 0) stripped = stripped.Substring(0, open);
+            return stripped;
         }
 
         private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "...";

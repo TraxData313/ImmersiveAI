@@ -46,6 +46,16 @@ namespace ImmersiveAI
         public static MemoryTokenProfile Resolve(ModConfig config)
         {
             var backend = config?.Backend ?? "Anthropic";
+
+            // The Local backend's window is whatever the player's own server loads the model with —
+            // declared in config (LocalContextWindow), never derivable from a model table: the same
+            // model id can be served at 4k or 128k depending on the loading settings.
+            if (backend == "Local")
+            {
+                var localWindow = config?.LocalContextWindow ?? 0;
+                return new MemoryTokenProfile(localWindow > 0 ? localWindow : FallbackContextTokens);
+            }
+
             var model = ((backend == "OpenAI" ? config?.OpenAIModel
                 : backend == "OpenRouter" ? config?.OpenRouterModel
                 : config?.AnthropicModel) ?? "").ToLowerInvariant();

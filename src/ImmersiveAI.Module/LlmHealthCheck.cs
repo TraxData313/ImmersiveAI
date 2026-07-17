@@ -36,11 +36,22 @@ namespace ImmersiveAI
             try
             {
                 var backend = SelectBackend(config, out var apiKey, out var model);
+                var isLocal = config?.Backend == "Local";
+
+                // The local backend runs keyless by design — its "commonest miss" is a blank model
+                // id instead, which the server cannot forgive (it must know which loaded model to ask).
+                if (isLocal && string.IsNullOrWhiteSpace(model))
+                {
+                    Report("Immersive AI: the Local backend needs LocalModel set to the exact id your server serves "
+                        + "(LM Studio shows it on its server page; Ollama: the name you pulled). Set it in "
+                        + ModConfig.ConfigFilePath + " or the mod options, and restart the game.", WarnColor);
+                    return;
+                }
 
                 // The commonest case, and the one an API call can't diagnose kindly: no key at all.
                 // A brand-new install also gets the one-time first-run guide popup — the "here is
                 // where keys come from, here is where one goes" version of this message.
-                if (string.IsNullOrWhiteSpace(apiKey))
+                if (string.IsNullOrWhiteSpace(apiKey) && !isLocal)
                 {
                     Report($"Immersive AI: no {backend} API key is set — the NPCs cannot speak. Add your key to "
                         + ModConfig.ConfigFilePath + " and restart the game.", WarnColor);
@@ -55,7 +66,9 @@ namespace ImmersiveAI
                     ChatMessage.User("ping"),
                 };
 
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                // A local server may be LOADING the model on this very first request — give it
+                // minutes, where a cloud service gets seconds.
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(isLocal ? 180 : 30)))
                 {
                     await client.CompleteAsync(messages, cts.Token).ConfigureAwait(false);
                 }
@@ -80,7 +93,15 @@ namespace ImmersiveAI
             var configPath = ModConfig.ConfigFilePath;
 
             if (IsNetworkFailure(ex))
+            {
+                // A dead LOCAL connection almost always means the server simply is not running —
+                // pointing at the internet would send the player entirely the wrong way.
+                if (config?.Backend == "Local")
+                    return "could not reach your local AI server at " + HostOf(config.LocalEndpoint)
+                        + " — is it running, with its server switched on (LM Studio: Developer tab, Start Server; "
+                        + "Ollama serves at localhost:11434)? Start it with your model loaded, then restart the game.";
                 return "could not reach the AI service — check your internet connection, then restart the game.";
+            }
 
             var msg = ex.Message ?? string.Empty;
 
@@ -142,6 +163,9 @@ namespace ImmersiveAI
                 case "OpenRouter":
                     apiKey = config.OpenRouterApiKey; model = config.OpenRouterModel;
                     return "OpenRouter";
+                case "Local":
+                    apiKey = config.LocalApiKey; model = config.LocalModel;
+                    return "your local AI server (" + HostOf(config.LocalEndpoint) + ")";
                 default:
                     apiKey = config?.AnthropicApiKey; model = config?.AnthropicModel;
                     return "Anthropic";

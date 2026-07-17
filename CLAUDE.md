@@ -229,6 +229,22 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   the health check names a custom host, the MCM "Custom endpoint (advanced)" field shows blank for
   the default; price/context tables match router ids by containment for free, including the dotted
   claude slugs: "claude-haiku"/"claude-opus-4" are substrings of the router forms),
+  `LocalEndpoint` + `LocalModel` + `LocalApiKey` + `LocalContextWindow` (2026.07.17, asked for by
+  testers — LOCAL MODELS as a first-class backend, `Backend: "Local"`: the same OpenAIChatClient with
+  `isLocal: true` pointed at the player's own machine, default LM Studio's http://localhost:1234/v1
+  (Ollama: 11434), label "Local AI" in every error; keyless is normal (no key check, no Authorization
+  header when blank — LocalApiKey only for keyed proxies), the routers' `reasoning` field is never
+  sent locally (strict servers 400 on unknowns), Normalize's shared NormalizeChatEndpoint gives
+  loopback hosts http:// not https://; `LocalContextWindow` (default 16384, clamp 2048..2M) feeds
+  MemoryTokenProfile directly — the window is whatever the server LOADS, never a model-table lookup;
+  the health check asks for a blank LocalModel by name and diagnoses a dead connection as
+  "is your local server running?"; MCM has the Local backend + URL/model/context fields;
+  LOCAL TIME RUNS SLOWER (2026.07.17, Anton's Qwen-35B dying at the flat 90s): the OpenAI client's
+  shared HttpClient is timeout-infinite and each request carries its own — 90s cloud, 5 MIN local —
+  the health check gives a local first-ping 180s (model may still be loading), and the reach-out/
+  letter watchdogs breathe 12 min instead of 3 on `config.IsLocalBackend` so a slow reply is never
+  mistaken for a lost one; LIVE-TESTED 2026.07.17: Qwen3.5-9B speaks and calls recall_company
+  correctly, big Qwen needs the wide timeouts),
   `AtmosphereLine` (the configurable opening identity line, supports `{name}`) + `RoleplayGuidance`
   (world-wide tone/roleplay guidance, offered as freedom), `NotifyWhenReplyReady` (short "has answered"
   ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),

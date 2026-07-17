@@ -16,7 +16,7 @@ namespace ImmersiveAI
         /// without clobbering hand-edits (Normalize keys migrations off it). Do not edit.</summary>
         public int ConfigVersion { get; set; } = 1;
 
-        public string Backend { get; set; } = "Anthropic"; // "Anthropic", "OpenAI" or "OpenRouter"
+        public string Backend { get; set; } = "Anthropic"; // "Anthropic", "OpenAI", "OpenRouter" or "Local"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-haiku-4-5";
@@ -48,6 +48,41 @@ namespace ImmersiveAI
         /// carry native tool calling — OpenRouter with mainstream models does; small local models
         /// usually stumble there.</summary>
         public string OpenAIBaseUrl { get; set; } = DefaultOpenAIEndpoint;
+
+        /// <summary>Local models as a first-class backend (2026.07.17, asked for by testers): set
+        /// <c>Backend</c> to "Local" and the NPCs think through a model running on the player's OWN
+        /// machine — free, private, no API key. The same OpenAI-shaped client speaks to any local
+        /// OpenAI-compatible server; the default endpoint is LM Studio's (start its server on the
+        /// Developer tab), Ollama's is http://localhost:11434/v1. <see cref="LocalModel"/> must be
+        /// the exact id the server serves. Honest expectations: the NPCs' full abilities lean on
+        /// native tool calling, which small local models are shaky at — prefer a tool-capable
+        /// instruct model (Qwen3-class MoE, Mistral Small); if hearts never move, set
+        /// <see cref="RelationshipChangesViaTool"/> false to fall back to the separate feeling call.</summary>
+        public string LocalEndpoint { get; set; } = DefaultLocalEndpoint;
+
+        /// <summary>The exact model id the local server serves — LM Studio shows it on its server
+        /// page ("qwen/qwen3-30b-a3b"), Ollama uses the name you pulled ("qwen3:30b"). Required
+        /// when the backend is Local; the health check says so plainly when it is blank.</summary>
+        public string LocalModel { get; set; } = "";
+
+        /// <summary>Most local servers want no key; set one only if yours does (a keyed proxy,
+        /// a remote box). Blank is normal and sends no Authorization header at all.</summary>
+        public string LocalApiKey { get; set; } = "";
+
+        /// <summary>The context window your local server ACTUALLY loads the model with (LM Studio's
+        /// context-length setting when loading; Ollama's num_ctx). The NPCs' memory budget scales
+        /// against this instead of the model table — local servers rarely serve a model's full
+        /// window, and assuming more than is really there means silent truncation and strange
+        /// amnesia. Match your server's setting.</summary>
+        public int LocalContextWindow { get; set; } = 16384;
+
+        /// <summary>LM Studio's default door — the local backend's starting endpoint.</summary>
+        public const string DefaultLocalEndpoint = "http://localhost:1234/v1/chat/completions";
+
+        /// <summary>True when the NPCs think on the player's own machine — where replies may
+        /// honestly take minutes, so timeouts and watchdogs must breathe wider.</summary>
+        [JsonIgnore]
+        public bool IsLocalBackend => Backend == "Local";
 
         // NOTE (2026.07.13): reasoning/thinking is switched OFF for good on every model — the
         // clients send OpenAI reasoning_effort "none" and Anthropic thinking "disabled" themselves.
@@ -548,15 +583,20 @@ namespace ImmersiveAI
 
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
-            // The OpenAI-compatible endpoint: blank means the real OpenAI; a pasted base URL ending
-            // in /v1 (the way every provider states it) is completed to the full chat-completions
-            // path, and a missing scheme becomes https — so "openrouter.ai/api/v1" just works.
-            if (string.IsNullOrWhiteSpace(OpenAIBaseUrl)) OpenAIBaseUrl = DefaultOpenAIEndpoint;
-            OpenAIBaseUrl = OpenAIBaseUrl.Trim().TrimEnd('/');
-            if (OpenAIBaseUrl.IndexOf("://", StringComparison.Ordinal) < 0)
-                OpenAIBaseUrl = "https://" + OpenAIBaseUrl;
-            if (!OpenAIBaseUrl.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
-                OpenAIBaseUrl += "/chat/completions";
+            // The OpenAI-compatible endpoints: blank falls back to each backend's default; a pasted
+            // base URL ending in /v1 (the way every provider states it) is completed to the full
+            // chat-completions path, and a missing scheme becomes https — except on a loopback
+            // address, where local servers speak plain http.
+            OpenAIBaseUrl = NormalizeChatEndpoint(OpenAIBaseUrl, DefaultOpenAIEndpoint);
+            LocalEndpoint = NormalizeChatEndpoint(LocalEndpoint, DefaultLocalEndpoint);
+
+            // The local backend's honest settings: the model id is the user's to fill (the health
+            // check asks for it kindly when blank); the context window must stay a sane size.
+            LocalModel = (LocalModel ?? string.Empty).Trim();
+            LocalApiKey = (LocalApiKey ?? string.Empty).Trim();
+            if (LocalContextWindow <= 0) LocalContextWindow = 16384;
+            if (LocalContextWindow < 2048) LocalContextWindow = 2048;
+            if (LocalContextWindow > 2000000) LocalContextWindow = 2000000;
 
             // The OpenRouter model: blank falls back to the default; ids are trimmed so a pasted
             // trailing space can't 400 the router.
@@ -661,6 +701,25 @@ namespace ImmersiveAI
             MaxRecentMemoryTokens = profile.GetMaxRecentMemoryTokens(MaxRecentMemoryPercent);
             MinRecentMemoryTokensAfterCompression =
                 profile.GetMinRecentMemoryTokensAfterCompression(MinRecentMemoryPercentAfterCompression);
+        }
+
+        /// <summary>One pasted-URL contract for every OpenAI-shaped endpoint: blank → the given
+        /// default, "/v1" completed to "/v1/chat/completions", missing scheme filled in — https for
+        /// the world, http for a loopback host (local servers do not carry certificates).</summary>
+        private static string NormalizeChatEndpoint(string url, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return fallback;
+            url = url.Trim().TrimEnd('/');
+            if (url.IndexOf("://", StringComparison.Ordinal) < 0)
+            {
+                var isLoopback = url.StartsWith("localhost", StringComparison.OrdinalIgnoreCase)
+                    || url.StartsWith("127.0.0.1", StringComparison.Ordinal)
+                    || url.StartsWith("0.0.0.0", StringComparison.Ordinal);
+                url = (isLoopback ? "http://" : "https://") + url;
+            }
+            if (!url.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+                url += "/chat/completions";
+            return url;
         }
 
         private static int Clamp(int value, int min, int max)

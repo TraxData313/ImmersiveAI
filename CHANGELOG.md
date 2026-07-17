@@ -5,6 +5,26 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.2.0 — 2026.07.17
+
+- **Local models are now a built-in backend** (asked for by testers): pick **Local** in Mod
+  Options and the NPCs think through **LM Studio** (the default, localhost:1234) or **Ollama**
+  (paste `http://localhost:11434/v1`) running on your own machine — free, private, no API key,
+  nothing leaves your PC. Set the exact model id your server serves and the context length you
+  loaded it with; the connection check at campaign start tells you plainly whether it worked
+  (including "is your local server running?" when it isn't).
+- Honest expectations for local: the model must carry native tool calling (worth a try:
+  Qwen3.6-35B-A3B instruct, GPT-OSS-20B, Mistral Small 24B), you want a 12–16+ GB VRAM GPU and
+  32 GB RAM, and replies are slower — the chat window (hotkey O) handles the wait far better
+  than the face-to-face panel. If relations never move on a small model, set
+  `RelationshipChangesViaTool` to false.
+- Local time runs slower, and the mod now knows it: local requests get up to 5 minutes (cloud
+  keeps its 90 seconds), the connection check gives a still-loading model 3 minutes, and the
+  autonomous flows' watchdogs breathe wider so a slow local reply is never mistaken for a lost
+  one. Leaked `<think>` blocks are stripped from local replies, and a model that thought without
+  ever speaking is called out in log.txt with the fix (turn thinking off / use an instruct build).
+- Existing setups are untouched — nothing changes unless you pick the Local backend.
+
 ## v1.1.0 — 2026.07.16
 
 - **OpenRouter is now a built-in backend** (the most-requested feature after release): pick

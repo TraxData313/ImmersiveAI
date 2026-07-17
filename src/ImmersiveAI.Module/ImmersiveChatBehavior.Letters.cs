@@ -60,7 +60,9 @@ namespace ImmersiveAI
         {
             if (!_config.EnableLetters || _letterBag == null || Campaign.Current == null) return;
 
-            if (_letterWorkInFlight && (DateTime.UtcNow - _letterWorkSince) > TimeSpan.FromMinutes(3))
+            // Same self-heal as the reach-outs — and the same wider window on a local backend,
+            // whose compose call can honestly run past the old three minutes.
+            if (_letterWorkInFlight && (DateTime.UtcNow - _letterWorkSince) > TimeSpan.FromMinutes(_config.IsLocalBackend ? 12 : 3))
                 _letterWorkInFlight = false;
 
             DeliverDueLetters();
