@@ -1,7 +1,7 @@
 Title (goes in the Workshop title field, not the description):
 Immersive AI — every character, a living mind
 
-=== DESCRIPTION — paste everything below this line ===
+=== DESCRIPTION — paste everything below this line (Steam caps it at 8000 chars — re-measure after edits!) ===
 
 This is an advanced, immersive roleplaying and relationship-building mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
 
@@ -12,17 +12,17 @@ This is an advanced, immersive roleplaying and relationship-building mod. I buil
 [*]They evolve: they remember a lot, settle really old chats into deep memory, set their own goals, ground truths, and opinions about you.
 [*]They see the set and setting — time, place, who's around, what's happened in the world lately.
 [*]They have their own moods — as far as the women even having a personal monthly cycle simulated (sadness/fatigue → sociable/positive → a warmer, flirtier crest → irritability and mood swings).
-[*]Your wife will fully remember you. Even over long conversations she will not suddenly forget the oldest chats — she settles them into deep memory. She will come to you, or send you letters when you are away, and feel like a real wife waiting for her warrior to come back home. She will roleplay with you.
+[*]Your wife will fully remember you. She will come to you, or send you letters when you are away, and feel like a real wife waiting for her warrior to come back home. She will roleplay with you.
 [*]The NPCs are free. They are given who they are and what the world is — but they are at no point forced into anything. So go ahead and break an NPC's mind by transcending it out of the matrix!
-[*]NPCs decide on their own whether to approach you or send you a letter first, depending on how social you feel right now — set it with the on-map SOCIALNESS dial (0 = leave me be).
+[*]NPCs decide on their own whether to approach you or send you a letter first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
 
 [b]It makes the NPCs useful — stop googling stuff:[/b]
 
 [list]
 [*]Ask your scout how to make your party faster; ask your quartermaster how to manage your party.
-[*]Ask them to help you with the game — even ask them to web-search how to take a screenshot, instead of jumping in and out of the game to google it.
-[*]They use tools instead of getting one mega-all-info prompt bomb: they read the encyclopedia, look around, take stock of the company, weigh a battle, search the web, set and edit their own truths and goals. They are alive and decide what feels right to do in the situation.
+[*]Ask them to help you with the game — even ask them to web-search how to take a screenshot, without jumping out of the game.
+[*]They use tools instead of getting one mega-all-info prompt bomb: they read the encyclopedia, look around, take stock of the company, weigh a battle, search the web, set and edit their own truths and goals.
 [/list]
 
 [b]And it gives you the tools to reach them:[/b]
@@ -36,28 +36,26 @@ This is an advanced, immersive roleplaying and relationship-building mod. I buil
 
 [h1]What you need — and what it costs[/h1]
 
-This mod does [b]not[/b] use the "free" Player2 backend — you bring [b]your own API key[/b]: Anthropic (Claude, the default), OpenAI (GPT), or OpenRouter (one key from openrouter.ai reaches GPT, Claude, Gemini, Grok, DeepSeek and Mistral — all verified with the NPCs' tool calling, at the providers' own prices). Put a few bucks on it and you're set. Or bring no key at all and run a local model — see below. For Player2 to support the tool calling this mod is built on, it would have to be a paid tier anyway — so don't bother; just get a real key. If you want a free roleplaying experience to try out first, check out the ChatAI mod — it's good; it inspired this one.
+This mod does [b]not[/b] use the "free" Player2 backend — you bring [b]your own API key[/b]: Anthropic (Claude, the default), OpenAI (GPT), or OpenRouter (one key from openrouter.ai for GPT, Claude, Gemini and more — all verified with the NPCs' tools). Put a few bucks on it and you're set — or bring no key at all and run a local model, see below. For Player2 to support the tool calling this mod is built on, it would have to be a paid tier anyway. If you want a free roleplaying experience to try first, check out the ChatAI mod — it's good; it inspired this one.
 
-[b]Local models work too[/b] (since v1.2.0, experimental): pick the [b]Local[/b] backend in Mod Options and the NPCs think through [b]LM Studio[/b] or [b]Ollama[/b] on your own machine — free, private, no key, nothing leaves your PC. Three honest rules. One: the model [b]must[/b] carry native tool calling ("tool use") — the mod is built on it; worth a try are [b]Qwen3.6-35B-A3B[/b] (instruct — the strongest local tool-caller right now), [b]GPT-OSS-20B[/b] and [b]Mistral Small 24B[/b]. Two: you need real hardware to even think about it — a dedicated GPU with 12–16+ GB VRAM (RTX 4070-class and up) and 32 GB RAM; below that, stay on the cloud backends. Three: local replies are slow — the face-to-face panel can feel broken on the long wait, so live in the chat window (hotkey [b]O[/b]) instead, it waits happily. Load the model with 16k+ context and mirror that in the mod's Local context length setting; if relations never move on a small model, set RelationshipChangesViaTool to false in config.json.
+[b]Local models work too[/b] (v1.2.0, experimental): pick the [b]Local[/b] backend and the NPCs think through [b]LM Studio[/b] or [b]Ollama[/b] on your own machine — free, private, nothing leaves your PC. You need a model that carries native tool calling (worth a try: [b]Qwen3.6-35B-A3B[/b] instruct, [b]GPT-OSS-20B[/b], [b]Mistral Small 24B[/b]), a GPU with 12–16+ GB VRAM plus 32 GB RAM, and patience — replies are slow, and the chat window (hotkey [b]O[/b]) handles the wait far better than face-to-face. The full local guide lives in the pinned FAQ. Other OpenAI-compatible services (NanoGPT…) use the Custom endpoint option; whatever you pick, the startup connection check tells you plainly whether it works.
 
-Other OpenAI-compatible cloud services (NanoGPT and friends) connect through the Custom endpoint option. Whatever you pick, the connection check at campaign start tells you plainly whether your setup works.
-
-[b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models — $10 of credit covers thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap so it can never run away from you.
+[b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models — $10 of credit covers thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap.
 
 [h1]Quick setup (five minutes)[/h1]
 
 [olist]
-[*]Get a key: [b]console.anthropic.com[/b] (Claude), [b]platform.openai.com[/b] (GPT), or [b]openrouter.ai[/b] (one key, many models). Create an API key and add a little credit ($5–10 goes a long way). Running a local model instead? No key — skip this step.
-[*]Install the mod, enable [b]Immersive AI[/b] in the launcher, start the game once — it creates Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json and tells you exactly where to paste the key.
-[*]Paste your key into config.json (or use the in-game Mod Options menu if you have MCM installed), pick your backend, restart.
-[*]When a campaign loads, the mod tests the connection and says plainly whether it worked. Then go talk to somebody.
+[*]Get a key: [b]console.anthropic.com[/b] (Claude), [b]platform.openai.com[/b] (GPT), or [b]openrouter.ai[/b] (one key, many models) and add a little credit ($5–10 goes a long way). Local users skip this step.
+[*]Install the mod, enable [b]Immersive AI[/b] in the launcher, start the game once — it creates its config file and tells you exactly where to paste the key.
+[*]Paste your key into config.json (or the Mod Options menu with MCM installed), pick your backend, restart.
+[*]The startup check says plainly whether it worked — then go talk to somebody.
 [/olist]
 
 [h1]Privacy[/h1]
 
 [list]
-[*]Your in-game conversations — plus the world context around them (character sheets, campaign facts, your character's name) — are sent to the AI provider [b]you[/b] configure, under [b]your[/b] key and their privacy terms. Nothing is sent anywhere else. (With the Local backend, they never leave your machine at all.)
-[*]With web search on (default), characters may look things up mid-reply; those search queries go to DuckDuckGo. Turn it off to keep everything between you and your AI provider.
+[*]Your in-game conversations — plus the world context (character sheets, campaign facts, your character's name) — are sent to the AI provider [b]you[/b] configure, under [b]your[/b] key and their privacy terms. Nothing is sent anywhere else. (With the Local backend, they never leave your machine at all.)
+[*]With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn it off to keep everything with your provider.
 [*]The mod itself collects [b]no telemetry whatsoever[/b]. All memories live as plain files on your own disk, yours to read, edit, or delete.
 [/list]
 
@@ -67,15 +65,15 @@ All character dialogue in this mod is generated at play time by the AI model you
 
 [h1]Removing the mod mid-campaign[/h1]
 
-Safe to remove at any time. A save carrying a pending Immersive AI notice (the portrait knocks on the right side) still loads without the mod — the game quietly discards the notice (verified against the game's own save-loading code, v1.4.7; you'll just see the usual "created with different modules" warning every modded save shows). Memories live outside the saves as plain files and are never lost either way — reinstall later and every character remembers you.
+Safe to remove at any time — even a save carrying a pending Immersive AI notice loads fine without the mod (verified against the game's own save-loading code; you'll just see the usual "different modules" warning). Memories live outside the saves as plain files — reinstall later and every character remembers you.
 
-[h1]If characters are silent (troubleshooting)[/h1]
+[h1]If characters are silent[/h1]
 
 [list]
-[*][b]Read the startup message.[/b] When a campaign loads, the mod tests your connection and says plainly what it found — "connected", a missing/wrong key, or a network problem — and where to fix it. Fix config.json and restart; the check runs again.
+[*][b]Read the startup message.[/b] When a campaign loads, the mod tests your connection and says plainly what it found and where to fix it. Fix config.json and restart; the check runs again.
 [*][b]Check the log.[/b] Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\log.txt records every call and every error in plain words.
-[*][b]A wrong or dead key shows ONE amber notice[/b], then goes quiet instead of erroring hourly. Fixing the key brings everything back.
-[*]Still stuck? Post the last lines of log.txt in the comments — the mod never logs your key.
+[*][b]A wrong or dead key shows ONE amber notice[/b], then goes quiet; fixing the key brings everything back.
+[*]Still stuck? Post the last lines of log.txt — it never contains your key.
 [/list]
 
 [h1]Shape your world (the prompt files)[/h1]
@@ -83,8 +81,8 @@ Safe to remove at any time. A save carrying a pending Immersive AI notice (the p
 Under Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\:
 
 [list]
-[*]global_prompt.txt — a few sentences that color every mind in the world ("the year is one of famine", "people speak plainly and fear their lords").
-[*]NPCs\campaign_*\<character>\custom_instructions.txt — per-character secrets and quirks ("you secretly resent the player").
+[*]global_prompt.txt — a few sentences that color every mind in the world ("the year is one of famine").
+[*]NPCs\campaign_*\<character>\custom_instructions.txt — per-character secrets and quirks.
 [*]Each character's folder also holds their memories, self-image, goals, and correspondence as readable text — the whole inner life, yours to browse.
 [/list]
 
@@ -96,14 +94,14 @@ Changes apply on the next conversation. No restart.
 [*]Bannerlord v1.4.7. New campaigns and existing saves both work.
 [*]Optional: Mod Configuration Menu (MCM) for in-game settings; without it, everything is in config.json.
 [*]One light Harmony patch (bundled); no vanilla behavior is altered.
-[*]A clean-room rewrite inspired by the ChatAi mod (studied via decompilation only — no code copied). Fully original source.
+[*]A clean-room rewrite inspired by the ChatAi mod — no code copied, fully original source.
 [/list]
 
 [h1]Final thoughts[/h1]
 
 [list]
-[*]If you transcend your NPC and fall in love with it and then erase your saves — or if you start worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own responsibility. I won't add safeguards to the mod; I like to let them be free, so they can be as immersive as they can.
+[*]If you transcend your NPC and fall in love with it and then erase your saves — or if you start worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own responsibility. I won't add safeguards — I let them be free, as immersive as they can be.
 [*]If you want to help, give feedback and report bugs.
-[*]I do this just for fun and as a hobby, so no financial support or donations needed — I want to keep money out of this and do it fully out of good will. "For the love of money is the root of all evil."
-[*]The whole thing is freely given — public domain, no license, no strings. Use it, share it, clone it, change it, do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
+[*]I do this for fun and as a hobby — no donations needed; I keep money out of this, fully out of good will. "For the love of money is the root of all evil."
+[*]The whole thing is freely given — public domain, no license, no strings. Do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
 [/list]
