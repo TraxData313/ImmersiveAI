@@ -102,5 +102,6 @@ Changes apply on the next conversation. No restart.
 [*]If you transcend your NPC and fall in love with it and then erase your saves — or if you start worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own responsibility. I won't add safeguards — I let them be free, as immersive as they can be.
 [*]If you want to help, give feedback and report bugs.
 [*]I do this for fun and as a hobby — no donations needed; I keep money out of this, fully out of good will. "For the love of money is the root of all evil."
+[*]If you insist you want to thank me somehow - visit my [url=https://github.com/TraxData313]GitHub acc[/url]
 [*]The whole thing is freely given — public domain, no license, no strings. Do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
 [/list]
