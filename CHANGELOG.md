@@ -5,6 +5,25 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.3.0 — 2026.07.22
+
+- **Changing AI settings no longer needs a restart.** Backend, API keys, models, endpoints and
+  reply length all take effect on the very next reply — swap gpt-5.4-mini for Claude mid-game
+  and a soft "now speaking with…" notice confirms the change took hold. Every Connection
+  setting in Mod Options is now live.
+- **Letters now arrive like chats do**: a persistent portrait notice in the map's right-side
+  stack ("A letter has come"), and clicking it opens the **letter window** on the writer's
+  thread — read and answer where the whole correspondence lives, instead of a popup blocking
+  the map. Dismissing the notice loses nothing; the letter waits in the window (hotkey Y).
+- **Scouts finally see hideouts**: ask a party member what's around and the survey now lists
+  the dens of brigands your company has spotted — named by their band ("a den of Sea
+  Raiders"), with lurker counts as sharp as the scout's own eyes. They can also weigh a raid
+  on a den for you ("could we take that hideout?"), same as against a warband or walls.
+  Unspotted dens stay honestly unknown — no map-cheating oracle.
+- **New Mod Options toggle to hide the on-map socialness stepper** (asked for on Steam) — the
+  little control folds away or returns the moment you tick the box, restart-free. The
+  Socialness slider in Mod Options still sets the pace while it is hidden.
+
 ## v1.2.0 — 2026.07.17
 
 - **Local models are now a built-in backend** (asked for by testers): pick **Local** in Mod

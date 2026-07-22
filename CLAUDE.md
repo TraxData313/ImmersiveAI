@@ -29,7 +29,7 @@ You usually only need to open:
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
-- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
+- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
@@ -142,6 +142,12 @@ TaleWorlds API usage patterns, never copy from it.
   the OpenAI default gpt-5.4-mini after live play priced opus-4-8 at ~3¢/exchange; the MCM
   dropdown offers sonnet-5 / opus-4-8 / fable-5 as the step-ups). Clients use raw `HttpClient`
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
+  **Connection settings are LIVE** (2026.07.22, "why must I restart to change models?"):
+  `ChatClientFactory.Create` returns a `LiveSwapChatClient` shell that rebuilds its inner concrete
+  client whenever the connection signature (backend/keys/models/endpoints/token budgets) changes —
+  every MCM Connection field is `RequireRestart = false` and takes hold on the next reply, with a
+  soft "now speaking with <backend> · <model>" notice on swap. Keep new client-captured settings
+  in the shell's `Signature()`.
   Both clients also implement `IToolChatClient` (native tool/function calling — the recall);
   plain `IChatClient` stays the base so test fakes and simple calls remain untouched. Once a
   history holds tool calls, both APIs require the tool definitions to keep riding along; the
@@ -268,7 +274,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   saving config.json as it changes; CLICK the label to unfold the explanation (hover proved shy on a
   no-focus map layer — 2026.07.10 playtest — so hover is only the bonus path); the Core blend in `InitiationScorer.GroupHourlyChance` makes 24 mean "someone near IS
   moved every hour" — the player's openness overriding faint bonds via an s² term that vanishes at
-  everyday rates, so old behavior is untouched below ~2/day; default on),
+  everyday rates, so old behavior is untouched below ~2/day; default on, and since 2026.07.22 also a
+  live MCM checkbox — SocialnessManager reads the flag per tick, so toggling hides/returns the
+  stepper at once, the hide promised to Charley Prince on Steam),
   `EnableWorldTidings` + `MaxWorldTidings` + `MaxLocalRumors` (recent world happenings — wars, falls of
   realms, towns changing hands, deaths/weddings/tournaments — and the talk of the town, drawn from the
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
@@ -567,7 +575,8 @@ module's bin — Anton green-lit it on 2026.07.09; use it sparingly, one intenti
 patch so far (`UI\MapNoticePatch`, applied in `SubModule.OnSubModuleLoad`) is a ctor postfix on
 `MapNotificationVM` that calls the game's own public `RegisterMapNotificationType` to register
 `ImmersiveChatMapNotification` (an `InformationData`) → `ImmersiveChatNotificationItemVM` (carries a
-`CharacterImageIdentifierVM` portrait over a "quest" fallback icon). The portrait is drawn by a marked
+`CharacterImageIdentifierVM` portrait over a "quest" fallback icon) — and, since 2026.07.22, its
+letter twin `ImmersiveLetterMapNotification` → `ImmersiveLetterNotificationItemVM` (saveable id 2). The portrait is drawn by a marked
 block in our override of `MapNotificationItem.xml` (`module\GUI\Prefabs\Map\` — same-name prefabs shadow
 SandBox's; vanilla items bind nothing there and are unaffected; re-copy + re-mark after game patches).
 **Save safety:** `InformationData` lives inside saves while a notice is up, so `ImmersiveAISaveDefiner`
@@ -743,8 +752,13 @@ bags never double-log; dead writers' folders resolved by identity), and the chat
 in-flight compose beat ("it is sealed, and rides toward you still" — `IsLetterOnRoadToPlayer`). The letter rides real in-game
 days by map distance (Core `LetterCourier`: 150 units/day, 0.25–10 day rails) and persists across
 save/load in `campaign_<id>\_letters.json` (Core `LetterBag`, atomic writes) — a letter is a promise,
-unlike a live chat. Arrival: faced toast + pausing inquiry, "Write back" (opens the composer popup) or
-"Set it aside"; a letter whose writer died en route still arrives, marked so, with no write-back. The
+unlike a live chat. **Arrival knocks like a chat now** (2026.07.22, Anton's ask): faced toast + a
+persistent portrait map notice ("A letter has come", `ImmersiveLetterMapNotification` — saveable type
+id 2 in the definer, keep registered forever — + `ImmersiveLetterNotificationItemVM`), whose click
+opens the LETTER WINDOW on the writer's thread (`OpenWhenClear`, composer popups as fallback); the
+letter is logged to letters.txt BEFORE the notice goes up, so X ("set it aside") or a reload loses
+nothing — the words wait in the window. The old pausing inquiry ("Write back"/"Set it aside") remains
+only for dead writers or when the notice UI / letter window is unavailable. The
 player can also send first: a "Send a letter by courier" option in every town/castle/village menu opens
 the LETTER WINDOW itself (2026.07.12 — the same one the letter hotkey opens; the old recipient-picker popups
 remain only as the fallback when `EnableLetterWindow` is off or the window cannot come up; one courier

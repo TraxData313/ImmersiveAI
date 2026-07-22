@@ -148,7 +148,8 @@ namespace ImmersiveAI
             _memoryStore = new JsonMemoryStore(NpcPaths.NpcsRoot);
             // Memory writing gets its own, roomier output budget: a rolling summary of a long story
             // plus a full list of truths plus a sense of self cannot breathe inside a spoken-reply cap.
-            _compressor = new MemoryCompressor(ChatClientFactory.Create(config, config.MaxMemoryWriteTokens));
+            // The budget is read live so a settings change reaches this client too, restart-free.
+            _compressor = new MemoryCompressor(ChatClientFactory.Create(config, () => config.MaxMemoryWriteTokens));
         }
 
         // One spoken completion that may reach for the world's memory along the way (the recall

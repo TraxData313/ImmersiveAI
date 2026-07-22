@@ -42,6 +42,12 @@ namespace ImmersiveAI
         private volatile bool _letterWorkInFlight;
         private DateTime _letterWorkSince;
 
+        // Arrived letters parked as right-side map notices (2026.07.22, Anton's ask — letters
+        // knock like chats do), by the writer's stringId. Session-scoped like _pendingNotices:
+        // the letter itself is already safe in letters.txt when the notice goes up, so a reload
+        // only folds the notice — the words wait in the letter window regardless.
+        private readonly HashSet<string> _pendingLetterNotices = new HashSet<string>(StringComparer.Ordinal);
+
         private void LoadLetterBag()
         {
             try { _letterBag = LetterBag.LoadFrom(NpcPaths.LettersFile); }
@@ -380,6 +386,21 @@ namespace ImmersiveAI
                 else
                     InformationManager.DisplayMessage(new InformationMessage(
                         $"A letter from {name} has reached you.", InitiationLogColor));
+
+                // The knock, chat-style: a persistent portrait notice whose click opens the letter
+                // WINDOW on the writer's thread — the reading happens where the correspondence
+                // lives, not in a popup blocking the map. Needs a living writer (the window's road
+                // runs through the hero) and the notice + window UI truly up; every other case
+                // keeps the classic inquiry below.
+                if (npc != null && _config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied
+                    && _config.EnableLetterWindow)
+                {
+                    _pendingLetterNotices.Add(npc.StringId);
+                    Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
+                        new UI.ImmersiveLetterMapNotification(npc,
+                            new TextObject("{=!}A letter from " + name + " awaits your reading.")));
+                    return;
+                }
 
                 double daysOnRoad = Math.Max(0, CampaignTime.Now.ToDays - letter.SentGameDay);
                 var provenance = $"Written at {letter.SentFrom}, some {daysOnRoad:0.#} days past." +
@@ -949,6 +970,34 @@ namespace ImmersiveAI
                 return;
             }
             OpenLetterComposer(npc);
+        }
+
+        // ---- Bridges for the letter map notice (constructed by the game, no reference to us) ----
+
+        /// <summary>Whether the parked letter notice still stands. Unlike a reach-out knock, a
+        /// letter has no expiry — it waits on the table until read or set aside — but the park is
+        /// session-scoped, so after a reload the notice folds and the letter waits in the window.</summary>
+        internal static bool IsLetterNoticeStillAlive(Hero npc)
+        {
+            var self = Current;
+            return self != null && npc != null && self._pendingLetterNotices.Contains(npc.StringId);
+        }
+
+        /// <summary>The player clicked the letter notice: open the letter window on the writer's
+        /// thread the moment the map is clear; the old composer popups only when it cannot come up.</summary>
+        internal static void OnLetterNoticeInspected(Hero npc)
+        {
+            var self = Current;
+            if (self == null || npc == null) return;
+            self._pendingLetterNotices.Remove(npc.StringId);
+            UI.LetterWindow.LetterWindowManager.OpenWhenClear(npc, self.OpenLetterComposer);
+        }
+
+        /// <summary>The notice went away uninspected (dismissed with X, or invalidated) — set
+        /// aside, not lost: the letter already lives in letters.txt and the letter window.</summary>
+        internal static void OnLetterNoticeDismissed(Hero? npc)
+        {
+            if (npc != null) Current?._pendingLetterNotices.Remove(npc.StringId);
         }
     }
 }

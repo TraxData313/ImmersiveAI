@@ -36,18 +36,19 @@ namespace ImmersiveAI.Tools
             new ToolDefinition(SurveySurroundings,
                 "Cast your eyes over the country about your company — every band, caravan, and army moving " +
                 "within sight: whose they are, their strength as well as your eyes can count it, whether they " +
-                "are friend or foe, and whether they or you are the swifter. Also your own company's pace and " +
-                "what slows it. Reach for this before ever speaking of who is near, of pursuit, of escape, or " +
-                "of the speed of the march."),
+                "are friend or foe, and whether they or you are the swifter. Also any den of brigands your " +
+                "company has spotted nearby, and your own company's pace and what slows it. Reach for this " +
+                "before ever speaking of who is near, of hideouts and lairs, of pursuit, of escape, or of " +
+                "the speed of the march."),
 
             new ToolDefinition(WeighBattle,
                 "Set a foe upon the scales against your own company: their numbers and kinds of fighters " +
                 "against yours, and how the day would likely go. Works against a band or army moving in the " +
-                "country, or against the garrison of a named town or castle. Reach for this before ever " +
-                "counselling battle or retreat.",
+                "country, against the garrison of a named town or castle, or against a spotted den of " +
+                "brigands. Reach for this before ever counselling battle or retreat.",
                 new[] { new ToolParameter("name",
-                    "Who to weigh against: a war party or army by its leader's or its own name, or a town or " +
-                    "castle by name. Leave it out to weigh the nearest hostile band in sight.", required: false) }),
+                    "Who to weigh against: a war party or army by its leader's or its own name, or a town, " +
+                    "castle, or brigands' den by name. Leave it out to weigh the nearest hostile band in sight.", required: false) }),
         };
 
         /// <summary>Answers one field-craft call for the asker. Same dispatcher rails as WorldRecall:
@@ -122,6 +123,7 @@ namespace ImmersiveAI.Tools
             });
 
             // Every band moving within sight, nearest first. A green eye sees fewer and counts rounder.
+            bool sawAnyone = false;
             Try(() =>
             {
                 float range = Math.Max(10f, party.SeeingRange * 1.5f);
@@ -133,17 +135,38 @@ namespace ImmersiveAI.Tools
                     .OrderBy(x => x.Dist)
                     .Take(eyes >= 75 ? 8 : 5)
                     .ToList();
+                if (seen.Count == 0) return;
 
-                if (seen.Count == 0)
-                {
-                    lines.Add("The country about lies empty as far as your eyes reach — no band moves within sight.");
-                    return;
-                }
-
+                sawAnyone = true;
                 lines.Add("Moving in the country about, nearest first:");
                 foreach (var x in seen)
                     lines.Add("- " + BandBrief(x.Party, x.Dist, party, asker, eyes));
             });
+
+            // The dens of brigands the company has SPOTTED — the fixed lairs the bands above ride out
+            // from. Only what the map already knows: an unspotted den stays honestly unknown, so the
+            // scout never turns oracle (2026.07.22, the "scouts are blind to hideouts" playtest find).
+            bool sawDens = false;
+            Try(() =>
+            {
+                float range = Math.Max(10f, party.SeeingRange * 1.5f);
+                var dens = Settlement.All
+                    .Where(s => s != null && s.IsHideout && Safe(() => s.Hideout.IsSpotted))
+                    .Select(s => new { Den = s, Dist = SafeSettlementDistance(s, party) })
+                    .Where(x => x.Dist >= 0 && x.Dist <= range)
+                    .OrderBy(x => x.Dist)
+                    .Take(3)
+                    .ToList();
+                if (dens.Count == 0) return;
+
+                sawDens = true;
+                lines.Add("And standing still in the country, the lairs your company has spotted:");
+                foreach (var x in dens)
+                    lines.Add("- " + DenBrief(x.Den, x.Dist, eyes));
+            });
+
+            if (!sawAnyone && !sawDens)
+                lines.Add("The country about lies empty as far as your eyes reach — no band moves within sight, and no den of brigands is known nearby.");
 
             if (eyes < 50)
                 lines.Add("(Your eyes are not the sharpest at this craft — trust the shapes, not the counts.)");
@@ -205,6 +228,32 @@ namespace ImmersiveAI.Tools
             return sb.ToString() + ".";
         }
 
+        // One spotted den: whose brigands, how many lurk within (as well as the eyes can count),
+        // and how far. A den the company never spotted is honestly unknown — the scout is no oracle.
+        private static string DenBrief(Settlement den, float dist, int eyes)
+        {
+            var sb = new StringBuilder();
+            sb.Append(DenName(den));
+            int men = 0;
+            Try(() => men = LurkersWithin(den));
+            if (men <= 0) sb.Append(", lying quiet — its brigands gone, or out riding");
+            else if (eyes >= 125) sb.Append($", {men} brigands lurking within");
+            else sb.Append($", perhaps {RoundTo(men, 10)} brigands lurking within");
+            sb.Append(" — FOES, " + DistanceWords(dist));
+            return sb.ToString() + ".";
+        }
+
+        // Dens carry no proper name of their own; the brigands' own name serves ("a den of Sea Raiders").
+        private static string DenName(Settlement den)
+        {
+            var clan = Safe(() => den.Hideout?.MapFaction?.Name?.ToString(), (string?)null);
+            return string.IsNullOrWhiteSpace(clan) ? "a den of brigands" : $"a den of {clan}";
+        }
+
+        private static int LurkersWithin(Settlement den) =>
+            den.Parties?.Where(p => p != null && Safe(() => p.IsBandit))
+                .Sum(p => Safe(() => p.MemberRoster?.TotalManCount ?? 0, 0)) ?? 0;
+
         // ------------------------------ the scales of battle ------------------------------
 
         private static string Weigh(string name, Hero asker)
@@ -235,13 +284,15 @@ namespace ImmersiveAI.Tools
             if (target != null)
                 return WeighAgainstParty(target, party, asker, ours, ourMen, ourWord);
 
-            var place = FindTargetSettlement(name);
+            var place = FindTargetSettlement(name, party);
             if (place != null)
-                return WeighAgainstWalls(place, asker, ours, ourMen, ourWord);
+                return place.IsHideout
+                    ? WeighAgainstDen(place, asker, ours, ourMen, ourWord)
+                    : WeighAgainstWalls(place, asker, ours, ourMen, ourWord);
 
             return string.IsNullOrWhiteSpace(name)
-                ? "No hostile band stands within sight to weigh against — name a foe or a walled place, and the scales can be set."
-                : $"Search the country and your memory as you may, no band or walled place called \"{name}\" comes to mind to weigh against.";
+                ? "No hostile band stands within sight to weigh against — name a foe, a walled place, or a spotted den, and the scales can be set."
+                : $"Search the country and your memory as you may, no band, walled place, or spotted den called \"{name}\" comes to mind to weigh against.";
         }
 
         private static string WeighAgainstParty(MobileParty target, MobileParty ours, Hero asker, float ourStrength, int ourMen, string ourWord)
@@ -294,6 +345,33 @@ namespace ImmersiveAI.Tools
             float wallStrength = theirs + militia * 0.5f;
             if (wallStrength > 0) lines.Add(Verdict(ourStrength, wallStrength, asker)
                 + " And walls are their own soldier: a stormed wall eats the attacker's advantage.");
+            return string.Join(" ", lines);
+        }
+
+        // A den is neither band nor wall: its strength is whatever brigand parties lurk inside it
+        // right now, and the raid itself is fought by a handful, not the company's whole weight.
+        private static string WeighAgainstDen(Settlement den, Hero asker, float ourStrength, int ourMen, string ourWord)
+        {
+            float theirs = 0; int lurkers = 0;
+            Try(() =>
+            {
+                foreach (var p in den.Parties)
+                {
+                    if (p == null || !Safe(() => p.IsBandit)) continue;
+                    lurkers += Safe(() => p.MemberRoster?.TotalManCount ?? 0, 0);
+                    theirs += Safe(() => p.Party?.EstimatedStrength ?? 0f, 0f);
+                }
+            });
+
+            var lines = new List<string>
+            {
+                $"You set {DenName(den)} upon the scales against {ourWord} ({ourMen} souls).",
+                lurkers > 0
+                    ? $"Some {lurkers} brigands lurk within it."
+                    : "It seems to lie quiet — its brigands gone, or out riding the roads.",
+            };
+            if (theirs > 0) lines.Add(Verdict(ourStrength, theirs, asker)
+                + " And know that a den is stormed by a chosen few, not a whole company — the boldest hands at your side, come what may.");
             return string.Join(" ", lines);
         }
 
@@ -377,14 +455,31 @@ namespace ImmersiveAI.Tools
             catch { return null; }
         }
 
-        private static Settlement FindTargetSettlement(string name)
+        private static Settlement FindTargetSettlement(string name, MobileParty ours)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(name)) return null;
                 var needle = name.Trim();
-                return Settlement.All.FirstOrDefault(s => s != null && (s.IsTown || s.IsCastle)
+                var walled = Settlement.All.FirstOrDefault(s => s != null && (s.IsTown || s.IsCastle)
                     && (s.Name?.ToString()?.IndexOf(needle, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0);
+                if (walled != null) return walled;
+
+                // A den carries no proper name — the asker says "the hideout", "the Sea Raiders'
+                // den" — so match the word or the brigands' own name, and let the NEAREST spotted
+                // one answer (every den on the map shares the same bare label).
+                bool denWords = needle.IndexOf("hideout", StringComparison.OrdinalIgnoreCase) >= 0
+                    || needle.IndexOf("den", StringComparison.OrdinalIgnoreCase) >= 0
+                    || needle.IndexOf("lair", StringComparison.OrdinalIgnoreCase) >= 0;
+                return Settlement.All
+                    .Where(s => s != null && s.IsHideout && Safe(() => s.Hideout.IsSpotted))
+                    .Where(s => denWords
+                        || (s.Name?.ToString()?.IndexOf(needle, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0
+                        || Safe(() => (s.Hideout.MapFaction?.Name?.ToString()?.IndexOf(needle, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0))
+                    .Select(s => new { Den = s, Dist = SafeSettlementDistance(s, ours) })
+                    .Where(x => x.Dist >= 0)
+                    .OrderBy(x => x.Dist)
+                    .FirstOrDefault()?.Den;
             }
             catch { return null; }
         }
@@ -394,6 +489,12 @@ namespace ImmersiveAI.Tools
         private static float SafeDistance(MobileParty a, MobileParty b)
         {
             try { return a.Position.Distance(b.Position); }
+            catch { return -1f; }
+        }
+
+        private static float SafeSettlementDistance(Settlement s, MobileParty p)
+        {
+            try { return s.Position.Distance(p.Position); }
             catch { return -1f; }
         }
 

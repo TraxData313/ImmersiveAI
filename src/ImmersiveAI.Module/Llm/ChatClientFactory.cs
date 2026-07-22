@@ -1,13 +1,26 @@
+using System;
 using ImmersiveAI.Core.Llm;
 
 namespace ImmersiveAI.Llm
 {
     public static class ChatClientFactory
     {
-        /// <summary>Builds a chat client for the configured backend. An explicit
+        /// <summary>Builds the chat client for the configured backend — a live shell that rebuilds
+        /// its inner client whenever the connection settings change, so an MCM edit (backend, key,
+        /// model, endpoint) takes hold on the next call without a restart. An explicit
         /// <paramref name="maxTokensOverride"/> lets a caller give one purpose its own output budget —
         /// e.g. memory writing (reflection/compression) gets more room than a spoken reply.</summary>
         public static IChatClient Create(ModConfig config, int? maxTokensOverride = null)
+            => new LiveSwapChatClient(config, () => maxTokensOverride);
+
+        /// <summary>Same, with a LIVE output budget: re-read at every (re)build, so a budget that
+        /// follows a config value (like the memory-writing room) keeps following it.</summary>
+        public static IChatClient Create(ModConfig config, Func<int?> maxTokensOverride)
+            => new LiveSwapChatClient(config, maxTokensOverride);
+
+        /// <summary>The raw, settings-frozen build the shell wraps — one concrete client for the
+        /// backend the config names right now.</summary>
+        internal static IChatClient Build(ModConfig config, int? maxTokensOverride = null)
         {
             var maxTokens = maxTokensOverride ?? config?.MaxTokens ?? 400;
 

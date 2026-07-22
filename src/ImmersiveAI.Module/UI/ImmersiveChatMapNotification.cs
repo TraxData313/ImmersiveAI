@@ -42,6 +42,36 @@ namespace ImmersiveAI.UI
         }
     }
 
+    /// <summary>
+    /// The letter twin of the notice above: an arrived letter parked in the right-side stack,
+    /// wearing the writer's portrait, clicking through to the letter WINDOW on their thread
+    /// (2026.07.22, Anton's ask — no more read-it-now popup blocking the map). The letter itself
+    /// is already safe in letters.txt when this goes up, so dismissing or losing the notice
+    /// loses nothing; the words wait in the window. Same save rules as its sibling: registered
+    /// in <see cref="ImmersiveAISaveDefiner"/> forever once shipped.
+    /// </summary>
+    public class ImmersiveLetterMapNotification : InformationData
+    {
+        [SaveableProperty(1)]
+        public Hero Npc { get; private set; }
+
+        public override TextObject TitleText => new TextObject("{=ImmersiveAI_LetterNoticeTitle}A letter has come");
+
+        public override string SoundEventPath => "event:/ui/notification/ransom_offer";
+
+        public ImmersiveLetterMapNotification(Hero npc, TextObject descriptionText)
+            : base(descriptionText)
+        {
+            Npc = npc;
+        }
+
+        public override bool IsValid()
+        {
+            return Npc != null && Npc.IsAlive
+                && ImmersiveChatBehavior.IsLetterNoticeStillAlive(Npc);
+        }
+    }
+
     /// <summary>Registers the mod's saveable types. The base id is a large, arbitrary number to
     /// keep clear of other mods; never change it once saves exist with it.</summary>
     public class ImmersiveAISaveDefiner : SaveableTypeDefiner
@@ -51,6 +81,7 @@ namespace ImmersiveAI.UI
         protected override void DefineClassTypes()
         {
             AddClassDefinition(typeof(ImmersiveChatMapNotification), 1);
+            AddClassDefinition(typeof(ImmersiveLetterMapNotification), 2);
         }
     }
 }

@@ -1,12 +1,6 @@
 BUGS:
-- [ ] Party members, like scounts, don't see hideouts
 
 NEXT UPDATE:
-- [ ] Socialness bar: hide toggle in mod settings (Steam comment, Charley Prince 2026.07.18)
-    The on-map socialness stepper bothers some players. `ShowSocialnessControl` already exists in
-    config.json (default on) but is NOT in the MCM menu — expose it there ("Show socialness control
-    on the map" toggle, no restart if possible: SocialnessManager already checks the flag per tick,
-    so the MCM write-back should hide it live). Promised to Charley for the next update.
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)

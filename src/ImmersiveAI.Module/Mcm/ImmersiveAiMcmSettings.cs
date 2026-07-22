@@ -26,42 +26,43 @@ namespace ImmersiveAI.Mcm
         public override string FormatType => "json2";
 
         // ── Connection ──────────────────────────────────────────────────────────────
-        // Which service answers, the keys, and the models. These are read once when the chat client
-        // is built at game start, so changing them asks for a restart to take effect.
+        // Which service answers, the keys, and the models. The chat client is a live shell
+        // (LiveSwapChatClient) that rebuilds itself when any of these change, so every edit here
+        // takes hold on the very next reply — no restart.
 
-        [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = true,
+        [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
             HintText = "Which AI service the NPCs think with. Anthropic (Claude) is the default; OpenAI (GPT) also works; OpenRouter reaches both with one key from openrouter.ai; Local speaks to a model on YOUR machine (LM Studio/Ollama) — free and private, no key, but weaker with the NPCs' tools.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> Backend { get; set; } = new Dropdown<string>(new[] { "Anthropic", "OpenAI", "OpenRouter", "Local" }, 0);
 
-        [SettingPropertyText("Anthropic API key", Order = 1, RequireRestart = true,
+        [SettingPropertyText("Anthropic API key", Order = 1, RequireRestart = false,
             HintText = "Your Claude API key (starts with sk-ant-...). Get one at console.anthropic.com. Required when the backend is Anthropic. Kept only in your local config file.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string AnthropicApiKey { get; set; } = string.Empty;
 
-        [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = true,
+        [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = false,
             HintText = "Haiku 4.5 ($1/$5 per MTok) is the fast, cheap default. Sonnet 5 ($3/$15) is the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(
             new[] { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" }, 0);
 
-        [SettingPropertyText("OpenAI API key", Order = 3, RequireRestart = true,
+        [SettingPropertyText("OpenAI API key", Order = 3, RequireRestart = false,
             HintText = "Your OpenAI API key (starts with sk-...). Required only when the backend is OpenAI. Kept only in your local config file.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIApiKey { get; set; } = string.Empty;
 
-        [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = true,
+        [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = false,
             HintText = "gpt-5.4-mini ($0.75/$4.50 per MTok) is the proven default. luna ($1/$6) is newer, terra ($2.50/$15) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. A model set by hand in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
             new[] { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
 
-        [SettingPropertyText("OpenRouter API key", Order = 5, RequireRestart = true,
+        [SettingPropertyText("OpenRouter API key", Order = 5, RequireRestart = false,
             HintText = "Your OpenRouter key (starts with sk-or-...). Get one at openrouter.ai — one key and a little credit reaches both Claude and GPT models at the providers' own prices. Required only when the backend is OpenRouter.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenRouterApiKey { get; set; } = string.Empty;
 
-        [SettingPropertyDropdown("OpenRouter model", Order = 6, RequireRestart = true,
+        [SettingPropertyDropdown("OpenRouter model", Order = 6, RequireRestart = false,
             HintText = "Which model when the backend is OpenRouter — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tools, same prices as going direct. gpt-5.4-mini and claude-haiku-4.5 are the proven picks; deepseek-v4-flash the cheapest. Any other id from openrouter.ai/models set in config.json also appears here.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(new[]
@@ -81,27 +82,27 @@ namespace ImmersiveAI.Mcm
             "openai/gpt-5.4-nano",
         }, 0);
 
-        [SettingPropertyText("Local server URL", Order = 7, RequireRestart = true,
+        [SettingPropertyText("Local server URL", Order = 7, RequireRestart = false,
             HintText = "Where your local AI server listens, when the backend is Local. LM Studio: http://localhost:1234/v1 (start its server on the Developer tab). Ollama: http://localhost:11434/v1. Blank resets to the LM Studio default. A key, if your server wants one, goes in LocalApiKey in config.json.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalEndpoint { get; set; } = string.Empty;
 
-        [SettingPropertyText("Local model id", Order = 8, RequireRestart = true,
+        [SettingPropertyText("Local model id", Order = 8, RequireRestart = false,
             HintText = "The EXACT id your local server serves — LM Studio shows it on its server page (e.g. qwen/qwen3-30b-a3b), Ollama uses the name you pulled (e.g. qwen3:30b). Prefer an instruct model that carries native tool calling; small models go shy of the NPCs' tools.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalModel { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 9, RequireRestart = true,
+        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 9, RequireRestart = false,
             HintText = "The context window your server ACTUALLY loads the model with (LM Studio's context-length setting; Ollama's num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int LocalContextWindow { get; set; } = 16384;
 
-        [SettingPropertyText("Custom endpoint (advanced)", Order = 10, RequireRestart = true,
+        [SettingPropertyText("Custom endpoint (advanced)", Order = 10, RequireRestart = false,
             HintText = "Empty = the real OpenAI. For another OpenAI-compatible CLOUD service (NanoGPT…), paste its base URL ending in /v1, put its key in the OpenAI key field, and set its model id in config.json. For OpenRouter or a local server, pick those backends above instead.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIBaseUrl { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 11, RequireRestart = true,
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 11, RequireRestart = false,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;
@@ -140,32 +141,37 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public float Socialness { get; set; } = 0.3f;
 
-        [SettingPropertyBool("Letters", Order = 2, RequireRestart = false,
+        [SettingPropertyBool("Show socialness control on the map", Order = 2, RequireRestart = false,
+            HintText = "The small stepper in the map's lower right that adjusts socialness live. Turn it off to clear the map — the slider above still sets the pace; it hides or returns at once, no restart.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool ShowSocialnessControl { get; set; } = true;
+
+        [SettingPropertyBool("Letters", Order = 3, RequireRestart = false,
             HintText = "Distant NPCs may write letters that travel real in-game days, and you can send letters by courier from any settlement.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableLetters { get; set; } = true;
 
-        [SettingPropertyBool("Recall the world's truth", Order = 3, RequireRestart = false,
+        [SettingPropertyBool("Recall the world's truth", Order = 4, RequireRestart = false,
             HintText = "NPCs may look up live campaign facts mid-reply — family, who holds a town, who is at war — instead of misremembering. Recommended.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableWorldRecall { get; set; } = true;
 
-        [SettingPropertyBool("All they have read and heard (web search)", Order = 4, RequireRestart = false,
+        [SettingPropertyBool("All they have read and heard (web search)", Order = 5, RequireRestart = false,
             HintText = "NPCs may quietly search the internet mid-reply when asked how something in the world is done — framed to them as their own reading and hearsay. Uses DuckDuckGo, no key needed; the search queries leave your machine, so turn this off if you prefer everything to stay between you and your AI provider.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableWebSearch { get; set; } = true;
 
-        [SettingPropertyInteger("Lasting truths per NPC", 1, 30, "0", Order = 5, RequireRestart = false,
+        [SettingPropertyInteger("Lasting truths per NPC", 1, 30, "0", Order = 6, RequireRestart = false,
             HintText = "How many distilled 'known facts' about you an NPC may carry at once. Higher means a longer memory but a larger, pricier prompt.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int MaxKnownFacts { get; set; } = 10;
 
-        [SettingPropertyInteger("Personal aims per NPC", 1, 20, "0", Order = 6, RequireRestart = false,
+        [SettingPropertyInteger("Personal aims per NPC", 1, 20, "0", Order = 7, RequireRestart = false,
             HintText = "How many personal goals an NPC may hold at once — what they strive for of their own will. Kept small so their striving stays focused.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int MaxNpcGoals { get; set; } = 6;
 
-        [SettingPropertyBool("Memories rewind with your saves", Order = 7, RequireRestart = false,
+        [SettingPropertyBool("Memories rewind with your saves", Order = 8, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool RevertMemoriesWithSaves { get; set; } = true;

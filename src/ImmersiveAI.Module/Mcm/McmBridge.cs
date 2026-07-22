@@ -96,6 +96,7 @@ namespace ImmersiveAI.Mcm
 
             s.EnableNpcInitiatedChats = c.EnableNpcInitiatedChats;
             s.Socialness = (float)Math.Max(0.0, Math.Min(24.0, c.DailyInitiationRate));
+            s.ShowSocialnessControl = c.ShowSocialnessControl;
             s.EnableLetters = c.EnableLetters;
             s.EnableWorldRecall = c.EnableWorldRecall;
             s.EnableWebSearch = c.EnableWebSearch;
@@ -138,6 +139,9 @@ namespace ImmersiveAI.Mcm
 
             c.EnableNpcInitiatedChats = s.EnableNpcInitiatedChats;
             c.DailyInitiationRate = s.Socialness;
+            // SocialnessManager reads this flag every tick, so the stepper folds away or returns
+            // the moment the box is toggled — the live hide promised on the Steam page comments.
+            c.ShowSocialnessControl = s.ShowSocialnessControl;
             c.EnableLetters = s.EnableLetters;
             c.EnableWorldRecall = s.EnableWorldRecall;
             c.EnableWebSearch = s.EnableWebSearch;
