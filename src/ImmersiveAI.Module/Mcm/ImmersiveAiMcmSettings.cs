@@ -41,29 +41,39 @@ namespace ImmersiveAI.Mcm
         public string AnthropicApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = false,
-            HintText = "Haiku 4.5 ($1/$5 per MTok) is the fast, cheap default. Sonnet 5 ($3/$15) is the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. A model set by hand in config.json also appears here.")]
+            HintText = "Haiku 4.5 ($1/$5 per MTok) is the fast, cheap default. Sonnet 5 ($3/$15) is the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. Any other model goes in the custom field below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(
             new[] { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" }, 0);
 
-        [SettingPropertyText("OpenAI API key", Order = 3, RequireRestart = false,
+        [SettingPropertyText("Anthropic model (type any id)", Order = 3, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: the exact Anthropic model id to use, as the API names it. Empty = the dropdown chooses. Unlisted models still work; the ~$ cost estimate just may not know their prices.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string AnthropicModelCustom { get; set; } = string.Empty;
+
+        [SettingPropertyText("OpenAI API key", Order = 4, RequireRestart = false,
             HintText = "Your OpenAI API key (starts with sk-...). Required only when the backend is OpenAI. Kept only in your local config file.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIApiKey { get; set; } = string.Empty;
 
-        [SettingPropertyDropdown("OpenAI model", Order = 4, RequireRestart = false,
-            HintText = "gpt-5.4-mini ($0.75/$4.50 per MTok) is the proven default. luna ($1/$6) is newer, terra ($2.50/$15) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. A model set by hand in config.json also appears here.")]
+        [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
+            HintText = "gpt-5.4-mini ($0.75/$4.50 per MTok) is the proven default. luna ($1/$6) is newer, terra ($2.50/$15) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. Any other model goes in the custom field below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
             new[] { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
 
-        [SettingPropertyText("OpenRouter API key", Order = 5, RequireRestart = false,
+        [SettingPropertyText("OpenAI model (type any id)", Order = 6, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: the exact OpenAI model id to use (e.g. gpt-4.1) — also the place for a custom endpoint's model id. Empty = the dropdown chooses. Unlisted models still work; the ~$ estimate just may not know their prices.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string OpenAIModelCustom { get; set; } = string.Empty;
+
+        [SettingPropertyText("OpenRouter API key", Order = 7, RequireRestart = false,
             HintText = "Your OpenRouter key (starts with sk-or-...). Get one at openrouter.ai — one key and a little credit reaches both Claude and GPT models at the providers' own prices. Required only when the backend is OpenRouter.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenRouterApiKey { get; set; } = string.Empty;
 
-        [SettingPropertyDropdown("OpenRouter model", Order = 6, RequireRestart = false,
-            HintText = "Which model when the backend is OpenRouter — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tools, same prices as going direct. gpt-5.4-mini and claude-haiku-4.5 are the proven picks; deepseek-v4-flash the cheapest. Any other id from openrouter.ai/models set in config.json also appears here.")]
+        [SettingPropertyDropdown("OpenRouter model", Order = 8, RequireRestart = false,
+            HintText = "Which model when the backend is OpenRouter — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tools, same prices as going direct. gpt-5.4-mini and claude-haiku-4.5 are the proven picks; deepseek-v4-flash the cheapest. Any other id goes in the custom field below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(new[]
         {
@@ -82,27 +92,32 @@ namespace ImmersiveAI.Mcm
             "openai/gpt-5.4-nano",
         }, 0);
 
-        [SettingPropertyText("Local server URL", Order = 7, RequireRestart = false,
+        [SettingPropertyText("OpenRouter model (type any id)", Order = 9, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: any id from openrouter.ai/models, pasted exactly in OpenRouter's own spelling (e.g. qwen/qwen3-235b-a22b). Empty = the dropdown chooses. A mistyped id answers as a clear error naming the model.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string OpenRouterModelCustom { get; set; } = string.Empty;
+
+        [SettingPropertyText("Local server URL", Order = 10, RequireRestart = false,
             HintText = "Where your local AI server listens, when the backend is Local. LM Studio: http://localhost:1234/v1 (start its server on the Developer tab). Ollama: http://localhost:11434/v1. Blank resets to the LM Studio default. A key, if your server wants one, goes in LocalApiKey in config.json.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalEndpoint { get; set; } = string.Empty;
 
-        [SettingPropertyText("Local model id", Order = 8, RequireRestart = false,
+        [SettingPropertyText("Local model id", Order = 11, RequireRestart = false,
             HintText = "The EXACT id your local server serves — LM Studio shows it on its server page (e.g. qwen/qwen3-30b-a3b), Ollama uses the name you pulled (e.g. qwen3:30b). Prefer an instruct model that carries native tool calling; small models go shy of the NPCs' tools.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalModel { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 9, RequireRestart = false,
+        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 12, RequireRestart = false,
             HintText = "The context window your server ACTUALLY loads the model with (LM Studio's context-length setting; Ollama's num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int LocalContextWindow { get; set; } = 16384;
 
-        [SettingPropertyText("Custom endpoint (advanced)", Order = 10, RequireRestart = false,
-            HintText = "Empty = the real OpenAI. For another OpenAI-compatible CLOUD service (NanoGPT…), paste its base URL ending in /v1, put its key in the OpenAI key field, and set its model id in config.json. For OpenRouter or a local server, pick those backends above instead.")]
+        [SettingPropertyText("Custom endpoint (advanced)", Order = 13, RequireRestart = false,
+            HintText = "Empty = the real OpenAI. For another OpenAI-compatible CLOUD service (NanoGPT…), paste its base URL ending in /v1, put its key in the OpenAI key field, and type its model id in the custom OpenAI model field above. For OpenRouter or a local server, pick those backends instead.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIBaseUrl { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 11, RequireRestart = false,
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 14, RequireRestart = false,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;

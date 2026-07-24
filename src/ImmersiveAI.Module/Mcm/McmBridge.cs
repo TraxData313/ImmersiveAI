@@ -74,11 +74,11 @@ namespace ImmersiveAI.Mcm
         {
             Select(s.Backend, c.Backend);
             s.AnthropicApiKey = c.AnthropicApiKey ?? string.Empty;
-            SelectOrAdd(s.AnthropicModel, c.AnthropicModel);
+            s.AnthropicModelCustom = SelectOrCustom(s.AnthropicModel, c.AnthropicModel);
             s.OpenAIApiKey = c.OpenAIApiKey ?? string.Empty;
-            SelectOrAdd(s.OpenAIModel, c.OpenAIModel);
+            s.OpenAIModelCustom = SelectOrCustom(s.OpenAIModel, c.OpenAIModel);
             s.OpenRouterApiKey = c.OpenRouterApiKey ?? string.Empty;
-            SelectOrAdd(s.OpenRouterModel, c.OpenRouterModel);
+            s.OpenRouterModelCustom = SelectOrCustom(s.OpenRouterModel, c.OpenRouterModel);
             // The endpoint shows blank while it is the real OpenAI — the field is for the exception.
             s.OpenAIBaseUrl = string.Equals(c.OpenAIBaseUrl, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
@@ -115,11 +115,11 @@ namespace ImmersiveAI.Mcm
         {
             c.Backend = s.Backend.SelectedValue ?? c.Backend;
             c.AnthropicApiKey = s.AnthropicApiKey ?? string.Empty;
-            c.AnthropicModel = s.AnthropicModel.SelectedValue ?? c.AnthropicModel;
+            c.AnthropicModel = ChosenModel(s.AnthropicModel, s.AnthropicModelCustom) ?? c.AnthropicModel;
             c.OpenAIApiKey = s.OpenAIApiKey ?? string.Empty;
-            c.OpenAIModel = s.OpenAIModel.SelectedValue ?? c.OpenAIModel;
+            c.OpenAIModel = ChosenModel(s.OpenAIModel, s.OpenAIModelCustom) ?? c.OpenAIModel;
             c.OpenRouterApiKey = s.OpenRouterApiKey ?? string.Empty;
-            c.OpenRouterModel = s.OpenRouterModel.SelectedValue ?? c.OpenRouterModel;
+            c.OpenRouterModel = ChosenModel(s.OpenRouterModel, s.OpenRouterModelCustom) ?? c.OpenRouterModel;
             // Blank means the real OpenAI; Normalize (run by the caller) completes a pasted /v1 base.
             c.OpenAIBaseUrl = string.IsNullOrWhiteSpace(s.OpenAIBaseUrl)
                 ? ModConfig.DefaultOpenAIEndpoint
@@ -164,8 +164,29 @@ namespace ImmersiveAI.Mcm
             if (index >= 0) dropdown.SelectedIndex = index;
         }
 
+        /// <summary>Selects the value in the dropdown when the curated list carries it (the custom field
+        /// stays blank); otherwise leaves the dropdown alone and returns the value for the custom field —
+        /// so a hand-set or exotic model id shows where it can be edited and cleared, not wedged into the
+        /// curated menu. Clearing that field falls back to whatever the dropdown shows.</summary>
+        private static string SelectOrCustom(Dropdown<string> dropdown, string value)
+        {
+            if (dropdown == null || string.IsNullOrWhiteSpace(value)) return string.Empty;
+            var index = dropdown.IndexOf(value);
+            if (index < 0) return value;
+            dropdown.SelectedIndex = index;
+            return string.Empty;
+        }
+
+        /// <summary>The model the menu currently means: the custom field while it holds text (it
+        /// overrides the dropdown, as its label promises), the dropdown pick otherwise.</summary>
+        private static string ChosenModel(Dropdown<string> dropdown, string custom)
+        {
+            if (!string.IsNullOrWhiteSpace(custom)) return custom.Trim();
+            return dropdown != null ? dropdown.SelectedValue : null;
+        }
+
         /// <summary>Selects a dropdown value, adding it first if the list does not already carry it — so a
-        /// model or key the player set by hand shows up in the menu instead of being silently dropped.</summary>
+        /// hotkey the player set by hand shows up in the menu instead of being silently dropped.</summary>
         private static void SelectOrAdd(Dropdown<string> dropdown, string value)
         {
             if (dropdown == null || string.IsNullOrWhiteSpace(value)) return;

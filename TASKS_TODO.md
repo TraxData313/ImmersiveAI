@@ -2,6 +2,7 @@ BUGS:
 
 NEXT UPDATE:
 
+
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
     Leaders of the player's clan parties take orders through conversation or letters via a

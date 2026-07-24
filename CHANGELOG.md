@@ -5,6 +5,15 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.3.1 — 2026.07.24
+
+- **Type any AI model id in Mod Options** (asked for on Nexus): each cloud backend's model
+  dropdown now has a "(type any id)" field right below it — while it holds text it overrides
+  the dropdown; clear it and the dropdown chooses again. Use any Anthropic or OpenAI id, or
+  anything from OpenRouter's full catalog, pasted exactly as openrouter.ai/models spells it.
+  Takes effect on the very next reply, no restart. Unlisted models work fine — the cost
+  estimate just may not know their prices, and a mistyped id tells you so plainly.
+
 ## v1.3.0 — 2026.07.22
 
 - **Changing AI settings no longer needs a restart.** Backend, API keys, models, endpoints and
