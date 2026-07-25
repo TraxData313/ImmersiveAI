@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.3.1 - Type any AI model id in Mod Options (asked for on Nexus): each cloud backend's model dropdown now has a '(type any id)' field right below it - while it holds text it overrides the dropdown; clear it and the dropdown chooses again. Use any Anthropic or OpenAI id, or anything from OpenRouter's full catalog, pasted exactly as openrouter.ai/models spells it. Takes effect on the very next reply, no restart. Unlisted models work fine - the cost estimate just may not know their prices, and a mistyped id tells you so plainly." />
+        <ChangeNotes Value="v1.3.2 - Fixed: settings changed at the main menu could be silently reverted. Editing Mod Options before loading a campaign - switching the Backend, pasting an API key, picking a model - could fail to reach the mod's config and quietly snap back when the campaign started, leaving errors like 'Anthropic API key is not set' after choosing OpenRouter. Settings now take hold wherever and whenever you edit them, main menu included. If this bit you: update, set your Backend (and key) once more, and it sticks." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

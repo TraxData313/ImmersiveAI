@@ -65,6 +65,10 @@ namespace ImmersiveAI
         protected override void OnApplicationTick(float dt)
         {
             base.OnApplicationTick(dt);
+            // Keep offering the MCM bind (self-throttled, no-op once bound): MCM may register our
+            // settings after both hooks above, and until the bind lands, menu edits never reach
+            // config.json — the "set Backend at the main menu, get reverted at campaign start" bug.
+            Mcm.McmBridge.TryBind(Config);
             // Drain UI updates queued by background LLM calls.
             MainThreadDispatcher.Drain();
             // The chat window's little life: hotkey on the map, Enter/Escape while open.

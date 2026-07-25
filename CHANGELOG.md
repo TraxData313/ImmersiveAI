@@ -5,6 +5,15 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.3.2 — 2026.07.25
+
+- **Fixed: settings changed at the main menu could be silently reverted** (the first Nexus bug
+  report — thank you). Editing Mod Options before loading a campaign — switching the Backend,
+  pasting an API key, picking a model — could fail to reach the mod's config and quietly snap
+  back when the campaign started, leaving errors like "Anthropic API key is not set" after
+  choosing OpenRouter. Settings now take hold wherever and whenever you edit them, main menu
+  included. If this bit you: update, set your Backend (and key) once more, and it sticks.
+
 ## v1.3.1 — 2026.07.24
 
 - **Type any AI model id in Mod Options** (asked for on Nexus): each cloud backend's model

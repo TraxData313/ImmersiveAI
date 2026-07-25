@@ -20,12 +20,22 @@ namespace ImmersiveAI.Mcm
     internal static class McmBridge
     {
         private static bool _bound;
+        private static int _failures;
+        private static DateTime _nextAttemptUtc = DateTime.MinValue;
 
         /// <summary>Binds the menu to <paramref name="live"/> if MCM is present. Safe to call when it is
-        /// not — returns quietly. Best-effort: any failure only costs the menu, never the mod.</summary>
+        /// not — returns quietly. Best-effort: any failure only costs the menu, never the mod.
+        /// Called every application tick (self-throttled to ~1s) until it succeeds: MCM registers our
+        /// settings on its own schedule, and until this bind lands, anything the player edits in the
+        /// menu never reaches config.json — a main-menu Backend switch used to be silently reverted at
+        /// campaign start by the push below (the first Nexus bug, 2026.07.25). Binding within a second
+        /// of MCM coming up closes that window for good.</summary>
         public static void TryBind(ModConfig live)
         {
             if (_bound || live == null) return;
+            var now = DateTime.UtcNow;
+            if (now < _nextAttemptUtc) return;
+            _nextAttemptUtc = now.AddSeconds(1.0);
             // Note: do NOT reference any MCM type in this method's body — the check below must not force
             // the CLR to load MCMv5 when the module is absent. All MCM contact is quarantined in Bind().
             var mcmLoaded = AppDomain.CurrentDomain.GetAssemblies()
@@ -35,12 +45,13 @@ namespace ImmersiveAI.Mcm
             try
             {
                 // Bind returns false if MCM is up but our settings aren't registered yet; leave _bound
-                // false so a later call (e.g. from OnGameStart) retries. A real exception, by contrast,
-                // won't heal itself — give up so we don't spam the log.
+                // false so the next tick retries. Exceptions get a few chances too (startup timing can
+                // be flaky) before we give up so we don't spam the log.
                 if (Bind(live)) _bound = true;
             }
             catch (Exception ex)
             {
+                if (++_failures < 3) return;
                 _bound = true;
                 // The menu is a convenience; config.json still works. Note it once and move on.
                 TaleWorlds.Library.InformationManager.DisplayMessage(
