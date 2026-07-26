@@ -273,6 +273,10 @@ public class NpcMemoryTests
         memory.AddTurn(new ConversationTurn { Speaker = ConversationTurn.AngelSpeaker, PlayerLine = "…", GameDay = 10 });
         Assert.Equal(1, memory.UnansweredOutreachCount);
 
+        // Neither is one of their OWN inner reckonings (the reach-out beats since 2026.07.26).
+        memory.AddTurn(new ConversationTurn { Speaker = ConversationTurn.InnerSpeaker, PlayerLine = "…", NpcLine = "STAY", GameDay = 10 });
+        Assert.Equal(1, memory.UnansweredOutreachCount);
+
         // A turn whose incoming line is the player's IS the answer.
         memory.AddTurn(new ConversationTurn { PlayerLine = "Well met.", NpcLine = "And you.", GameDay = 11 });
         Assert.Equal(0, memory.UnansweredOutreachCount);

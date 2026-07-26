@@ -117,7 +117,7 @@ public class PromptBuilderTests
         var memory = new NpcMemory();
         memory.AddTurn(new ConversationTurn { PlayerLine = "Hail, Gafnir", NpcLine = "Hail, stranger." });
 
-        var line = PromptBuilder.ReachOutDesireLine("Vulgrim");
+        var line = PromptBuilder.WriteLetterDesireLine("Vulgrim");
         var messages = new PromptBuilder().BuildAngelPrompt(Persona(), memory, "In the tavern.", "Vulgrim", line, "Seraph");
 
         // System, the one remembered player turn (user+assistant), then the Angel's line as the last user turn.
@@ -128,12 +128,29 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void ApproachLine_ReflectsWhetherThePlayerWelcomedThem()
+    public void BuildInnerPrompt_FramesTheLineAsTheNpcsOwnMind_NoVoiceSpeaking()
     {
-        var welcomed = PromptBuilder.ApproachLine("Vulgrim", welcomed: true);
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn { PlayerLine = "Hail, Gafnir", NpcLine = "Hail, stranger." });
+
+        var line = PromptBuilder.ReachOutPonderLine("Vulgrim");
+        var messages = new PromptBuilder().BuildInnerPrompt(Persona(), memory, "In the tavern.", "Vulgrim", line, "Seraph");
+
+        Assert.Equal(4, messages.Count);
+        Assert.Equal(ChatRole.User, messages[3].Role);
+        Assert.StartsWith("(Within my own mind:", messages[3].Content); // their own reckoning, no Angel
+        Assert.DoesNotContain("Seraph", messages[3].Content);
+        Assert.Contains("STAY", messages[3].Content);                   // the sober decision it asks for
+    }
+
+    [Fact]
+    public void ApproachLine_ReflectsWhetherThePlayerWelcomedThem_AndCarriesTheCause()
+    {
+        var welcomed = PromptBuilder.ApproachLine("Vulgrim", welcomed: true, reason: "the granary tally is short");
         var busy = PromptBuilder.ApproachLine("Vulgrim", welcomed: false);
 
-        Assert.Contains("gladly", welcomed);      // the player turns to them warmly
+        Assert.Contains("give me their attention", welcomed); // the player receives them
+        Assert.Contains("the granary tally is short", welcomed); // the resolved cause rides along
         Assert.Contains("apologetic", busy);      // the player is too caught up just now
         Assert.NotEqual(welcomed, busy);
     }
@@ -158,6 +175,28 @@ public class PromptBuilderTests
         Assert.Contains("Do you wish to seek Vulgrim out?", messages[1].Content);
         Assert.Equal(ChatRole.Assistant, messages[2].Role);
         Assert.Equal("Yes — I have missed them.", messages[2].Content);
+    }
+
+    [Fact]
+    public void Build_ReplaysARememberedInnerTurnAsTheirOwnMind_NotAsTheAngelOrThePlayer()
+    {
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.InnerSpeaker,
+            PlayerLine = PromptBuilder.ReachOutPonderNote("Vulgrim"),
+            NpcLine = "GO: the granary tally is short.",
+            Place = "Ostican",
+            CalradiaTime = "1087.01.01 10.20",
+        });
+
+        var messages = new PromptBuilder().Build(Persona(), memory, "In Ostican.", "Vulgrim", "Hello", voiceName: "Seraph");
+
+        // system, [inner note framed as their own mind], [their resolution as assistant], [player input].
+        Assert.Equal(4, messages.Count);
+        Assert.StartsWith("[Ostican, 1087.01.01 10.20] (Within my own mind:", messages[1].Content);
+        Assert.DoesNotContain("Seraph", messages[1].Content);
+        Assert.Equal("GO: the granary tally is short.", messages[2].Content);
     }
 
     [Fact]
@@ -445,35 +484,49 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void ReachOutDesireLine_TellsAStrangerHonestlyThereIsNoHistoryYet()
+    public void ReachOutPonderLine_DemandsACauseAndKeepsAStrangerHonest()
     {
-        // With the pull floor, someone never spoken with may be moved to approach; the Angel must not
-        // let them imagine a past that is not there — the approach is a first acquaintance.
-        var stranger = PromptBuilder.ReachOutDesireLine("Vulgrim", stranger: true);
-        var friend = PromptBuilder.ReachOutDesireLine("Vulgrim");
+        // The reach-out weighing is the NPC's own sober reckoning: courtesy is named as no cause
+        // (the lever against "how are you feeling today" visits), and someone never spoken with
+        // must not imagine a past that is not there.
+        var stranger = PromptBuilder.ReachOutPonderLine("Vulgrim", stranger: true);
+        var friend = PromptBuilder.ReachOutPonderLine("Vulgrim");
 
-        Assert.Contains("never truly spoken", stranger);
-        Assert.Contains("make their acquaintance", stranger);
-        Assert.DoesNotContain("never truly spoken", friend);
-        // Both leave the choice wholly theirs.
-        Assert.Contains("yes or no", stranger);
-        Assert.Contains("yes or no", friend);
+        Assert.Contains("we have never spoken", stranger);
+        Assert.DoesNotContain("we have never spoken", friend);
+        Assert.Contains("no cause", stranger);                 // courtesy alone moves no one
+        Assert.Contains("no cause", friend);
+        Assert.Contains("needs no second telling", friend);    // last time's errand is spent
+        // Both ask for the plain decision the parser reads.
+        Assert.Contains("STAY", stranger);
+        Assert.Contains("GO:", friend);
     }
 
     [Fact]
-    public void FirstWordLine_SpeaksFirstAndKnowsTheAnswerMayComeLater()
+    public void ReachOutPonderNote_IsRecognizedAsAPonderBeat()
     {
-        // The chat-window reaching-out: no accept/decline stands between them — she simply speaks,
-        // and the Angel is honest that the player may be occupied and answer only later.
-        var first = PromptBuilder.FirstWordLine("Vulgrim", stranger: true);
+        Assert.True(PromptBuilder.IsPonderBeat(PromptBuilder.ReachOutPonderNote("Vulgrim", stranger: true)));
+        Assert.True(PromptBuilder.IsPonderBeat(PromptBuilder.ReachOutPonderNote("Vulgrim")));
+        // Delivery notes are NOT ponders — their spoken words must stand as spoken.
+        Assert.False(PromptBuilder.IsPonderBeat(PromptBuilder.FirstWordNote("Vulgrim", "the granary")));
+        Assert.False(PromptBuilder.IsPonderBeat(PromptBuilder.ApproachNote("Vulgrim", welcomed: true)));
+    }
+
+    [Fact]
+    public void FirstWordLine_SpeaksFirstWithTheCauseAndKnowsTheAnswerMayComeLater()
+    {
+        // The chat-window reaching-out: no accept/decline stands between them — she simply goes and
+        // speaks, carrying the cause she resolved on, honest that the player may answer only later.
+        var first = PromptBuilder.FirstWordLine("Vulgrim", stranger: true, reason: "their smith buys no iron");
         var friend = PromptBuilder.FirstWordLine("Vulgrim");
 
-        Assert.Contains("never truly spoken", first);
-        Assert.Contains("make yourself known", first);
-        Assert.DoesNotContain("never truly spoken", friend);
+        Assert.Contains("we have never spoken", first);
+        Assert.Contains("name myself briefly", first);
+        Assert.Contains("their smith buys no iron", first);    // the resolved cause rides along
+        Assert.DoesNotContain("we have never spoken", friend);
         // Both are told the answer may not be immediate, so silence is a lived moment, not a rebuff.
-        Assert.Contains("only when their hands are free", first);
-        Assert.Contains("only when their hands are free", friend);
+        Assert.Contains("at once or only later", first);
+        Assert.Contains("at once or only later", friend);
     }
 
     [Fact]

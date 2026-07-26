@@ -26,6 +26,57 @@ namespace ImmersiveAI.Core.Initiation
             return System.Text.RegularExpressions.Regex.IsMatch(t, "\\byes\\b");
         }
 
+        /// <summary>Reads the STAY / "GO: reason" resolution of a reach-out ponder (the first-person
+        /// weighing that replaced the Angel's yes/no on 2026.07.26). Lenient around dressing — markdown,
+        /// quotes, "I go"/"I stay" phrasings — but an unreadable answer falls back to the old yes/no
+        /// reading, and anything still unclear is STAY, so the player is never troubled on a mumble.
+        /// The reason (the NPC's own stated cause for coming) is handed back trimmed and single-line;
+        /// empty when they gave none.</summary>
+        public static bool WantsToGo(string? reply, out string reason)
+        {
+            reason = string.Empty;
+            if (string.IsNullOrWhiteSpace(reply)) return false;
+
+            // Strip the dressing an eager model may wrap the verdict in.
+            var t = reply!.Trim().TrimStart('*', '-', '>', '#', '(', '[', '"', '“', '\'', ' ');
+            var lower = t.ToLowerInvariant();
+
+            if (StartsWithWord(lower, "stay") || StartsWithWord(lower, "i stay")
+                || StartsWithWord(lower, "i remain") || StartsWithWord(lower, "i keep")) return false;
+
+            if (StartsWithWord(lower, "go"))
+            {
+                reason = CleanReason(t.Substring(2));
+                return true;
+            }
+            if (StartsWithWord(lower, "i go") || StartsWithWord(lower, "i will go") || StartsWithWord(lower, "i cross"))
+            {
+                var idx = t.IndexOfAny(new[] { ':', '—' });
+                if (idx >= 0 && idx + 1 < t.Length) reason = CleanReason(t.Substring(idx + 1));
+                return true;
+            }
+
+            // Not the asked-for shape — fall back to the old yes/no reading (a bare "yes" carries no reason).
+            return WantsToReachOut(reply);
+        }
+
+        // True when the text begins with the given word(s) followed by a non-letter or the end — so
+        // "go" never matches "good day" and "stay" never matches "staying power"... which it would.
+        private static bool StartsWithWord(string text, string word)
+        {
+            if (!text.StartsWith(word, System.StringComparison.Ordinal)) return false;
+            return text.Length == word.Length || !char.IsLetter(text[word.Length]);
+        }
+
+        // One line, unquoted, unpadded — the reason travels into prompts and recorded notes.
+        private static string CleanReason(string raw)
+        {
+            var r = (raw ?? string.Empty).Trim().TrimStart(':', '—', '-', ',', '.', ' ', '"', '“', '*')
+                .TrimEnd('"', '”', ')', ']', '*', ' ');
+            r = System.Text.RegularExpressions.Regex.Replace(r, "\\s+", " ").Trim();
+            return r.Length > 240 ? r.Substring(0, 240).TrimEnd() + "…" : r;
+        }
+
         /// <summary>True when the NPC chose not to reach out (an empty or single-word declining answer).</summary>
         public static bool IsDecline(string reply)
         {

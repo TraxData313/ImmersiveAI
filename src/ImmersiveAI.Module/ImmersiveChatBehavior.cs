@@ -118,11 +118,12 @@ namespace ImmersiveAI
 
         private readonly struct PendingNotice
         {
-            public PendingNotice(double offeredGameDay, string situation, string greeting = "")
+            public PendingNotice(double offeredGameDay, string situation, string greeting = "", string reason = "")
             {
                 OfferedGameDay = offeredGameDay;
                 Situation = situation;
                 Greeting = greeting ?? string.Empty;
+                Reason = reason ?? string.Empty;
             }
             public double OfferedGameDay { get; }
             public string Situation { get; }
@@ -130,6 +131,9 @@ namespace ImmersiveAI
             /// as the opening line when the player clicks the notice into a conversation. Empty for the
             /// accept/decline path, whose greeting is generated only after the player accepts.</summary>
             public string Greeting { get; }
+            /// <summary>The cause the NPC resolved on when they chose to come (the ponder's "GO: reason") —
+            /// carried into the approach narration so the words open about the thing that brought them.</summary>
+            public string Reason { get; }
         }
 
         // How long a parked notice waits before the moment passes on its own.
@@ -1703,39 +1707,45 @@ namespace ImmersiveAI
             try
             {
                 // Capture the situation now and reuse it for the beats to come; the offer pauses the game,
-                // so the moment does not drift between the asking and the answering.
-                var situation = SafeBuildSituation(npc);
+                // so the moment does not drift between the asking and the answering. The NEARBY shape:
+                // the player is about their own affairs, not arriving — the meeting shape's closing
+                // "And now X comes to me" contradicted the very question of whether to go to them.
+                var situation = SafeBuildNearbySituation(npc);
                 var ctx = BuildContext(npc, situation);
 
-                // The Angel asks whether they even wish to reach out; their answer becomes a recorded turn.
-                // A stranger is told honestly that this would be a first acquaintance, not a return.
-                // (The flag is taken BEFORE the desire beat is recorded — that beat itself must not turn
-                // a stranger into an acquaintance between the asking and the speaking.)
+                // Their own mind weighs the moment — no Angel here since 2026.07.26 (the tender framing
+                // bred emotional small-talk approaches): the full sheet (news, mood, duty, memory) plus a
+                // sober "have I real cause?" answered STAY or "GO: reason". A stranger is reminded they
+                // have never spoken, so no history is imagined. (The flag is taken BEFORE the ponder beat
+                // is recorded — that beat itself must not turn a stranger into an acquaintance.)
                 var stranger = !PromptBuilder.HasRememberedHistory(ctx.Memory);
-                var desireLine = PromptBuilder.ReachOutDesireLine(ctx.PlayerName, stranger);
-                var desireMsgs = _promptBuilder.BuildAngelPrompt(
-                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
-                var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
-                var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
+                var ponderLine = PromptBuilder.ReachOutPonderLine(ctx.PlayerName, stranger);
+                var ponderMsgs = _promptBuilder.BuildInnerPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, ponderLine, _config.SystemVoiceName);
+                var ponderRaw = await _client.CompleteAsync(ponderMsgs).ConfigureAwait(false);
+                var resolution = string.IsNullOrWhiteSpace(ponderRaw) ? "STAY" : ponderRaw.Trim();
 
                 // The weighing itself rests them for a while (OutreachMark.Considered) whatever they chose:
-                // a "no" must not leave them the likeliest pick again next hour, and a "yes" whose notice
+                // a STAY must not leave them the likeliest pick again next hour, and a GO whose notice
                 // the player never reaches should still not turn into an hourly knock (the delivery beat
-                // below marks the true outreach on top of this).
-                AppendAngelTurn(npc, desireLine, desireAnswer, OutreachMark.Considered);
+                // below marks the true outreach on top of this). Memory keeps the condensed note, not the
+                // working instruction — the resolution beside it carries their own stated cause.
+                AppendAngelTurn(npc, PromptBuilder.ReachOutPonderNote(ctx.PlayerName, stranger), resolution,
+                    OutreachMark.Considered, ConversationTurn.InnerSpeaker);
 
-                if (!InitiationParser.WantsToReachOut(desireAnswer)) { PassOnInitiation(npc); return; }
+                if (!InitiationParser.WantsToGo(resolution, out var reason)) { PassOnInitiation(npc); return; }
 
-                // They wish to. In the speak-first shapes (face-to-face or chat-window) they simply come
-                // and speak — their greeting is recorded now and a notice parked; clicking it either opens
-                // the face-to-face conversation or the window, per config. Otherwise the moment is offered
-                // to the player first and the approach narrated once they decide.
+                // They resolved to go — the cause rides with them into the words they open with. In the
+                // speak-first shapes (face-to-face or chat-window) they simply come and speak — their
+                // greeting is recorded now and a notice parked; clicking it either opens the face-to-face
+                // conversation or the window, per config. Otherwise the moment is offered to the player
+                // first and the approach narrated once they decide.
                 if (SpeaksFirstOnInitiation)
                 {
-                    await DeliverFirstWordAsync(npc, situation, stranger).ConfigureAwait(false);
+                    await DeliverFirstWordAsync(npc, situation, stranger, reason).ConfigureAwait(false);
                     return;
                 }
-                MainThreadDispatcher.Enqueue(() => ShowInitiationOffer(npc, situation));
+                MainThreadDispatcher.Enqueue(() => ShowInitiationOffer(npc, situation, reason));
             }
             catch
             {
@@ -1751,11 +1761,13 @@ namespace ImmersiveAI
         // the player engaging (a meeting note, a letter of the player's read), clearing the count.
         private enum OutreachMark { None, Reached, Considered, PlayerEngaged }
 
-        // Records one Angel↔NPC exchange as a real turn in the NPC's memory, so their whole dialogue with the
-        // meta-voice lives in the same remembered, inspectable stream as their talks with the player. The
-        // Angel's line is stored verbatim (framed in their voice only when replayed). Best-effort: bookkeeping
-        // must never throw into a tick or a UI callback.
-        private void AppendAngelTurn(Hero npc, string angelLine, string npcReply, OutreachMark mark = OutreachMark.None)
+        // Records one Angel↔NPC exchange (or, with speaker = ConversationTurn.InnerSpeaker, one of the
+        // NPC's own inner reckonings — the reach-out beats) as a real turn in the NPC's memory, so their
+        // whole dialogue with the meta-voice lives in the same remembered, inspectable stream as their
+        // talks with the player. The line is stored verbatim (framed only when replayed). Best-effort:
+        // bookkeeping must never throw into a tick or a UI callback.
+        private void AppendAngelTurn(Hero npc, string angelLine, string npcReply,
+            OutreachMark mark = OutreachMark.None, string? speaker = null)
         {
             try
             {
@@ -1763,7 +1775,7 @@ namespace ImmersiveAI
                 memory.NpcName = npc.Name?.ToString() ?? memory.NpcName;
                 memory.AddTurn(new ConversationTurn
                 {
-                    Speaker = ConversationTurn.AngelSpeaker,
+                    Speaker = speaker ?? ConversationTurn.AngelSpeaker,
                     PlayerLine = angelLine,
                     NpcLine = npcReply,
                     GameDay = CampaignTime.Now.ToDays,
@@ -1800,12 +1812,20 @@ namespace ImmersiveAI
             catch { return string.Empty; }
         }
 
+        // The reach-out shape of the situation: the player nearby, about their own affairs — nothing
+        // yet passing between them — so the ponder's premise and the sheet's closing breath agree.
+        private string SafeBuildNearbySituation(Hero npc)
+        {
+            try { return SituationBuilder.BuildNearby(npc, Hero.MainHero, _config); }
+            catch { return string.Empty; }
+        }
+
         // An NPC has sought the player out. The preferred shape is the ransom-style right-side map
         // notice — persistent, non-pausing, wearing her own portrait — which parks the offer until
         // the player clicks it (ShowInitiationInquiry then presents the real choice). When the
         // notice UI is unavailable (Harmony failed, or turned off in config), the choice inquiry
         // is shown directly, as it always was. Runs on the game thread.
-        private void ShowInitiationOffer(Hero npc, string situation)
+        private void ShowInitiationOffer(Hero npc, string situation, string reason = "")
         {
             try
             {
@@ -1817,7 +1837,7 @@ namespace ImmersiveAI
 
                 if (_config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied)
                 {
-                    _pendingNotices[npc.StringId] = new PendingNotice(CampaignTime.Now.ToDays, situation);
+                    _pendingNotices[npc.StringId] = new PendingNotice(CampaignTime.Now.ToDays, situation, reason: reason);
                     Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
                         new UI.ImmersiveChatMapNotification(npc,
                             new TextObject("{=!}" + name + " wishes to speak with you.")));
@@ -1828,7 +1848,7 @@ namespace ImmersiveAI
                     return;
                 }
 
-                ShowInitiationInquiry(npc, situation);
+                ShowInitiationInquiry(npc, situation, reason);
             }
             catch (Exception ex)
             {
@@ -1839,12 +1859,17 @@ namespace ImmersiveAI
 
         // The accept/decline inquiry itself — reached by clicking the map notice, or directly when
         // the notice UI is unavailable. Pauses like a ransom broker's offer so it is a real choice.
-        private void ShowInitiationInquiry(Hero npc, string situation)
+        // The cause the currently-offered approach was resolved on (one inquiry up at a time; the
+        // parked notices each carry their own in PendingNotice.Reason until clicked).
+        private string _currentApproachReason = string.Empty;
+
+        private void ShowInitiationInquiry(Hero npc, string situation, string reason = "")
         {
             try
             {
                 _initiationNpc = npc;
                 _currentSituation = situation;
+                _currentApproachReason = reason ?? string.Empty;
 
                 var name = npc.Name?.ToString() ?? "Someone";
                 var them = npc.IsFemale ? "her" : "him";
@@ -1923,7 +1948,7 @@ namespace ImmersiveAI
             }
 
             self.MarkInitiationInFlight();
-            self.ShowInitiationInquiry(npc, pending.Situation);
+            self.ShowInitiationInquiry(npc, pending.Situation, pending.Reason);
         }
 
         /// <summary>The notice went away uninspected (dismissed with X, expired, or invalidated) —
@@ -2021,14 +2046,16 @@ namespace ImmersiveAI
             using var _cost = UsageLedger.BeginInteraction("approach", npc?.Name?.ToString());
             try
             {
+                var reason = _currentApproachReason;
                 var ctx = BuildContext(npc, _currentSituation);
-                var approachLine = PromptBuilder.ApproachLine(ctx.PlayerName, welcomed);
-                var messages = _promptBuilder.BuildAngelPrompt(
+                var approachLine = PromptBuilder.ApproachLine(ctx.PlayerName, welcomed, reason);
+                var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, approachLine, _config.SystemVoiceName);
                 var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
-                AppendAngelTurn(npc, approachLine, npcLine, OutreachMark.Reached);
+                AppendAngelTurn(npc, PromptBuilder.ApproachNote(ctx.PlayerName, welcomed, reason), npcLine,
+                    OutreachMark.Reached, ConversationTurn.InnerSpeaker);
 
                 if (welcomed)
                 {
@@ -2511,19 +2538,20 @@ namespace ImmersiveAI
         // either way, so whatever silence follows is part of the story she remembers: the stamps let her
         // see whether the player answered at once, later, or not at all). The toast carries the flash of
         // it ("Ava sees you and says…"); the notice stack keeps a quiet knock that opens the window.
-        private async Task DeliverFirstWordAsync(Hero npc, string situation, bool stranger)
+        private async Task DeliverFirstWordAsync(Hero npc, string situation, bool stranger, string reason = "")
         {
             using var _cost = UsageLedger.BeginInteraction("first word", npc?.Name?.ToString());
             try
             {
                 var ctx = BuildContext(npc, situation);
-                var firstWordLine = PromptBuilder.FirstWordLine(ctx.PlayerName, stranger);
-                var messages = _promptBuilder.BuildAngelPrompt(
+                var firstWordLine = PromptBuilder.FirstWordLine(ctx.PlayerName, stranger, reason);
+                var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, firstWordLine, _config.SystemVoiceName);
                 var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var words = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
-                AppendAngelTurn(npc, firstWordLine, words, OutreachMark.Reached);
+                AppendAngelTurn(npc, PromptBuilder.FirstWordNote(ctx.PlayerName, reason), words,
+                    OutreachMark.Reached, ConversationTurn.InnerSpeaker);
                 PersistSituation(npc, situation);
 
                 MainThreadDispatcher.Enqueue(() =>

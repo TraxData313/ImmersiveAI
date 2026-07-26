@@ -229,6 +229,23 @@ namespace ImmersiveAI.UI.ChatWindow
                             WithStamp(stamp, $"{voice}, softly into {npcName}'s mind: {turn.PlayerLine}"),
                             isNarration: true, Colors.White));
                     }
+                    else if (turn.IsInnerThought)
+                    {
+                        // Her own mind at work (the reach-out beats since 2026.07.26 — no Angel). A
+                        // ponder is wholly inner — reckoning and resolution fold into one soft line,
+                        // nothing was spoken aloud; a delivery beat narrates the going and lets the
+                        // words she actually spoke stand as a spoken card below.
+                        if (Core.Prompts.PromptBuilder.IsPonderBeat(turn.PlayerLine))
+                        {
+                            messages.Add(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine} {turn.NpcLine})".TrimEnd()),
+                                isNarration: true, Colors.White));
+                            continue;
+                        }
+                        messages.Add(new ChatMessageVM(string.Empty,
+                            WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine})"),
+                            isNarration: true, Colors.White));
+                    }
                     else
                     {
                         AddSpoken(messages, WithStamp(stamp, playerName),

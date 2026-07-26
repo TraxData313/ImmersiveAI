@@ -20,8 +20,16 @@ namespace ImmersiveAI.Core.Memory
         /// <summary>The <see cref="Speaker"/> value marking the Angel (the meta-voice) as the one who spoke.</summary>
         public const string AngelSpeaker = "Angel";
 
+        /// <summary>The <see cref="Speaker"/> value marking the NPC's OWN mind as the source of the
+        /// incoming line — an inner reckoning, no voice speaking to them (the reach-out beats since
+        /// 2026.07.26: "I marked them nearby and weighed whether I had true cause to go").</summary>
+        public const string InnerSpeaker = "Self";
+
         /// <summary>Convenience: true when the incoming line was the Angel's, not the player's.</summary>
         public bool IsFromAngel => string.Equals(Speaker, AngelSpeaker, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Convenience: true when the incoming line was the NPC's own inner thought.</summary>
+        public bool IsInnerThought => string.Equals(Speaker, InnerSpeaker, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Campaign day the exchange happened on (game time, not real time). Drives compression.</summary>
         public double GameDay { get; set; }

@@ -311,6 +311,16 @@ namespace ImmersiveAI.Core.Memory
         // mistaken in the summary for something the player said.
         private static void AppendReflectedTurn(StringBuilder sb, ConversationTurn turn, string voice)
         {
+            // An inner beat is no one speaking TO them — it is their own mind at work (a reach-out
+            // weighed, an approach made); attribute it so the summary never invents a second voice.
+            if (turn.IsInnerThought)
+            {
+                sb.AppendLine($"[{TurnStamp(turn)}] Your own thought, then: {turn.PlayerLine}");
+                if (!string.IsNullOrWhiteSpace(turn.NpcLine))
+                    sb.AppendLine($"You: {turn.NpcLine}");
+                return;
+            }
+
             var speaker = turn.IsFromAngel ? voice : "They";
             sb.AppendLine($"[{TurnStamp(turn)}] {speaker} said: {turn.PlayerLine}");
             // A silent beat (a meeting noted, no reply recorded) carries no answer — never invent one.

@@ -128,7 +128,18 @@ namespace ImmersiveAI.Personas
         /// is saved to current_situation_info.txt and folded into the prompt.
         /// </summary>
         public static string Build(Hero speaker, Hero partner, ModConfig? config = null)
-            => Build(speaker, partner, config, apart: false);
+            => Build(speaker, partner, config, Moment.Meeting);
+
+        /// <summary>The situation for a reach-out ponder: the partner is NEARBY, about their own
+        /// affairs — not coming to the speaker, not being written to from afar. Before this shape the
+        /// reach-out flow borrowed the meeting one, whose closing "And now X comes to me" contradicted
+        /// the very question of whether to go to them (found 2026.07.26).</summary>
+        public static string BuildNearby(Hero speaker, Hero partner, ModConfig? config)
+            => Build(speaker, partner, config, Moment.Near);
+
+        // The three shapes of THE MOMENT: the partner arriving to speak, far away (letters), or
+        // merely nearby with nothing yet passing between them (the reach-out weighing).
+        private enum Moment { Meeting, Apart, Near }
 
         /// <summary>Same situation block, but with <paramref name="apart"/> true the partner is NOT
         /// here: the scene opens on the speaker alone and the partner is described as someone far
@@ -140,6 +151,9 @@ namespace ImmersiveAI.Personas
         /// there to slot deep memory of the person right before their arrival; the situation FILE
         /// writer replaces it with a soft divider.</summary>
         public static string Build(Hero speaker, Hero partner, ModConfig? config, bool apart)
+            => Build(speaker, partner, config, apart ? Moment.Apart : Moment.Meeting);
+
+        private static string Build(Hero speaker, Hero partner, ModConfig? config, Moment moment)
         {
             var sb = new StringBuilder();
             var name = Name(speaker);
@@ -194,7 +208,7 @@ namespace ImmersiveAI.Personas
 
             // And past the separator, the person: who stands before me (or writes from afar), named
             // with what they are to me — my husband, my daughter, my liege — and how my heart leans.
-            var meeting = BuildMeeting(speaker, partner, apart);
+            var meeting = BuildMeeting(speaker, partner, moment);
             if (meeting.Length > 0)
             {
                 sb.AppendLine();
@@ -207,7 +221,7 @@ namespace ImmersiveAI.Personas
 
         // The moment itself: the arrival (or the far-away thought), the person, and where my heart
         // stands — the closing breath of the sheet, placed right after my memory of them.
-        private static string BuildMeeting(Hero speaker, Hero partner, bool apart)
+        private static string BuildMeeting(Hero speaker, Hero partner, Moment moment)
         {
             if (partner == null) return string.Empty;
 
@@ -216,8 +230,10 @@ namespace ImmersiveAI.Personas
             var kin = FamilyBuilder.KinshipTo(speaker, partner);
             var appos = kin == null ? string.Empty : $", {kin},";
 
-            if (apart)
+            if (moment == Moment.Apart)
                 sb.AppendLine($"My thoughts turn to {them}{appos} who is far from me now — the road between us is long.");
+            else if (moment == Moment.Near)
+                sb.AppendLine($"{them}{appos} is nearby, about their own affairs — nothing has yet passed between us at this moment.");
             else if (partner == Hero.MainHero)
                 sb.AppendLine($"And now {them}{appos} comes to me.");
             else
@@ -239,7 +255,9 @@ namespace ImmersiveAI.Personas
             // they barely know, what the eyes see IS the introduction — garb, arms, banner, following,
             // smashed down to one sentence, so a king receives an unknown as a king would, without a
             // single hard-coded manner forced on him.
-            if (!apart)
+            // Meeting only: the sight speaks of a "caller" coming to them — nearby-but-apart
+            // moments (the reach-out weighing) have no caller, and letters no eyes at all.
+            if (moment == Moment.Meeting)
             {
                 var sight = FirstSightOfStranger(speaker, partner);
                 if (sight.Length > 0) sb.AppendLine(sight);

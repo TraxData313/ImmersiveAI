@@ -187,9 +187,12 @@ Concrete rules for every prompt, instruction, and piece of text an NPC could eve
   clinical data sheet, never `SYSTEM:` / `Rules:`. The situation too: *"This moment finds me… And now
   Vulgrim, my husband, comes to me."*
 - **The Angel remains a real person to them, not the sheet's narrator**: it still speaks in the second
-  person in the DIALOGUE beats (reach-out desire questions, arrival/letter lines, memory reflection) —
-  a kind voice by its name (`SystemVoiceName`), leaving choices to them. Recorded Angel turns replay
-  exactly as spoken forever; never rewrite shipped Angel templates that memories already carry.
+  person in the DIALOGUE beats (arrival lines, ALL letter beats, memory reflection) — a kind voice by
+  its name (`SystemVoiceName`), leaving choices to them. Recorded Angel turns replay exactly as spoken
+  forever; never rewrite shipped Angel templates that memories already carry. **The reach-out flow lost
+  the Angel on 2026.07.26** (Anton: its tenderness bred emotional small-talk visits — "what are you, my
+  wife?") — those beats are now the NPC's OWN first-person reckoning (`BuildInnerPrompt`,
+  `ConversationTurn.InnerSpeaker`, framed "(Within my own mind: …)"); see the reach-out section.
 - **Never break the fourth wall to them.** No "AI", no "prompt", no game title, no "the player" as a
   cold label. To them, Calradia is simply the world they live in and the player is a person.
 - **Short rules, more freedom.** Long prompt rules make every soul answer the same; keep guidance to
@@ -568,13 +571,26 @@ FACE-TO-FACE only: letters are unaffected, since a distant hand's writing hour i
 arrival days later. A stuck-in-flight watchdog (`_initiationInFlightSince`, 3 min) self-heals a lost offer
 so one mishap can't silence the feature.
 
-When one is moved, the reaching-out plays out as **real Angel↔NPC turns recorded in her memory** — nothing
-hidden from her or from the player on inspect. The Angel is a first-class speaker in the same history stream:
-`ConversationTurn.Speaker` marks a turn as the Angel's (`ConversationTurn.AngelSpeaker`), and
-`PromptBuilder.AppendRememberedTurns` replays those framed in the Angel's voice (`AngelFrame`), so she
-re-reads her own past truthfully. The beats: (1) `PromptBuilder.BuildAngelPrompt` with
-`PromptBuilder.ReachOutDesireLine` asks — privately, yes/no (`InitiationParser.WantsToReachOut`) — whether
-she wishes to go to the player; her answer is recorded via `AppendAngelTurn`. (2) On yes, the player gets a
+When one is moved, the reaching-out plays out as **recorded beats of her OWN mind** — nothing hidden from
+her or from the player on inspect. **De-Angeled 2026.07.26** (Anton: the Angel's tender "from your own
+heart" framing bred emotional small-talk visits — the steward asking how you feel, the quartermaster's
+"troops are good, how are you today"): the beats are now first-person inner reckonings
+(`ConversationTurn.InnerSpeaker` = "Self", replayed via `InnerFrame` "(Within my own mind: …)", rendered
+in the window as "(Name, within: …)" narration and in reflection as "Your own thought, then:"; the Angel
+still owns arrivals, letters, and reflection). The situation for these beats is the **NEARBY shape**
+(`SituationBuilder.BuildNearby` — "X is nearby, about their own affairs"), because the meeting shape's
+closing "And now X comes to me" contradicted the question of whether to go. The beats:
+(1) `PromptBuilder.BuildInnerPrompt` with `PromptBuilder.ReachOutPonderLine` — the full sheet (news, mood,
+duty, memory) plus a sober "have I real cause to go — trade/duty, news lately come, something owed or
+unfinished? Courtesy is no cause, and last time's errand needs no second telling" — answered **STAY or
+"GO: reason"** (`InitiationParser.WantsToGo`, word-boundary-safe so "Good day" never reads as GO; unreadable
+answers fall back to the old yes/no, then STAY). Memory keeps a condensed note (`ReachOutPonderNote`,
+prefix-matched by `IsPonderBeat` so the window folds reckoning+resolution into one narration line), and the
+resolved **reason rides into the delivery** — `FirstWordLine`/`ApproachLine` carry "What brings me: …", and
+the recorded `FirstWordNote`/`ApproachNote` keep it, so the next ponder sees what was already brought (the
+content-repetition brake; inner beats also never reset `UnansweredOutreachCount`). For the offer shape the
+reason travels in `PendingNotice.Reason` → `ShowInitiationInquiry` → `_currentApproachReason`.
+(2) On GO, the player gets a
 faced portrait toast and — with `UseMapNoticeForInitiations` on (default) — a **persistent, non-pausing
 right-side map notice wearing her live portrait** (see the Harmony section below); clicking it opens the
 accept/decline inquiry (which pauses per `PauseOnInitiationOffer`). The notice waits up to 2 in-game days,

@@ -29,6 +29,43 @@ public class InitiationParserTests
 
 
     [Theory]
+    [InlineData("GO: the granary tally is short and they must hear of it", "the granary tally is short and they must hear of it")]
+    [InlineData("GO — the wounded lack herbs", "the wounded lack herbs")]
+    [InlineData("go: \"their smith pays double for iron\"", "their smith pays double for iron")]
+    [InlineData("**GO:** the war with the Vlandians touches our caravan", "the war with the Vlandians touches our caravan")]
+    [InlineData("I go: my lord's letter must be answered", "my lord's letter must be answered")]
+    public void WantsToGo_ReadsTheDecisionAndHandsBackTheCause(string reply, string expectedReason)
+    {
+        Assert.True(InitiationParser.WantsToGo(reply, out var reason));
+        Assert.Equal(expectedReason, reason);
+    }
+
+    [Theory]
+    [InlineData("GO")]
+    [InlineData("Yes")]
+    public void WantsToGo_AcceptsABareAssentWithNoCause(string reply)
+    {
+        Assert.True(InitiationParser.WantsToGo(reply, out var reason));
+        Assert.Equal(string.Empty, reason);
+    }
+
+    [Theory]
+    [InlineData("STAY")]
+    [InlineData("Stay.")]
+    [InlineData("stay — I have nothing of substance for them today")]
+    [InlineData("I stay; my ledgers need me more than talk does.")]
+    [InlineData("I remain at my work.")]
+    [InlineData("Good day to them, but I have my rounds.")] // "Go..."-lookalike must not read as GO
+    [InlineData("No")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void WantsToGo_TreatsStayRefusalOrMumbleAsStay(string? reply)
+    {
+        Assert.False(InitiationParser.WantsToGo(reply, out var reason));
+        Assert.Equal(string.Empty, reason);
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData(null)]
     [InlineData("none")]

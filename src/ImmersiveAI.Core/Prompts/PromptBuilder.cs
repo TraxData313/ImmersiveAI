@@ -75,7 +75,9 @@ namespace ImmersiveAI.Core.Prompts
         {
             // Angel turns carry the same "[place, time]" tag as player lines, so the NPC can see WHEN
             // she was reached for, wrote a letter, or was come to — the full picture of her own story.
-            var line = turn.IsFromAngel ? AngelFrame(voice, turn.PlayerLine.Trim()) : turn.PlayerLine;
+            var line = turn.IsFromAngel ? AngelFrame(voice, turn.PlayerLine.Trim())
+                : turn.IsInnerThought ? InnerFrame(turn.PlayerLine.Trim())
+                : turn.PlayerLine;
 
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
@@ -88,11 +90,15 @@ namespace ImmersiveAI.Core.Prompts
         private static string AngelFrame(string voice, string line) =>
             $"{voice} speaks softly into your mind: \"{line}\"";
 
+        // How the NPC's OWN inner reckonings are rendered — no voice speaks; the line is their own mind at
+        // work. Same frame live and on replay, so a remembered thought reads exactly as it did when thought.
+        private static string InnerFrame(string line) => $"(Within my own mind: {line})";
+
         /// <summary>
         /// Builds an exchange in which the Angel speaks a given line into the NPC's mind and the NPC answers.
-        /// This is the shape of every reaching-out beat — the Angel asking whether they wish to go to the
-        /// player (<see cref="ReachOutDesireLine"/>), then narrating the approach and its welcome
-        /// (<see cref="ApproachLine"/>). The NPC's reply to each is recorded as a real Angel turn, so their
+        /// This is the shape of the letter beats and other Angel-voiced moments (the reach-out flow moved to
+        /// <see cref="BuildInnerPrompt"/> on 2026.07.26 — the NPC's own mind, no Angel). The NPC's reply is
+        /// recorded as a real Angel turn, so their
         /// whole exchange with the meta-voice lives in the same remembered stream — never hidden from them.
         /// The caller stores <paramref name="angelLine"/> verbatim as the turn's incoming line; here it is
         /// framed in the Angel's voice, identically to how <see cref="AppendRememberedTurns"/> will replay it.
@@ -116,43 +122,104 @@ namespace ImmersiveAI.Core.Prompts
             return messages;
         }
 
-        /// <summary>The Angel's line asking whether the NPC wishes, of their own will, to seek the player out
-        /// and speak (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).
-        /// When <paramref name="stranger"/>, the Angel says honestly that they have never truly spoken —
-        /// the approach would be a first acquaintance, not a return — so the NPC never imagines a history
-        /// that is not there.</summary>
-        public static string ReachOutDesireLine(string playerName, bool stranger = false) => stranger
-            ? $"The day is quiet, and {playerName} is near — someone you know only by sight, for you have never truly spoken with them. " +
-              "No one has bid you do anything — this moment is yours alone. " +
-              $"Tell me, from your own heart: do you wish, of your own will, to go to {playerName} now and make their acquaintance? " +
-              "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you."
-            : $"The day is quiet, and {playerName} is near. No one has bid you do anything — this moment is yours alone. " +
-              $"Tell me, from your own heart: do you wish, of your own will, to go to {playerName} now and speak with them? " +
-              "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
+        /// <summary>
+        /// Builds an exchange in which the NPC's OWN mind poses itself a moment to weigh or act on — no
+        /// Angel, no voice speaking to them (the reach-out flow since 2026.07.26; Anton found the Angel's
+        /// tenderness there bred emotional small-talk approaches). The line is framed by
+        /// <see cref="InnerFrame"/> exactly as <see cref="AppendRememberedTurns"/> will replay a recorded
+        /// inner turn, so live and remembered thoughts read identically. The caller records the beat with
+        /// <see cref="Memory.ConversationTurn.InnerSpeaker"/> — usually storing a condensed note (the
+        /// Ponder/FirstWord/Approach notes below) rather than the full working instruction.
+        /// </summary>
+        public IReadOnlyList<ChatMessage> BuildInnerPrompt(
+            NpcPersona persona,
+            NpcMemory memory,
+            string sceneContext,
+            string playerName,
+            string innerLine,
+            string? voiceName = null)
+        {
+            var voice = Voice(voiceName);
+            var messages = new List<ChatMessage>
+            {
+                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
+            };
 
-        /// <summary>The Angel's line narrating the NPC crossing to the player: when <paramref name="welcomed"/>
-        /// the player turns to them gladly and they greet first; otherwise the player is too busy just now and
-        /// the NPC answers that moment however their heart moves them (they may resolve to come another time).</summary>
-        public static string ApproachLine(string playerName, bool welcomed) => welcomed
-            ? $"You rise and go to {playerName}. Seeing you come, they turn to you gladly and give you their whole attention. " +
-              $"Speak first now, in your own voice and to their face — greet {playerName}, and let your words carry what moved you to seek them out."
-            : $"You rise and go to {playerName}, but as you near, they raise an apologetic hand — they are too caught up just now to speak with you. " +
-              "This moment is still yours: say or do what is in your heart, here and now.";
+            var carried = AppendRememberedTurns(messages, memory, voice);
+            messages.Add(ChatMessage.User(carried + InnerFrame(innerLine)));
+            return messages;
+        }
 
-        /// <summary>The Angel's line for a reaching-out that arrives as spoken words rather than a knock
-        /// at the door: the NPC goes to the player and simply speaks first, told honestly that the player
-        /// is caught up in their own affairs and may answer at once or only later — so a word left
-        /// unanswered is a moment lived, not a door shut. The stranger variant opens a first acquaintance
-        /// without imagining a history that is not there. Recorded — with their words — as a real Angel
-        /// turn, so the time that passes before any answer is theirs to see in the stamps.</summary>
-        public static string FirstWordLine(string playerName, bool stranger = false) => stranger
-            ? $"You go to {playerName} now — a first acquaintance, for you have never truly spoken with them. " +
-              "They are close by, though caught up in their own affairs; your words will reach them, but they " +
-              "may answer at once, or only when their hands are free. Speak your first words to them now, in " +
-              "your own voice — make yourself known, and let them hear what moved you to come."
-            : $"You go to {playerName} now. They are close by, though caught up in their own affairs; your words " +
-              "will reach them, but they may answer at once, or only when their hands are free. Speak to them " +
-              "now, in your own voice, and let your words carry what moved you to seek them out.";
+        /// <summary>The NPC's own reckoning on whether to approach the player at all — sober, first
+        /// person, and demanding a real cause: their trade or duty, news lately come, something owed or
+        /// unfinished, something they genuinely want. Courtesy and "how do you fare" are named as no
+        /// cause, and what was brought last time needs no second telling — the levers against the
+        /// steward-asking-how-you-feel repetition (Anton, 2026.07.26). Answered STAY or "GO: reason"
+        /// (see <see cref="Initiation.InitiationParser.WantsToGo"/>).</summary>
+        public static string ReachOutPonderLine(string playerName, bool stranger = false) => stranger
+            ? $"I notice {playerName} nearby — someone I know only by sight, for we have never spoken. " +
+              "Nothing obliges me to approach; my own affairs can hold me as well. Would I truly cross to a stranger now? " +
+              "Only a real cause would move me — some matter of my trade, station or duty, some news lately come that touches them, " +
+              "something I want or need of them. Courtesy alone is no cause; strangers do not seek each other out to ask how they fare. " +
+              "I decide now, in one line: STAY — or GO: followed by my true cause, plainly."
+            : $"I notice {playerName} nearby, about their own affairs. Nothing obliges me to approach. " +
+              "Have I real cause to go to them now — a matter of my duty or trade, news lately come, something unfinished or owed between us, " +
+              "something I genuinely need to say or ask? A bare greeting is no cause, asking how they fare is no cause, " +
+              "and whatever I brought them last time needs no second telling. If I have nothing of substance, I keep to my own business without shame. " +
+              "I decide now, in one line: STAY — or GO: followed by my true cause, plainly.";
+
+        /// <summary>The condensed note recorded for a ponder beat (the live prompt uses the full
+        /// <see cref="ReachOutPonderLine"/>; memory keeps this short truthful note plus their answer).
+        /// Both variants share the <see cref="IsPonderBeat"/> prefix — keep it word-for-word.</summary>
+        public static string ReachOutPonderNote(string playerName, bool stranger = false) => stranger
+            ? $"I marked {playerName} nearby — a stranger to me still — and weighed whether I had true cause to cross to them. I resolved:"
+            : $"I marked {playerName} nearby and weighed whether I had true cause to go to them. I resolved:";
+
+        // The word-for-word prefix of every recorded ponder note; the chat window folds such a beat —
+        // reckoning and resolution both — into one soft line of narration (nothing spoken happened).
+        private const string PonderNoteMark = "I marked ";
+
+        /// <summary>True when this recorded inner line is a ponder note — a weighing with no spoken
+        /// words in it, so views can render the whole beat as narration.</summary>
+        public static bool IsPonderBeat(string? innerLine) =>
+            (innerLine ?? string.Empty).TrimStart().StartsWith(PonderNoteMark, StringComparison.Ordinal);
+
+        /// <summary>The NPC's own narration of crossing to the player after choosing an offered approach:
+        /// when <paramref name="welcomed"/> the player receives them and they speak first, to the point of
+        /// what brought them; otherwise the player is too busy and the moment is theirs to spend.</summary>
+        public static string ApproachLine(string playerName, bool welcomed, string? reason = null) => welcomed
+            ? $"I rise and go to {playerName}. Seeing me come, they turn to me and give me their attention.{ReasonSentence(reason)} " +
+              "I speak first now, in my own voice — plainly, to the point of what brought me, not mere pleasantry."
+            : $"I rise and go to {playerName}, but as I near, they raise an apologetic hand — too caught up just now to speak with me. " +
+              "The moment is still mine: I say or do with it what I will, here and now.";
+
+        /// <summary>The condensed note recorded for an approach beat.</summary>
+        public static string ApproachNote(string playerName, bool welcomed, string? reason = null) => welcomed
+            ? $"Of my own accord I went to {playerName}{ReasonClause(reason)}; they received me, and I spoke first. My words:"
+            : $"Of my own accord I went to {playerName}{ReasonClause(reason)}, but they were too caught up to speak with me just then. In that moment:";
+
+        /// <summary>The NPC's own narration for a reaching-out that arrives as spoken words: they cross
+        /// to the player and speak first — carrying the cause they resolved on — knowing the answer may
+        /// come at once or only later. The stranger variant names themselves briefly, as fits their
+        /// station, and comes straight to the purpose (no imagined history).</summary>
+        public static string FirstWordLine(string playerName, bool stranger = false, string? reason = null) => stranger
+            ? $"I cross to {playerName} now — we have never spoken, so I name myself briefly, as fits my station, and come straight to my purpose.{ReasonSentence(reason)} " +
+              "They are caught up in their own affairs; my words will reach them, but the answer may come at once or only later. " +
+              "I speak my first words now, plainly, in my own voice."
+            : $"I go to {playerName} now.{ReasonSentence(reason)} " +
+              "They are caught up in their own affairs; my words will reach them, but the answer may come at once or only later. " +
+              "I speak now, in my own voice — to the point of what brought me, not mere pleasantry.";
+
+        /// <summary>The condensed note recorded for a first-word beat — the cause rides in it, so the
+        /// next ponder sees plainly what was already brought and needs no second telling.</summary>
+        public static string FirstWordNote(string playerName, string? reason = null) =>
+            $"Of my own accord I crossed to {playerName} and spoke first{ReasonClause(reason)}. My words:";
+
+        private static string ReasonSentence(string? reason) =>
+            string.IsNullOrWhiteSpace(reason) ? string.Empty : $" What brings me: {reason!.Trim()}.";
+
+        private static string ReasonClause(string? reason) =>
+            string.IsNullOrWhiteSpace(reason) ? string.Empty : $" — what brought me: {reason!.Trim()}";
 
         // ------------------------- letters (correspondence across the map) -------------------------
         // Each beat below is spoken by the Angel and recorded as a real Angel turn, so the NPC's

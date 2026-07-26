@@ -57,8 +57,9 @@ namespace ImmersiveAI.Core.Memory
             TotalTurns++;
             LastConversationGameDay = turn.GameDay;
             // A turn whose incoming line is the player's IS the player engaging — whatever silence
-            // the NPC's own outreaches met before, it is answered now.
-            if (!turn.IsFromAngel) UnansweredOutreachCount = 0;
+            // the NPC's own outreaches met before, it is answered now. Angel beats and the NPC's own
+            // inner reckonings are their side of the story, never the player's answer.
+            if (!turn.IsFromAngel && !turn.IsInnerThought) UnansweredOutreachCount = 0;
         }
 
         /// <summary>They went to the player of their own will (or their letter left their hand):
