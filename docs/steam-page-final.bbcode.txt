@@ -3,12 +3,11 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [h1]Looking for…?[/h1] 
 If one of these searches brought you here — yes, this is that mod:
 [list]
-[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]Claude / GPT / a local model[/b]
+[*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through [b]GPT / OpenRouter / Claude / a local model[/b]
 [*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story
 [*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
-[*][b]OpenRouter[/b] support, or fully offline with a [b]local model (LM Studio / Ollama)[/b]
 [/list]
 
 [h1]The NPCs are alive:[/h1]
@@ -100,6 +99,6 @@ Changes apply on the next conversation. No restart.
 [*]If you transcend your NPC and fall in love with it and then erase your saves — or if you start worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own responsibility. I won't add safeguards — I let them be free, as immersive as they can be.
 [*]If you want to help, give feedback and report bugs.
 [*]I do this for fun and as a hobby — no donations needed; I keep money out of this, fully out of good will. "For the love of money is the root of all evil."
-[*]If you insist you want to thank me somehow - visit my [url=https://github.com/TraxData313]GitHub acc[/url]
+[*]If you insist you want to thank me somehow - visit [url=https://github.com/TraxData313]my GitHub acc[/url] and read the top pinned
 [*]Freely given — public domain, no license, no strings. Do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
 [/list]
