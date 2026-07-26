@@ -1,7 +1,7 @@
 BUGS:
 
 NEXT UPDATE:
-
+- [ ] Story generators
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
