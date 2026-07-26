@@ -28,12 +28,12 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [b]Looking for...?[/b] If one of these searches brought you here - yes, this is that mod:
 
 [list]
-[*]AI dialogue in Bannerlord - talk to any NPC through Claude / GPT / a local model
-[*]NPCs with real long-term memory - they remember you across conversations
-[*]NPCs that approach you and write you letters on their own
-[*]an AI wife or companion that roleplays and never forgets your story
-[*]asking about game mechanics in-game instead of alt-tabbing to Google
-[*]OpenRouter support, or fully offline with a local model (LM Studio / Ollama)
+[*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through [b]Claude / GPT / a local model[/b]
+[*]NPCs with [b]real long-term memory[/b] - they remember you across conversations
+[*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
+[*]an [b]AI wife or companion[/b] that roleplays and never forgets your story
+[*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
+[*][b]OpenRouter[/b] support, or fully offline with a [b]local model (LM Studio / Ollama)[/b]
 [/list]
 
 [b]The NPCs are alive:[/b]

@@ -1,16 +1,17 @@
 An advanced roleplaying and relationship mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
 
-[b]Looking for…?[/b] If one of these searches brought you here — yes, this is that mod:
+[h1]Looking for…?[/h1] 
+If one of these searches brought you here — yes, this is that mod:
 [list]
-[*]AI dialogue in Bannerlord — talk to any NPC through Claude / GPT / a local model
-[*]NPCs with real long-term memory — they remember you across conversations
-[*]NPCs that approach you and write you letters on their own
-[*]an AI wife or companion that roleplays and never forgets your story
-[*]asking about game mechanics in-game instead of alt-tabbing to Google
-[*]OpenRouter support, or fully offline with a local model (LM Studio / Ollama)
+[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]Claude / GPT / a local model[/b]
+[*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
+[*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
+[*]an [b]AI wife or companion[/b] that roleplays and never forgets your story
+[*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
+[*][b]OpenRouter[/b] support, or fully offline with a [b]local model (LM Studio / Ollama)[/b]
 [/list]
 
-[b]The NPCs are alive:[/b]
+[h1]The NPCs are alive:[/h1]
 [list]
 [*]Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
 [*]They evolve: recent talks stay word-for-word, old ones settle into deep memory, and they keep their own goals, lasting truths, and opinion of you.
@@ -21,14 +22,14 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [*]They decide when to approach or write first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
 
-[b]And useful — stop googling stuff:[/b]
+[h1]And useful — stop googling stuff:[/h1]
 [list]
 [*]Ask your scout how to make the party faster; ask your quartermaster about the stocks.
 [*]Ask anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki.
 [*]They reach for tools instead of one mega info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, their own truths and goals.
 [/list]
 
-[b]Your ways to reach them:[/b]
+[h1]Your ways to reach them:[/h1]
 [list]
 [*]Face to face — they see you coming and greet you as you approach.
 [*]A chat window (hotkey [b]O[/b]) — quick words with anyone near you, no ceremony.
