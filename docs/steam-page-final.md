@@ -1,8 +1,9 @@
-# Steam Workshop page — FINAL (2026.07.13)
+# Steam Workshop page — SUPERSEDED (kept for history)
 
-The merged description: Anton's honest rant (docs/steam-page-draft-Anton.md) carries the pitch,
-the earlier draft (docs/steam-page-draft.md) supplies the required disclosure blocks. This file
-is what gets converted to BBCode and pasted into the Workshop page at upload time.
+**The live page text is `steam-page-final.bbcode.txt` — edit THAT, not this.** This was the
+v1.0 merged draft (Anton's honest rant + the disclosure blocks) that the first BBCode was
+converted from; since the v1.4.0 rewrite the BBCode file is maintained directly and this
+markdown no longer matches it.
 
 ---
 

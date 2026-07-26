@@ -182,4 +182,41 @@ public class InitiationScorerTests
             prev = hourly;
         }
     }
+
+    [Fact]
+    public void OutreachDamping_NeverReachedOut_IsUntouched()
+    {
+        Assert.Equal(1.0, InitiationScorer.OutreachDamping(-1, 0), 5);
+        Assert.Equal(1.0, InitiationScorer.OutreachDamping(-1, 3), 5); // stale count without a day stamp changes nothing
+    }
+
+    [Fact]
+    public void OutreachDamping_RestsAfterAnyOutreach_ThenRecovers()
+    {
+        // The moment they reach out (answered or not) the pull is at zero — no knocking twice in an
+        // afternoon — and with the player having engaged (0 unanswered) it is whole again after the
+        // cooldown day.
+        Assert.Equal(0.0, InitiationScorer.OutreachDamping(0, 0), 5);
+        double halfway = InitiationScorer.OutreachDamping(InitiationScorer.OutreachCooldownDays / 2, 0);
+        Assert.True(halfway > 0 && halfway < 1);
+        Assert.Equal(1.0, InitiationScorer.OutreachDamping(InitiationScorer.OutreachCooldownDays, 0), 5);
+    }
+
+    [Fact]
+    public void OutreachDamping_SilenceStretchesPatience_AndLowersTheCeiling()
+    {
+        // One letter into silence: even fully recovered, the pull tops out at the pride factor —
+        // and the recovery itself takes days, not hours.
+        double patience1 = InitiationScorer.OutreachCooldownDays + InitiationScorer.UnansweredPatienceDays;
+        Assert.Equal(InitiationScorer.UnansweredPrideFactor,
+            InitiationScorer.OutreachDamping(patience1, 1), 5);
+        Assert.True(InitiationScorer.OutreachDamping(1.0, 1) < 0.1); // a day later, still nearly silent
+
+        // Each further unanswered outreach shrinks the ceiling geometrically: the Emperor does not
+        // send letter after letter to someone who never writes back (the 2026.07.26 report).
+        double two = InitiationScorer.OutreachDamping(1000, 2);
+        double three = InitiationScorer.OutreachDamping(1000, 3);
+        Assert.Equal(Math.Pow(InitiationScorer.UnansweredPrideFactor, 2), two, 5);
+        Assert.True(three < two);
+    }
 }

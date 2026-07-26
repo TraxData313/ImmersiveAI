@@ -240,4 +240,41 @@ public class NpcMemoryTests
         Assert.Null(memory.DropKnownFact("something never held"));
         Assert.Single(memory.KnownFacts);
     }
+
+    [Fact]
+    public void Outreach_CountsAndRests_UntilThePlayerEngages()
+    {
+        var memory = new NpcMemory();
+        Assert.Equal(-1, memory.LastOutreachGameDay, 5);
+        Assert.Equal(0, memory.UnansweredOutreachCount);
+
+        // Two outreaches into silence stack; a mere weighing rests them without wounding pride.
+        memory.NoteOutreach(10);
+        memory.NoteOutreach(12);
+        Assert.Equal(12, memory.LastOutreachGameDay, 5);
+        Assert.Equal(2, memory.UnansweredOutreachCount);
+        memory.NoteOutreachConsidered(13);
+        Assert.Equal(13, memory.LastOutreachGameDay, 5);
+        Assert.Equal(2, memory.UnansweredOutreachCount);
+
+        // The player engaging outside the turn stream clears the silence; the rest-day stamp remains.
+        memory.NotePlayerEngaged();
+        Assert.Equal(0, memory.UnansweredOutreachCount);
+        Assert.Equal(13, memory.LastOutreachGameDay, 5);
+    }
+
+    [Fact]
+    public void AddTurn_PlayerTurnAnswersTheSilence_AngelTurnDoesNot()
+    {
+        var memory = new NpcMemory();
+        memory.NoteOutreach(10);
+
+        // An Angel beat (their own reaching-out being narrated) is not the player answering.
+        memory.AddTurn(new ConversationTurn { Speaker = ConversationTurn.AngelSpeaker, PlayerLine = "…", GameDay = 10 });
+        Assert.Equal(1, memory.UnansweredOutreachCount);
+
+        // A turn whose incoming line is the player's IS the answer.
+        memory.AddTurn(new ConversationTurn { PlayerLine = "Well met.", NpcLine = "And you.", GameDay = 11 });
+        Assert.Equal(0, memory.UnansweredOutreachCount);
+    }
 }

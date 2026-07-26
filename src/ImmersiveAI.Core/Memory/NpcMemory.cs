@@ -33,6 +33,18 @@ namespace ImmersiveAI.Core.Memory
 
         public double LastConversationGameDay { get; set; } = -1;
 
+        /// <summary>Campaign day this NPC last reached toward the player of their OWN will — spoke first,
+        /// approached, or sent a spontaneous letter (also set, without the count below, when they weighed
+        /// it and let it pass). -1 = never. Their pull rests after this day and recovers over time
+        /// (see Initiation.InitiationScorer.OutreachDamping), so no one knocks twice in an afternoon.</summary>
+        public double LastOutreachGameDay { get; set; } = -1;
+
+        /// <summary>How many of their own outreaches have met the player's silence since the player last
+        /// engaged (spoke with them, met them, or wrote). Each one stretches how long they wait and lowers
+        /// how strongly they try again — two letters into silence is enough for anyone's pride. Reset the
+        /// moment the player answers in any form.</summary>
+        public int UnansweredOutreachCount { get; set; }
+
         /// <summary>How rich the shared story with the player is, for weighting who reaches out. Uses the
         /// lifetime turn count, but never falls below what is still held verbatim — so memories saved before
         /// <see cref="TotalTurns"/> existed (where it loads as 0) still weigh in by their surviving turns.</summary>
@@ -44,6 +56,32 @@ namespace ImmersiveAI.Core.Memory
             RecentTurns.Add(turn);
             TotalTurns++;
             LastConversationGameDay = turn.GameDay;
+            // A turn whose incoming line is the player's IS the player engaging — whatever silence
+            // the NPC's own outreaches met before, it is answered now.
+            if (!turn.IsFromAngel) UnansweredOutreachCount = 0;
+        }
+
+        /// <summary>They went to the player of their own will (or their letter left their hand):
+        /// the outreach day is set and one more waits unanswered until the player engages.</summary>
+        public void NoteOutreach(double gameDay)
+        {
+            LastOutreachGameDay = gameDay;
+            UnansweredOutreachCount++;
+        }
+
+        /// <summary>They weighed reaching out and let the moment pass (or answered a letter they were
+        /// invited to answer): the outreach day still rests them for a while, but their pride is
+        /// untouched — nothing of theirs waits unanswered.</summary>
+        public void NoteOutreachConsidered(double gameDay)
+        {
+            LastOutreachGameDay = gameDay;
+        }
+
+        /// <summary>The player engaged outside the turn stream (met them face to face without free chat,
+        /// or a letter of the player's reached their hands): whatever waited unanswered is answered.</summary>
+        public void NotePlayerEngaged()
+        {
+            UnansweredOutreachCount = 0;
         }
 
         /// <summary>True when older turns should be compressed into the rolling summary.</summary>

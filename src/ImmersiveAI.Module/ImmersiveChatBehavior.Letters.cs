@@ -174,6 +174,13 @@ namespace ImmersiveAI
                     // is floored instead of fading with the weeks away (see the scorer).
                     double pull = InitiationScorer.Pull(
                         known.Richness, GetStanding(hero), daysSince, InPlayersService(hero));
+                    // A correspondence needs a story deep enough to fill pages, and a writer whose
+                    // last letters met only silence holds their pen (the 2026.07.26 tune-down —
+                    // "letter after letter about the same stuff"). Duty writers rest the same:
+                    // one field report, then patience until it is answered.
+                    pull *= LetterCourier.StoryDepthFactor(known.Richness)
+                          * InitiationScorer.OutreachDamping(
+                                DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
                     if (pull <= 0) continue;
 
                     eligible.Add(hero);
@@ -215,7 +222,8 @@ namespace ImmersiveAI
                 var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
-                AppendAngelTurn(npc, desireLine, desireAnswer);
+                // Weighing whether to write rests them either way (see the reach-out desire beat).
+                AppendAngelTurn(npc, desireLine, desireAnswer, OutreachMark.Considered);
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer)) { _letterWorkInFlight = false; return; }
 
@@ -230,7 +238,7 @@ namespace ImmersiveAI
                 var body = CleanLetterBody(bodyRaw);
                 if (body.Length == 0) { _letterWorkInFlight = false; return; }
 
-                AppendAngelTurn(npc, composeLine, body);
+                AppendAngelTurn(npc, composeLine, body, OutreachMark.Reached);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -300,6 +308,19 @@ namespace ImmersiveAI
 
             if (!toPlayer)
             {
+                // The player writing IS the engagement, from the moment the courier rides — the
+                // recipient's own unanswered outreaches must not keep damping them for the days the
+                // road takes (the reading beat clears the count again on arrival; this is the early word).
+                try
+                {
+                    var memory = LoadMemory(npc);
+                    if (memory.UnansweredOutreachCount != 0)
+                    {
+                        memory.NotePlayerEngaged();
+                        SaveMemory(npc, memory);
+                    }
+                }
+                catch { /* bookkeeping only */ }
                 var name = letter.NpcName;
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"Your letter to {name} is away — a courier rides, some {travelDays:0.#} days on the road.",
@@ -609,7 +630,9 @@ namespace ImmersiveAI
                 var desireRaw = await _client.CompleteAsync(readMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
-                AppendAngelTurn(npc, readLine, desireAnswer);
+                // A letter of the player's in their hands IS the player engaging: whatever of their own
+                // waited unanswered, waits no longer.
+                AppendAngelTurn(npc, readLine, desireAnswer, OutreachMark.PlayerEngaged);
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer))
                 {
@@ -629,7 +652,9 @@ namespace ImmersiveAI
                 var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
 
-                AppendAngelTurn(npc, composeLine, body.Length == 0 ? "..." : body);
+                // An invited answer, not an outreach — but it still rests them (no spontaneous letter
+                // hard on the heels of the reply the player is already owed).
+                AppendAngelTurn(npc, composeLine, body.Length == 0 ? "..." : body, OutreachMark.Considered);
 
                 var writer = npc;
                 MainThreadDispatcher.Enqueue(() =>
@@ -654,7 +679,7 @@ namespace ImmersiveAI
             foreach (var menuId in new[] { "town", "castle", "village" })
             {
                 starter.AddGameMenuOption(menuId, "immersiveai_send_letter_" + menuId,
-                    "{=ImmersiveAI_SendLetter}Send a letter by courier [Immersive AI]",
+                    "{=ImmersiveAI_SendLetter}Send a letter by courier",
                     OnLetterMenuCondition, _ => OnLetterMenuChosen(), false, -1, false, null);
             }
         }

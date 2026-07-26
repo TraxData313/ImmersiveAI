@@ -21,6 +21,8 @@ namespace ImmersiveAI
             public string NpcName = "";
             public int Richness;
             public double LastTalkGameDay = -1;
+            public double LastOutreachGameDay = -1;
+            public int UnansweredOutreach;
             public DateTime StampUtc;
             public long Length;
         }
@@ -47,6 +49,8 @@ namespace ImmersiveAI
                     NpcName = memory.NpcName ?? "",
                     Richness = memory.StoryRichness,
                     LastTalkGameDay = memory.LastConversationGameDay,
+                    LastOutreachGameDay = memory.LastOutreachGameDay,
+                    UnansweredOutreach = memory.UnansweredOutreachCount,
                     StampUtc = info.LastWriteTimeUtc,
                     Length = info.Length,
                 };

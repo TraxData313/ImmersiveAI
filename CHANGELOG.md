@@ -5,6 +5,22 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.4.0 — 2026.07.26
+
+- **The repetition tune-down** (the first Steam feedback — thank you, Gguy). Characters who
+  reached out or wrote to you could circle back on the same topic again and again — a companion
+  mailing "the troops are in line" for hours, a lord writing letter after letter you never
+  answered. Cause found and fixed at the root: a character's own reach-outs and letters were
+  feeding the very score that decides who reaches out next. Now every character **rests after
+  reaching out** (no knocking twice in an afternoon, even between friends), and **your silence
+  is heard**: each unanswered visit or letter makes them wait days longer and try softer, until
+  they hold their peace — one word from you (a talk, a reply, a letter) restores the bond whole.
+  Letters also now need a real acquaintance: one shallow conversation no longer funds a
+  correspondence. No new settings — the odds view and the bond line under a character's name
+  show the truth in plain words ("awaits your answer", "resting after reaching out").
+- **The [Immersive AI] tags are gone from the dialogue options** (also asked for). "Speak freely
+  with me." now stands on its own — the options read like the game's own.
+
 ## v1.3.3 — 2026.07.26
 
 - **Fixed harder: mod-menu settings not taking effect** (the follow-up Nexus report — thank you

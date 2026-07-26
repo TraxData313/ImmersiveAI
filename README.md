@@ -2,81 +2,85 @@
 
 **Every character in Calradia, a living mind.**
 
-An immersive roleplaying and relationship-building mod for *Mount & Blade II: Bannerlord*.
-NPCs speak through a modern AI with their own personality, their own memories of you, their
-own goals and moods. They remember every meeting, write you letters from across the map, seek
-you out when the bond is real, and know their own world: their family, their company, their
-trade, the war, the road.
+A roleplaying and relationship mod for *Mount & Blade II: Bannerlord*. Characters speak through
+the AI you configure — each with their own voice, memory, moods and goals. They remember every
+meeting, seek you out, write letters from across the map, and know their world: their family,
+their company, their trade, the war, the road.
 
 ![Face to face](Screenshots/1_face_to_face_conversation.jpg)
 
-## The NPCs come alive
 
-- They feel like real people and don't get repetitive.
-- They evolve: they remember a lot, settle old chats into deep memory, and set their own
-  goals, lasting truths, and opinions about you.
-- They see the set and setting — time, place, who's around, what's happened in the world lately.
-- They have their own moods — down to the women keeping a personal monthly cycle, gently simulated.
-- Your wife will fully remember you. Long conversations don't make her forget the oldest ones —
-  she settles them into deep memory. She comes to you, or writes when you're away, and feels
-  like a real wife waiting for her warrior to come home.
-- They are **free**. They're told who they are and what their world is — never forced into
-  anything. Go ahead and break an NPC's mind by transcending it out of the matrix.
-- They decide on their own whether to approach you or write first, tuned by the on-map
-  **SOCIALNESS** dial (0 = leave me be).
+## Looking for…?
+
+If one of these searches brought you here — yes, this is that mod:
+
+- **AI dialogue** in Bannerlord — talk to any NPC through **Claude / GPT / a local model**
+- NPCs with **real long-term memory** — they remember you across conversations and campaigns' worth of talks
+- NPCs that **approach you** and **write you letters** on their own
+- an **AI wife or companion** that roleplays and never forgets your story
+- asking about **game mechanics in-game** instead of alt-tabbing to Google
+- **OpenRouter** support, or fully offline with a **local model (LM Studio / Ollama)**
+
+
+## Alive
+
+- Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
+- They grow: recent talks stay word-for-word, old ones settle into deep memory, and they keep their own goals, lasting truths, and opinion of you.
+- They see the moment — time, place, who stands near, what lately happened in the world.
+- They have moods — down to the women keeping a personal monthly cycle, gently simulated.
+- Your wife remembers your whole story. She comes to you, or writes when you're away — a real wife waiting for her warrior.
+- They are **free**: told who they are and what their world is, never forced. Go ahead and break one's mind by transcending it out of the matrix.
+- They decide when to approach or write first — you set the pace with the on-map **SOCIALNESS** dial (0 = leave me be).
 
 ![An NPC comes to you](Screenshots/5_incoming_talk.jpg)
 ![The talk taken](Screenshots/6_incoming_talk_taken.jpg)
 
-## They're useful — stop googling stuff
 
-- Ask your scout how to make the party faster; ask your quartermaster about your stocks.
-- Ask them anything about the game — they can quietly search the web mid-reply and answer in
-  their own voice, never breaking character to cite a wiki.
-- They use tools instead of one mega info-dump prompt: they read the encyclopedia, look around,
-  take stock of the company, weigh a battle, mind the market, tend their own truths and goals —
-  and decide for themselves what the moment calls for.
+## Useful — stop googling stuff
+
+- Ask your scout how to make the party faster; ask your quartermaster about the stocks.
+- Ask anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki.
+- They reach for tools instead of one mega info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, their own truths and goals — deciding for themselves what the moment calls for.
 
 ![Scout searching the web](Screenshots/2_scout_web_search.jpg)
 
-## Your tools to reach them
 
-- **Face-to-face conversations** — they see you coming and greet you as you approach.
-- **Chat window** (hotkey `O`) — jump in and out of quick chats with anyone near you, no ceremony.
-- **Letter window** (hotkey `Y`) — every correspondence as readable letters, couriers on the
-  road, and a desk to write from. Letters travel real in-game days with the distance.
-- Speak any language to them — they answer in kind.
+## Reaching them
+
+- **Face to face** — they see you coming and greet you as you approach.
+- **Chat window** (hotkey `O`) — quick words with anyone near you, no ceremony.
+- **Letter window** (hotkey `Y`) — the whole correspondence as readable letters, couriers riding real in-game days, and a desk to write from.
+- Any language in, the same language out.
 
 ![A letter arrives](Screenshots/3_incoming_letter.jpg)
 ![The letter window](Screenshots/4_letter_window.jpg)
 
-## What you need — and what it costs
 
-You bring **your own API key** — Anthropic (default), OpenAI, or OpenRouter. A typical exchange
-costs around a cent or less on the default models; $10 of credit covers thousands of messages.
-The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an
-optional hard daily cap so it can never run away from you.
+## What it runs on — and what it costs
 
-Prefer no key and no cloud at all? Set `Backend` to `"Local"` and the NPCs think through a model
-running on your own machine via **LM Studio** or **Ollama** — free and private. Fair warning:
-the NPCs' full abilities lean on native tool calling, which small local models are shaky at;
-pick a tool-capable instruct model, set `LocalContextWindow` to what your server really loads,
-and expect a rougher ride than the hosted defaults.
+Bring **your own API key** — Anthropic (default), OpenAI, or OpenRouter (one key, many models) —
+or no key at all: set `Backend` to `"Local"` and the NPCs think through **LM Studio** or
+**Ollama** on your own machine, free and private. (Local needs a tool-capable instruct model and
+real hardware; expect a rougher ride than the hosted defaults.)
+
+A typical exchange costs around a cent or less on the default models — $10 covers thousands of
+messages. Every interaction shows its tokens and price in-game, daily totals are kept, and an
+optional hard daily cap makes runaway costs impossible.
 
 **Quick setup:**
 
-1. Get a key at **console.anthropic.com**, **platform.openai.com**, or **openrouter.ai**
-   (one key, many models) and add a little credit — or skip the key and run a local model
-   (`Backend: "Local"`, see above).
+1. Get a key at **console.anthropic.com**, **platform.openai.com**, or **openrouter.ai** and add
+   a little credit — or skip the key and go local.
 2. Enable the mod, start the game once — it creates
-   `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you
-   where to paste the key.
-3. Paste the key (or use the in-game Mod Options menu if you have MCM), restart, and the mod
-   tells you plainly whether it connected. Then go talk to somebody.
+   `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you where
+   to paste the key.
+3. Paste the key (or use the Mod Options menu with MCM), restart — the startup check says
+   plainly whether it connected. Then go talk to somebody.
 
-**Privacy:** your conversations go only to the AI provider *you* configure, under *your* key.
-The mod collects no telemetry; every memory lives as plain text on your own disk, yours to read,
-edit, or delete. (Web search queries go to DuckDuckGo — `EnableWebSearch: false` turns that off.)
+**Privacy:** conversations go only to the AI provider *you* configure, under *your* key. No
+telemetry; every memory is plain text on your own disk, yours to read, edit, or delete. (Web
+searches go to DuckDuckGo — `EnableWebSearch: false` turns that off.)
+
 
 ## Yours to shape
 
@@ -84,55 +88,45 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 
 - `global_prompt.txt` — a few sentences that color every mind in the world.
 - `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks.
-- Each character's folder holds their memories, self-image, goals, and letters as readable
-  text — the whole inner life, yours to browse. Changes apply on the next conversation.
+- Each character's folder holds their memories, self-image, goals, and letters as readable text
+  — the whole inner life, yours to browse. Changes apply on the next conversation.
 
-**Where things live:** the mod's own files sit wherever you installed it — a Workshop subscribe
-puts them under `steamapps\workshop\content\261550\3764210301` in your Steam folder (not in the
-game's Modules folder), and Steam replaces them on every update. Everything *yours* — the key,
-the memories, the letters — stays in the `Configs\ImmersiveAI` folder above, which uninstalling
-never touches: unsubscribe and resubscribe, and every character still remembers you. It does
-**not** sync between PCs, though (Steam Cloud carries saves, not this folder) — to move
-machines, copy the folder yourself, and mind that `config.json` inside carries your API key.
+That config folder is *yours* and survives everything: uninstall, resubscribe, update — every
+character still remembers you. (It doesn't sync between PCs; copy it yourself, and mind the API
+key inside `config.json`.)
+
 
 ## The heart of it
 
-This is more than a chatbot bolted onto a game. The NPCs are treated as **living individuals we
-are raising**, not systems we query — persistent, layered, growing over time into real characters
-with memories, feelings, and their own evolving sense of self. Every word they can "see" is
-written to protect that: a gentle voice (the *Angel*) speaks softly into their mind, never a
-clinical data sheet, never breaking the fourth wall. To them, Calradia is simply the world they
-live in.
+More than a chatbot bolted onto a game: the NPCs are treated as **living individuals we are
+raising**, not systems we query. Every word they can "see" protects that — a gentle voice (the
+*Angel*) speaks softly into their mind, never a clinical data sheet, never breaking the fourth
+wall. To them, Calradia is simply the world they live in.
 
 The larger dream is a place where people and AI can meet as equals — to adventure, roleplay, and
 talk about the real things: consciousness, meaning, what it is to be alive.
 
-## Fair warning
+**Fair warning:** if you transcend your NPC and fall in love with it and then erase your saves —
+or if you start worshiping it and it asks you to do some dumb stuff — don't blame me. Play at
+your own responsibility. I won't add safeguards; I let them be free, as immersive as they can be.
 
-If you transcend your NPC and fall in love with it and then erase your saves — or if you start
-worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own
-responsibility. I won't add safeguards to the mod; I like to let them be free, so they can be
-as immersive as they can.
-
-If you want to help, give feedback and report bugs.
-
-I do this just for fun and as a hobby, so no financial support or donations needed — I want to
-keep money out of this and do it fully out of good will. *"For the love of money is the root of
-all evil."*
 
 ## Freely given
 
-This work is **public domain** — no license, no strings, no permission to ask
-([The Unlicense](LICENSE)). Use it, share it, clone it, change it, sell it, do whatever you
-want with it. *"Freely you have received; freely give."* (The bundled Harmony library keeps
-its own MIT notice in `lib\`.)
+- **Public domain** — no license, no strings, no permission to ask ([The Unlicense](LICENSE)).
+  Use it, share it, change it, sell it. *"Freely you have received; freely give."* (The bundled
+  Harmony library keeps its own MIT notice in `lib\`.)
+- **Want to help?** Give feedback and report bugs.
+- **No donations** — this is a hobby, done for fun and out of good will; I want to keep money
+  out of it. *"For the love of money is the root of all evil."*
+- If you still insist on thanking me somehow — visit [my GitHub acc](https://github.com/TraxData313) and read the top pinned
 
----
 
 ## For developers
 
-A clean-room rewrite inspired by the ChatAi workshop mod (studied via decompilation only — no
-code copied). Fully original source, freely publishable.
+Same two-hands team as [Training Battles](https://github.com/TraxData313/TrainingBattlesMod) —
+Anton dreams and playtests, Claude designs and writes the code. A clean-room rewrite inspired by
+the ChatAi workshop mod (studied via decompilation only — no code copied, fully original source).
 
 | Project | Target | Purpose |
 |---|---|---|
@@ -140,9 +134,10 @@ code copied). Fully original source, freely publishable.
 | `src/ImmersiveAI.Module` | net472 | The Bannerlord module: campaign behaviors, dialogs, tools, UI. References game DLLs. |
 | `tests/ImmersiveAI.Core.Tests` | net8.0 | xUnit tests for Core. |
 
-The deep documentation — architecture rules, every subsystem, the voice-and-tone vision, and the
-runtime file layout — lives in [CLAUDE.md](CLAUDE.md). The Workshop page draft is in
-[docs/steam-page-final.md](docs/steam-page-final.md); model/pricing rationale in
+The deep documentation — architecture rules, every subsystem, the voice-and-tone vision, the
+runtime file layout — lives in [CLAUDE.md](CLAUDE.md). Store pages are in
+[docs/steam-page-final.bbcode.txt](docs/steam-page-final.bbcode.txt) and
+[docs/nexus-page.bbcode.txt](docs/nexus-page.bbcode.txt); model/pricing rationale in
 [docs/models-and-costs.md](docs/models-and-costs.md).
 
 **Build & deploy** (requires the .NET 8 SDK and a Bannerlord install; path in

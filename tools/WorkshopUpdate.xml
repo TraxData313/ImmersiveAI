@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.3.3 - Fix: on some MCM setups the options menu never truly connected to the mod, so Backend/key edits did not take effect. The mod now recovers settings stranded in MCM's store, syncs menu edits directly, and says plainly if the menu cannot connect." />
+        <ChangeNotes Value="v1.4.0 - The repetition tune-down: characters now rest after reaching out or writing, and your silence is heard - unanswered visits and letters make them wait longer and try softer until you answer; letters need a real acquaintance, not one shallow talk. Also: the [Immersive AI] tags are gone from the dialogue options." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

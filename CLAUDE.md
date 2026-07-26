@@ -449,7 +449,9 @@ CLAUDE.md / AGENTS.md together.**
 
 ## In-game feature (current)
 
-Talking to any hero shows a **"Speak freely with me. [Immersive AI]"** dialog option →
+Talking to any hero shows a **"Speak freely with me."** dialog option (the `[Immersive AI]` tags
+came OFF every dialog/menu option in v1.4.0 — the first Steam feedback called them immersion-breaking;
+localization ids unchanged, only the DevMode `[Immersive AI • test]` levers keep a tag) →
 "Say something..." → a text popup → the reply appears in the conversation panel and loops.
 Errors surface as a top-left "Immersive AI: ..." message.
 
@@ -542,7 +544,19 @@ you actually spend time with stays quiet, not silent — the floor keeps the fea
 total across everyone is ≈ rate × unionPull ≤ rate** — five devoted companions share the visits instead of
 each bringing their own (the old per-NPC independent rolls summed: rate 0.777 with five close bonds gave
 ~3.9/day; settled 2026.07.10). Who comes is `InitiationPlanner.PickWeightedIndex` by pull. So a fresh game
-stays quiet and `DailyInitiationRate` is the day's total for a full bond. Firing only happens at *safe* moments
+stays quiet and `DailyInitiationRate` is the day's total for a full bond.
+**Outreach rests and silence is heard** (2026.07.26, the first Steam feedback — the same soul knocking/
+writing about the same thing for hours; root cause was a FEEDBACK LOOP: outreach beats are recorded
+turns, so an NPC's own reach-outs raised their richness/recency and made them likelier to reach out
+again): `NpcMemory` tracks `LastOutreachGameDay` + `UnansweredOutreachCount`, and every pull is
+multiplied by `InitiationScorer.OutreachDamping` — zero right after any self-initiated outreach,
+recovering over 0.75d, with each UNANSWERED outreach adding +4d patience and ×0.4 on the ceiling
+(2 unanswered ≈ 16% max). Any player engagement resets the count: a player turn (`AddTurn` auto-reset),
+a meeting note, reading the player's letter, or the player's letter leaving the courier. The beats mark
+themselves via `AppendAngelTurn`'s `OutreachMark` (Reached / Considered / PlayerEngaged — desire
+weighings and invited replies rest without the pride wound). The damping multiplies AFTER the presence
+floor (else the floor re-arms the spam); `MemoryIndex` carries both fields so the hourly rolls stay
+cheap, and BondStatsLabel/the odds view show the damped truth ("awaits your answer (2 unanswered)"). Firing only happens at *safe* moments
 (`IsSafeToInitiate`/`InitiationBlockReason`: on the map, not in a scene/battle or a *non-settlement*
 encounter, not already talking — being **inside a settlement is fine**, that's where co-located NPCs are).
 **The world sleeps at night** (2026.07.11, Anton's ask): the group hourly chance is multiplied by
@@ -749,7 +763,10 @@ touching real bonds.
 
 **Letters — the bond crosses the map.** The mirror of reaching-out for everyone `IsCoLocated` skips:
 each hour, distant NPCs with history roll `LetterCourier.WriteRateFactor` (0.5) × their reaching-out
-chance; one moved soul is asked by the Angel — privately, yes/no, recorded — whether they wish to write,
+chance × `LetterCourier.StoryDepthFactor` (richness/12 capped at 1 — one shallow conversation funds
+half-weight letters at best, 2026.07.26) × the same `OutreachDamping` as the visits (a writer whose
+letters met silence holds their pen — duty writers too: one field report, then patience until answered);
+one moved soul is asked by the Angel — privately, yes/no, recorded — whether they wish to write,
 and on a yes composes the letter with their full self (persona, memory, the situation built *apart*
 via `SituationBuilder.Build(..., apart: true)`, and the gift of recall). **The player's own clan writes
 out of duty** (2026.07.12): `InitiationScorer.Pull(..., inPlayersService)` floors recency (0.6) and

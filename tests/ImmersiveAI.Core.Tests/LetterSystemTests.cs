@@ -22,6 +22,17 @@ public class LetterSystemTests
         Assert.Equal(LetterCourier.MaxDays / 2, LetterCourier.TravelDays(double.NaN));
     }
 
+    [Fact]
+    public void StoryDepthFactor_ShallowStoriesWriteFewLetters_DeepOnesWriteFreely()
+    {
+        // One conversation's worth of story funds letters at fractional weight; no story, none at all —
+        // and a real history is never dampened (the 2026.07.26 tune-down).
+        Assert.Equal(0, LetterCourier.StoryDepthFactor(0), 5);
+        Assert.Equal(6.0 / LetterCourier.WriteStoryFullAt, LetterCourier.StoryDepthFactor(6), 5);
+        Assert.Equal(1.0, LetterCourier.StoryDepthFactor(LetterCourier.WriteStoryFullAt), 5);
+        Assert.Equal(1.0, LetterCourier.StoryDepthFactor(500), 5);
+    }
+
     // ------------------------------ the bag ------------------------------
 
     private static Letter MakeLetter(string npcId, double arriveDay, bool toPlayer = true) => new()

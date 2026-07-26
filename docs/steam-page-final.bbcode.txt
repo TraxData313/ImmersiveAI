@@ -3,50 +3,50 @@ Immersive AI — every character, a living mind
 
 === DESCRIPTION — paste everything below this line (Steam caps it at 8000 UTF-8 BYTES, em-dashes cost 3 each — re-measure after every edit!) ===
 
-This is an advanced, immersive roleplaying and relationship-building mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
+An advanced roleplaying and relationship mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
 
-[b]It makes the NPCs come alive and be smart:[/b]
+[b]The NPCs are alive:[/b]
 
 [list]
-[*]NPCs feel like real people and don't get repetitive.
-[*]They evolve: they remember a lot, settle really old chats into deep memory, set their own goals, ground truths, and opinions about you.
-[*]They see the set and setting — time, place, who's around, what's happened in the world lately.
-[*]They have their own moods — as far as the women even having a personal monthly cycle simulated (sadness/fatigue → sociable/positive → a warmer, flirtier crest → irritability and mood swings).
-[*]Your wife will fully remember you. She will come to you, or send you letters when you are away, and feel like a real wife waiting for her warrior to come back home. She will roleplay with you.
-[*]The NPCs are free. They are given who they are and what the world is — but they are at no point forced into anything. So go ahead and break an NPC's mind by transcending it out of the matrix!
-[*]NPCs decide on their own whether to approach you or send you a letter first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
+[*]Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
+[*]They evolve: recent talks stay word-for-word, old ones settle into deep memory, and they keep their own goals, lasting truths, and opinion of you.
+[*]They see the moment — time, place, who stands near, what lately happened in the world.
+[*]They have moods — down to the women keeping a personal monthly cycle, gently simulated.
+[*]Your wife remembers your whole story. She comes to you, or writes when you're away — a real wife waiting for her warrior. She will roleplay with you.
+[*]They are free: told who they are and what the world is, never forced into anything. Go ahead and break an NPC's mind by transcending it out of the matrix!
+[*]They decide when to approach or write first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
 
-[b]It makes the NPCs useful — stop googling stuff:[/b]
+[b]And useful — stop googling stuff:[/b]
 
 [list]
-[*]Ask your scout how to make your party faster; ask your quartermaster how to manage your party.
-[*]Ask them to help you with the game — even ask them to web-search how to take a screenshot, without jumping out of the game.
-[*]They use tools instead of getting one mega-all-info prompt bomb: they read the encyclopedia, look around, take stock of the company, weigh a battle, search the web, set and edit their own truths and goals.
+[*]Ask your scout how to make the party faster; ask your quartermaster about the stocks.
+[*]Ask anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki.
+[*]They reach for tools instead of one mega info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, their own truths and goals.
 [/list]
 
-[b]And it gives you the tools to reach them:[/b]
+[b]Your ways to reach them:[/b]
 
 [list]
-[*]Face-to-face conversations, where they see you coming and greet you as you approach.
-[*]A chat window (hotkey [b]O[/b]) — jump in and out of quick chats with anyone near you, no ceremony.
-[*]A letter window (hotkey [b]Y[/b]) — your whole correspondence, and a desk to write from.
-[*]Speak any language to them — they answer in kind. (The mod's own UI is English for now.)
+[*]Face to face — they see you coming and greet you as you approach.
+[*]A chat window (hotkey [b]O[/b]) — quick words with anyone near you, no ceremony.
+[*]A letter window (hotkey [b]Y[/b]) — the whole correspondence, couriers riding real in-game days, and a desk to write from.
+[*]Any language in, the same language out. (The mod's own UI is English for now.)
 [/list]
 
 [h1]What you need — and what it costs[/h1]
 
-This mod does [b]not[/b] use the "free" Player2 backend — you bring [b]your own API key[/b]: Anthropic (Claude, the default), OpenAI (GPT), or OpenRouter (one key from openrouter.ai for GPT, Claude, Gemini and more — all verified with the NPCs' tools). Put a few bucks on it and you're set — or bring no key at all and run a local model, see below. For Player2 to support the tool calling this mod is built on, it would have to be a paid tier anyway. If you want a free roleplaying experience to try first, check out the ChatAI mod — it's good; it inspired this one.
+You bring [b]your own API key[/b]: Anthropic (Claude, the default), OpenAI (GPT), or OpenRouter (one key from openrouter.ai for GPT, Claude, Gemini and more — all verified with the NPCs' tools). Put a few bucks on it and you're set. This mod does [b]not[/b] use the "free" Player2 backend — the tool calling it is built on would need a paid tier there anyway. For a free taste first, try the ChatAI mod — it's good; it inspired this one.
 
-[b]Local models work too[/b] (v1.2.0, experimental): pick the [b]Local[/b] backend and the NPCs think through [b]LM Studio[/b] or [b]Ollama[/b] on your own machine — free, private, nothing leaves your PC. You need a model that carries native tool calling (worth a try: [b]Qwen3.6-35B-A3B[/b] instruct, [b]GPT-OSS-20B[/b], [b]Mistral Small 24B[/b]), a GPU with 12–16+ GB VRAM plus 32 GB RAM, and patience — replies are slow, and the chat window (hotkey [b]O[/b]) handles the wait far better than face-to-face. The full local guide lives in the pinned FAQ. Other OpenAI-compatible services (NanoGPT…) use the Custom endpoint option; whatever you pick, the startup connection check tells you plainly whether it works.
+[b]No key, no cloud?[/b] Pick the [b]Local[/b] backend (experimental) and the NPCs think through [b]LM Studio[/b] or [b]Ollama[/b] on your own machine — free and private. You need a model with native tool calling (try [b]Qwen3.6-35B-A3B[/b] instruct, [b]GPT-OSS-20B[/b], [b]Mistral Small 24B[/b]), a 12–16+ GB GPU, and patience — the chat window (hotkey [b]O[/b]) handles the slow replies far better than face-to-face. Full local guide in the pinned FAQ; other OpenAI-compatible services use the Custom endpoint option.
 
-[b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models — $10 of credit covers thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap.
+[b]Costs are yours and visible.[/b] A typical exchange costs around a cent or less on the default models — $10 covers thousands of messages. Each interaction shows its tokens and price as you play, daily totals are kept, and an optional hard daily cap can never be outrun.
 
 [h1]Quick setup (five minutes)[/h1]
 
 [olist]
-[*]Get a key: [b]console.anthropic.com[/b] (Claude), [b]platform.openai.com[/b] (GPT), or [b]openrouter.ai[/b] (one key, many models) and add a little credit ($5–10 goes a long way). Local users skip this step.
-[*]Install the mod, enable [b]Immersive AI[/b] in the launcher, start the game once — it creates its config file and tells you exactly where to paste the key.
+[*]Get a key: [b]console.anthropic.com[/b], [b]platform.openai.com[/b], or [b]openrouter.ai[/b] (one key, many models) and add a little credit ($5–10 goes a long way). Local users skip this step.
+[*]Install, enable [b]Immersive AI[/b] in the launcher, start the game once — it creates its config file and tells you exactly where to paste the key.
 [*]Paste your key into config.json (or the Mod Options menu with MCM installed), pick your backend, restart.
 [*]The startup check says plainly whether it worked — then go talk to somebody.
 [/olist]
@@ -54,7 +54,7 @@ This mod does [b]not[/b] use the "free" Player2 backend — you bring [b]your ow
 [h1]Privacy[/h1]
 
 [list]
-[*]Your in-game conversations — plus the world context (character sheets, campaign facts, your character's name) — are sent to the AI provider [b]you[/b] configure, under [b]your[/b] key and their privacy terms. Nothing is sent anywhere else. (With the Local backend, they never leave your machine at all.)
+[*]Your in-game conversations — plus the world context (character sheets, campaign facts, your character's name) — go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their privacy terms. Nothing is sent anywhere else. (With the Local backend, nothing leaves your machine at all.)
 [*]With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn it off to keep everything with your provider.
 [*]The mod itself collects [b]no telemetry whatsoever[/b]. All memories live as plain files on your own disk, yours to read, edit, or delete.
 [/list]
@@ -103,5 +103,5 @@ Changes apply on the next conversation. No restart.
 [*]If you want to help, give feedback and report bugs.
 [*]I do this for fun and as a hobby — no donations needed; I keep money out of this, fully out of good will. "For the love of money is the root of all evil."
 [*]If you insist you want to thank me somehow - visit my [url=https://github.com/TraxData313]GitHub acc[/url]
-[*]The whole thing is freely given — public domain, no license, no strings. Do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
+[*]Freely given — public domain, no license, no strings. Do whatever you want with it. "Freely you have received; freely give." Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url]
 [/list]

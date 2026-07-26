@@ -63,6 +63,19 @@ namespace ImmersiveAI.Core.Initiation
         /// affection, so even a near-neutral standing keeps the field reports coming.</summary>
         public const double DutyClosenessFloor = 0.5;
 
+        /// <summary>Days a soul rests after ANY outreach of their own (even a welcomed one) before their
+        /// pull fully returns — a visit paid is a visit paid; no one knocks twice in the same afternoon.</summary>
+        public const double OutreachCooldownDays = 0.75;
+
+        /// <summary>Extra days of patience per outreach the player left unanswered: one letter into
+        /// silence waits this much longer before the next is even weighed, two wait twice as long…</summary>
+        public const double UnansweredPatienceDays = 4.0;
+
+        /// <summary>How much each unanswered outreach lowers the CEILING the pull can recover to
+        /// (0.4¹ = 40% after one, 16% after two…). Silence is an answer too, and they hear it —
+        /// the counter resets the moment the player engages, so a word restores the bond whole.</summary>
+        public const double UnansweredPrideFactor = 0.4;
+
         /// <summary>
         /// How moved this NPC is toward the player, in [0,1]: frequency × closeness × recency.
         /// 1 is a full-blown bond (rich shared story, maxed standing, spoken today); zero means nothing
@@ -97,6 +110,32 @@ namespace ImmersiveAI.Core.Initiation
             if (pull < 0) pull = 0;
             if (pull > 1) pull = 1;
             return pull;
+        }
+
+        /// <summary>
+        /// How much a soul's own recent outreach quiets them, a multiplier in [0,1] on their pull —
+        /// the brake on the one-sided spiral where an NPC's own recorded reach-outs and letters keep
+        /// their story fresh and so keep THEM the likeliest to reach out again (the "letter after
+        /// letter about the same stuff" the first players reported, 2026.07.26). Two forces:
+        ///
+        ///   - Rest: after any outreach (answered or not) the pull climbs back from zero over
+        ///     <see cref="OutreachCooldownDays"/> plus <see cref="UnansweredPatienceDays"/> per
+        ///     unanswered one — patience stretching the more silence they have already met.
+        ///   - Pride: each unanswered outreach also lowers the ceiling by <see cref="UnansweredPrideFactor"/>
+        ///     (40% after one, 16% after two…) — they do not pour words into a well that gives none back.
+        ///
+        /// The player engaging in any form resets the unanswered count (see NpcMemory), so one word
+        /// restores the bond whole. daysSinceOutreach &lt; 0 means "never reached out": no damping.
+        /// </summary>
+        public static double OutreachDamping(double daysSinceOutreach, int unansweredOutreaches)
+        {
+            if (daysSinceOutreach < 0 || double.IsNaN(daysSinceOutreach)) return 1.0;
+
+            int unanswered = unansweredOutreaches > 0 ? unansweredOutreaches : 0;
+            double patience = OutreachCooldownDays + UnansweredPatienceDays * unanswered;
+            double rest = Math.Min(1.0, daysSinceOutreach / patience);
+            double pride = Math.Pow(UnansweredPrideFactor, unanswered);
+            return rest * pride;
         }
 
         /// <summary>

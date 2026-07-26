@@ -581,7 +581,9 @@ namespace ImmersiveAI
 
                 bool firstMeeting = !PromptBuilder.HasRememberedHistory(memory);
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
-                AppendAngelTurn(npc, PromptBuilder.MeetingLine(playerName, firstMeeting), string.Empty);
+                // The meeting itself is the player engaging — any outreach that waited unanswered, isn't.
+                AppendAngelTurn(npc, PromptBuilder.MeetingLine(playerName, firstMeeting), string.Empty,
+                    OutreachMark.PlayerEngaged);
             }
             catch { /* best-effort; the meeting mattered, the bookkeeping must not */ }
         }
@@ -689,7 +691,7 @@ namespace ImmersiveAI
             if (_config.EnableConversationRecap)
             {
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_greet",
-                    "{=ImmersiveAI_Speak}Speak freely with me. [Immersive AI]",
+                    "{=ImmersiveAI_Speak}Speak freely with me.",
                     () => Hero.OneToOneConversationHero != null, OnChatOpened, 110);
 
                 // Greet state, recap is in -> the NPC delivers it, then we fall into the menu.
@@ -708,7 +710,7 @@ namespace ImmersiveAI
             else
             {
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_input",
-                    "{=ImmersiveAI_Speak}Speak freely with me. [Immersive AI]",
+                    "{=ImmersiveAI_Speak}Speak freely with me.",
                     () => Hero.OneToOneConversationHero != null, OnChatOpenedNoRecap, 110);
             }
 
@@ -721,7 +723,7 @@ namespace ImmersiveAI
             // Ask her to reflect now: compress/refactor memory on demand instead of waiting for the
             // automatic trigger. Uses the same hold-until-ready wait loop as a normal reply.
             starter.AddPlayerLine("immersiveai_update", "immersiveai_input", "immersiveai_updating",
-                "{=ImmersiveAI_Update}Reflect on all we have shared, and settle it into your memory. [Immersive AI]",
+                "{=ImmersiveAI_Update}Reflect on all we have shared, and settle it into your memory.",
                 null, OnMemoryUpdateRequested, 108);
             starter.AddDialogLine("immersiveai_update_done", "immersiveai_updating", "immersiveai_input",
                 "{=!}{" + UpdateVar + "}", () => _updateReady, null);
@@ -739,7 +741,7 @@ namespace ImmersiveAI
             if (_config.DevMode)
             {
                 starter.AddPlayerLine("immersiveai_deepmem", "immersiveai_input", "immersiveai_deepmem_out",
-                    "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind — all you see, remember, and have become. [Immersive AI]",
+                    "{=ImmersiveAI_DeepMemory}Reveal the whole of your mind — all you see, remember, and have become.",
                     null, OnShowRawPrompt, 107);
                 starter.AddDialogLine("immersiveai_deepmem_line", "immersiveai_deepmem_out", "immersiveai_input",
                     "{=!}{" + InfoVar + "}", null, null);
@@ -1310,15 +1312,23 @@ namespace ImmersiveAI
                 double daysSince = known != null && known.LastTalkGameDay >= 0
                     ? Math.Max(0, nowDay - known.LastTalkGameDay) : -1;
 
+                double damping = known == null ? 1.0 : InitiationScorer.OutreachDamping(
+                    DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
                 double pull = here
-                    ? self.CoLocatedPull(npc, nowDay)
-                    : InitiationScorer.Pull(richness, GetStanding(npc), Math.Max(0, daysSince), InPlayersService(npc));
+                    ? self.CoLocatedPull(npc, nowDay)   // damping already folded in
+                    : InitiationScorer.Pull(richness, GetStanding(npc), Math.Max(0, daysSince), InPlayersService(npc))
+                      * Core.Letters.LetterCourier.StoryDepthFactor(richness) * damping;
 
                 var sb = new StringBuilder();
                 sb.Append(richness > 0
                     ? $"spoke {richness} time{(richness == 1 ? "" : "s")}"
                     : "no words shared yet");
                 if (daysSince >= 0) sb.Append($" · last {daysSince:0.#}d ago");
+                // Why the quiet, in a word: waiting on an answer, or simply resting after a visit paid.
+                if (known != null && known.UnansweredOutreach > 0)
+                    sb.Append($" · awaits your answer ({known.UnansweredOutreach} unanswered)");
+                else if (damping < 0.999)
+                    sb.Append(" · resting after reaching out");
 
                 var cfg = self._config;
                 if (here && cfg.EnableNpcInitiatedChats)
@@ -1597,8 +1607,18 @@ namespace ImmersiveAI
             double daysSince = known.LastTalkGameDay >= 0
                 ? Math.Max(0, nowDay - known.LastTalkGameDay)
                 : 0;
-            return Math.Max(floor, InitiationScorer.Pull(known.Richness, GetStanding(hero), daysSince));
+            // The damping multiplies AFTER the presence floor: a soul who just came knocking (or whose
+            // knocks the player left unanswered) rests below it — else the floor would re-arm the very
+            // repetition the damping exists to stop (the 2026.07.26 tune-down).
+            return Math.Max(floor, InitiationScorer.Pull(known.Richness, GetStanding(hero), daysSince))
+                 * InitiationScorer.OutreachDamping(
+                       DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
         }
+
+        // Days since a remembered game-day stamp, or -1 ("never") when the stamp itself is -1/unset —
+        // the shape InitiationScorer.OutreachDamping distinguishes on.
+        private static double DaysSinceOrNever(double gameDay, double nowDay)
+            => gameDay >= 0 ? Math.Max(0, nowDay - gameDay) : -1;
 
         // How readily a STRANGER of this station approaches the player: 1 for equals and commoners,
         // fading for great lords far above an unknown player (two tiers → 0.4, more → 0.25; a crowned
@@ -1698,7 +1718,11 @@ namespace ImmersiveAI
                 var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
-                AppendAngelTurn(npc, desireLine, desireAnswer);
+                // The weighing itself rests them for a while (OutreachMark.Considered) whatever they chose:
+                // a "no" must not leave them the likeliest pick again next hour, and a "yes" whose notice
+                // the player never reaches should still not turn into an hourly knock (the delivery beat
+                // below marks the true outreach on top of this).
+                AppendAngelTurn(npc, desireLine, desireAnswer, OutreachMark.Considered);
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer)) { PassOnInitiation(npc); return; }
 
@@ -1720,11 +1744,18 @@ namespace ImmersiveAI
             }
         }
 
+        // What an Angel beat means for the NPC's own outreach bookkeeping (the anti-spam brake —
+        // see InitiationScorer.OutreachDamping): Reached = they went to the player of their own will
+        // (counts as unanswered until the player engages); Considered = they weighed it, or answered
+        // an invited letter (rests them without a pride wound); PlayerEngaged = the beat itself IS
+        // the player engaging (a meeting note, a letter of the player's read), clearing the count.
+        private enum OutreachMark { None, Reached, Considered, PlayerEngaged }
+
         // Records one Angel↔NPC exchange as a real turn in the NPC's memory, so their whole dialogue with the
         // meta-voice lives in the same remembered, inspectable stream as their talks with the player. The
         // Angel's line is stored verbatim (framed in their voice only when replayed). Best-effort: bookkeeping
         // must never throw into a tick or a UI callback.
-        private void AppendAngelTurn(Hero npc, string angelLine, string npcReply)
+        private void AppendAngelTurn(Hero npc, string angelLine, string npcReply, OutreachMark mark = OutreachMark.None)
         {
             try
             {
@@ -1739,6 +1770,12 @@ namespace ImmersiveAI
                     CalradiaTime = SituationBuilder.Timestamp(),
                     Place = SituationBuilder.Place(npc),
                 });
+                switch (mark)
+                {
+                    case OutreachMark.Reached: memory.NoteOutreach(CampaignTime.Now.ToDays); break;
+                    case OutreachMark.Considered: memory.NoteOutreachConsidered(CampaignTime.Now.ToDays); break;
+                    case OutreachMark.PlayerEngaged: memory.NotePlayerEngaged(); break;
+                }
                 SaveMemory(npc, memory);
             }
             catch { /* best-effort */ }
@@ -1991,7 +2028,7 @@ namespace ImmersiveAI
                 var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
-                AppendAngelTurn(npc, approachLine, npcLine);
+                AppendAngelTurn(npc, approachLine, npcLine, OutreachMark.Reached);
 
                 if (welcomed)
                 {
@@ -2172,11 +2209,20 @@ namespace ImmersiveAI
                         double pull = InitiationScorer.Pull(known.Richness, relation, daysSince,
                             !coLocated && InPlayersService(hero));
                         if (coLocated) pull = Math.Max(floor, pull); // presence alone lifts to the floor
+                        // The same brakes the live rolls apply: a shallow story writes few letters, and a
+                        // soul who lately reached out (worse, into silence) rests (the 2026.07.26 tune-down).
+                        double damping = InitiationScorer.OutreachDamping(
+                            DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
+                        pull *= damping;
+                        if (!coLocated) pull *= Core.Letters.LetterCourier.StoryDepthFactor(known.Richness);
                         double alone = Math.Min(1, _config.DailyInitiationRate * pull);
                         (coLocated ? herePulls : awayPulls).Add(pull);
 
+                        string quietNote = known.UnansweredOutreach > 0
+                            ? $", {known.UnansweredOutreach} outreach{(known.UnansweredOutreach == 1 ? "" : "es")} of theirs unanswered (pull damped ×{damping:0.00})"
+                            : damping < 0.999 ? $", resting after reaching out (pull damped ×{damping:0.00})" : "";
                         sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
-                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago");
+                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago{quietNote}");
                         if (coLocated)
                             sb.AppendLine($"    → pull {pull * 100:0.0}% of a full bond (alone that would be ~{alone:0.00} visits/day; here it is their share of the group's total)");
                         else
@@ -2474,7 +2520,7 @@ namespace ImmersiveAI
                 var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var words = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
-                AppendAngelTurn(npc, firstWordLine, words);
+                AppendAngelTurn(npc, firstWordLine, words, OutreachMark.Reached);
                 PersistSituation(npc, situation);
 
                 MainThreadDispatcher.Enqueue(() =>
@@ -2528,7 +2574,7 @@ namespace ImmersiveAI
             foreach (var menuId in new[] { "town", "castle", "village" })
             {
                 starter.AddGameMenuOption(menuId, "immersiveai_chat_window_" + menuId,
-                    "{=ImmersiveAI_ChatWindow}Speak with those near you [Immersive AI]",
+                    "{=ImmersiveAI_ChatWindow}Speak with those near you",
                     OnChatWindowMenuCondition, _ => UI.ChatWindow.ChatWindowManager.Open(), false, -1, false, null);
             }
         }

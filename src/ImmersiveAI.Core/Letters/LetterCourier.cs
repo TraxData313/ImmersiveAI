@@ -23,6 +23,22 @@ namespace ImmersiveAI.Core.Letters
         /// write is their reaching-out chance (see Initiation.InitiationScorer) scaled by this.</summary>
         public const double WriteRateFactor = 0.5;
 
+        /// <summary>Shared exchanges at which the story is deep enough to fully fund a correspondence.
+        /// Below it the write-chance scales down linearly (see <see cref="StoryDepthFactor"/>).</summary>
+        public const int WriteStoryFullAt = 12;
+
+        /// <summary>Sitting down to write asks for more shared story than crossing a room: someone
+        /// spoken with once has little to say that was not already said, and saying it again in new
+        /// words is exactly the repetition the first players reported (2026.07.26). Scales the
+        /// write-chance by richness / <see cref="WriteStoryFullAt"/>, capped at 1 — a single
+        /// conversation funds half-weight letters at best; a real history writes freely.</summary>
+        public static double StoryDepthFactor(int storyRichness)
+        {
+            if (storyRichness <= 0) return 0;
+            double f = storyRichness / (double)WriteStoryFullAt;
+            return f > 1 ? 1 : f;
+        }
+
         /// <summary>In-game days for a letter to travel <paramref name="distance"/> map units.
         /// A negative or NaN distance (an unknown position) is treated as a far road, not a near one.</summary>
         public static double TravelDays(double distance)
