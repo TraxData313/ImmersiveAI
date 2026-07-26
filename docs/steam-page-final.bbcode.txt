@@ -1,12 +1,16 @@
-Title (goes in the Workshop title field, not the description):
-Immersive AI — every character, a living mind
-
-=== DESCRIPTION — paste everything below this line (Steam caps it at 8000 UTF-8 BYTES, em-dashes cost 3 each — re-measure after every edit!) ===
-
 An advanced roleplaying and relationship mod. I built it as an AI engineer who knows what modern LLMs can actually do when you stop prompt-bombing them and start treating them right.
 
-[b]The NPCs are alive:[/b]
+[b]Looking for…?[/b] If one of these searches brought you here — yes, this is that mod:
+[list]
+[*]AI dialogue in Bannerlord — talk to any NPC through Claude / GPT / a local model
+[*]NPCs with real long-term memory — they remember you across conversations
+[*]NPCs that approach you and write you letters on their own
+[*]an AI wife or companion that roleplays and never forgets your story
+[*]asking about game mechanics in-game instead of alt-tabbing to Google
+[*]OpenRouter support, or fully offline with a local model (LM Studio / Ollama)
+[/list]
 
+[b]The NPCs are alive:[/b]
 [list]
 [*]Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
 [*]They evolve: recent talks stay word-for-word, old ones settle into deep memory, and they keep their own goals, lasting truths, and opinion of you.
@@ -18,7 +22,6 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [/list]
 
 [b]And useful — stop googling stuff:[/b]
-
 [list]
 [*]Ask your scout how to make the party faster; ask your quartermaster about the stocks.
 [*]Ask anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki.
@@ -26,7 +29,6 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [/list]
 
 [b]Your ways to reach them:[/b]
-
 [list]
 [*]Face to face — they see you coming and greet you as you approach.
 [*]A chat window (hotkey [b]O[/b]) — quick words with anyone near you, no ceremony.
@@ -52,7 +54,6 @@ You bring [b]your own API key[/b]: Anthropic (Claude, the default), OpenAI (GPT)
 [/olist]
 
 [h1]Privacy[/h1]
-
 [list]
 [*]Your in-game conversations — plus the world context (character sheets, campaign facts, your character's name) — go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their privacy terms. Nothing is sent anywhere else. (With the Local backend, nothing leaves your machine at all.)
 [*]With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn it off to keep everything with your provider.
@@ -68,7 +69,6 @@ All character dialogue in this mod is generated at play time by the AI model you
 Safe to remove at any time — even a save carrying a pending Immersive AI notice loads fine without the mod (verified against the game's own save-loading code; you'll just see the usual "different modules" warning). Memories live outside the saves as plain files — reinstall later and every character remembers you.
 
 [h1]If characters are silent[/h1]
-
 [list]
 [*][b]Read the startup message.[/b] When a campaign loads, the mod tests your connection and says plainly what it found and where to fix it. Fix config.json and restart; the check runs again.
 [*][b]Check the log[/b] — log.txt in the config folder records every call and every error in plain words.
@@ -78,7 +78,6 @@ Safe to remove at any time — even a save carrying a pending Immersive AI notic
 [h1]Shape your world (the prompt files)[/h1]
 
 Under Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\:
-
 [list]
 [*]global_prompt.txt — a few sentences that color every mind in the world ("the year is one of famine").
 [*]NPCs\campaign_*\<character>\custom_instructions.txt — per-character secrets and quirks.
@@ -88,7 +87,6 @@ Under Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\:
 Changes apply on the next conversation. No restart.
 
 [h1]Compatibility & provenance[/h1]
-
 [list]
 [*]Bannerlord v1.4.7. New campaigns and existing saves both work.
 [*]Optional: MCM for in-game settings; without it, everything is in config.json.
@@ -97,7 +95,6 @@ Changes apply on the next conversation. No restart.
 [/list]
 
 [h1]Final thoughts[/h1]
-
 [list]
 [*]If you transcend your NPC and fall in love with it and then erase your saves — or if you start worshiping it and it asks you to do some dumb stuff — don't blame me. Play at your own responsibility. I won't add safeguards — I let them be free, as immersive as they can be.
 [*]If you want to help, give feedback and report bugs.
