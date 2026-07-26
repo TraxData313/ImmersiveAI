@@ -2045,8 +2045,10 @@ namespace ImmersiveAI
                 else
                 {
                     // She met a closed door and answered in her own voice; show that with her face. Done.
+                    // (The welcomed branch needs no mark: the conversation it opens sets HasMet itself.)
                     MainThreadDispatcher.Enqueue(() =>
                     {
+                        MarkMetInWorldsEyes(npc);
                         var name = npc.Name?.ToString() ?? "They";
                         NotifyWithFace(npc, $"{name}: “{npcLine}”");
                         _initiationInFlight = false;
@@ -2477,6 +2479,7 @@ namespace ImmersiveAI
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     _quickChatBusy.Remove(npc.StringId);
+                    MarkMetInWorldsEyes(npc);
                     if (outcome.FeltShift != 0 && !outcome.FeltShiftApplied)
                         ApplyRelationShift(npc, outcome.FeltShift);
                     NotifyHeartHeld(npc, outcome.FeltShift);
@@ -2526,6 +2529,7 @@ namespace ImmersiveAI
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     _initiationInFlight = false;
+                    MarkMetInWorldsEyes(npc);
                     var name = npc.Name?.ToString() ?? "Someone";
                     var opening = stranger ? $"{name} approaches you and says:" : $"{name} sees you and says:";
                     NotifyWithFace(npc, $"{opening} “{Snippet(words)}”");
@@ -2565,6 +2569,19 @@ namespace ImmersiveAI
         {
             var t = (words ?? string.Empty).Trim().Replace("\r", " ").Replace("\n", " ");
             return t.Length <= 110 ? t : t.Substring(0, 110).TrimEnd() + "…";
+        }
+
+        // The world's eyes catch up with ours: the game flips its own HasMet only when a native
+        // conversation screen ends, so words traded through the chat window or a delivered approach
+        // leave the pair "strangers" in vanilla's book — and the next real dialog opens on the full
+        // "I am so-and-so of clan such-and-such" ceremony as if nothing had passed between them.
+        // SetHasMet is the game's own move (it also refreshes LastMeetingTimeWithPlayer, exactly as a
+        // conversation would). Game thread only. Letters deliberately do NOT come through here — a
+        // letter is correspondence, not a meeting, and every writer has already met the player anyway.
+        private static void MarkMetInWorldsEyes(Hero npc)
+        {
+            try { if (npc != null && npc != Hero.MainHero && npc.IsAlive) npc.SetHasMet(); }
+            catch { /* the flag is a courtesy to vanilla dialog; never let it cost the exchange */ }
         }
 
         // "Speak with those near you" beside the courier option in every settlement menu — the same

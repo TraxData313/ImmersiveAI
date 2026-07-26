@@ -636,6 +636,11 @@ goes straight through `ExecutePlayerTurnAsync`, the shared trunk factored out of
 (prompt → spoken reply with recall/wisdom riding along → the private feeling number → recorded turn →
 compression → save), so window and conversation panel are the same machinery with different rendering.
 One in-flight exchange per NPC (`_quickChatBusy`); a failed send puts the words back in the input box.
+**Talking through the mod counts as meeting in vanilla's eyes** (2026.07.26): the game flips its
+`Hero.HasMet` only when a native conversation screen ends, so window exchanges and delivered
+reach-outs left the pair "strangers" and the next real dialog opened on the full "I am so-and-so"
+introduction — `MarkMetInWorldsEyes` (game's own `SetHasMet()`, game thread) now rides the
+quick-chat reply, the delivered first word, and the "not now" approach; letters deliberately don't.
 **Reach-outs become messages** (`SendInitiationsToChatWindow`, default on): after her recorded yes to
 the desire question, there is NO accept/decline — `DeliverFirstWordAsync` has her simply speak
 (`PromptBuilder.FirstWordLine`, stranger-aware, honest that the player may answer only later), records
