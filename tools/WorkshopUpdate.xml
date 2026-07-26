@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.3.2 - Fixed: settings changed at the main menu could be silently reverted. Editing Mod Options before loading a campaign - switching the Backend, pasting an API key, picking a model - could fail to reach the mod's config and quietly snap back when the campaign started, leaving errors like 'Anthropic API key is not set' after choosing OpenRouter. Settings now take hold wherever and whenever you edit them, main menu included. If this bit you: update, set your Backend (and key) once more, and it sticks." />
+        <ChangeNotes Value="v1.3.3 - Fix: on some MCM setups the options menu never truly connected to the mod, so Backend/key edits did not take effect. The mod now recovers settings stranded in MCM's store, syncs menu edits directly, and says plainly if the menu cannot connect." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

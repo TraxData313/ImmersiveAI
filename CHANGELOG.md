@@ -5,6 +5,20 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.3.3 — 2026.07.26
+
+- **Fixed harder: mod-menu settings not taking effect** (the follow-up Nexus report — thank you
+  again). On some MCM setups the options menu renders fine but never actually connects to the
+  mod underneath, so every edit — Backend, keys, models — landed only in MCM's own files and
+  the mod kept speaking with the old backend ("Anthropic API key is not set" after choosing
+  OpenRouter). Three fixes ride together: on startup the mod now reads MCM's own settings store
+  directly and recovers anything stranded there (a saved key, a chosen backend or model) into
+  its config — you'll see a "recovered mod-menu settings" notice when it happens; menu edits
+  are synced by watching the menu itself instead of trusting MCM to announce saves; and if the
+  menu truly cannot connect, the mod now says so plainly and points you to config.json instead
+  of failing silently. Recovery never overwrites anything you set by hand — it only fills what
+  was missing.
+
 ## v1.3.2 — 2026.07.25
 
 - **Fixed: settings changed at the main menu could be silently reverted** (the first Nexus bug

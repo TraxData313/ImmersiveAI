@@ -68,5 +68,13 @@ POST V1 or NOT FULLY DECIDED:
     the cost story must stay boringly honest), fail-soft (a dead audio call never blocks the spoken
     text), and off-thread synthesis marshaled like every other LLM call. STT (player speaking) is a
     separate later step — TTS first.
+- [ ] Dramalord compatibility (asked on Nexus by coca1colax, 2026.07.25)
+    Fold Dramalord's relationship state (lovers, affairs, friendships, its emotion values) into what
+    each NPC knows of themselves and the player — so a Dramalord lover speaks AS a lover without the
+    player explaining it in chat. Likely shape: a soft dependency read by reflection (the MCM pattern —
+    absent Dramalord, nothing changes) feeding SituationBuilder/FamilyBuilder ("What X is to me" +
+    the situation's standing lines), maybe Dramalord events as tidings. Needs a study pass over
+    Dramalord's data layer first (it keeps per-hero attraction/trust/love + relations in its own
+    save data); decide scope with Anton — read-only awareness first, our NPCs ACTING on it later.
 - [ ] NPC to NPC chat
     In the future have a system that lets the NPC pick a person (another NPC) to talk to and for them to be able to exchange a few messages and for me to be able to see the log or watch them in real time talk, again maybe based on how popular they are, but even the unused to have the option to do it. So they should have a general deep memory, a per person deep memory and per person hist maybe

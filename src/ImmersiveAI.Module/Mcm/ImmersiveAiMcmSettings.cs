@@ -33,7 +33,7 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
             HintText = "Which AI service the NPCs think with. Anthropic (Claude) is the default; OpenAI (GPT) also works; OpenRouter reaches both with one key from openrouter.ai; Local speaks to a model on YOUR machine (LM Studio/Ollama) — free and private, no key, but weaker with the NPCs' tools.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(new[] { "Anthropic", "OpenAI", "OpenRouter", "Local" }, 0);
+        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 0);
 
         [SettingPropertyText("Anthropic API key", Order = 1, RequireRestart = false,
             HintText = "Your Claude API key (starts with sk-ant-...). Get one at console.anthropic.com. Required when the backend is Anthropic. Kept only in your local config file.")]
@@ -43,8 +43,7 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = false,
             HintText = "Haiku 4.5 ($1/$5 per MTok) is the fast, cheap default. Sonnet 5 ($3/$15) is the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. Any other model goes in the custom field below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(
-            new[] { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" }, 0);
+        public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(McmChoiceLists.AnthropicModels, 0);
 
         [SettingPropertyText("Anthropic model (type any id)", Order = 3, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: the exact Anthropic model id to use, as the API names it. Empty = the dropdown chooses. Unlisted models still work; the ~$ cost estimate just may not know their prices.")]
@@ -59,8 +58,7 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
             HintText = "gpt-5.4-mini ($0.75/$4.50 per MTok) is the proven default. luna ($1/$6) is newer, terra ($2.50/$15) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. Any other model goes in the custom field below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(
-            new[] { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" }, 0);
+        public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0);
 
         [SettingPropertyText("OpenAI model (type any id)", Order = 6, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: the exact OpenAI model id to use (e.g. gpt-4.1) — also the place for a custom endpoint's model id. Empty = the dropdown chooses. Unlisted models still work; the ~$ estimate just may not know their prices.")]
@@ -75,22 +73,7 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyDropdown("OpenRouter model", Order = 8, RequireRestart = false,
             HintText = "Which model when the backend is OpenRouter — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tools, same prices as going direct. gpt-5.4-mini and claude-haiku-4.5 are the proven picks; deepseek-v4-flash the cheapest. Any other id goes in the custom field below.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(new[]
-        {
-            "openai/gpt-5.4-mini",
-            "anthropic/claude-haiku-4.5",
-            "deepseek/deepseek-v4-flash",
-            "google/gemini-2.5-flash",
-            "google/gemini-3.5-flash",
-            "mistralai/mistral-large-2512",
-            "anthropic/claude-sonnet-5",
-            "openai/gpt-5.6-luna",
-            "openai/gpt-5.6-terra",
-            "x-ai/grok-4.5",
-            "anthropic/claude-opus-4.8",
-            "anthropic/claude-fable-5",
-            "openai/gpt-5.4-nano",
-        }, 0);
+        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0);
 
         [SettingPropertyText("OpenRouter model (type any id)", Order = 9, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: any id from openrouter.ai/models, pasted exactly in OpenRouter's own spelling (e.g. qwen/qwen3-235b-a22b). Empty = the dropdown chooses. A mistyped id answers as a clear error naming the model.")]
@@ -214,7 +197,7 @@ namespace ImmersiveAI.Mcm
         /// selected. Kept modest so a player picks rather than types an InputKey name by hand.</summary>
         private static Dropdown<string> HotkeyChoices(string preferred)
         {
-            var keys = new[] { "O", "P", "K", "J", "U", "N", "B", "L", "Y", "H", "G", "V", "F9", "F10", "F11", "F12" };
+            var keys = McmChoiceLists.HotkeyKeys;
             var index = 0;
             for (var i = 0; i < keys.Length; i++)
                 if (keys[i] == preferred) { index = i; break; }

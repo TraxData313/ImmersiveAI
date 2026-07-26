@@ -1,0 +1,46 @@
+namespace ImmersiveAI.Mcm
+{
+    /// <summary>
+    /// The dropdown choice lists the MCM menu offers, kept apart from <see cref="ImmersiveAiMcmSettings"/>
+    /// because they are needed in two worlds: the menu itself (MCM present) and the store-file rescue in
+    /// <see cref="McmBridge"/>, which maps MCM's persisted dropdown INDICES back to values on machines
+    /// where the menu never connected — and so must never touch an MCM type. Plain strings only here.
+    /// MCM's store file persists selections as indices into these arrays, so append new entries at the
+    /// END; reordering silently changes what old store files mean.
+    /// </summary>
+    internal static class McmChoiceLists
+    {
+        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local" };
+
+        public static readonly string[] AnthropicModels =
+            { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" };
+
+        public static readonly string[] OpenAIModels =
+            { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" };
+
+        public static readonly string[] OpenRouterModels =
+        {
+            "openai/gpt-5.4-mini",
+            "anthropic/claude-haiku-4.5",
+            "deepseek/deepseek-v4-flash",
+            "google/gemini-2.5-flash",
+            "google/gemini-3.5-flash",
+            "mistralai/mistral-large-2512",
+            "anthropic/claude-sonnet-5",
+            "openai/gpt-5.6-luna",
+            "openai/gpt-5.6-terra",
+            "x-ai/grok-4.5",
+            "anthropic/claude-opus-4.8",
+            "anthropic/claude-fable-5",
+            "openai/gpt-5.4-nano",
+        };
+
+        public static readonly string[] HotkeyKeys =
+            { "O", "P", "K", "J", "U", "N", "B", "L", "Y", "H", "G", "V", "F9", "F10", "F11", "F12" };
+
+        /// <summary>The value an MCM-persisted dropdown index means, or null when the index falls
+        /// outside the list (older/newer store files, or lists grown at runtime by SelectOrAdd).</summary>
+        public static string? AtIndex(string[] choices, int? index) =>
+            index.HasValue && index.Value >= 0 && index.Value < choices.Length ? choices[index.Value] : null;
+    }
+}

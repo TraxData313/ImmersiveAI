@@ -96,8 +96,17 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           moment, + party-duty depth, + the beholder's eye on unknown callers)
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits) — the single source of truth
-  Mcm/                    ImmersiveAiMcmSettings + McmBridge: the in-game MCM settings menu (SOFT dependency —
-                          absent MCM = config.json only; present = a live two-way editor over a subset, config.json still master)
+  Mcm/                    ImmersiveAiMcmSettings + McmBridge + McmChoiceLists: the in-game MCM settings menu
+                          (SOFT dependency — absent MCM = config.json only; present = a live two-way editor over
+                          a subset, config.json still master). Hardened 2026.07.26 (2nd Nexus report — menus can
+                          RENDER via MCM.UI's pipeline while MCM's own container never registers our instance, so
+                          the bind silently never lands and edits strand in MCM's store): (1) TryRescueOnce reads
+                          MCM's store file (Configs\ModSettings\Global\ImmersiveAI\ImmersiveAI_v1.json, dropdowns
+                          as INDICES into McmChoiceLists — append-only, never reorder) and adopts stranded values
+                          under never-clobber rules (keys fill only empty, models/endpoints only over defaults,
+                          Backend only when the current one has no key and the store's can speak); (2) SyncTick
+                          polls menu↔config snapshots ~1s after bind so sync never depends on MCM's SAVE_TRIGGERED
+                          event; (3) bind success/failure logs + a one-time "menu could not connect" notice
   MainThreadDispatcher.cs marshals async LLM results back to the game thread
   UsageLedger.cs          the cost ledger: per-call tokens from the clients, per-interaction cost
                           notices, daily cap (usage.json); LlmGate.cs the dying-key circuit breaker
