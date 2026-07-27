@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.4.0 - The repetition tune-down: characters now rest after reaching out or writing, and your silence is heard - unanswered visits and letters make them wait longer and try softer until you answer; letters need a real acquaintance, not one shallow talk. Also: the [Immersive AI] tags are gone from the dialogue options." />
+        <ChangeNotes Value="v1.4.1 - Fixed: characters you had already talked with through the chat window introduced themselves all over again in ordinary conversation - the game did not count those talks as having met. Fixed: characters reaching out now come with something they want to discuss, instead of an empty hello - the moment that decides whether someone approaches you no longer asks merely whether they want to greet you, and what they bring is left entirely to them." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

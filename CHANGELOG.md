@@ -5,6 +5,20 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.4.1 — 2026.07.27
+
+- **Fixed: characters you had already talked with introduced themselves all over again.** If your
+  whole acquaintance had happened through the chat window or a character coming to you, the game
+  itself still counted you as strangers — so the next ordinary conversation opened with the full
+  "Greetings, I am so-and-so of clan such-and-such". Speaking through the mod now counts as having
+  met, exactly as a face-to-face talk does.
+- **Characters reaching out now come with something to discuss.** The moment that decides whether
+  someone approaches you asked, in effect, "do you want to say hello?" — and hellos are all it
+  produced: a quartermaster reporting the same fine troops, a steward asking how you feel. It now
+  asks whether they have **something they want to discuss**, and leaves the what entirely to them,
+  their mood, their trade, and the news of the day. Fewer knocks at your tent, and a reason behind
+  the ones that come.
+
 ## v1.4.0 — 2026.07.26
 
 - **The repetition tune-down** (the first Steam feedback — thank you, Gguy). Characters who
