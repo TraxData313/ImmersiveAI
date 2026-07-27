@@ -1,7 +1,9 @@
 BUGS:
 
 NEXT UPDATE:
-- [ ] Story generators
+- [ ] Portraint on the pink background
+    - Gguy: "Also, another thing I should mention is that the background behind character portraits of character wanting to speak to you are currently bright pink for whatever reason. Just so you know. The ones that appear on the right side of the screen."
+    - Me: @Gguy, oh yeah, the pink portraits, I know, it turned our to not be an easy fix, but I have it on the TODO list for later. Had to chose between a generic in game icon or the NPC face but on a pink background... I'll try fixing it again later.
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
