@@ -5,6 +5,17 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.4.2 — 2026.07.27
+
+- **Mod-menu connection hardened again** (continuing the Nexus report — the new log lines did
+  their job and named the failure). On the affected setup, MCM itself throws errors while the
+  mod connects to the menu — consistent with MCM building its settings object half-made under
+  mismatched dependencies. The mod now repairs such a half-made menu (rebuilding its dropdowns
+  by hand), syncs field-by-field so one broken control can't take the rest down, keeps retrying
+  the connection for the whole session instead of giving up after three tries, and logs the full
+  error detail so the next report pinpoints the exact spot inside MCM. If the menu still cannot
+  connect, a notice says so plainly — and config.json always works.
+
 ## v1.4.1 — 2026.07.27
 
 - **Fixed: characters you had already talked with introduced themselves all over again.** If your

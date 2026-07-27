@@ -34,7 +34,6 @@ namespace ImmersiveAI.Mcm
     internal static class McmBridge
     {
         private static bool _bound;
-        private static bool _gaveUp;
         private static int _failures;
         private static DateTime _nextAttemptUtc = DateTime.MinValue;
         private static bool _rescueDone;
@@ -73,17 +72,16 @@ namespace ImmersiveAI.Mcm
                 try { SyncTick(live); } catch { /* one bad tick must not kill the bridge */ }
                 return;
             }
-            if (_gaveUp) return;
 
             try
             {
                 // Bind returns false if MCM is up but our settings aren't registered yet; leave _bound
-                // false so the next tick retries. Exceptions get a few chances too (startup timing can
-                // be flaky) before we give up so we don't spam the log.
+                // false so the next tick retries.
                 if (Bind(live))
                 {
                     _bound = true;
-                    ModLog.Info("MCM menu bound — settings sync is live.");
+                    ModLog.Info("MCM menu bound — settings sync is live" +
+                                (_failures > 0 ? " (after " + _failures + " failed attempts)." : "."));
                 }
                 else
                 {
@@ -92,12 +90,25 @@ namespace ImmersiveAI.Mcm
             }
             catch (Exception ex)
             {
-                ModLog.Error("MCM bind attempt " + (_failures + 1), ex);
-                if (++_failures < 3) return;
-                _gaveUp = true;
-                // The menu is a convenience; config.json still works. Note it once and move on.
-                TaleWorlds.Library.InformationManager.DisplayMessage(
-                    new TaleWorlds.Library.InformationMessage("Immersive AI: mod menu unavailable (" + ex.Message + ")."));
+                // NEVER give up: on some machines MCM (or a dependency it leans on) is still warming up
+                // when the first attempts fire, and on others it heals only after a screen change — the
+                // third Nexus round taught us that 3 strikes in 5 seconds is far too impatient. Back off
+                // to ~15s and keep knocking. First failures log the FULL stack (the exact throw site
+                // inside MCM is the diagnosis — type+message alone told us nothing), later ones a short
+                // line every 20th so the log stays readable.
+                _failures++;
+                _nextAttemptUtc = now.AddSeconds(15.0);
+                if (_failures <= 3)
+                    ModLog.Error("MCM bind attempt " + _failures + " — " + ex);
+                else if (_failures % 20 == 0)
+                    ModLog.Error("MCM bind still failing (attempt " + _failures + ")", ex);
+                if (_failures == 3)
+                {
+                    // The menu is a convenience; config.json still works. Note it once and keep trying.
+                    TaleWorlds.Library.InformationManager.DisplayMessage(new TaleWorlds.Library.InformationMessage(
+                        "Immersive AI: the mod options menu is not connecting (" + ex.GetType().Name + ") — " +
+                        "changes there may not take hold. config.json always works; details in log.txt."));
+                }
             }
         }
 
@@ -123,6 +134,7 @@ namespace ImmersiveAI.Mcm
             var s = ImmersiveAiMcmSettings.Instance;
             if (s == null) return false; // MCM present but our settings not registered yet — retry later.
 
+            RepairMenuInstance(s);
             PushConfigToMenu(s, live);
             RecordSnapshots(s, live);
             // The fast path: MCM raises PropertyChanged ("SAVE_TRIGGERED") when the menu is saved. The
@@ -176,16 +188,48 @@ namespace ImmersiveAI.Mcm
             _lastCfgSig = CfgSignature(live);
         }
 
-        /// <summary>Everything the menu can edit, as one comparison key.</summary>
+        /// <summary>Some MCM builds materialize the settings without running our constructors (their
+        /// ctor-delegate machinery can fail under mismatched dependencies, falling back to an
+        /// UNINITIALIZED object) — every dropdown null, every string null, and both MCM's own load/save
+        /// and our bind then die on it (the third Nexus round: ArgumentOutOfRange/NullReference inside
+        /// bind). Rebuild what is missing so the menu and the sync work anyway; on a healthy MCM the
+        /// initializers ran and this touches nothing.</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void RepairMenuInstance(ImmersiveAiMcmSettings s)
+        {
+            var repaired = false;
+            if (s.Backend == null) { s.Backend = new Dropdown<string>(McmChoiceLists.Backends, 0); repaired = true; }
+            if (s.AnthropicModel == null) { s.AnthropicModel = new Dropdown<string>(McmChoiceLists.AnthropicModels, 0); repaired = true; }
+            if (s.OpenAIModel == null) { s.OpenAIModel = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0); repaired = true; }
+            if (s.OpenRouterModel == null) { s.OpenRouterModel = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0); repaired = true; }
+            if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
+            if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
+            if (repaired)
+                ModLog.Warn("MCM served an uninitialized settings instance — dropdowns rebuilt by hand " +
+                            "(an MCM/dependency version mismatch; the menu should still work now).");
+        }
+
+        /// <summary>A dropdown's selected value, or null when the dropdown is missing or its innards
+        /// throw (unhealthy MCM builds) — never an exception.</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string? SelectedOf(Dropdown<string>? dropdown)
+        {
+            try { return dropdown?.SelectedValue; }
+            catch { return null; }
+        }
+
+        /// <summary>Everything the menu can edit, as one comparison key. Dropdown reads go through
+        /// <see cref="SelectedOf"/> so a broken dropdown degrades to a blank instead of killing the
+        /// whole sync tick.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static string MenuSignature(ImmersiveAiMcmSettings s)
         {
             return string.Join("",
-                s.Backend.SelectedValue, s.AnthropicApiKey, ChosenModel(s.AnthropicModel, s.AnthropicModelCustom),
+                SelectedOf(s.Backend), s.AnthropicApiKey, ChosenModel(s.AnthropicModel, s.AnthropicModelCustom),
                 s.OpenAIApiKey, ChosenModel(s.OpenAIModel, s.OpenAIModelCustom),
                 s.OpenRouterApiKey, ChosenModel(s.OpenRouterModel, s.OpenRouterModelCustom),
                 s.OpenAIBaseUrl, s.LocalEndpoint, s.LocalModel, s.LocalContextWindow, s.MaxTokens,
-                s.EnableChatWindow, s.ChatWindowHotkey.SelectedValue, s.LetterWindowHotkey.SelectedValue,
+                s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch, s.MaxKnownFacts, s.MaxNpcGoals,
                 s.RevertMemoriesWithSaves, s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
@@ -249,7 +293,7 @@ namespace ImmersiveAI.Mcm
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void PullMenuToConfig(ImmersiveAiMcmSettings s, ModConfig c)
         {
-            c.Backend = s.Backend.SelectedValue ?? c.Backend;
+            c.Backend = SelectedOf(s.Backend) ?? c.Backend;
             c.AnthropicApiKey = s.AnthropicApiKey ?? string.Empty;
             c.AnthropicModel = ChosenModel(s.AnthropicModel, s.AnthropicModelCustom) ?? c.AnthropicModel;
             c.OpenAIApiKey = s.OpenAIApiKey ?? string.Empty;
@@ -273,8 +317,8 @@ namespace ImmersiveAI.Mcm
                 c.MaxTokens = s.MaxTokens;
 
             c.EnableChatWindow = s.EnableChatWindow;
-            c.ChatWindowHotkey = s.ChatWindowHotkey.SelectedValue ?? c.ChatWindowHotkey;
-            c.LetterWindowHotkey = s.LetterWindowHotkey.SelectedValue ?? c.LetterWindowHotkey;
+            c.ChatWindowHotkey = SelectedOf(s.ChatWindowHotkey) ?? c.ChatWindowHotkey;
+            c.LetterWindowHotkey = SelectedOf(s.LetterWindowHotkey) ?? c.LetterWindowHotkey;
             c.NotifyWhenReplyReady = s.NotifyWhenReplyReady;
 
             c.EnableNpcInitiatedChats = s.EnableNpcInitiatedChats;
@@ -424,12 +468,18 @@ namespace ImmersiveAI.Mcm
         }
 
         /// <summary>Selects an existing dropdown value; leaves the current selection if the value is not
-        /// present (used for a fixed set like the backend, where an unknown value is a config error).</summary>
+        /// present (used for a fixed set like the backend, where an unknown value is a config error).
+        /// Best-effort: a dropdown whose innards throw (unhealthy MCM builds) is left alone rather than
+        /// killing the whole push.</summary>
         private static void Select(Dropdown<string> dropdown, string value)
         {
             if (dropdown == null || string.IsNullOrWhiteSpace(value)) return;
-            var index = dropdown.IndexOf(value);
-            if (index >= 0) dropdown.SelectedIndex = index;
+            try
+            {
+                var index = dropdown.IndexOf(value);
+                if (index >= 0) dropdown.SelectedIndex = index;
+            }
+            catch { /* this field stays as it was; the rest of the push proceeds */ }
         }
 
         /// <summary>Selects the value in the dropdown when the curated list carries it (the custom field
@@ -439,18 +489,22 @@ namespace ImmersiveAI.Mcm
         private static string SelectOrCustom(Dropdown<string> dropdown, string value)
         {
             if (dropdown == null || string.IsNullOrWhiteSpace(value)) return string.Empty;
-            var index = dropdown.IndexOf(value);
-            if (index < 0) return value;
-            dropdown.SelectedIndex = index;
-            return string.Empty;
+            try
+            {
+                var index = dropdown.IndexOf(value);
+                if (index < 0) return value;
+                dropdown.SelectedIndex = index;
+                return string.Empty;
+            }
+            catch { return value; } // broken dropdown: the custom field carries the model instead
         }
 
         /// <summary>The model the menu currently means: the custom field while it holds text (it
         /// overrides the dropdown, as its label promises), the dropdown pick otherwise.</summary>
-        private static string ChosenModel(Dropdown<string> dropdown, string custom)
+        private static string? ChosenModel(Dropdown<string>? dropdown, string custom)
         {
             if (!string.IsNullOrWhiteSpace(custom)) return custom.Trim();
-            return dropdown != null ? dropdown.SelectedValue : null;
+            return SelectedOf(dropdown);
         }
 
         /// <summary>Selects a dropdown value, adding it first if the list does not already carry it — so a
@@ -458,13 +512,17 @@ namespace ImmersiveAI.Mcm
         private static void SelectOrAdd(Dropdown<string> dropdown, string value)
         {
             if (dropdown == null || string.IsNullOrWhiteSpace(value)) return;
-            var index = dropdown.IndexOf(value);
-            if (index < 0)
+            try
             {
-                dropdown.Add(value);
-                index = dropdown.Count - 1;
+                var index = dropdown.IndexOf(value);
+                if (index < 0)
+                {
+                    dropdown.Add(value);
+                    index = dropdown.Count - 1;
+                }
+                dropdown.SelectedIndex = index;
             }
-            dropdown.SelectedIndex = index;
+            catch { /* this field stays as it was; the rest of the push proceeds */ }
         }
 
         private static int Clamp(int value, int min, int max) =>
