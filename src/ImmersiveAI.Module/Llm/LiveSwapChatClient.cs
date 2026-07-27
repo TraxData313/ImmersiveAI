@@ -19,19 +19,14 @@ namespace ImmersiveAI.Llm
     {
         private readonly ModConfig _config;
         private readonly Func<int?> _maxTokensOverride;
-        private readonly Func<string>? _modelOverride;
-        private readonly bool _announceSwaps;
         private readonly object _gate = new object();
         private IChatClient? _inner;
         private string _signature = string.Empty;
 
-        internal LiveSwapChatClient(ModConfig config, Func<int?> maxTokensOverride,
-            bool announceSwaps = true, Func<string>? modelOverride = null)
+        internal LiveSwapChatClient(ModConfig config, Func<int?> maxTokensOverride)
         {
             _config = config;
             _maxTokensOverride = maxTokensOverride;
-            _announceSwaps = announceSwaps;
-            _modelOverride = modelOverride;
         }
 
         public Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
@@ -63,9 +58,9 @@ namespace ImmersiveAI.Llm
                     return _inner;
 
                 bool isSwap = _inner != null;
-                _inner = ChatClientFactory.Build(_config, _maxTokensOverride(), ModelOverride());
+                _inner = ChatClientFactory.Build(_config, _maxTokensOverride());
                 _signature = signature;
-                if (isSwap && _announceSwaps) AnnounceSwap();
+                if (isSwap) AnnounceSwap();
                 return _inner;
             }
         }
@@ -76,7 +71,7 @@ namespace ImmersiveAI.Llm
         {
             var c = _config;
             return string.Join("",
-                c.Backend, _maxTokensOverride()?.ToString() ?? "", c.MaxTokens.ToString(), ModelOverride(),
+                c.Backend, _maxTokensOverride()?.ToString() ?? "", c.MaxTokens.ToString(),
                 c.AnthropicApiKey, c.AnthropicModel,
                 c.OpenAIApiKey, c.OpenAIModel, c.OpenAIBaseUrl,
                 c.OpenRouterApiKey, c.OpenRouterModel,
@@ -94,14 +89,6 @@ namespace ImmersiveAI.Llm
                     $"Immersive AI: now speaking with {_config.Backend} · {model}.")));
             }
             catch { /* the notice is a nicety */ }
-        }
-
-        // Blank unless this shell serves a purpose that speaks to another model on the same backend
-        // (the utility split). Read live, so a settings change rebuilds through the signature.
-        private string ModelOverride()
-        {
-            try { return _modelOverride?.Invoke() ?? string.Empty; }
-            catch { return string.Empty; }
         }
 
         private string ModelInUse()

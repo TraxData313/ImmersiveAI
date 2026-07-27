@@ -4,21 +4,10 @@ The "which models for what" rethink Anton asked for. Verified against provider d
 
 ## The decision
 
-**One model per backend for the NPC's own life** (spoken replies, memory writes, letters), chosen
-for conversation quality + tool reliability + price.
-
-**The utility split shipped 2026.07.27** (`UseUtilityModel` on by default, `UtilityModel` blank =
-auto). The five small mechanical calls — the private feeling number, the reach-out ponder, the two
-letter yes/no weighings, the search-query refiner — go to the backend's small model on the same key
-and endpoint; everything an NPC *says, remembers, or writes* stays on the main model. The worry that
-postponed it (a second personality) is answered by where the line falls: none of these calls produce
-words anyone reads. The saving is real on a large model (the ponder alone carries the whole sheet)
-and exactly zero on a small one — auto resolves to "no split" when the main model already IS the
-small tier, when the price table says the pick would not be cheaper (a nano user is never moved up
-to mini), on the Local backend (one model is loaded), and on a custom endpoint whose catalogue we
-cannot know. Then `UtilityClient` simply hands back the main client, so nothing about that path
-changed. The health check names the split once, and the cost notices price each call by the model
-that actually served it, so a two-model bill is never a surprise.
+**One model per backend for everything** (spoken replies, memory writes, utility calls), chosen
+for conversation quality + tool reliability + price. Splitting utility calls (feeling number,
+desire yes/no, search refining) onto a cheaper model is a real ~30–40% saving but adds a second
+client, a second failure mode, and a second personality — postponed to post-V1 (task noted).
 
 | Role | Anthropic (default backend) | OpenAI |
 |---|---|---|

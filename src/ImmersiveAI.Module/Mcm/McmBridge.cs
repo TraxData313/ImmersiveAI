@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -229,7 +229,6 @@ namespace ImmersiveAI.Mcm
                 s.OpenAIApiKey, ChosenModel(s.OpenAIModel, s.OpenAIModelCustom),
                 s.OpenRouterApiKey, ChosenModel(s.OpenRouterModel, s.OpenRouterModelCustom),
                 s.OpenAIBaseUrl, s.LocalEndpoint, s.LocalModel, s.LocalContextWindow, s.MaxTokens,
-                s.UseUtilityModel, s.UtilityModel,
                 s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch, s.MaxKnownFacts, s.MaxNpcGoals,
@@ -244,7 +243,6 @@ namespace ImmersiveAI.Mcm
                 c.OpenAIApiKey, c.OpenAIModel,
                 c.OpenRouterApiKey, c.OpenRouterModel,
                 c.OpenAIBaseUrl, c.LocalEndpoint, c.LocalModel, c.LocalContextWindow, c.MaxTokens,
-                c.UseUtilityModel, c.UtilityModel,
                 c.EnableChatWindow, c.ChatWindowHotkey, c.LetterWindowHotkey,
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
                 c.EnableLetters, c.EnableWorldRecall, c.EnableWebSearch, c.MaxKnownFacts, c.MaxNpcGoals,
@@ -270,8 +268,6 @@ namespace ImmersiveAI.Mcm
             s.LocalModel = c.LocalModel ?? string.Empty;
             s.LocalContextWindow = Clamp(c.LocalContextWindow, 2048, 131072);
             s.MaxTokens = Clamp(c.MaxTokens, 100, 2000);
-            s.UseUtilityModel = c.UseUtilityModel;
-            s.UtilityModel = c.UtilityModel ?? string.Empty;
 
             s.EnableChatWindow = c.EnableChatWindow;
             SelectOrAdd(s.ChatWindowHotkey, c.ChatWindowHotkey);
@@ -319,8 +315,6 @@ namespace ImmersiveAI.Mcm
                 c.LocalContextWindow = s.LocalContextWindow;
             if (s.MaxTokens != Clamp(c.MaxTokens, 100, 2000))
                 c.MaxTokens = s.MaxTokens;
-            c.UseUtilityModel = s.UseUtilityModel;
-            c.UtilityModel = (s.UtilityModel ?? string.Empty).Trim();
 
             c.EnableChatWindow = s.EnableChatWindow;
             c.ChatWindowHotkey = SelectedOf(s.ChatWindowHotkey) ?? c.ChatWindowHotkey;

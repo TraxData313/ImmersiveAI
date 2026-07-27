@@ -105,16 +105,6 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;
 
-        [SettingPropertyBool("Cheaper model for the small calls", Order = 15, RequireRestart = false,
-            HintText = "Sends only the mechanical calls (the private feeling number, an NPC's yes/no on seeking you out or writing, sharpening a web search) to your backend's small model. Nothing an NPC says, remembers or writes goes there. Saves roughly a third if you speak with a large model; changes nothing if you already use a small one.")]
-        [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public bool UseUtilityModel { get; set; } = true;
-
-        [SettingPropertyText("Small-calls model (type any id)", Order = 16, RequireRestart = false,
-            HintText = "Empty = chosen for you: your backend's small model (claude-haiku-4-5, gpt-5.4-mini, or the router's spelling), and no split at all when you already speak with it. Type an id to decide yourself; it must be one the same backend and key can reach. Local servers never split.")]
-        [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public string UtilityModel { get; set; } = string.Empty;
-
         // ── Windows & Hotkeys ───────────────────────────────────────────────────────
 
         [SettingPropertyBool("Chat window", Order = 0, RequireRestart = false,

@@ -219,7 +219,7 @@ namespace ImmersiveAI
                 var desireLine = PromptBuilder.WriteLetterDesireLine(ctx.PlayerName);
                 var desireMsgs = _promptBuilder.BuildAngelPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
-                var desireRaw = await UtilityClient.CompleteAsync(desireMsgs).ConfigureAwait(false);
+                var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
                 // Weighing whether to write rests them either way (see the reach-out desire beat).
@@ -627,7 +627,7 @@ namespace ImmersiveAI
                 var readLine = PromptBuilder.AnswerLetterDesireLine(ctx.PlayerName, letter.Body);
                 var readMsgs = _promptBuilder.BuildAngelPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, readLine, _config.SystemVoiceName);
-                var desireRaw = await UtilityClient.CompleteAsync(readMsgs).ConfigureAwait(false);
+                var desireRaw = await _client.CompleteAsync(readMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
                 // A letter of the player's in their hands IS the player engaging: whatever of their own

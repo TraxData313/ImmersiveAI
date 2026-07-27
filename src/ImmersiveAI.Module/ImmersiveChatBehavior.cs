@@ -39,7 +39,6 @@ namespace ImmersiveAI
 
         private readonly ModConfig _config;
         private readonly IChatClient _client;
-        private readonly IChatClient _utilityClientShell;
         private readonly JsonMemoryStore _memoryStore;
         private readonly MemoryCompressor _compressor;
         private readonly PromptBuilder _promptBuilder = new PromptBuilder();
@@ -155,20 +154,7 @@ namespace ImmersiveAI
             // plus a full list of truths plus a sense of self cannot breathe inside a spoken-reply cap.
             // The budget is read live so a settings change reaches this client too, restart-free.
             _compressor = new MemoryCompressor(ChatClientFactory.Create(config, () => config.MaxMemoryWriteTokens));
-            // The plumbing's own client: same backend and key, a cheaper model, for the small
-            // mechanical calls. Built lazily inside the shell, so it costs nothing when there is
-            // no split (see UtilityClient).
-            _utilityClientShell = ChatClientFactory.CreateUtility(config);
         }
-
-        /// <summary>The client for the small mechanical calls — the private feeling number, a yes/no
-        /// weighing of whether to seek the player out or write, the sharpening of a search query.
-        /// Nothing an NPC SAYS, remembers, or writes ever goes through here. Falls back to the one
-        /// voice whenever the split resolves to nothing (a small model already, a local server, an
-        /// unknown endpoint, or the player having switched it off), so the no-split path is exactly
-        /// what it always was.</summary>
-        private IChatClient UtilityClient =>
-            string.IsNullOrEmpty(_config.ResolvedUtilityModel) ? _client : _utilityClientShell;
 
         // One spoken completion that may reach for the world's memory along the way (the recall
         // tools, resolved from live campaign data on the game thread) and, when granted, the
@@ -271,7 +257,7 @@ namespace ImmersiveAI
                     ChatMessage.System("You sharpen web search queries. Answer with the search query alone — one line, no quotes, no commentary."),
                     ChatMessage.User(ask),
                 };
-                var raw = await UtilityClient.CompleteAsync(messages).ConfigureAwait(false);
+                var raw = await _client.CompleteAsync(messages).ConfigureAwait(false);
                 var line = (raw ?? string.Empty).Trim().Trim('"', '“', '”');
                 int nl = line.IndexOf('\n');
                 if (nl >= 0) line = line.Substring(0, nl).Trim();
@@ -1243,7 +1229,7 @@ namespace ImmersiveAI
                 {
                     var feelingMessages = _promptBuilder.BuildFeelingQuery(
                         ctx.Persona, ctx.PlayerName, playerInput, reply, _config.SystemVoiceName);
-                    var feelingRaw = await UtilityClient.CompleteAsync(feelingMessages).ConfigureAwait(false);
+                    var feelingRaw = await _client.CompleteAsync(feelingMessages).ConfigureAwait(false);
                     feltShift = FeelingParser.ParseShift(feelingRaw) ?? 0;
                 }
                 catch { /* the number is best-effort; never let it cost us the conversation */ }
@@ -1736,7 +1722,7 @@ namespace ImmersiveAI
                 var ponderLine = PromptBuilder.ReachOutPonderLine(ctx.PlayerName, stranger);
                 var ponderMsgs = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, ponderLine, _config.SystemVoiceName);
-                var ponderRaw = await UtilityClient.CompleteAsync(ponderMsgs).ConfigureAwait(false);
+                var ponderRaw = await _client.CompleteAsync(ponderMsgs).ConfigureAwait(false);
                 var resolution = string.IsNullOrWhiteSpace(ponderRaw) ? "No." : ponderRaw.Trim();
 
                 // The weighing itself rests them for a while (OutreachMark.Considered) whatever they chose:
