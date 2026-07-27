@@ -20,10 +20,6 @@ POST V1 or NOT FULLY DECIDED:
     ..\reference\Bannerlord.PartyAI; prior art: Finer Party Controls (closed, clan-screen panel +
     the "Thinks" framework that exists precisely because naive SetMove is unstable).
 - [ ] NPCs that are in charge of Cities/Castles when they see ana enemy army they get the army and their party/castle info and get the option to send a letter (asking for help, letting the player know they can hold etc)
-- [ ] Utility model split (cost saving)
-    a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
-    desire yes/no, search refining — cuts roughly a third of cost; parked until the ledger's real
-    numbers say it's worth the second client (see docs/models-and-costs.md).
 - [ ] Localization wiring
     V1 ships English-only UI and says so on the page; the {=ImmersiveAI_*} ids exist if we ever wire
     the XML. (The NPCs already answer in whatever language the player writes — stated proudly on the page.)

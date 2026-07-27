@@ -367,6 +367,20 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
   their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
   default 1500, never below `MaxTokens`),
+  `UseUtilityModel` + `UtilityModel` (2026.07.27, the utility split: the five small mechanical calls —
+  the private feeling number, the reach-out ponder, the two letter yes/no weighings, the search-query
+  refiner — go to a cheaper model on the SAME backend/key/endpoint, while everything an NPC says,
+  remembers, or writes stays on the main model. Blank `UtilityModel` = auto: claude-haiku-4-5 /
+  gpt-5.4-mini / the router's dotted spelling of whichever family the main model belongs to, and NO
+  split at all when the main model already IS it, when `ModConfig.PriceFor` says the pick is not
+  cheaper (a nano user is never moved up to mini), on the Local backend (one model is loaded), or on a
+  custom OpenAI endpoint whose catalogue we cannot know. `ModConfig.ResolvedUtilityModel` is the live
+  answer, empty meaning "no split" — and then `ImmersiveChatBehavior.UtilityClient` hands back the main
+  client, so the no-split path is byte-for-byte the old one. The mechanism is
+  `ChatClientFactory.CreateUtility` → `LiveSwapChatClient(modelOverride)`, the override joining
+  `Signature()` like every other connection setting; memory + utility shells pass `announceSwaps:
+  false` so only the voice the player hears announces a model change. The health check names the split
+  once ("connected to X · Y (small calls: Z)"). Both default on/blank),
   `NotifyOnMemoryRefactor` (a soft activity-style notice the moment an NPC's automatic compression
   reworks her deep memory — "…turns over old memories of you, and settles them deeper"; default on),
   `ModelContextWindows` (user-editable model → context-window dict — gpt-4o 128k, gpt-4.1 1M,

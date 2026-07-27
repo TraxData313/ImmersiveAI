@@ -136,6 +136,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   one at a time mid-conversation, reflection reworks them wholesale via a `GOALS:` replace-all section),
   `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
   replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls),
+  `UseUtilityModel` + `UtilityModel` (the utility split: the small mechanical calls — feeling number,
+  reach-out ponder, letter yes/no, search refining — ride a cheaper model on the same backend and key;
+  blank = auto per backend, and no split when the main model is already small, on Local, or on a
+  custom endpoint; nothing an NPC says or remembers ever goes there),
   `NotifyOnMemoryRefactor` (soft notice when an NPC's compression reworks her deep memory),
   `ModelContextWindows` (user-editable model → context-window dict the memory-percent settings
   scale against; longest key contained in the model id wins), `DevMode` (default false: hides the

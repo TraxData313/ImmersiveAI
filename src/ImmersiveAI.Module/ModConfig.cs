@@ -138,6 +138,114 @@ namespace ImmersiveAI
         /// until the day turns or the cap is raised. 0 (the default) means no cap.</summary>
         public int MaxDailyRequests { get; set; } = 0;
 
+        /// <summary>The utility split (2026.07.27): the small, mechanical calls — the private feeling
+        /// number, an NPC's yes/no weighing of whether to seek the player out or write, the sharpening
+        /// of a web-search query — go to a cheaper model than the one the NPCs SPEAK with. Nothing an
+        /// NPC says, remembers, or writes in a letter ever rides here; only the plumbing does. Roughly
+        /// a third off the bill for anyone on a large model, and nothing at all changes for someone
+        /// already on a small one (the split then resolves to the same model and is skipped).
+        /// Set false to put every call back on the one model.</summary>
+        public bool UseUtilityModel { get; set; } = true;
+
+        /// <summary>Which model the small calls use. Blank (the default) means "choose for me": the
+        /// small tier of whatever backend is in use — claude-haiku-4-5, gpt-5.4-mini, or the router's
+        /// spelling of those — and no split at all when the main model IS that model, when the price
+        /// table says the choice would not be cheaper, on a local server (one model is loaded, asking
+        /// for another would only fail), or on a custom endpoint whose catalogue we cannot know. Name
+        /// a model here to decide for yourself; it must be one the SAME backend and key can reach.</summary>
+        public string UtilityModel { get; set; } = "";
+
+        /// <summary>The model the small calls actually speak to, or empty when there is no split and
+        /// they simply ride the main client. Resolved live, so an MCM edit takes hold on the next call.</summary>
+        [JsonIgnore]
+        public string ResolvedUtilityModel => ResolveUtilityModel();
+
+        private string ResolveUtilityModel()
+        {
+            try
+            {
+                if (!UseUtilityModel) return string.Empty;
+
+                var chosen = (UtilityModel ?? string.Empty).Trim();
+                var main = (MainModel ?? string.Empty).Trim();
+
+                if (chosen.Length == 0)
+                {
+                    // Choosing for the player is only honest where we know the catalogue: the two
+                    // cloud backends we ship, and the router's own spelling of the same small models.
+                    switch (Backend)
+                    {
+                        case "Anthropic": chosen = "claude-haiku-4-5"; break;
+                        case "OpenAI":
+                            if (!string.Equals(OpenAIBaseUrl, DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase))
+                                return string.Empty;
+                            chosen = "gpt-5.4-mini";
+                            break;
+                        case "OpenRouter":
+                            // Stay inside the family the player picked — never swap one house's model
+                            // for another's behind their back.
+                            if (main.IndexOf("claude", StringComparison.OrdinalIgnoreCase) >= 0) chosen = "anthropic/claude-haiku-4.5";
+                            else if (main.IndexOf("gpt", StringComparison.OrdinalIgnoreCase) >= 0) chosen = "openai/gpt-5.4-mini";
+                            else return string.Empty;
+                            break;
+                        default: return string.Empty;   // Local: whatever the server loaded is all there is
+                    }
+
+                    // Only worth a second client if it is truly cheaper — a player already down on
+                    // nano tiers must not be quietly moved UP to mini.
+                    if (!IsCheaper(chosen, main)) return string.Empty;
+                }
+
+                return string.Equals(chosen, main, StringComparison.OrdinalIgnoreCase) ? string.Empty : chosen;
+            }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>The model the NPCs presently speak with, whichever backend is in use.</summary>
+        [JsonIgnore]
+        public string MainModel
+        {
+            get
+            {
+                switch (Backend)
+                {
+                    case "OpenAI": return OpenAIModel ?? "";
+                    case "OpenRouter": return OpenRouterModel ?? "";
+                    case "Local": return LocalModel ?? "";
+                    default: return AnthropicModel ?? "";
+                }
+            }
+        }
+
+        /// <summary>This model's rates, by the same longest-key-contained match the cost notices use.
+        /// Null when the table knows nothing of it.</summary>
+        public ModelPrice? PriceFor(string model)
+        {
+            try
+            {
+                if (ModelPrices == null || string.IsNullOrWhiteSpace(model)) return null;
+                ModelPrice? best = null;
+                int bestLen = -1;
+                foreach (var pair in ModelPrices)
+                {
+                    if (string.IsNullOrEmpty(pair.Key) || pair.Value == null) continue;
+                    if (model.IndexOf(pair.Key, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    if (pair.Key.Length > bestLen) { bestLen = pair.Key.Length; best = pair.Value; }
+                }
+                return best;
+            }
+            catch { return null; }
+        }
+
+        // Cheaper on input, which is what the small calls are made of (a whole sheet in, a word out).
+        // An unknown price on either side answers "no" — never guess someone's bill downward.
+        private bool IsCheaper(string candidate, string current)
+        {
+            var a = PriceFor(candidate);
+            var b = PriceFor(current);
+            return a != null && b != null && a.InputPerMTok < b.InputPerMTok;
+        }
+
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
         /// compression: the rolling summary, her lasting truths, her sense of self). Kept apart from
         /// <see cref="MaxTokens"/> — which paces spoken replies — so deep memory has room to be rich:
@@ -603,6 +711,9 @@ namespace ImmersiveAI
             OpenRouterApiKey = (OpenRouterApiKey ?? string.Empty).Trim();
             OpenRouterModel = (OpenRouterModel ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-5.4-mini";
+
+            // The utility model: a pasted id keeps no stray spaces; blank stays "choose for me".
+            UtilityModel = (UtilityModel ?? string.Empty).Trim();
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;

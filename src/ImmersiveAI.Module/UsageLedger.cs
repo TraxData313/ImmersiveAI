@@ -192,17 +192,7 @@ namespace ImmersiveAI
             cost = 0;
             try
             {
-                var prices = _config?.ModelPrices;
-                if (prices == null || string.IsNullOrWhiteSpace(model)) return false;
-
-                ModConfig.ModelPrice? best = null;
-                int bestLen = -1;
-                foreach (var pair in prices)
-                {
-                    if (string.IsNullOrEmpty(pair.Key) || pair.Value == null) continue;
-                    if (model.IndexOf(pair.Key, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                    if (pair.Key.Length > bestLen) { bestLen = pair.Key.Length; best = pair.Value; }
-                }
+                var best = _config?.PriceFor(model);
                 if (best == null) return false;
 
                 cost = tokensIn / 1_000_000.0 * best.InputPerMTok + tokensOut / 1_000_000.0 * best.OutputPerMTok;

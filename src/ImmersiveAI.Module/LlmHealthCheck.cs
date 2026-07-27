@@ -74,8 +74,12 @@ namespace ImmersiveAI
                 }
 
                 var quiet = string.IsNullOrWhiteSpace(model) ? backend : $"{backend} · {model}";
-                ModLog.Info($"Health check OK — connected to {quiet}.");
-                Report($"Immersive AI: connected to {quiet}. The world is listening.", OkColor);
+                // When the small mechanical calls ride a cheaper model, say so once — a bill that
+                // shows two models should never be a surprise.
+                var utility = config?.ResolvedUtilityModel ?? string.Empty;
+                var withUtility = utility.Length == 0 ? quiet : $"{quiet} (small calls: {utility})";
+                ModLog.Info($"Health check OK — connected to {withUtility}.");
+                Report($"Immersive AI: connected to {withUtility}. The world is listening.", OkColor);
             }
             catch (Exception ex)
             {
