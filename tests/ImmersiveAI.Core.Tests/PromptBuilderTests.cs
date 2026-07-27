@@ -140,7 +140,7 @@ public class PromptBuilderTests
         Assert.Equal(ChatRole.User, messages[3].Role);
         Assert.StartsWith("(Within my own mind:", messages[3].Content); // their own reckoning, no Angel
         Assert.DoesNotContain("Seraph", messages[3].Content);
-        Assert.Contains("STAY", messages[3].Content);                   // the sober decision it asks for
+        Assert.Contains("NO — or YES:", messages[3].Content);           // the plain decision it asks for
     }
 
     [Fact]
@@ -484,22 +484,26 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void ReachOutPonderLine_DemandsACauseAndKeepsAStrangerHonest()
+    public void ReachOutPonderLine_AsksOnlyWhetherThereIsSomethingToDiscuss()
     {
-        // The reach-out weighing is the NPC's own sober reckoning: courtesy is named as no cause
-        // (the lever against "how are you feeling today" visits), and someone never spoken with
-        // must not imagine a past that is not there.
+        // One simple nudge — "is there something I want to discuss?" — and nothing telling them what
+        // a worthy topic is (a list there made every soul answer the same; Anton, 2026.07.27). The
+        // only fact kept: a stranger has no shared past to imagine.
         var stranger = PromptBuilder.ReachOutPonderLine("Vulgrim", stranger: true);
         var friend = PromptBuilder.ReachOutPonderLine("Vulgrim");
 
         Assert.Contains("we have never spoken", stranger);
         Assert.DoesNotContain("we have never spoken", friend);
-        Assert.Contains("no cause", stranger);                 // courtesy alone moves no one
-        Assert.Contains("no cause", friend);
-        Assert.Contains("needs no second telling", friend);    // last time's errand is spent
-        // Both ask for the plain decision the parser reads.
-        Assert.Contains("STAY", stranger);
-        Assert.Contains("GO:", friend);
+        Assert.Contains("discuss", stranger);
+        Assert.Contains("discuss", friend);
+        // No topic-policing survives.
+        Assert.DoesNotContain("no cause", stranger);
+        Assert.DoesNotContain("no cause", friend);
+        // Both ask for the plain decision the parser reads — YES/NO, never STAY/GO (a "go" smells
+        // of physically leaving).
+        Assert.Contains("NO — or YES:", stranger);
+        Assert.Contains("NO — or YES:", friend);
+        Assert.DoesNotContain("STAY", friend);
     }
 
     [Fact]
@@ -521,7 +525,6 @@ public class PromptBuilderTests
         var friend = PromptBuilder.FirstWordLine("Vulgrim");
 
         Assert.Contains("we have never spoken", first);
-        Assert.Contains("name myself briefly", first);
         Assert.Contains("their smith buys no iron", first);    // the resolved cause rides along
         Assert.DoesNotContain("we have never spoken", friend);
         // Both are told the answer may not be immediate, so silence is a lived moment, not a rebuff.

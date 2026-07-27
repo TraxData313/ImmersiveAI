@@ -150,23 +150,19 @@ namespace ImmersiveAI.Core.Prompts
             return messages;
         }
 
-        /// <summary>The NPC's own reckoning on whether to approach the player at all — sober, first
-        /// person, and demanding a real cause: their trade or duty, news lately come, something owed or
-        /// unfinished, something they genuinely want. Courtesy and "how do you fare" are named as no
-        /// cause, and what was brought last time needs no second telling — the levers against the
-        /// steward-asking-how-you-feel repetition (Anton, 2026.07.26). Answered STAY or "GO: reason"
-        /// (see <see cref="Initiation.InitiationParser.WantsToGo"/>).</summary>
+        /// <summary>The NPC's own reckoning on whether to approach the player — one simple nudge, first
+        /// person: is there something I want to DISCUSS with them (not merely "do I want to say hi"), the
+        /// rest left wholly to their own nature and what the sheet has stirred (news, mood, trade, memory).
+        /// Deliberately free of instruction about what a worthy topic is — a list there made every soul
+        /// answer the same (Anton, 2026.07.27: "the AI stops being AI and becomes a program again").
+        /// Answered NO or "YES: the something" (see <see cref="Initiation.InitiationParser.WantsToGo"/>).</summary>
         public static string ReachOutPonderLine(string playerName, bool stranger = false) => stranger
             ? $"I notice {playerName} nearby — someone I know only by sight, for we have never spoken. " +
-              "Nothing obliges me to approach; my own affairs can hold me as well. Would I truly cross to a stranger now? " +
-              "Only a real cause would move me — some matter of my trade, station or duty, some news lately come that touches them, " +
-              "something I want or need of them. Courtesy alone is no cause; strangers do not seek each other out to ask how they fare. " +
-              "I decide now, in one line: STAY — or GO: followed by my true cause, plainly."
-            : $"I notice {playerName} nearby, about their own affairs. Nothing obliges me to approach. " +
-              "Have I real cause to go to them now — a matter of my duty or trade, news lately come, something unfinished or owed between us, " +
-              "something I genuinely need to say or ask? A bare greeting is no cause, asking how they fare is no cause, " +
-              "and whatever I brought them last time needs no second telling. If I have nothing of substance, I keep to my own business without shame. " +
-              "I decide now, in one line: STAY — or GO: followed by my true cause, plainly.";
+              "Is there something I would discuss with them? " +
+              "I decide in one line: NO — or YES: what I want to discuss."
+            : $"I notice {playerName} nearby, about their own affairs. " +
+              "Is there something I want to discuss with them just now? " +
+              "I decide in one line: NO — or YES: what I want to discuss.";
 
         /// <summary>The condensed note recorded for a ponder beat (the live prompt uses the full
         /// <see cref="ReachOutPonderLine"/>; memory keeps this short truthful note plus their answer).
@@ -185,11 +181,11 @@ namespace ImmersiveAI.Core.Prompts
             (innerLine ?? string.Empty).TrimStart().StartsWith(PonderNoteMark, StringComparison.Ordinal);
 
         /// <summary>The NPC's own narration of crossing to the player after choosing an offered approach:
-        /// when <paramref name="welcomed"/> the player receives them and they speak first, to the point of
-        /// what brought them; otherwise the player is too busy and the moment is theirs to spend.</summary>
+        /// when <paramref name="welcomed"/> the player receives them and they speak first; otherwise the
+        /// player is too busy and the moment is theirs to spend.</summary>
         public static string ApproachLine(string playerName, bool welcomed, string? reason = null) => welcomed
             ? $"I rise and go to {playerName}. Seeing me come, they turn to me and give me their attention.{ReasonSentence(reason)} " +
-              "I speak first now, in my own voice — plainly, to the point of what brought me, not mere pleasantry."
+              "I speak first now, in my own voice."
             : $"I rise and go to {playerName}, but as I near, they raise an apologetic hand — too caught up just now to speak with me. " +
               "The moment is still mine: I say or do with it what I will, here and now.";
 
@@ -199,16 +195,16 @@ namespace ImmersiveAI.Core.Prompts
             : $"Of my own accord I went to {playerName}{ReasonClause(reason)}, but they were too caught up to speak with me just then. In that moment:";
 
         /// <summary>The NPC's own narration for a reaching-out that arrives as spoken words: they cross
-        /// to the player and speak first — carrying the cause they resolved on — knowing the answer may
-        /// come at once or only later. The stranger variant names themselves briefly, as fits their
-        /// station, and comes straight to the purpose (no imagined history).</summary>
+        /// to the player and speak first — carrying what they resolved to discuss — knowing the answer
+        /// may come at once or only later. The stranger variant states only the fact: they have never
+        /// spoken (no imagined history; how to open is their own affair).</summary>
         public static string FirstWordLine(string playerName, bool stranger = false, string? reason = null) => stranger
-            ? $"I cross to {playerName} now — we have never spoken, so I name myself briefly, as fits my station, and come straight to my purpose.{ReasonSentence(reason)} " +
+            ? $"I cross to {playerName} now — we have never spoken.{ReasonSentence(reason)} " +
               "They are caught up in their own affairs; my words will reach them, but the answer may come at once or only later. " +
-              "I speak my first words now, plainly, in my own voice."
+              "I speak my first words now, in my own voice."
             : $"I go to {playerName} now.{ReasonSentence(reason)} " +
               "They are caught up in their own affairs; my words will reach them, but the answer may come at once or only later. " +
-              "I speak now, in my own voice — to the point of what brought me, not mere pleasantry.";
+              "I speak now, in my own voice.";
 
         /// <summary>The condensed note recorded for a first-word beat — the cause rides in it, so the
         /// next ponder sees plainly what was already brought and needs no second telling.</summary>

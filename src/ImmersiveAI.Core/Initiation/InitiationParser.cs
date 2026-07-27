@@ -26,12 +26,13 @@ namespace ImmersiveAI.Core.Initiation
             return System.Text.RegularExpressions.Regex.IsMatch(t, "\\byes\\b");
         }
 
-        /// <summary>Reads the STAY / "GO: reason" resolution of a reach-out ponder (the first-person
-        /// weighing that replaced the Angel's yes/no on 2026.07.26). Lenient around dressing — markdown,
-        /// quotes, "I go"/"I stay" phrasings — but an unreadable answer falls back to the old yes/no
-        /// reading, and anything still unclear is STAY, so the player is never troubled on a mumble.
-        /// The reason (the NPC's own stated cause for coming) is handed back trimmed and single-line;
-        /// empty when they gave none.</summary>
+        /// <summary>Reads the NO / "YES: what I want to discuss" resolution of a reach-out ponder (the
+        /// first-person weighing that replaced the Angel's question on 2026.07.26; YES/NO rather than
+        /// STAY/GO so the words never smell of physically leaving — Anton, 2026.07.27). Lenient around
+        /// dressing — markdown, quotes, "I go"/"I stay" phrasings, the old STAY/GO shape — but an
+        /// unreadable answer falls back to the plain yes/no reading, and anything still unclear is a NO,
+        /// so the player is never troubled on a mumble. The reason (what they resolved to discuss) is
+        /// handed back trimmed and single-line; empty when they gave none.</summary>
         public static bool WantsToGo(string? reply, out string reason)
         {
             reason = string.Empty;
@@ -41,9 +42,15 @@ namespace ImmersiveAI.Core.Initiation
             var t = reply!.Trim().TrimStart('*', '-', '>', '#', '(', '[', '"', '“', '\'', ' ');
             var lower = t.ToLowerInvariant();
 
-            if (StartsWithWord(lower, "stay") || StartsWithWord(lower, "i stay")
+            if (StartsWithWord(lower, "no") || StartsWithWord(lower, "nay")
+                || StartsWithWord(lower, "stay") || StartsWithWord(lower, "i stay")
                 || StartsWithWord(lower, "i remain") || StartsWithWord(lower, "i keep")) return false;
 
+            if (StartsWithWord(lower, "yes") || StartsWithWord(lower, "aye"))
+            {
+                reason = CleanReason(t.Substring(3));
+                return true;
+            }
             if (StartsWithWord(lower, "go"))
             {
                 reason = CleanReason(t.Substring(2));
@@ -56,7 +63,7 @@ namespace ImmersiveAI.Core.Initiation
                 return true;
             }
 
-            // Not the asked-for shape — fall back to the old yes/no reading (a bare "yes" carries no reason).
+            // Not the asked-for shape — fall back to the plain yes/no reading (no reason to hand back).
             return WantsToReachOut(reply);
         }
 

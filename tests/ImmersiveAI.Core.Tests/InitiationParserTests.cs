@@ -29,37 +29,41 @@ public class InitiationParserTests
 
 
     [Theory]
-    [InlineData("GO: the granary tally is short and they must hear of it", "the granary tally is short and they must hear of it")]
-    [InlineData("GO — the wounded lack herbs", "the wounded lack herbs")]
-    [InlineData("go: \"their smith pays double for iron\"", "their smith pays double for iron")]
-    [InlineData("**GO:** the war with the Vlandians touches our caravan", "the war with the Vlandians touches our caravan")]
+    [InlineData("YES: the granary tally is short and they must hear of it", "the granary tally is short and they must hear of it")]
+    [InlineData("Yes — the wounded lack herbs", "the wounded lack herbs")]
+    [InlineData("yes: \"their smith pays double for iron\"", "their smith pays double for iron")]
+    [InlineData("**YES:** the war with the Vlandians touches our caravan", "the war with the Vlandians touches our caravan")]
+    [InlineData("GO: the tolls on the west road", "the tolls on the west road")] // the old shape still reads
     [InlineData("I go: my lord's letter must be answered", "my lord's letter must be answered")]
-    public void WantsToGo_ReadsTheDecisionAndHandsBackTheCause(string reply, string expectedReason)
+    public void WantsToGo_ReadsTheDecisionAndHandsBackTheTopic(string reply, string expectedReason)
     {
         Assert.True(InitiationParser.WantsToGo(reply, out var reason));
         Assert.Equal(expectedReason, reason);
     }
 
     [Theory]
-    [InlineData("GO")]
-    [InlineData("Yes")]
-    public void WantsToGo_AcceptsABareAssentWithNoCause(string reply)
+    [InlineData("YES")]
+    [InlineData("Yes.")]
+    [InlineData("Aye")]
+    public void WantsToGo_AcceptsABareAssentWithNoTopic(string reply)
     {
         Assert.True(InitiationParser.WantsToGo(reply, out var reason));
         Assert.Equal(string.Empty, reason);
     }
 
     [Theory]
-    [InlineData("STAY")]
-    [InlineData("Stay.")]
-    [InlineData("stay — I have nothing of substance for them today")]
+    [InlineData("NO")]
+    [InlineData("No.")]
+    [InlineData("no — nothing needs saying today")]
+    [InlineData("Nay, my ledgers need me more than talk does.")]
+    [InlineData("STAY")] // the old shape still reads
     [InlineData("I stay; my ledgers need me more than talk does.")]
     [InlineData("I remain at my work.")]
-    [InlineData("Good day to them, but I have my rounds.")] // "Go..."-lookalike must not read as GO
-    [InlineData("No")]
+    [InlineData("Good day to them, but I have my rounds.")] // "Go..."-lookalike must not read as assent
+    [InlineData("Nothing comes to mind.")]
     [InlineData("")]
     [InlineData(null)]
-    public void WantsToGo_TreatsStayRefusalOrMumbleAsStay(string? reply)
+    public void WantsToGo_TreatsRefusalOrMumbleAsNo(string? reply)
     {
         Assert.False(InitiationParser.WantsToGo(reply, out var reason));
         Assert.Equal(string.Empty, reason);

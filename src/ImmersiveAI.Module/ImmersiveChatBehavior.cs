@@ -1723,7 +1723,7 @@ namespace ImmersiveAI
                 var ponderMsgs = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, ponderLine, _config.SystemVoiceName);
                 var ponderRaw = await _client.CompleteAsync(ponderMsgs).ConfigureAwait(false);
-                var resolution = string.IsNullOrWhiteSpace(ponderRaw) ? "STAY" : ponderRaw.Trim();
+                var resolution = string.IsNullOrWhiteSpace(ponderRaw) ? "No." : ponderRaw.Trim();
 
                 // The weighing itself rests them for a while (OutreachMark.Considered) whatever they chose:
                 // a STAY must not leave them the likeliest pick again next hour, and a GO whose notice

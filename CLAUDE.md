@@ -581,10 +581,12 @@ still owns arrivals, letters, and reflection). The situation for these beats is 
 (`SituationBuilder.BuildNearby` — "X is nearby, about their own affairs"), because the meeting shape's
 closing "And now X comes to me" contradicted the question of whether to go. The beats:
 (1) `PromptBuilder.BuildInnerPrompt` with `PromptBuilder.ReachOutPonderLine` — the full sheet (news, mood,
-duty, memory) plus a sober "have I real cause to go — trade/duty, news lately come, something owed or
-unfinished? Courtesy is no cause, and last time's errand needs no second telling" — answered **STAY or
-"GO: reason"** (`InitiationParser.WantsToGo`, word-boundary-safe so "Good day" never reads as GO; unreadable
-answers fall back to the old yes/no, then STAY). Memory keeps a condensed note (`ReachOutPonderNote`,
+duty, memory) plus ONE simple nudge: "Is there something I want to discuss with them just now?" — answered
+**NO or "YES: the something"** (`InitiationParser.WantsToGo`, word-boundary-safe, old STAY/GO still read;
+unreadable answers fall back to plain yes/no, then NO). Deliberately NO instruction about what a worthy
+topic is — the first cut listed causes and banned courtesy, and that made every soul answer the same
+("the AI stops being AI and becomes a program again", Anton 2026.07.27); YES/NO rather than STAY/GO so
+the words never smell of physically leaving. Memory keeps a condensed note (`ReachOutPonderNote`,
 prefix-matched by `IsPonderBeat` so the window folds reckoning+resolution into one narration line), and the
 resolved **reason rides into the delivery** — `FirstWordLine`/`ApproachLine` carry "What brings me: …", and
 the recorded `FirstWordNote`/`ApproachNote` keep it, so the next ponder sees what was already brought (the
