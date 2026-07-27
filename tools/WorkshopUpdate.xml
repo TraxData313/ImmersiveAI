@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.4.1 - Fixed: characters you had already talked with through the chat window introduced themselves all over again in ordinary conversation - the game did not count those talks as having met. Fixed: characters reaching out now come with something they want to discuss, instead of an empty hello - the moment that decides whether someone approaches you no longer asks merely whether they want to greet you, and what they bring is left entirely to them." />
+        <ChangeNotes Value="v1.4.2 - Mod menu hardening: where MCM builds its settings half-made (mismatched dependencies), the mod now repairs the menu, syncs field by field, keeps retrying the connection all session, and logs full error detail. config.json always works regardless." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />
