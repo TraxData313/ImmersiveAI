@@ -27,12 +27,16 @@
             <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="75" SuggestedHeight="75" HorizontalAlignment="Center" VerticalAlignment="Center" Sprite="BlankWhiteSquare_9" PositionXOffset="3" Color="#000000FF" CircularClipEnabled="true" CircularClipRadius="45" />
             <BrushWidget Id="NotificationRingImageWidget" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="75" SuggestedHeight="75" HorizontalAlignment="Center" VerticalAlignment="Center" PositionXOffset="3" Brush="Map.Notification.Type.Circle.Image" />
 
-            <!-- IMMERSIVE AI: the NPC's live portrait inside the circle, when the VM offers one. -->
-            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="75" SuggestedHeight="75" HorizontalAlignment="Center" VerticalAlignment="Center" PositionXOffset="3" CircularClipEnabled="true" CircularClipRadius="37" IsVisible="@HasCharacterImage">
-              <Children>
-                <ImageIdentifierWidget DataSource="{CharacterImage}" DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" AdditionalArgs="@AdditionalArgs" ImageId="@Id" TextureProviderName="@TextureProviderName" />
-              </Children>
-            </Widget>
+            <!-- IMMERSIVE AI: the NPC's live portrait inside the circle, when the VM offers one.
+                 Shaped exactly like vanilla's own portrait usages (SPConversationAggresivePartyItem,
+                 GameNotificationUI): FIXED size on the image widget itself, the circular clip on that
+                 same widget rather than on a wrapper, and HideWhenNull so vanilla notices — whose VMs
+                 have no CharacterImage, hence no ImageId — simply hide it. A stretched image inside a
+                 wrapper asks the thumbnail provider for a texture sized off a parent that the notice
+                 animates in, which is the suspect behind the bright-pink backdrop. The dark disc
+                 beneath is belt and braces: whatever the portrait leaves untouched stays quiet. -->
+            <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="75" SuggestedHeight="75" HorizontalAlignment="Center" VerticalAlignment="Center" PositionXOffset="3" Sprite="BlankWhiteSquare_9" Color="#17120DFF" CircularClipEnabled="true" CircularClipRadius="37" CircularClipSmoothingRadius="3" IsVisible="@HasCharacterImage" />
+            <ImageIdentifierWidget DataSource="{CharacterImage}" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="75" SuggestedHeight="75" HorizontalAlignment="Center" VerticalAlignment="Center" PositionXOffset="3" CircularClipEnabled="true" CircularClipRadius="37" CircularClipSmoothingRadius="3" HideWhenNull="true" AdditionalArgs="@AdditionalArgs" ImageId="@Id" TextureProviderName="@TextureProviderName" />
             <!-- /IMMERSIVE AI -->
 
             <ImageWidget Id="NotificationRingWidget" DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="107" SuggestedHeight="113" HorizontalAlignment="Right" VerticalAlignment="Center" Brush="Map.Notification.Ring" />
