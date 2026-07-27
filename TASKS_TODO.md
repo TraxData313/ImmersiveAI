@@ -24,6 +24,29 @@ POST V1 or NOT FULLY DECIDED:
     a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
     desire yes/no, search refining — cuts roughly a third of cost; parked until the ledger's real
     numbers say it's worth the second client (see docs/models-and-costs.md).
+- [ ] Utility model split (cost saving) — BUILT AND REVERTED 2026.07.27, pick it up from the code
+    Anton's call: it was written and working-by-build, but there was no time to playtest it and it
+    did not feel right to ship untested (his current haiku setup would see no change anyway — the
+    saving belongs to whoever speaks with sonnet / opus / 5.6). The whole implementation lives in
+    commit 86e061f (reverted by a0c0a64): `git show 86e061f` restores it in one step.
+    What it did: five MECHANICAL calls move to a cheaper model on the SAME backend, key and endpoint —
+    the private feeling number, the reach-out ponder, both letter yes/no weighings, the search-query
+    refiner. Everything an NPC SAYS, REMEMBERS or WRITES stays on the main model. THE LINE TO HOLD if
+    this is ever revisited: does a human ever read these words? If yes, main model.
+    Design worth keeping: `UseUtilityModel` (bool) + `UtilityModel` (blank = auto) + MCM fields;
+    auto picks the backend's small tier and never crosses provider families on OpenRouter; it resolves
+    to NO SPLIT when the main model already is that model, when the price table says the pick is not
+    cheaper (a nano user must never be moved UP to mini), on Local (one model is loaded), and on a
+    custom endpoint whose catalogue we cannot know — and with no split `UtilityClient` hands back the
+    main client, so that path stays byte-for-byte the old one. Mechanism: `ChatClientFactory.CreateUtility`
+    → `LiveSwapChatClient` with a model override that MUST join `Signature()`; memory + utility shells
+    pass `announceSwaps: false` so only the voice the player hears announces a model change.
+    Open question for next time: the reach-out PONDER carries the whole sheet, so it is where the money
+    is — but it is also the "does this soul want to seek you out" judgment Anton has tuned twice. Test
+    that one specifically on a big model before believing the saving is free.
+    Untestable by unit test as written: the resolution logic sits in `ModConfig` (Module, net472) while
+    the test project is Core (net8). If it returns, consider moving the pure resolver into Core so it
+    can be covered.
 - [ ] Localization wiring
     V1 ships English-only UI and says so on the page; the {=ImmersiveAI_*} ids exist if we ever wire
     the XML. (The NPCs already answer in whatever language the player writes — stated proudly on the page.)
