@@ -769,10 +769,25 @@ own party "rides with you — your scout". Beside the recalls ride the **field-c
 `NpcPersona.CanSurveyField`): `survey_surroundings` (bands within `SeeingRange`×1.5 with kind/faction/
 strength/foe-or-friend/distance-in-rider's-words + who is swifter — the true "can we escape them?" — and
 our own pace with the real `SpeedExplained` drag lines; counts coarsened below Scouting 125/50) and
-`weigh_battle` (company-or-army vs a named band/army/walled place, garrison + militia at half weight,
+`weigh_battle` (company-or-army vs a named band/army/walled place/village, garrison + militia at half weight,
 compositions from real rosters, verdict by true `EstimatedStrength` ratio, confidence by Tactics —
 NOTE: this game version has NO `PartyBase.TotalStrength`, use `EstimatedStrength`; `ExplainedNumber`
 explanations come from the parameterless `GetLines()`; `DefaultSkills` lives in `TaleWorlds.Core`).
+**The eyes gained the land itself (2026.07.27**, the "do you see those raiders burning the village north
+of us?" playtest — the scout counted brigands while Stathymos burned in plain sight): the survey now also
+tells (a) the **places** within sight — villages/towns/castles with whose they are and *how they fare*:
+`Settlement.IsUnderRaid` ("and IT BURNS: <attacker> is at the sack of it even now", attacker read from
+`s.Party.MapEvent.GetLeaderParty(BattleSideEnum.Attacker)` falling back to `LastAttackerParty`),
+`IsUnderSiege` (+ `SiegeEvent.BesiegerCamp.LeaderParty`), `IsRaided` (= village lately Looted),
+`InRebelliousState` — nearest four plus any troubled one further off; (b) **a bearing** on everything
+(`Whereabouts`/`Bearing`, +Y north +X east — "a few hours' ride to the north", because the player points
+at the map and says "north of us"); (c) **what each band is about** (`BandDoing`: raid/siege-assault/
+battle from `MapEvent` for every eye, marching intent from `DefaultBehavior` only at Scouting ≥ 50);
+(d) bands standing at a settlement are no longer dropped when they are FIGHTING there (the old
+`CurrentSettlement == null` filter hid every raider), and a raider/besieger is never crowded out of the
+list by nearer villager carts; (e) `weigh_battle` now resolves **villages** by name too — under raid it
+weighs the raider ("Stathymos lies under the knife even now…"), else militia at half weight with "no
+wall, no gate, no garrison" — and village carts no longer steal the village's own name.
 `recall_company` gained the surgeon's ledger (healing rates for named and ranks via the game's
 `PartyHealingModel`). Stations carry one trade-knowledge sentence each (`PersonaBuilder.TradeKnowledge`:
 artisan, tavern-keeper, ransom broker, smith, arena master, headman, merchant/caravan master). Family
