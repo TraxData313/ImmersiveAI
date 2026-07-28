@@ -19,7 +19,8 @@ If one of these searches brought you here — yes, this is that mod:
 - NPCs that **approach you** and **write you letters** on their own
 - an **AI wife or companion** that roleplays and never forgets your story
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
-- **OpenRouter** support, or fully offline with a **local model (LM Studio / Ollama)**
+- **OpenRouter** (recommended), OpenAI or Claude — or, for tinkerers only, a **local model
+  (LM Studio / Ollama)** at your own risk
 
 
 ## Alive
@@ -58,19 +59,30 @@ If one of these searches brought you here — yes, this is that mod:
 
 ## What it runs on — and what it costs
 
-Bring **your own API key** — Anthropic (default), OpenAI, or OpenRouter (one key, many models) —
-or no key at all: set `Backend` to `"Local"` and the NPCs think through **LM Studio** or
-**Ollama** on your own machine, free and private. (Local needs a tool-capable instruct model and
-real hardware; expect a rougher ride than the hosted defaults.)
+Bring **your own API key**. Recommended, in order:
 
-A typical exchange costs around a cent or less on the default models — $10 covers thousands of
+1. **OpenRouter** with `openai/gpt-5.6-luna` — the default, what the mod is tuned and tested
+   against. `openai/gpt-5.4-mini` is the cheaper fallback, also tested.
+2. **OpenAI** with those same two models.
+3. **Anthropic (Claude)** — works, haiku-4.5 by default; not tested at length.
+
+Any other model, from the dropdown or typed in yourself, is at your own risk, and must carry
+**native tool calling** or the NPCs go noticeably duller.
+
+> **Local models: tinkerers only, at your own risk.** Local exists because people asked, not
+> because it plays well. Instruct model with native tool calling, **thinking/reasoning OFF** in
+> your server (a thinking model burns its whole budget in silence and answers `...`),
+> `MaxTokens` 400+, and `LocalContextWindow` set to what your server actually loaded. I don't
+> debug local setups.
+
+A typical exchange costs around a cent or less on the recommended models — $10 covers thousands of
 messages. Every interaction shows its tokens and price in-game, daily totals are kept, and an
 optional hard daily cap makes runaway costs impossible.
 
 **Quick setup:**
 
-1. Get a key at **console.anthropic.com**, **platform.openai.com**, or **openrouter.ai** and add
-   a little credit — or skip the key and go local.
+1. Get a key at **openrouter.ai** (recommended) — or **platform.openai.com** / **console.anthropic.com** —
+   and add a little credit.
 2. Enable the mod, start the game once — it creates
    `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you where
    to paste the key.

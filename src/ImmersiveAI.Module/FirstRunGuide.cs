@@ -32,17 +32,16 @@ namespace ImmersiveAI
                     "Delete this file to see that popup once more.\r\n");
 
                 var keyField = config?.Backend == "OpenAI" ? "OpenAIApiKey"
-                    : config?.Backend == "OpenRouter" ? "OpenRouterApiKey"
-                    : "AnthropicApiKey";
+                    : config?.Backend == "Anthropic" ? "AnthropicApiKey"
+                    : "OpenRouterApiKey";
                 var body =
                     "Immersive AI gives every character a real, remembering mind — but the minds speak " +
                     "through an AI service, with YOUR OWN key, and no key is set yet. Until one is, the world stays silent.\n\n" +
-                    "1. GET A KEY — console.anthropic.com (Anthropic, the default), platform.openai.com (OpenAI), " +
-                    "or openrouter.ai (one key for many models). " +
-                    "All bill by use: an evening of conversation is typically well under a dollar, and the mod " +
-                    "shows you each exchange's cost as you play. " +
-                    "(No key at all? Set Backend to \"Local\" and run a model on your own machine with " +
-                    "LM Studio or Ollama — free and private, though small models make weaker company.)\n\n" +
+                    "1. GET A KEY — openrouter.ai is recommended: one key, every model, and the mod comes set " +
+                    "to openai/gpt-5.6-luna (openai/gpt-5.4-mini is the cheaper fallback). platform.openai.com " +
+                    "with those same two works as well; console.anthropic.com (Claude) works but is less tested. " +
+                    "All bill by use — an evening of conversation is typically well under a dollar, and the mod " +
+                    "shows each exchange's cost as you play. (Local models: tinkerers only, unsupported.)\n\n" +
                     "2. PUT IT HERE — open:\n" + ModConfig.ConfigFilePath + "\n" +
                     "and paste the key into \"" + keyField + "\"." +
                     " (With the Mod Configuration Menu installed, the key can also be set in-game under Mod Options.)\n\n" +

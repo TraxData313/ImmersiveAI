@@ -16,7 +16,12 @@ namespace ImmersiveAI
         /// without clobbering hand-edits (Normalize keys migrations off it). Do not edit.</summary>
         public int ConfigVersion { get; set; } = 1;
 
-        public string Backend { get; set; } = "Anthropic"; // "Anthropic", "OpenAI", "OpenRouter" or "Local"
+        /// <summary>Which service the minds think through. OpenRouter is the DEFAULT since 2026.07.28:
+        /// one key reaches every model worth using, and the two the mod is actually tuned and tested
+        /// against — gpt-5.6-luna first, gpt-5.4-mini as the cheaper fallback — live there. OpenAI with
+        /// the same two is the equal second; Anthropic works and is untested at length; "Local" is
+        /// tinkerers' territory, unsupported by design.</summary>
+        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Anthropic" or "Local"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-haiku-4-5";
@@ -28,12 +33,12 @@ namespace ImmersiveAI
         /// context tables match them by containment. Live-verified 2026.07.16: plain replies,
         /// native tool calling, and reasoning-off all work through the router.</summary>
         public string OpenRouterApiKey { get; set; } = "";
-        public string OpenRouterModel { get; set; } = "openai/gpt-5.4-mini";
+        public string OpenRouterModel { get; set; } = "openai/gpt-5.6-luna";
 
         public const string OpenRouterEndpoint = "https://openrouter.ai/api/v1/chat/completions";
 
         public string OpenAIApiKey { get; set; } = "";
-        public string OpenAIModel { get; set; } = "gpt-5.4-mini";
+        public string OpenAIModel { get; set; } = "gpt-5.6-luna";
 
         /// <summary>The default (real OpenAI) chat-completions endpoint the OpenAI backend speaks to.</summary>
         public const string DefaultOpenAIEndpoint = "https://api.openai.com/v1/chat/completions";
@@ -602,7 +607,7 @@ namespace ImmersiveAI
             // trailing space can't 400 the router.
             OpenRouterApiKey = (OpenRouterApiKey ?? string.Empty).Trim();
             OpenRouterModel = (OpenRouterModel ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-5.4-mini";
+            if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-5.6-luna";
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;

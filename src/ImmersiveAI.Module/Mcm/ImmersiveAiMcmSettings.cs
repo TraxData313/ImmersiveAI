@@ -31,9 +31,9 @@ namespace ImmersiveAI.Mcm
         // takes hold on the very next reply — no restart.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
-            HintText = "Which AI service the NPCs think with. Anthropic (Claude) is the default; OpenAI (GPT) also works; OpenRouter reaches both with one key from openrouter.ai; Local speaks to a model on YOUR machine (LM Studio/Ollama) — free and private, no key, but weaker with the NPCs' tools.")]
+            HintText = "Which AI service the NPCs think with. OpenRouter is recommended and the default (one key from openrouter.ai, every model). OpenAI is the equal second; Anthropic (Claude) works but is less tested. Local runs a model on YOUR machine — for tinkerers, unsupported, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 0);
+        public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 2);
 
         [SettingPropertyText("Anthropic API key", Order = 1, RequireRestart = false,
             HintText = "Your Claude API key (starts with sk-ant-...). Get one at console.anthropic.com. Required when the backend is Anthropic. Kept only in your local config file.")]
@@ -41,7 +41,7 @@ namespace ImmersiveAI.Mcm
         public string AnthropicApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Anthropic model", Order = 2, RequireRestart = false,
-            HintText = "Haiku 4.5 ($1/$5 per MTok) is the fast, cheap default. Sonnet 5 ($3/$15) is the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. Any other model goes in the custom field below.")]
+            HintText = "Claude works, but is the least tested of the three cloud backends. Haiku 4.5 ($1/$5 per MTok) is the fast, cheap pick; Sonnet 5 ($3/$15) the step-up, Opus 4.8 ($5/$25) stronger still, Fable 5 ($10/$50) the flagship. Any other model goes in the custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> AnthropicModel { get; set; } = new Dropdown<string>(McmChoiceLists.AnthropicModels, 0);
 
@@ -56,9 +56,9 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
-            HintText = "gpt-5.4-mini ($0.75/$4.50 per MTok) is the proven default. luna ($1/$6) is newer, terra ($2.50/$15) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. Any other model goes in the custom field below.")]
+            HintText = "gpt-5.6-luna ($1/$6 per MTok) is the tested pick; gpt-5.4-mini ($0.75/$4.50) the cheaper fallback, also tested. terra ($2.50/$15) is stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. Any other model goes in the custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0);
+        public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 1);
 
         [SettingPropertyText("OpenAI model (type any id)", Order = 6, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: the exact OpenAI model id to use (e.g. gpt-4.1) — also the place for a custom endpoint's model id. Empty = the dropdown chooses. Unlisted models still work; the ~$ estimate just may not know their prices.")]
@@ -71,9 +71,9 @@ namespace ImmersiveAI.Mcm
         public string OpenRouterApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenRouter model", Order = 8, RequireRestart = false,
-            HintText = "Which model when the backend is OpenRouter — GPT, Claude, Gemini, Grok, DeepSeek and Mistral all verified with the NPCs' tools, same prices as going direct. gpt-5.4-mini and claude-haiku-4.5 are the proven picks; deepseek-v4-flash the cheapest. Any other id goes in the custom field below.")]
+            HintText = "openai/gpt-5.6-luna is the tested pick, openai/gpt-5.4-mini the cheaper fallback — same prices as going direct. Claude, Gemini, Grok, DeepSeek and Mistral are verified to carry the NPCs' tools but are not what the mod is tuned to. Any other id goes in the custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0);
+        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 7);
 
         [SettingPropertyText("OpenRouter model (type any id)", Order = 9, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: any id from openrouter.ai/models, pasted exactly in OpenRouter's own spelling (e.g. qwen/qwen3-235b-a22b). Empty = the dropdown chooses. A mistyped id answers as a clear error naming the model.")]
@@ -86,7 +86,7 @@ namespace ImmersiveAI.Mcm
         public string LocalEndpoint { get; set; } = string.Empty;
 
         [SettingPropertyText("Local model id", Order = 11, RequireRestart = false,
-            HintText = "The EXACT id your local server serves — LM Studio shows it on its server page (e.g. qwen/qwen3-30b-a3b), Ollama uses the name you pulled (e.g. qwen3:30b). Prefer an instruct model that carries native tool calling; small models go shy of the NPCs' tools.")]
+            HintText = "UNSUPPORTED, at your own risk. The EXACT id your server serves (LM Studio: qwen/qwen3-30b-a3b; Ollama: qwen3:30b). It must be an instruct model with native tool calling AND with thinking/reasoning turned OFF in your server — a thinking model spends its whole budget in silence and answers '...'.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalModel { get; set; } = string.Empty;
 

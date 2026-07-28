@@ -147,7 +147,13 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
-- **Anthropic is the default backend**, model `claude-haiku-4-5` (2026.07.13, price-matched to
+- **OpenRouter is the default backend since 2026.07.28**, model `openai/gpt-5.6-luna` — Anton's call:
+  one key reaches everything, and luna + `gpt-5.4-mini` are the only two he has really tested. The
+  recommendation order everywhere (README, first-run popup, MCM hints) is OpenRouter(luna → 5.4-mini)
+  → OpenAI(same two) → Anthropic(works, untested at length) → anything typed by hand, at your own risk
+  → Local, which is tinkerers-only and explicitly unsupported. Existing config.json files are NOT
+  migrated; only fresh ones get the new defaults. Historical note: Anthropic was the default with
+  `claude-haiku-4-5` (2026.07.13, price-matched to
   the OpenAI default gpt-5.4-mini after live play priced opus-4-8 at ~3¢/exchange; the MCM
   dropdown offers sonnet-5 / opus-4-8 / fable-5 as the step-ups). Clients use raw `HttpClient`
   because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
