@@ -5,6 +5,17 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.4.3 — 2026.07.27
+
+- **Scouts and companions now see the land, not only the bands moving on it.** Asked what is
+  about, they tell you the villages, towns and castles within sight and how they fare — one
+  burning under a raid (and who is at the sack of it), one under siege, one lately plundered —
+  which way each band and place lies from you, and what each band is doing. Before this, someone
+  could count brigands for you while a village burned in plain sight. Weighing a fight now works
+  on a village by name too: under raid it weighs whoever holds the torch.
+- **Fixed: the bright pink backdrop behind the portraits** on the notices for someone seeking you
+  out or a letter arriving. It is dark now, as it always should have been.
+
 ## v1.4.2 — 2026.07.27
 
 - **Mod-menu connection hardened again** (continuing the Nexus report — the new log lines did

@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.4.2 - Mod menu hardening: where MCM builds its settings half-made (mismatched dependencies), the mod now repairs the menu, syncs field by field, keeps retrying the connection all session, and logs full error detail. config.json always works regardless." />
+        <ChangeNotes Value="v1.4.3&#10;- Scouts and companions now see the land, not only the bands on it: villages, towns and castles within sight, which way they lie, and how they fare - one burning under a raid, one under siege, one lately plundered - plus what each band nearby is doing.&#10;- Fixed: the bright pink backdrop behind portraits on incoming chat and letter notices - it is dark now." />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />

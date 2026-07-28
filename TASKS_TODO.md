@@ -98,5 +98,18 @@ POST V1 or NOT FULLY DECIDED:
     the situation's standing lines), maybe Dramalord events as tidings. Needs a study pass over
     Dramalord's data layer first (it keeps per-hero attraction/trust/love + relations in its own
     save data); decide scope with Anton — read-only awareness first, our NPCs ACTING on it later.
+- [ ] Total-conversion world frame (asked for indirectly on Nexus by LukeCage718, 2026.07.27 — "can't wait
+      to try this with ROT" = Realm of Thrones, the Game of Thrones overhaul; second comment implying a
+      converted map)
+    Everything already works on an overhaul — we read live campaign data through public APIs, and
+    self.txt even seeds from the overhaul's own encyclopedia lore. The one hardcoded assumption is the
+    world's NAME: `RefineSearchQueryAsync` (ImmersiveChatBehavior) prepends "Mount and Blade Bannerlord"
+    to every `seek_wisdom` query, so a Westerosi lord asked about his own house gets searched as a
+    Bannerlord question. Make the frame a config key (`WorldName`, default "Mount and Blade Bannerlord")
+    used by the refiner and its raw-question fallback. Consider a second sentence on the Steam/Nexus page
+    pointing overhaul players at `AtmosphereLine` + `RoleplayGuidance` — the existing keys that already
+    let them tell every soul they live in Westeros and that the tale is their own, not the written one
+    (worth saying out loud: a model that recognizes the setting will otherwise drift into show canon).
+    Small change, serves every total conversion, not just ROT.
 - [ ] NPC to NPC chat
     In the future have a system that lets the NPC pick a person (another NPC) to talk to and for them to be able to exchange a few messages and for me to be able to see the log or watch them in real time talk, again maybe based on how popular they are, but even the unused to have the option to do it. So they should have a general deep memory, a per person deep memory and per person hist maybe
