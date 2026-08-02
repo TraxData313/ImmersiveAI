@@ -5,6 +5,18 @@ The player-facing history of Immersive AI. The version lives in `module\SubModul
 section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
 Workshop and into the Nexus changelog field when uploading the new file.
 
+## v1.5.0 — 2026.08.02
+
+- **Added DeepSeek and Gemini as built-in backends.** DeepSeek (platform.deepseek.com) is the
+  cheapest paid option — about half the default's cost. Gemini (aistudio.google.com) has a real
+  free tier: no card, ~1,500 replies a day — with two catches told plainly: Google trains on
+  free-tier traffic, and Gemini 3.x replies run slow (its thinking can't be switched off;
+  gemini-2.5-flash in the dropdown is the one that truly switches off).
+- **GPT-5.6-Luna prices updated** — OpenAI cut it 80% on July 30 ($0.20/$1.20 per MTok). The
+  cost table in existing configs is corrected automatically (hand-edited prices are honored),
+  and Luna now heads the model dropdowns.
+- Full model comparison: [Which AI should I use?](docs/choosing-a-model.md)
+
 ## v1.4.3 — 2026.07.27
 
 - **Scouts and companions now see the land, not only the bands moving on it.** Asked what is

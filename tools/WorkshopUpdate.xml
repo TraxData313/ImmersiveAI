@@ -10,7 +10,7 @@
     </GetItem>
     <UpdateItem>
         <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v1.4.3&#10;- Scouts and companions now see the land, not only the bands on it: villages, towns and castles within sight, which way they lie, and how they fare - one burning under a raid, one under siege, one lately plundered - plus what each band nearby is doing.&#10;- Fixed: the bright pink backdrop behind portraits on incoming chat and letter notices - it is dark now." />
+        <ChangeNotes Value="v1.5.0&#10;- Added DeepSeek and Gemini as built-in backends. DeepSeek is the cheapest paid option; Gemini has a real free tier (no card, ~1,500 replies a day) - two catches: Google trains on free-tier traffic, and Gemini 3.x replies run slow (its thinking can't be switched off; gemini-2.5-flash is the one that truly switches off).&#10;- GPT-5.6-Luna prices updated (OpenAI's 80% July cut) - existing configs corrected automatically, hand-edited prices honored; Luna now heads the model dropdowns.&#10;- Full model guide: github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md" />
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />
@@ -19,3 +19,4 @@
         </Tags>
     </UpdateItem>
 </Tasks>
+
