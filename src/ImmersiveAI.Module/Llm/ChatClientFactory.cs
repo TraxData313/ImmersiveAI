@@ -33,6 +33,19 @@ namespace ImmersiveAI.Llm
                 return new OpenAIChatClient(config.OpenRouterApiKey, config.OpenRouterModel, maxTokens,
                     ModConfig.OpenRouterEndpoint, "OpenRouter");
 
+            // Gemini: Google's own OpenAI-compatible door. The one backend with a real free tier —
+            // and the one whose thinking cannot be fully switched off, which is why it carries its
+            // own dialect (and its own raised token ceiling inside the client).
+            if (config != null && config.Backend == "Gemini")
+                return new OpenAIChatClient(config.GeminiApiKey, config.GeminiModel, maxTokens,
+                    ModConfig.GeminiEndpoint, "Gemini", dialect: OpenAiDialect.Gemini);
+
+            // DeepSeek: their own platform rather than a router — cheapest of the paid roads, and
+            // it thinks by default unless the dialect says otherwise.
+            if (config != null && config.Backend == "DeepSeek")
+                return new OpenAIChatClient(config.DeepSeekApiKey, config.DeepSeekModel, maxTokens,
+                    ModConfig.DeepSeekEndpoint, "DeepSeek", dialect: OpenAiDialect.DeepSeek);
+
             // Local: the same client speaking to a server on the player's own machine (LM Studio,
             // Ollama, llama.cpp). Keyless is normal there; errors name "Local AI" so a dead server
             // never sends anyone checking a cloud account.

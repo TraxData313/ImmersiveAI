@@ -33,6 +33,8 @@ namespace ImmersiveAI
 
                 var keyField = config?.Backend == "OpenAI" ? "OpenAIApiKey"
                     : config?.Backend == "Anthropic" ? "AnthropicApiKey"
+                    : config?.Backend == "Gemini" ? "GeminiApiKey"
+                    : config?.Backend == "DeepSeek" ? "DeepSeekApiKey"
                     : "OpenRouterApiKey";
                 var body =
                     "Immersive AI gives every character a real, remembering mind — but the minds speak " +
@@ -41,7 +43,13 @@ namespace ImmersiveAI
                     "to openai/gpt-5.6-luna (openai/gpt-5.4-mini is the cheaper fallback). platform.openai.com " +
                     "with those same two works as well; console.anthropic.com (Claude) works but is less tested. " +
                     "All bill by use — an evening of conversation is typically well under a dollar, and the mod " +
-                    "shows each exchange's cost as you play. (Local models: tinkerers only, unsupported.)\n\n" +
+                    "shows each exchange's cost as you play.\n\n" +
+                    "FREE OF CHARGE — aistudio.google.com gives a Gemini key with a real free tier (no card, " +
+                    "about 1,500 replies a day). Set Backend to \"Gemini\" and paste it into \"GeminiApiKey\". " +
+                    "Know the trade: on Google's FREE tier what passes through is read to improve their products, " +
+                    "so nothing said there is private. CHEAPEST PAID — platform.deepseek.com, roughly half the " +
+                    "cost of the default for near-equal answers (Backend \"DeepSeek\"; their servers are in China). " +
+                    "(Local models: tinkerers only, unsupported.)\n\n" +
                     "2. PUT IT HERE — open:\n" + ModConfig.ConfigFilePath + "\n" +
                     "and paste the key into \"" + keyField + "\"." +
                     " (With the Mod Configuration Menu installed, the key can also be set in-game under Mod Options.)\n\n" +

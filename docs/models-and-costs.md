@@ -1,6 +1,8 @@
-# Models & costs — the V1 decision (2026.07.12, Anthropic default revised 2026.07.13)
+# Models & costs — the V1 decision (2026.07.12, Anthropic default revised 2026.07.13,
+# prices + Gemini/DeepSeek backends 2026.08.02)
 
-The "which models for what" rethink Anton asked for. Verified against provider docs 2026.07.
+The "which models for what" rethink Anton asked for. Verified against provider docs 2026.07;
+prices re-verified and the two new backends added 2026.08.02 (see the last section).
 
 ## The decision
 
@@ -46,13 +48,61 @@ A typical exchange sends ~2–4k tokens of context and gets ~150–400 back.
 | claude-opus-4-8 | ~1.5–3¢ | ~$1.50–3 |
 | claude-sonnet-5 | ~1–2¢ | ~$1–2 |
 | claude-haiku-4-5 | ~0.3–0.6¢ | ~$0.30–0.60 |
-| gpt-5.6-terra | ~0.8–1.5¢ | ~$0.80–1.50 |
-| gpt-5.6-luna | ~0.3–0.6¢ | ~$0.30–0.60 |
+| gpt-5.6-terra | ~0.7–1.2¢ | ~$0.70–1.20 |
+| gpt-5.6-luna | ~0.07–0.13¢ | ~$0.07–0.13 |
 | gpt-5.4-mini | ~0.2–0.5¢ | ~$0.20–0.50 |
+| deepseek-v4-flash | ~0.04–0.08¢ | ~$0.04–0.08 |
+| gemini-3.6-flash (free tier) | $0 | $0 |
 
 Reach-outs cost ~2 exchanges (desire + approach), letters ~2, memory compression ~1 larger call
 every ~15 turns. The in-game cost notices show the real numbers as you play; `ModelPrices` in
 config.json is the (editable) price table behind them.
+
+## The 2026.08.02 price revision + two new backends
+
+**Luna got 80% cheaper.** OpenAI cut `gpt-5.6-luna` from $1/$6 to **$0.20/$1.20** per MTok and
+`gpt-5.6-terra` from $2.50/$15 to **$2/$12**, effective 2026.07.30 (sol unchanged). That makes the
+mod's own default the cheapest mainstream model it has ever shipped with — an exchange fell from
+~0.4¢ to well under a tenth of a cent. `DefaultModelPrices` carries the new figures, and unlike the
+model defaults, **the prices ARE migrated** (ConfigVersion 3): an existing config.json keeps its
+table forever otherwise, and would quote the old number for the rest of its life. The migration
+replaces an entry only where it still equals the exact superseded figure — a hand-edited price is
+the player's own and survives (`SupersededModelPrices` is that list).
+
+**Gemini and DeepSeek became first-class backends**, both asked for on the Steam page by the same
+commenter: *"it's kind of weird to offer only Claude and OpenAI while there is also Gemini, which
+allows free usage"*. Both are OpenAI-compatible, so both ride the existing `OpenAIChatClient` — the
+only real work was the third and fourth **dialect of "stop thinking"**:
+
+| Backend | How thinking is switched off | Default when unsaid |
+|---|---|---|
+| OpenAI / routers | `reasoning_effort: "none"` / `reasoning: {enabled:false}` | on |
+| Anthropic | `thinking: {"type":"disabled"}` | on (sonnet-5+) |
+| **Gemini** | `reasoning_effort` — but `"none"` works ONLY on 2.5 models; 3.x takes `"minimal"` at best | **HIGH** |
+| **DeepSeek** | `thinking: {"type":"disabled"}` | **on** |
+
+Gemini is the awkward one and the reason `GeminiThinkingFloor` exists: **Gemini 3.x cannot be
+silenced at all**, and its token ceiling covers thinking *and* speech, so the mod's 400-token
+spoken budget would be eaten in silence — the exact "..." bug of 2026.07.13, wearing a new hat. The
+client raises the ceiling to 1500 for that backend. It's a ceiling, not a target: a reply that
+simply speaks is billed for what it said. A 400 naming our quieting field drops it and retries, so
+a renamed switch (Google has already moved once, budget → level) leaves NPCs talking, not mute.
+
+- **Gemini's pitch is free, not cheap.** Its *paid* rates ($1.50/$7.50 for 3.6-flash) are worse
+  than luna's new price — nobody should pay for it here. Its value is the free tier: no card,
+  ~10–15 RPM and ~1,500 requests/day, which is a genuine evening of play. Default model
+  `gemini-3.6-flash` (not a Lite) because this mod leans hard on native tool calling and the Lite
+  models are shakier there. **The disclosure is mandatory everywhere it's offered**: Google's own
+  pricing page marks free-tier input as used to improve their products. Paid tier says no.
+- **DeepSeek's pitch is cheap.** `deepseek-v4-flash` at $0.14/$0.28 scores 50 vs luna's 51 on the
+  Artificial Analysis index — within noise for conversation — at roughly half an exchange's cost
+  even after luna's cut. Two caveats we state plainly: prices **double during Beijing peak hours**
+  (09:00–12:00, 14:00–18:00 UTC+8; European evening play lands in the cheap window), and the
+  servers are in China. Their prompt cache (50× cheaper on a repeated prefix) suits this mod's
+  stable prompt sheet, which the static price table cannot model — so notices *over*state.
+- **The default backend did NOT change.** OpenRouter + luna stays: it is what the mod is tuned
+  against, it just got 5× cheaper, and defaulting everyone into a free tier that trains on their
+  conversations is not a choice to make on their behalf.
 
 ## Code facts that ride with this (shipped 2026.07.12)
 

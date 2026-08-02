@@ -122,8 +122,16 @@ tools/deploy.ps1          build + install into the game as Modules\ImmersiveAI.D
                           its own Id so it coexists with the Workshop copy (enable only ONE); keep the
                           script ASCII-only (BOM-less .ps1 + em-dash bytes = smart quote = PS 5.1 parse error)
 tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
-docs/steam-page-draft.md  the Workshop description draft (privacy/cost/AI disclosures) — finalize at release
-docs/models-and-costs.md  the model-selection decision (haiku-4-5 / gpt-5.4-mini) + price table rationale
+docs/steam-page-draft.md  SUPERSEDED draft; the LIVE pages are the .bbcode.txt files beside it —
+                          steam-page-final.bbcode.txt, steam-faq.bbcode.txt (pinned), nexus-page.bbcode.txt.
+                          All three are AT their length limit: any addition must be paid for by a cut
+                          elsewhere in the same file (deep material goes to docs/ and is LINKED instead)
+docs/choosing-a-model.md  PLAYER-FACING "Which AI should I use?" — the one place the model/backend/local
+                          detail lives, written in layers (pick-a-row table → costs → each provider's
+                          one catch → local setup → why: tool calling, thinking-off, context). Linked
+                          from README + all three store pages, so keep the URL path stable
+docs/models-and-costs.md  the DEVELOPER decision record behind that guide: why these defaults, the
+                          price-migration rule, the four thinking-off dialects
 Directory.Build.props     shared MSBuild props; GameFolder points at the Bannerlord install
 ```
 
@@ -147,6 +155,19 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
+- **Gemini and DeepSeek are first-class backends since 2026.08.02** (asked for on Steam — "weird to
+  offer only Claude and OpenAI while Gemini allows free usage"). Both are OpenAI-compatible and ride
+  `OpenAIChatClient` through a new `OpenAiDialect` enum whose ONLY job is how each provider is told to
+  stop thinking: **Gemini** takes `reasoning_effort`, but `"none"` works only on 2.5 models — the 3.x
+  line cannot be silenced, only turned down to `"minimal"`, and it defaults to HIGH when the field is
+  omitted; **DeepSeek** takes `thinking: {"type":"disabled"}` and thinks by default without it. Because
+  Gemini's ceiling covers thought AND speech, `ModConfig.GeminiThinkingFloor` (1500) raises its token
+  budget — a 400-token spoken cap would be eaten in silence, the "..." bug wearing a new hat. A 400
+  naming our quieting field drops it and retries once, so a renamed switch never mutes an NPC. Gemini's
+  pitch is FREE (aistudio.google.com, no card, ~1,500 replies/day) and its paid rates are worse than
+  luna's — **always disclose that Google's free tier trains on what it receives**; DeepSeek's pitch is
+  cheap (~half an exchange's cost, prices DOUBLE in Beijing peak hours, servers in China). Defaults
+  deliberately unchanged. Full rationale in `docs/models-and-costs.md`.
 - **OpenRouter is the default backend since 2026.07.28**, model `openai/gpt-5.6-luna` — Anton's call:
   one key reaches everything, and luna + `gpt-5.4-mini` are the only two he has really tested. The
   recommendation order everywhere (README, first-run popup, MCM hints) is OpenRouter(luna → 5.4-mini)
@@ -237,7 +258,16 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 ## User-editable runtime files (NOT in the repo)
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
-- `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
+- `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"Local"),
+  model, `MaxTokens`, memory limits,
+  `GeminiApiKey` + `GeminiModel` (2026.08.02 — `Backend: "Gemini"`, the FREE road: the same
+  OpenAIChatClient pointed at `ModConfig.GeminiEndpoint` (Google's OpenAI-compat door) with
+  `OpenAiDialect.Gemini`; default `gemini-3.6-flash` — deliberately not a Lite, the tools need the
+  stronger model; every "flash"/"flash-lite" id has a free tier, Pro is paid-only since April 2026;
+  `GeminiThinkingFloor` = 1500 because 3.x thinking cannot be turned off and shares the reply's
+  ceiling) + `DeepSeekApiKey` + `DeepSeekModel` (same day — `Backend: "DeepSeek"`, the CHEAPEST road:
+  `ModConfig.DeepSeekEndpoint`, `OpenAiDialect.DeepSeek`, default `deepseek-v4-flash`; scores 50 vs
+  luna's 51 at ~half the cost; both unplaytested as of writing),
   `OpenRouterApiKey` + `OpenRouterModel` (2026.07.16, asked for on Nexus — OpenRouter as a FIRST-CLASS
   backend, `Backend: "OpenRouter"`: the same OpenAIChatClient pointed at `ModConfig.OpenRouterEndpoint`
   with label "OpenRouter" in every error; one sk-or- key reaches GPT and Claude alike, ids in
@@ -397,7 +427,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   access-propagation 401s; the MCM dropdown offers 5.4-mini/luna/terra/sol/5.5/5.4/5.4-nano — NO 5.5
   mini/nano exist; older models live on as config.json hand edits), existing configs deliberately
   unmigrated — see docs/models-and-costs.md),
-  `ConfigVersion` (format stamp, 2 — migrations key off it; V2 = the letter hotkey's U→Y move),
+  `ConfigVersion` (format stamp, 3 — migrations key off it; V2 = the letter hotkey's U→Y move,
+  V3 = correcting superseded built-in `ModelPrices` after OpenAI cut luna 80% / terra 20% on
+  2026.07.30 — only entries still equal to the exact old figure move, hand-edits survive; the list
+  of what was superseded lives in `ModConfig.SupersededModelPrices`. NOTE the asymmetry, it is
+  deliberate: model DEFAULTS are never migrated, PRICES always are — a model swap changes voice and
+  money and stays the player's call, a stale price is just a lie in the cost notice),
   `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
   "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
   panel in the chat window; set true when working on the mod — Anton keeps it true).

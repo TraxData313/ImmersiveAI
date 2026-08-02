@@ -98,9 +98,15 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 ## User-editable runtime files (NOT in the repo)
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
-- `config.json` — API keys, `Backend` ("Anthropic"/"OpenAI"), model, `MaxTokens`, memory limits,
+- `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"Local"),
+  model, `MaxTokens`, memory limits,
   `OpenRouterApiKey` + `OpenRouterModel` (OpenRouter as a first-class backend, `Backend: "OpenRouter"` —
   one key reaches GPT and Claude, ids in OpenRouter's dotted spelling like "anthropic/claude-haiku-4.5"),
+  `GeminiApiKey` + `GeminiModel` / `DeepSeekApiKey` + `DeepSeekModel` (2026.08.02 — the free road and
+  the cheap one; both OpenAI-compatible, both ride OpenAIChatClient through `OpenAiDialect`, which
+  exists solely because each provider spells "stop thinking" differently: Gemini's 3.x line CANNOT be
+  silenced at all, hence `GeminiThinkingFloor`; DeepSeek thinks unless told `thinking: disabled`.
+  Gemini's free tier trains on what it receives — say so wherever it is offered),
   `OpenAIBaseUrl` (the OpenAI backend's endpoint — default the real OpenAI; any other OpenAI-compatible
   service works: paste a base URL ending in /v1, Normalize completes it; router ids like
   "openai/gpt-5.4-mini" get classic max_tokens + `reasoning: {enabled:false}`),

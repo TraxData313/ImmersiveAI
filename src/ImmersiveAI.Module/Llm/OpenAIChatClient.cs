@@ -12,10 +12,26 @@ using Newtonsoft.Json.Linq;
 
 namespace ImmersiveAI.Llm
 {
+    /// <summary>Which house dialect of the shared chat-completions shape a service speaks. They all
+    /// take the same messages and tools; they differ ONLY in how one tells them not to think — and
+    /// getting that wrong is the "..." bug, where an NPC spends every token in silence and speaks
+    /// nothing (2026.07.13). Each is a hard 400 on the others' field, so it can never be guessed at
+    /// runtime; it is decided by which backend the player chose.</summary>
+    public enum OpenAiDialect
+    {
+        /// <summary>OpenAI and the routers: reasoning_effort "none", or the routers' reasoning:{enabled}.</summary>
+        Standard,
+        /// <summary>Google: reasoning_effort, but "none" only on the 2.5 models — the 3.x line cannot
+        /// be silenced at all, only turned down to "minimal".</summary>
+        Gemini,
+        /// <summary>DeepSeek: thinking:{"type":"disabled"}, and it thinks by DEFAULT when unsaid.</summary>
+        DeepSeek,
+    }
+
     /// <summary>OpenAI chat-completions client (raw HTTP, .NET Framework compatible). Supports
     /// native function calling, which carries the NPCs' "recall the world" ability. The endpoint
     /// is configurable (<see cref="ModConfig.OpenAIBaseUrl"/>), so the same client speaks to any
-    /// OpenAI-compatible service — OpenRouter, NanoGPT, a local server.</summary>
+    /// OpenAI-compatible service — OpenRouter, Gemini, DeepSeek, NanoGPT, a local server.</summary>
     public sealed class OpenAIChatClient : IToolChatClient
     {
         // No timeout on the shared client itself — each request carries its own (see PostOnceAsync):
@@ -33,17 +49,25 @@ namespace ImmersiveAI.Llm
         private readonly string _endpoint;
         private readonly string _label;
         private readonly bool _isLocal;
+        private readonly OpenAiDialect _dialect;
 
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
         }
 
-        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? endpoint = null, string? providerLabel = null, bool isLocal = false)
+        public OpenAIChatClient(string apiKey, string model, int maxTokens, string? endpoint = null, string? providerLabel = null, bool isLocal = false,
+            OpenAiDialect dialect = OpenAiDialect.Standard)
         {
             _apiKey = apiKey ?? "";
             _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.4-mini" : model;
+            _dialect = dialect;
+            // Gemini 3.x cannot be told to stop thinking, and its budget counts thought and speech
+            // against one ceiling — so a spoken budget alone would be eaten in silence. Raising a
+            // CEILING costs nothing on a reply that simply speaks.
             _maxTokens = maxTokens > 0 ? maxTokens : 400;
+            if (_dialect == OpenAiDialect.Gemini && _maxTokens < ModConfig.GeminiThinkingFloor)
+                _maxTokens = ModConfig.GeminiThinkingFloor;
             _endpoint = string.IsNullOrWhiteSpace(endpoint) ? ModConfig.DefaultOpenAIEndpoint : endpoint;
             // Errors and log lines name the true provider ("OpenRouter request failed…"), so a
             // router problem never sends the player checking their OpenAI account.
@@ -60,6 +84,12 @@ namespace ImmersiveAI.Llm
         // request rides through a router that translates parameters per provider. Those get the
         // universal shape (classic max_tokens), never the OpenAI-only fields below.
         private bool IsRoutedModel => _model.IndexOf('/') >= 0;
+
+        // Only Google's 2.5 line can be told to stop thinking outright; 2.5 Pro and the whole 3.x
+        // line refuse "none". Matched on the id so a router-prefixed spelling counts too.
+        private bool IsGemini25 =>
+            _model.IndexOf("gemini-2.5", StringComparison.OrdinalIgnoreCase) >= 0
+            && _model.IndexOf("2.5-pro", StringComparison.OrdinalIgnoreCase) < 0;
 
         // The gpt-5.x family and the o-series reject the classic max_tokens in favor of
         // max_completion_tokens, and carry the reasoning_effort dial; older models keep the
@@ -103,14 +133,24 @@ namespace ImmersiveAI.Llm
             // long answers with silence. "none" is sent explicitly because omitting the dial lets
             // the API default to reasoning. (It also sidesteps gpt-5.6's refusal to combine
             // function tools with reasoning on chat completions, hit live 2026.07.12.)
-            var reasoningFamily = !IsRoutedModel && IsReasoningFamily;
+            var reasoningFamily = _dialect == OpenAiDialect.Standard && !IsRoutedModel && IsReasoningFamily;
             var payload = new JObject
             {
                 ["model"] = _model,
                 [reasoningFamily ? "max_completion_tokens" : "max_tokens"] = _maxTokens,
                 ["messages"] = BuildTurns(messages),
             };
-            if (reasoningFamily)
+            if (_dialect == OpenAiDialect.Gemini)
+                // Google's OpenAI door takes reasoning_effort, but "none" is honored only by the 2.5
+                // models; asking it of a 3.x is refused, and leaving the field off entirely lets them
+                // default to HIGH — the costliest, slowest, most silent answer of all. "minimal" is
+                // as close to off as Google allows.
+                payload["reasoning_effort"] = IsGemini25 ? "none" : "minimal";
+            else if (_dialect == OpenAiDialect.DeepSeek)
+                // DeepSeek thinks unless explicitly told not to — the same trap Anthropic sets, and
+                // the same shape of answer.
+                payload["thinking"] = new JObject { ["type"] = "disabled" };
+            else if (reasoningFamily)
                 payload["reasoning_effort"] = "none";
             else if (IsRoutedModel && !_isLocal)
                 // The routers' own unified reasoning switch (documented as ignored by models that
@@ -143,6 +183,23 @@ namespace ImmersiveAI.Llm
                 payloadText = payload.ToString(Formatting.None);
                 ModLog.Warn($"{_label}: '{_model}' cannot run with reasoning disabled — retrying with its own thinking allowed.");
                 (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
+
+            // The same grace for the two house dialects. Providers rename and retire these switches
+            // (Google has already moved once, from a thinking budget to a level), and a model that
+            // must think is still worth hearing — so a 400 that names our quieting field drops it and
+            // asks again, rather than leaving the NPC mute over a parameter.
+            if (status == 400 && MentionsThinkingField(body))
+            {
+                var dropped = _dialect == OpenAiDialect.Gemini ? "reasoning_effort"
+                    : _dialect == OpenAiDialect.DeepSeek ? "thinking" : null;
+                if (dropped != null && payload[dropped] != null)
+                {
+                    payload.Remove(dropped);
+                    payloadText = payload.ToString(Formatting.None);
+                    ModLog.Warn($"{_label}: '{_model}' refused '{dropped}' — retrying and letting it think as it must.");
+                    (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+                }
             }
 
             // OpenAI's "insufficient permissions" 401 shows up INTERMITTENTLY for a while after
@@ -204,6 +261,14 @@ namespace ImmersiveAI.Llm
                             "Disable the model's thinking in your server (LM Studio has a per-model toggle) " +
                             "or load a non-thinking 'instruct' build.");
                 }
+            }
+            else if (_dialect == OpenAiDialect.Gemini && text.Length == 0 && calls.Count == 0)
+            {
+                // Gemini 3.x cannot be silenced, only turned down — so an empty answer here means the
+                // thinking ate the ceiling before a single word. The floor in the constructor should
+                // prevent it; say the remedy plainly if it ever slips through anyway.
+                ModLog.Warn("Gemini: the model spent its whole budget thinking and never spoke. Raise the reply length "
+                    + "(MaxTokens in " + ModConfig.ConfigFilePath + "), or pick a gemini-2.5 model, whose thinking CAN be switched off.");
             }
 
             return new ChatResult(text, calls);
@@ -343,6 +408,13 @@ namespace ImmersiveAI.Llm
             if (open >= 0) stripped = stripped.Substring(0, open);
             return stripped;
         }
+
+        /// <summary>Whether a 400 body is complaining about the very field we use to quiet the model
+        /// (unknown, unsupported, or given a value it will not take) rather than about our prompt.</summary>
+        private static bool MentionsThinkingField(string body) =>
+            body.IndexOf("reasoning_effort", StringComparison.OrdinalIgnoreCase) >= 0
+            || body.IndexOf("thinking", StringComparison.OrdinalIgnoreCase) >= 0
+            || body.IndexOf("thinking_level", StringComparison.OrdinalIgnoreCase) >= 0;
 
         private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "...";
     }

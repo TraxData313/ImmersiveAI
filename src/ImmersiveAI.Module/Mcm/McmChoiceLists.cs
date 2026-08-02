@@ -10,7 +10,16 @@ namespace ImmersiveAI.Mcm
     /// </summary>
     internal static class McmChoiceLists
     {
-        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local" };
+        // Gemini and DeepSeek joined on 2026.08.02 and are APPENDED, not slotted in beside the other
+        // cloud services — an old store file's "3" must keep meaning Local.
+        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek" };
+
+        /// <summary>Every free-tier Gemini, newest first. The Pro models are paid-only since April
+        /// 2026 and deliberately absent: the whole point of this backend is the free road.</summary>
+        public static readonly string[] GeminiModels =
+            { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite" };
+
+        public static readonly string[] DeepSeekModels = { "deepseek-v4-flash", "deepseek-v4-pro" };
 
         public static readonly string[] AnthropicModels =
             { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" };
@@ -33,6 +42,8 @@ namespace ImmersiveAI.Mcm
             "anthropic/claude-opus-4.8",
             "anthropic/claude-fable-5",
             "openai/gpt-5.4-nano",
+            "google/gemini-3.6-flash",
+            "deepseek/deepseek-v4-pro",
         };
 
         public static readonly string[] HotkeyKeys =

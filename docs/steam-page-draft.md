@@ -38,20 +38,36 @@ world: their family, their company, their trade, the war, the road.
 
 ## [REQUIRED] What you need — and what it costs
 
-This mod speaks through an AI service using **your own API key** (Anthropic by default, or
-OpenAI). Keys come from console.anthropic.com or platform.openai.com; the mod shows you exactly
-where to paste yours on first run.
+This mod speaks through an AI service using **your own API key**. Pick whichever suits you:
 
-**Costs are yours and visible.** The service bills by use. A typical exchange costs a fraction of
-a cent to a few cents depending on the model; an evening of heavy talking is usually well under a
-dollar on the default models. The mod shows each interaction's tokens and price as you play
-(`ShowCostNotices`), keeps daily totals, and has an optional hard daily cap (`MaxDailyRequests`).
+- **OpenRouter** (the default) — one key from openrouter.ai reaches every model. Set to
+  `openai/gpt-5.6-luna`, which OpenAI cut by 80% on 30 July 2026.
+- **OpenAI** — platform.openai.com, the same models.
+- **Google Gemini — FREE.** aistudio.google.com gives a key with a real free tier: no card,
+  roughly 1,500 replies a day. See the privacy note below before you choose it.
+- **DeepSeek** — platform.deepseek.com, the cheapest paid road, about half the default's cost.
+- **Anthropic (Claude)** — console.anthropic.com. Works; less tested.
+- **Local models** — your own machine, free and private, but tinkerers only and unsupported.
+
+The mod shows you exactly where to paste your key on first run, and every one of these can be
+switched in-game from the Mod Options menu without restarting.
+
+**Costs are yours and visible.** The service bills by use (Gemini's free tier bills nothing at
+all). A typical exchange costs a fraction of a cent on the recommended models — an evening of
+heavy talking is usually well under a dollar, and around a nickel on the cheapest. The mod shows
+each interaction's tokens and price as you play (`ShowCostNotices`), keeps daily totals, and has
+an optional hard daily cap (`MaxDailyRequests`) so a runaway bill is impossible.
 
 ## [REQUIRED] Privacy
 
 - Your in-game conversations — plus the world context around them (character sheets, campaign
   facts, your character's name) — are sent to the AI provider **you** configure, under **your**
   key and their privacy terms. Nothing is sent anywhere else.
+- **Know what your provider does with it.** Google states that content sent on the **free** Gemini
+  tier is used to improve their products — so if you take the free road, treat those conversations
+  as not private (paying moves the same key to their paid tier, where they say they don't).
+  DeepSeek's servers are in China. The paid tiers of OpenAI, OpenRouter, Anthropic, DeepSeek and
+  Google all say they do not train on API traffic. Local models send nothing anywhere.
 - With `EnableWebSearch` on (default), characters may look things up mid-reply; those search
   queries go to DuckDuckGo. Turn it off to keep everything between you and your AI provider.
 - The mod itself collects **no telemetry whatsoever**. All memories live as plain files on your

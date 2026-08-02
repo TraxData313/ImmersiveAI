@@ -163,6 +163,12 @@ namespace ImmersiveAI
                 case "OpenRouter":
                     apiKey = config.OpenRouterApiKey; model = config.OpenRouterModel;
                     return "OpenRouter";
+                case "Gemini":
+                    apiKey = config.GeminiApiKey; model = config.GeminiModel;
+                    return "Gemini";
+                case "DeepSeek":
+                    apiKey = config.DeepSeekApiKey; model = config.DeepSeekModel;
+                    return "DeepSeek";
                 case "Local":
                     apiKey = config.LocalApiKey; model = config.LocalModel;
                     return "your local AI server (" + HostOf(config.LocalEndpoint) + ")";

@@ -4,23 +4,23 @@ Same BBCode dialect as the description.
 === THREAD 1 — title: "FAQ — read before asking" ===
 
 [b]Is it free?[/b]
-The mod is free (public domain, even). The AI mostly is not — you bring your own API key (OpenRouter by default and recommended — one key there reaches many models — or OpenAI, or Anthropic) and put a few bucks on it. The one truly free road is a local model on your own machine — tinkerers only, unsupported; see below. No key and no local model, no talking NPCs. See the description for the five-minute setup.
+The mod is free (public domain, even). The AI usually isn't — you bring your own API key (OpenRouter by default and recommended — one key there reaches many models) and put a few bucks on it. [b]Two free roads exist:[/b] a [b]Gemini[/b] key from aistudio.google.com has a real free tier (~1,500 replies a day, no card — but Google trains on free-tier traffic, so it isn't private), or a local model on your own machine — tinkerers only, unsupported; see below. No key and no local model, no talking NPCs.
 
 [b]OK, but how much does it actually cost?[/b]
-On the recommended models a typical exchange is around a cent or less — $10 of credit covers thousands of messages. The mod shows you each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
+A typical exchange is about a tenth of a cent on the default — $10 of credit covers many thousands of messages. The mod shows you each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
 
 [b]Can I use OpenRouter / NanoGPT / a local LLM?[/b]
-All of them. [b]OpenRouter is the default and the one I recommend[/b]: pick it in Mod Options, paste one key from openrouter.ai, use [b]openai/gpt-5.6-luna[/b] (tuned and tested against) or [b]openai/gpt-5.4-mini[/b] as the cheaper fallback. OpenAI with those same two is the equal second; Claude works but isn't tested at length. Claude, Gemini, Grok, DeepSeek and Mistral through the router do carry the NPCs' tool calling, and any other id can be typed in — at your own risk, and duller without native tool calling. Other OpenAI-compatible cloud services (NanoGPT…) connect through [b]Custom endpoint[/b] in Mod Options: paste the base URL ending in /v1, put that service's key in the OpenAI key field, set its model id in config.json. The connection check at campaign start tells you plainly whether your setup works.
+All of them. [b]OpenRouter is the default and the one I recommend[/b]: pick it in Mod Options, paste one key from openrouter.ai, use [b]openai/gpt-5.6-luna[/b] (tuned and tested against) or [b]openai/gpt-5.4-mini[/b] as the cheaper fallback. OpenAI, Gemini, DeepSeek and Claude each have their own backend too; Grok and Mistral ride the router, and any other id can be typed in — at your own risk, and duller without native tool calling. Other OpenAI-compatible services (NanoGPT…) connect through [b]Custom endpoint[/b]: paste the base URL ending in /v1, put that service's key in the OpenAI key field, set its model id in config.json. The connection check at campaign start tells you plainly whether your setup works.
 
 [b]Local models — what to expect?[/b]
-[b]Tinkerers only, at your own risk[/b] — local exists because people asked, not because it plays well. You own the setup, and I don't debug local setups. Still want to? Pick [b]Local[/b] in Mod Options, run [b]LM Studio[/b] (the default, localhost:1234) or [b]Ollama[/b] (paste http://localhost:11434/v1 as the local server URL), set the exact model id your server serves and the context length you loaded it with. Free, private, nothing leaves your PC. The rules:
+[b]Tinkerers only, at your own risk[/b] — local exists because people asked, not because it plays well. You own the setup, and I don't debug local setups. Still want to? Pick [b]Local[/b] in Mod Options, run [b]LM Studio[/b] (the default, localhost:1234) or [b]Ollama[/b] (paste http://localhost:11434/v1 as the local server URL), set the exact model id your server serves and the context length you loaded it with. Free, private, nothing leaves your PC. The short rules:
 [list]
-[*]The model [b]must[/b] carry native tool calling ("tool use") — the mod is built on it. Worth a try: [b]Qwen3.6-35B-A3B[/b] (instruct — the strongest local tool-caller right now), [b]GPT-OSS-20B[/b], [b]Mistral Small 24B[/b]. Small 8B-class models will talk but fumble the tools.
-[*]Realistic hardware to even think about it: a dedicated GPU with [b]12–16+ GB VRAM[/b] (RTX 4070-class and up) and [b]32 GB RAM[/b]. Below that, stay on the cloud backends.
-[*]Local replies are [b]slow[/b] — the face-to-face panel can feel broken on the long wait; the chat window (hotkey [b]O[/b]) handles it far better, so live there when running local.
-[*]Load the model with [b]16k+ context[/b] and mirror it in the mod's Local context length setting; if relations never move, set RelationshipChangesViaTool to false in config.json.
-[*]Replies arriving as "…" mean the model is [b]thinking silently[/b] instead of speaking (hybrid reasoners like Qwen do this by default) — turn the model's thinking OFF in your server (LM Studio has a per-model toggle) or load a non-thinking [b]instruct[/b] build. log.txt says so in plain words when it happens.
+[*]An [b]instruct[/b] model with native tool calling — Qwen3.6-35B-A3B, GPT-OSS-20B, Mistral Small 24B. 8B-class models talk but fumble the tools.
+[*][b]Thinking/reasoning OFF[/b] in your server, or replies arrive as "…" — the model spent its whole budget thinking. log.txt says so plainly when it happens.
+[*][b]12–16+ GB VRAM[/b] and 32 GB RAM, [b]16k+ context[/b] mirrored in the mod's Local context length setting. Below that, stay on the cloud backends.
+[*]Replies are [b]slow[/b] — live in the chat window (hotkey [b]O[/b]); the face-to-face panel feels broken on the wait. If relations never move, set RelationshipChangesViaTool to false.
 [/list]
+Full setup guide, and how local compares to the cloud options: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
 [b]Where does the mod actually live on my disk? Where do I put my key?[/b]
 Two places, and the split matters:
@@ -42,7 +42,7 @@ Another PC: not automatically. Steam Cloud syncs your Bannerlord saves, but NOT 
 Still stuck? Post the last lines of log.txt in the Bug reports thread — the mod never logs your key.
 
 [b]Which model should I pick?[/b]
-[b]gpt-5.6-luna[/b] (via OpenRouter as openai/gpt-5.6-luna, or straight from OpenAI) — the default and what the mod is tuned and tested against; [b]gpt-5.4-mini[/b] is the cheaper fallback, also tested. Claude works (haiku-4.5 is cheap and good) but isn't tested at length. Everything else is at your own risk and must carry native tool calling. Going local: Qwen3.6-35B-A3B (instruct), with its thinking turned off.
+[b]gpt-5.6-luna[/b] (via OpenRouter as openai/gpt-5.6-luna, or straight from OpenAI) — the default and what the mod is tuned and tested against, and 80% cheaper since July 2026. Want it free: [b]Gemini + gemini-3.6-flash[/b]. Want the smallest bill: [b]DeepSeek + deepseek-v4-flash[/b]. Claude works but isn't tested at length. Everything else is at your own risk and must carry native tool calling. Going local: Qwen3.6-35B-A3B (instruct), thinking turned off. Full side-by-side comparison: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
 [b]Where do my conversations go? (privacy)[/b]
 To the AI provider YOU configured, under YOUR key and their terms — nowhere else (and with the Local backend, they never leave your machine at all). With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn EnableWebSearch off to keep everything between you and your provider. The mod itself collects no telemetry whatsoever. All memories are plain files on your own disk, yours to read, edit, or delete.

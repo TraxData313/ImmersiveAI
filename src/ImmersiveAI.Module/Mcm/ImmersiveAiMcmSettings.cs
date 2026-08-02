@@ -31,7 +31,7 @@ namespace ImmersiveAI.Mcm
         // takes hold on the very next reply — no restart.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
-            HintText = "Which AI service the NPCs think with. OpenRouter is recommended and the default (one key from openrouter.ai, every model). OpenAI is the equal second; Anthropic (Claude) works but is less tested. Local runs a model on YOUR machine — for tinkerers, unsupported, at your own risk.")]
+            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. Anthropic works but is less tested. Local runs on YOUR machine - tinkerers only, unsupported.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 2);
 
@@ -80,28 +80,53 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenRouterModelCustom { get; set; } = string.Empty;
 
-        [SettingPropertyText("Local server URL", Order = 10, RequireRestart = false,
+        [SettingPropertyText("Gemini API key", Order = 10, RequireRestart = false,
+            HintText = "FREE: get a key at aistudio.google.com — no card needed. Roughly 10-15 requests a minute and ~1,500 a day, enough for a long evening. The honest catch: on the FREE tier Google reads what passes through to improve their products, so nothing said here is private. Paying moves the same key to the paid tier, where they say they do not.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string GeminiApiKey { get; set; } = string.Empty;
+
+        [SettingPropertyDropdown("Gemini model", Order = 11, RequireRestart = false,
+            HintText = "All of these are free-tier (the Pro models are paid-only since April 2026). gemini-3.6-flash is the pick — strongest of them, and the tools the NPCs need are steadier on it than on the Lite models. Drop to a flash-lite if you keep hitting the per-minute limit.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> GeminiModel { get; set; } = new Dropdown<string>(McmChoiceLists.GeminiModels, 0);
+
+        [SettingPropertyText("Gemini model (type any id)", Order = 12, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: any Gemini id as Google names it. Empty = the dropdown chooses. Note that Gemini 3.x models cannot be told to stop thinking, so their replies always cost some silent thought — the mod widens their token ceiling to leave room for it.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string GeminiModelCustom { get; set; } = string.Empty;
+
+        [SettingPropertyText("DeepSeek API key", Order = 13, RequireRestart = false,
+            HintText = "The cheapest paid road: a key from platform.deepseek.com, about half the cost of gpt-5.6-luna per exchange for near-equal answers. Two things to know: prices DOUBLE during Beijing peak hours (09:00-12:00 and 14:00-18:00 UTC+8 - European evenings fall in the cheap window), and their servers are in China.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string DeepSeekApiKey { get; set; } = string.Empty;
+
+        [SettingPropertyDropdown("DeepSeek model", Order = 14, RequireRestart = false,
+            HintText = "deepseek-v4-flash ($0.14/$0.28 per MTok) is the value pick and scores within a point of gpt-5.6-luna. deepseek-v4-pro ($0.44/$0.87) is the stronger sibling, still cheaper than most. Both carry the NPCs' tools.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> DeepSeekModel { get; set; } = new Dropdown<string>(McmChoiceLists.DeepSeekModels, 0);
+
+        [SettingPropertyText("Local server URL", Order = 15, RequireRestart = false,
             HintText = "Where your local AI server listens, when the backend is Local. LM Studio: http://localhost:1234/v1 (start its server on the Developer tab). Ollama: http://localhost:11434/v1. Blank resets to the LM Studio default. A key, if your server wants one, goes in LocalApiKey in config.json.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalEndpoint { get; set; } = string.Empty;
 
-        [SettingPropertyText("Local model id", Order = 11, RequireRestart = false,
+        [SettingPropertyText("Local model id", Order = 16, RequireRestart = false,
             HintText = "UNSUPPORTED, at your own risk. The EXACT id your server serves (LM Studio: qwen/qwen3-30b-a3b; Ollama: qwen3:30b). It must be an instruct model with native tool calling AND with thinking/reasoning turned OFF in your server — a thinking model spends its whole budget in silence and answers '...'.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalModel { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 12, RequireRestart = false,
+        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 17, RequireRestart = false,
             HintText = "The context window your server ACTUALLY loads the model with (LM Studio's context-length setting; Ollama's num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int LocalContextWindow { get; set; } = 16384;
 
-        [SettingPropertyText("Custom endpoint (advanced)", Order = 13, RequireRestart = false,
+        [SettingPropertyText("Custom endpoint (advanced)", Order = 18, RequireRestart = false,
             HintText = "Empty = the real OpenAI. For another OpenAI-compatible CLOUD service (NanoGPT…), paste its base URL ending in /v1, put its key in the OpenAI key field, and type its model id in the custom OpenAI model field above. For OpenRouter or a local server, pick those backends instead.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIBaseUrl { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 14, RequireRestart = false,
-            HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance.")]
+        [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 19, RequireRestart = false,
+            HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance. On Gemini this is raised to at least 1500 behind the scenes, because its thinking is charged against the same ceiling and would otherwise leave nothing to say.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int MaxTokens { get; set; } = 400;
 

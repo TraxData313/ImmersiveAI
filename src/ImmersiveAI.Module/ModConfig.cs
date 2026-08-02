@@ -19,9 +19,11 @@ namespace ImmersiveAI
         /// <summary>Which service the minds think through. OpenRouter is the DEFAULT since 2026.07.28:
         /// one key reaches every model worth using, and the two the mod is actually tuned and tested
         /// against — gpt-5.6-luna first, gpt-5.4-mini as the cheaper fallback — live there. OpenAI with
-        /// the same two is the equal second; Anthropic works and is untested at length; "Local" is
+        /// the same two is the equal second. "Gemini" is the way in for FREE (Google's own free tier —
+        /// see <see cref="GeminiApiKey"/>); "DeepSeek" the cheapest paid road (see
+        /// <see cref="DeepSeekApiKey"/>); Anthropic works and is untested at length; "Local" is
         /// tinkerers' territory, unsupported by design.</summary>
-        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Anthropic" or "Local"
+        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Gemini", "DeepSeek", "Anthropic" or "Local"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-haiku-4-5";
@@ -53,6 +55,52 @@ namespace ImmersiveAI
         /// carry native tool calling — OpenRouter with mainstream models does; small local models
         /// usually stumble there.</summary>
         public string OpenAIBaseUrl { get; set; } = DefaultOpenAIEndpoint;
+
+        /// <summary>Google Gemini as a first-class backend (2026.08.02, asked for on Steam): the ONE
+        /// road into this world that costs nothing. A key from aistudio.google.com carries a real free
+        /// tier — no card, no credit — roughly 10–15 requests a minute and ~1,500 a day, which is a
+        /// long evening's play. The catch is honest and must be said plainly to players: on the FREE
+        /// tier Google reads what passes through to improve their products (their own pricing page
+        /// says so), so what you and the NPCs say is not private there; paying even a little moves the
+        /// same key to the paid tier, where they say they do not. Spoken to through Google's own
+        /// OpenAI-compatible door, so the same client and the same native tool calling serve.</summary>
+        public string GeminiApiKey { get; set; } = "";
+
+        /// <summary>Which Gemini answers. The default is the newest free-tier Flash — strong enough to
+        /// carry the NPCs' tools, which the Lite models can be shaky at. Every "flash" and "flash-lite"
+        /// id has a free tier; the Pro models are paid-only since April 2026. NOTE: Gemini 3.x models
+        /// CANNOT have their thinking turned off (only turned down), so the client raises their token
+        /// budget to leave room for silent thought — see <see cref="GeminiThinkingFloor"/>.</summary>
+        public string GeminiModel { get; set; } = "gemini-3.6-flash";
+
+        /// <summary>Google's OpenAI-compatible door — the same chat-completions shape, so Gemini needs
+        /// no client of its own.</summary>
+        public const string GeminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+        /// <summary>The least a Gemini reply may be given to spend, whatever <see cref="MaxTokens"/>
+        /// says. Gemini 3.x cannot be told to stop thinking (Google allows only "minimal"), and its
+        /// budget counts thinking AND speech against the same ceiling — so a 400-token cap would be
+        /// eaten by silent thought and the NPC would answer "...", the exact bug of 2026.07.13. This
+        /// is a ceiling, not a target: an NPC who simply speaks is billed only for what they said.</summary>
+        public const int GeminiThinkingFloor = 1500;
+
+        /// <summary>DeepSeek as a first-class backend (2026.08.02, asked for on Steam): the cheapest
+        /// road that still speaks well. deepseek-v4-flash scores within a point of gpt-5.6-luna on the
+        /// public intelligence index at $0.14/$0.28 per MTok against luna's $0.20/$1.20 — about half
+        /// the cost of an exchange here, and their cache makes a repeated prompt cheaper still. Two
+        /// cautions, both real: prices DOUBLE during Beijing peak hours (09:00–12:00 and 14:00–18:00
+        /// UTC+8 — European evening play falls in the cheap window), and the servers sit in China, so
+        /// what is said passes under their jurisdiction. Get a key at platform.deepseek.com.</summary>
+        public string DeepSeekApiKey { get; set; } = "";
+
+        /// <summary>Which DeepSeek answers. v4-flash is the tested-value pick; deepseek-v4-pro is the
+        /// stronger, ~3× dearer sibling. Both carry native tool calling and a 1M-token window. NOTE:
+        /// DeepSeek thinks by DEFAULT — the client sends thinking "disabled" explicitly, the same way
+        /// it must for Anthropic.</summary>
+        public string DeepSeekModel { get; set; } = "deepseek-v4-flash";
+
+        /// <summary>DeepSeek's OpenAI-compatible door.</summary>
+        public const string DeepSeekEndpoint = "https://api.deepseek.com/v1/chat/completions";
 
         /// <summary>Local models as a first-class backend (2026.07.17, asked for by testers): set
         /// <c>Backend</c> to "Local" and the NPCs think through a model running on the player's OWN
@@ -485,12 +533,16 @@ namespace ImmersiveAI
                 ["claude-sonnet-5"] = 1000000,
                 ["claude-sonnet-4-6"] = 1000000,
                 ["gemini"] = 1000000,
+                ["deepseek"] = 128000,
+                ["deepseek-v4"] = 1000000,
                 ["grok"] = 256000,
             };
 
-        /// <summary>The built-in model → price table (USD per million tokens; verified 2026.07).
+        /// <summary>The built-in model → price table (USD per million tokens; verified 2026.08.02).
         /// Longest key contained in the model id wins, so "gpt-5.6-terra" beats "gpt-5.6".
-        /// Users edit/extend the copy in config.json; missing built-ins are re-added on load.</summary>
+        /// Users edit/extend the copy in config.json; missing built-ins are re-added on load, and the
+        /// V3 migration corrects entries an old config still holds at a superseded price (see
+        /// <see cref="SupersededModelPrices"/>) — untouched defaults only, never a hand-edit.</summary>
         public static Dictionary<string, ModelPrice> DefaultModelPrices() =>
             new Dictionary<string, ModelPrice>(StringComparer.OrdinalIgnoreCase)
             {
@@ -499,11 +551,11 @@ namespace ImmersiveAI
                 ["claude-sonnet"] = new ModelPrice(3, 15),
                 ["claude-haiku"] = new ModelPrice(1, 5),
                 ["claude-fable-5"] = new ModelPrice(10, 50),
-                // OpenAI
+                // OpenAI — luna and terra were cut hard on 2026.07.30 (luna by 80%).
                 ["gpt-5.6"] = new ModelPrice(5, 30),          // the bare alias routes to Sol
-                ["gpt-5.6-sol"] = new ModelPrice(5, 30),
-                ["gpt-5.6-terra"] = new ModelPrice(2.5, 15),
-                ["gpt-5.6-luna"] = new ModelPrice(1, 6),
+                ["gpt-5.6-sol"] = new ModelPrice(5, 30),      // unchanged in the July cut
+                ["gpt-5.6-terra"] = new ModelPrice(2, 12),
+                ["gpt-5.6-luna"] = new ModelPrice(0.2, 1.2),
                 ["gpt-5.5"] = new ModelPrice(5, 30),          // flagship tier; no mini/nano siblings exist
                 ["gpt-5.4"] = new ModelPrice(2.5, 15),
                 ["gpt-5.4-mini"] = new ModelPrice(0.75, 4.5), // explicit: would otherwise match "gpt-5"
@@ -514,13 +566,36 @@ namespace ImmersiveAI
                 ["gpt-4o-mini"] = new ModelPrice(0.15, 0.6),
                 ["gpt-4.1"] = new ModelPrice(2, 8),
                 ["gpt-4.1-mini"] = new ModelPrice(0.4, 1.6),
-                // Via OpenRouter (2026.07.16, read from the live catalog): the dropdown's other
-                // families. Containment matches the prefixed ids ("google/gemini-2.5-flash").
-                ["gemini-2.5-flash"] = new ModelPrice(0.3, 2.5),
+                // Google. These are the PAID rates; on a free-tier key nothing is billed at all, so
+                // the cost notice simply overstates — no ledger can know which tier a key sits on.
+                ["gemini-3.6-flash"] = new ModelPrice(1.5, 7.5),
                 ["gemini-3.5-flash"] = new ModelPrice(1.5, 9),
-                ["deepseek-v4-flash"] = new ModelPrice(0.1, 0.2),
+                ["gemini-3.5-flash-lite"] = new ModelPrice(0.3, 2.5),
+                ["gemini-3.1-flash-lite"] = new ModelPrice(0.25, 1.5),
+                ["gemini-2.5-pro"] = new ModelPrice(1.25, 10),
+                ["gemini-2.5-flash"] = new ModelPrice(0.3, 2.5),
+                ["gemini-2.5-flash-lite"] = new ModelPrice(0.1, 0.4),
+                // DeepSeek. Their published off-peak rates; during Beijing peak hours (09:00–12:00 and
+                // 14:00–18:00 UTC+8) the real bill is DOUBLE these, which no static table can follow.
+                ["deepseek-v4-flash"] = new ModelPrice(0.14, 0.28),
+                ["deepseek-v4-pro"] = new ModelPrice(0.435, 0.87),
+                // Others reachable through OpenRouter; containment matches the prefixed ids
+                // ("google/gemini-2.5-flash", "deepseek/deepseek-v4-flash").
                 ["grok-4.5"] = new ModelPrice(2, 6),
                 ["mistral-large-2512"] = new ModelPrice(0.5, 1.5),
+            };
+
+        /// <summary>Prices a shipped default once carried and no longer does. An existing config.json
+        /// keeps whatever it was written with — <see cref="Normalize"/> only ever ADDS missing keys —
+        /// so a provider's price cut would otherwise leave every old install quoting the old number
+        /// forever. The V3 migration replaces an entry ONLY where it still equals the superseded
+        /// figure exactly; a player who edited that line keeps their own.</summary>
+        private static Dictionary<string, ModelPrice> SupersededModelPrices() =>
+            new Dictionary<string, ModelPrice>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["gpt-5.6-luna"] = new ModelPrice(1, 6),        // cut 80% on 2026.07.30
+                ["gpt-5.6-terra"] = new ModelPrice(2.5, 15),    // cut 20% the same day
+                ["deepseek-v4-flash"] = new ModelPrice(0.1, 0.2), // our own estimate; their real rate is 0.14/0.28
             };
 
         public static string ConfigDirectory =>
@@ -586,6 +661,26 @@ namespace ImmersiveAI
                 ConfigVersion = 2;
             }
 
+            // V3: providers cut their prices (OpenAI's luna by 80% on 2026.07.30) and an existing
+            // config keeps the table it was written with. Correct only the lines still holding the
+            // exact superseded figure — a hand-tuned price is the player's own and stays.
+            if (ConfigVersion < 3)
+            {
+                if (ModelPrices != null)
+                {
+                    var current = DefaultModelPrices();
+                    foreach (var stale in SupersededModelPrices())
+                    {
+                        if (!ModelPrices.TryGetValue(stale.Key, out var held) || held == null) continue;
+                        if (held.InputPerMTok != stale.Value.InputPerMTok
+                            || held.OutputPerMTok != stale.Value.OutputPerMTok) continue;
+                        if (current.TryGetValue(stale.Key, out var fresh) && fresh != null)
+                            ModelPrices[stale.Key] = fresh;
+                    }
+                }
+                ConfigVersion = 3;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The OpenAI-compatible endpoints: blank falls back to each backend's default; a pasted
@@ -608,6 +703,16 @@ namespace ImmersiveAI
             OpenRouterApiKey = (OpenRouterApiKey ?? string.Empty).Trim();
             OpenRouterModel = (OpenRouterModel ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-5.6-luna";
+
+            // Gemini and DeepSeek: same contract — trimmed keys and ids, a blank id falling back to
+            // the tested default rather than 400-ing on an empty model name.
+            GeminiApiKey = (GeminiApiKey ?? string.Empty).Trim();
+            GeminiModel = (GeminiModel ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(GeminiModel)) GeminiModel = new ModConfig().GeminiModel;
+
+            DeepSeekApiKey = (DeepSeekApiKey ?? string.Empty).Trim();
+            DeepSeekModel = (DeepSeekModel ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(DeepSeekModel)) DeepSeekModel = new ModConfig().DeepSeekModel;
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;

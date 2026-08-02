@@ -59,30 +59,32 @@ If one of these searches brought you here — yes, this is that mod:
 
 ## What it runs on — and what it costs
 
-Bring **your own API key**. Recommended, in order:
+Bring **your own API key**. Pick a row:
 
-1. **OpenRouter** with `openai/gpt-5.6-luna` — the default, what the mod is tuned and tested
-   against. `openai/gpt-5.4-mini` is the cheaper fallback, also tested.
-2. **OpenAI** with those same two models.
-3. **Anthropic (Claude)** — works, haiku-4.5 by default; not tested at length.
+| If you want… | Pick | Key from |
+|---|---|---|
+| **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
+| **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card | aistudio.google.com |
+| **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
+| **The best writing** | `openai/gpt-5.6-terra` or `anthropic/claude-sonnet-5` | openrouter.ai |
+| **Nothing to leave your PC** | Local (LM Studio / Ollama) — tinkerers only | — |
 
-Any other model, from the dropdown or typed in yourself, is at your own risk, and must carry
-**native tool calling** or the NPCs go noticeably duller.
-
-> **Local models: tinkerers only, at your own risk.** Local exists because people asked, not
-> because it plays well. Instruct model with native tool calling, **thinking/reasoning OFF** in
-> your server (a thinking model burns its whole budget in silence and answers `...`),
-> `MaxTokens` 400+, and `LocalContextWindow` set to what your server actually loaded. I don't
-> debug local setups.
-
-A typical exchange costs around a cent or less on the recommended models — $10 covers thousands of
+A typical exchange costs about a tenth of a cent on the default — $10 covers many thousands of
 messages. Every interaction shows its tokens and price in-game, daily totals are kept, and an
 optional hard daily cap makes runaway costs impossible.
 
+**The one catch worth knowing about free:** Google states that free-tier traffic is used to
+improve their products, so your roleplay isn't private there. Paying moves the same key to their
+paid tier.
+
+📖 **[Which AI should I use?](docs/choosing-a-model.md)** — prices side by side, the catch with
+each provider, what makes a model good enough (native tool calling, thinking off), and the whole
+local-model setup. Read as far down as you need.
+
 **Quick setup:**
 
-1. Get a key at **openrouter.ai** (recommended) — or **platform.openai.com** / **console.anthropic.com** —
-   and add a little credit.
+1. Get a key at **openrouter.ai** (recommended) and add a little credit — or a free one at
+   **aistudio.google.com**.
 2. Enable the mod, start the game once — it creates
    `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you where
    to paste the key.
@@ -91,7 +93,8 @@ optional hard daily cap makes runaway costs impossible.
 
 **Privacy:** conversations go only to the AI provider *you* configure, under *your* key. No
 telemetry; every memory is plain text on your own disk, yours to read, edit, or delete. (Web
-searches go to DuckDuckGo — `EnableWebSearch: false` turns that off.)
+searches go to DuckDuckGo — `EnableWebSearch: false` turns that off.) What the provider does with
+it is *their* policy — notably, **Google's free Gemini tier trains on what it receives**.
 
 
 ## Yours to shape

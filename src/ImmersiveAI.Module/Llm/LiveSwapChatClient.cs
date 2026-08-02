@@ -75,6 +75,8 @@ namespace ImmersiveAI.Llm
                 c.AnthropicApiKey, c.AnthropicModel,
                 c.OpenAIApiKey, c.OpenAIModel, c.OpenAIBaseUrl,
                 c.OpenRouterApiKey, c.OpenRouterModel,
+                c.GeminiApiKey, c.GeminiModel,
+                c.DeepSeekApiKey, c.DeepSeekModel,
                 c.LocalEndpoint, c.LocalModel, c.LocalApiKey);
         }
 
@@ -97,6 +99,8 @@ namespace ImmersiveAI.Llm
             {
                 case "OpenAI": return _config.OpenAIModel;
                 case "OpenRouter": return _config.OpenRouterModel;
+                case "Gemini": return _config.GeminiModel;
+                case "DeepSeek": return _config.DeepSeekModel;
                 case "Local": return string.IsNullOrWhiteSpace(_config.LocalModel) ? "the loaded local model" : _config.LocalModel;
                 default: return _config.AnthropicModel;
             }

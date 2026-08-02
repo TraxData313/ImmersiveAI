@@ -3,7 +3,7 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [h1]Looking for…?[/h1] 
 If one of these searches brought you here — yes, this is that mod:
 [list]
-[*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through [b]OpenRouter (recommended) / OpenAI / Claude[/b], or a local model if you like to tinker
+[*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through [b]OpenRouter (recommended) / OpenAI / Gemini / DeepSeek / Claude[/b], a [b]free[/b] Gemini key, or a local model if you like to tinker
 [*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story
@@ -38,24 +38,25 @@ If one of these searches brought you here — yes, this is that mod:
 
 [h1]What you need — and what it costs[/h1]
 
-You bring [b]your own API key[/b]. Recommended, in order:
+You bring [b]your own API key[/b]. Pick a row:
 
-[olist]
-[*][b]OpenRouter with openai/gpt-5.6-luna[/b] — the default, what the mod is tuned and tested against. One key from [b]openrouter.ai[/b] reaches every model at the providers' own prices. [b]openai/gpt-5.4-mini[/b] is the cheaper fallback, also tested.
-[*][b]OpenAI[/b] with those same two models.
-[*][b]Anthropic (Claude)[/b] — works, haiku-4.5 by default; not tested at length.
-[/olist]
+[list]
+[*][b]Just works[/b] — OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
+[*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. One catch — Google trains on free-tier traffic, so your roleplay isn't private there; paying moves the same key to their paid tier.
+[*][b]Cheapest paid[/b] — DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
+[*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model if you like to tinker.
+[/list]
 
-Any other model, from the dropdown or typed in yourself, is at your own risk, and must carry [b]native tool calling[/b] or the NPCs go noticeably duller. This mod does [b]not[/b] use the "free" Player2 backend — the tool calling it is built on would need a paid tier there anyway. For a free taste first, try the ChatAI mod — it's good; it inspired this one.
+[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default — $10 covers many thousands of messages, shown as you play, with daily totals and a hard cap you can't outrun.
 
-[b]Local models: tinkerers only, at your own risk.[/b] The [b]Local[/b] backend (LM Studio / Ollama) exists because people asked, not because it plays well. You own the setup: an instruct model with [b]native tool calling[/b], [b]thinking/reasoning OFF[/b] in your server (a thinking model burns its whole budget in silence and answers "..."), a 12–16+ GB GPU, and patience. Details in the pinned FAQ. I don't debug local setups.
+[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
-[b]Costs are yours and visible.[/b] A typical exchange is around a cent or less on the recommended models — $10 covers thousands of messages. Each interaction shows its tokens and price as you play, with daily totals and an optional hard cap.
+Any model must carry [b]native tool calling[/b] or the NPCs go duller — so no "free" Player2 backend (its tool calling would need a paid tier anyway). For a free taste first, try the ChatAI mod — it's good; it inspired this one.
 
 [h1]Quick setup (five minutes)[/h1]
 
 [olist]
-[*]Get a key at [b]openrouter.ai[/b] (recommended — one key, many models) or [b]platform.openai.com[/b] / [b]console.anthropic.com[/b], and add a little credit ($5–10 goes a long way). Local users skip this step.
+[*]Get a key at [b]openrouter.ai[/b] (recommended) and add a little credit ($5–10 goes a long way) — or a free one at [b]aistudio.google.com[/b]. Local users skip this step.
 [*]Install, enable [b]Immersive AI[/b] in the launcher, start the game once — it creates its config file and tells you where to paste the key.
 [*]Paste the key into config.json (or the Mod Options menu with MCM), pick your backend, restart.
 [*]The startup check says whether it worked — then go talk to somebody.
@@ -63,7 +64,7 @@ Any other model, from the dropdown or typed in yourself, is at your own risk, an
 
 [h1]Privacy[/h1]
 [list]
-[*]Your conversations and the world context around them go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms. Nowhere else. (Local backend: nothing leaves your machine.)
+[*]Your conversations and the world context around them go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms — nowhere else. Their policy is theirs: notably, Google's [b]free[/b] tier trains on what it receives. (Local backend: nothing leaves your machine.)
 [*]With web search on (default), characters may look things up mid-reply; those queries go to DuckDuckGo — turn it off to keep everything with your provider.
 [*][b]No telemetry whatsoever.[/b] All memories are plain files on your own disk, yours to read, edit, or delete.
 [/list]
