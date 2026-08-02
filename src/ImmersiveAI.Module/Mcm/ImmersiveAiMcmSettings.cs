@@ -86,7 +86,7 @@ namespace ImmersiveAI.Mcm
         public string GeminiApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Gemini model", Order = 11, RequireRestart = false,
-            HintText = "All of these are free-tier (the Pro models are paid-only since April 2026). gemini-3.6-flash is the pick — strongest of them, and the tools the NPCs need are steadier on it than on the Lite models. Drop to a flash-lite if you keep hitting the per-minute limit.")]
+            HintText = "All free-tier (Pro models are paid-only since April 2026). gemini-3.6-flash is the strongest, but the 3.x line always thinks a little. gemini-2.5-flash is the one whose thinking truly switches OFF (the mod does so) — try it if 3.6 feels slow; Google retires it Oct 2026. The Lites are weaker with the NPCs' tools.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> GeminiModel { get; set; } = new Dropdown<string>(McmChoiceLists.GeminiModels, 0);
 

@@ -15,9 +15,12 @@ namespace ImmersiveAI.Mcm
         public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek" };
 
         /// <summary>Every free-tier Gemini, newest first. The Pro models are paid-only since April
-        /// 2026 and deliberately absent: the whole point of this backend is the free road.</summary>
+        /// 2026 and deliberately absent: the whole point of this backend is the free road.
+        /// gemini-2.5-flash (appended 2026.08.02) is the odd one out — older, but the last capable
+        /// model whose thinking can be truly switched OFF (the client sends "none" for the 2.5s),
+        /// so it is the escape from the 3.x thinking tax; Google retires it 2026.10.16.</summary>
         public static readonly string[] GeminiModels =
-            { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite" };
+            { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash" };
 
         public static readonly string[] DeepSeekModels = { "deepseek-v4-flash", "deepseek-v4-pro" };
 

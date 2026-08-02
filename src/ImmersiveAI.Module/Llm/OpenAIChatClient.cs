@@ -226,10 +226,19 @@ namespace ImmersiveAI.Llm
 
             // The API measures its own tokens — hand them to the ledger, and tell the
             // gate the road is open again.
+            var completionTokens = (int?)json.SelectToken("usage.completion_tokens") ?? 0;
             UsageLedger.RecordCall(_model,
                 (int?)json.SelectToken("usage.prompt_tokens") ?? 0,
-                (int?)json.SelectToken("usage.completion_tokens") ?? 0);
+                completionTokens);
             LlmGate.ReportSuccess();
+
+            // The thinking tax, made visible: some backends cannot have thinking switched off
+            // (Gemini 3.x), and any backend could quietly ignore the off switch — when the API
+            // reports reasoning tokens, the log says so, and "why is it slow" is answered by
+            // log.txt instead of guesswork. Silent when the count is zero, which is the norm.
+            var thinkingTokens = (int?)json.SelectToken("usage.completion_tokens_details.reasoning_tokens") ?? 0;
+            if (thinkingTokens > 0)
+                ModLog.Info($"{_label} ({_model}): {thinkingTokens} of {completionTokens} output tokens were silent thinking.");
 
             var message = json.SelectToken("choices[0].message");
 

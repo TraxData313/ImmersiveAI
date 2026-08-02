@@ -62,6 +62,11 @@ before the first word — and with the tools the NPCs reach for, several thinkin
 into one answer. The chat window (hotkey `O`) wears the wait fine; the face-to-face panel can
 show `...` before the words arrive — clicking "(wait for them to answer)" again shows the reply.
 
+**The escape hatch: `gemini-2.5-flash`.** The older generation still honors a true off switch
+(the mod sends it automatically), so it answers without the thinking toll — pick it from the
+model dropdown if 3.6 feels too slow. Still free-tier, still carries the tools; Google retires
+it in October 2026, so it's a bridge, not a home.
+
 So: free, capable, slow, and read by Google. **If you'd rather have snappy and private, luna
 costs about a tenth of a cent per exchange** — $5 will outlast your campaign.
 
