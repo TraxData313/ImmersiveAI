@@ -239,8 +239,14 @@ namespace ImmersiveAI.Llm
                 .Where(c => (string?)c["type"] == "function")
                 .Select(c => new ToolCall(
                     (string?)c["id"] ?? "",
-                    (string?)c.SelectToken("function.name") ?? "",
-                    (string?)c.SelectToken("function.arguments") ?? "{}"))
+                    PlainToolName((string?)c.SelectToken("function.name") ?? ""),
+                    (string?)c.SelectToken("function.arguments") ?? "{}",
+                    // Gemini's thinking models cryptographically SIGN each function call and refuse
+                    // the next request if the signature does not come back with it ("Function call
+                    // is missing a thought_signature", a hard 400 — hit live 2026.08.02 on the very
+                    // first Gemini reply, since move_heart rides every one). Carried opaquely; no
+                    // other backend sends the field, so nothing else is affected.
+                    (string?)c.SelectToken("extra_content.google.thought_signature")))
                 .ToList();
 
             // Local hybrid thinkers (Qwen3.x and kin) cannot be told reasoning-off through this
@@ -335,7 +341,7 @@ namespace ImmersiveAI.Llm
                     var toolCalls = new JArray();
                     foreach (var call in m.ToolCalls)
                     {
-                        toolCalls.Add(new JObject
+                        var entry = new JObject
                         {
                             ["id"] = call.Id,
                             ["type"] = "function",
@@ -344,7 +350,16 @@ namespace ImmersiveAI.Llm
                                 ["name"] = call.Name,
                                 ["arguments"] = call.ArgumentsJson,
                             },
-                        });
+                        };
+                        // Whatever the backend signed the call with rides back exactly as it came.
+                        // Keyed off the signature's presence, not the dialect: only Gemini issues
+                        // one, so no other service ever sees a field it does not know.
+                        if (call.ProviderSignature != null)
+                            entry["extra_content"] = new JObject
+                            {
+                                ["google"] = new JObject { ["thought_signature"] = call.ProviderSignature },
+                            };
+                        toolCalls.Add(entry);
                     }
 
                     var turn = new JObject { ["role"] = "assistant", ["tool_calls"] = toolCalls };
@@ -408,6 +423,25 @@ namespace ImmersiveAI.Llm
             if (open >= 0) stripped = stripped.Substring(0, open);
             return stripped;
         }
+
+        /// <summary>The tool name as WE named it. Gemini namespaces functions internally
+        /// ("default_api:move_heart" — seen in its own 400 text, 2026.08.02); should that spelling
+        /// ever reach the reply, every lookup would miss and each tool would answer its honest
+        /// "nothing surfaces", which is silent and miserable to diagnose. Our tool names never carry
+        /// a colon, so dropping a namespace prefix is a no-op when there is none — and it says so in
+        /// the log the one time it fires, since that would be worth knowing.</summary>
+        private static string PlainToolName(string name)
+        {
+            var colon = name.LastIndexOf(':');
+            if (colon < 0 || colon == name.Length - 1) return name;
+            var plain = name.Substring(colon + 1);
+            if (_namespaceNoted) return plain;
+            _namespaceNoted = true;
+            ModLog.Info($"Tool names arrive namespaced ('{name}') — using '{plain}'.");
+            return plain;
+        }
+
+        private static bool _namespaceNoted;
 
         /// <summary>Whether a 400 body is complaining about the very field we use to quiet the model
         /// (unknown, unsupported, or given a value it will not take) rather than about our prompt.</summary>

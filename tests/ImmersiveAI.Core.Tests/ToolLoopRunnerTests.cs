@@ -100,6 +100,32 @@ public class ToolLoopRunnerTests
     }
 
     [Fact]
+    public async Task ProviderSignature_RidesBackWithTheReplayedCall()
+    {
+        // Gemini signs each function call and 400s unless the replay carries the signature
+        // untouched — so the loop's history must preserve it through the round-trip.
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("", new[]
+        {
+            new ToolCall("call_1", "recall_person", "{\"name\":\"Rhagaea\"}", "sig-abc123"),
+        }));
+        client.Script.Enqueue(new ChatResult("She is the empress."));
+
+        await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("answer"));
+
+        var replayed = client.Requests[1].First(m => m.Role == ChatRole.Assistant && m.ToolCalls.Count > 0);
+        Assert.Equal("sig-abc123", replayed.ToolCalls[0].ProviderSignature);
+    }
+
+    [Fact]
+    public void ProviderSignature_BlankMeansNone()
+    {
+        Assert.Null(new ToolCall("id", "recall_person", "{}").ProviderSignature);
+        Assert.Null(new ToolCall("id", "recall_person", "{}", "  ").ProviderSignature);
+        Assert.Equal("sig", new ToolCall("id", "recall_person", "{}", "sig").ProviderSignature);
+    }
+
+    [Fact]
     public async Task SpentBudget_ForcesASpokenAnswer()
     {
         var client = new ScriptedToolClient();
