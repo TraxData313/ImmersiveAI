@@ -56,9 +56,9 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
-            HintText = "gpt-5.6-luna ($1/$6 per MTok) is the tested pick; gpt-5.4-mini ($0.75/$4.50) the cheaper fallback, also tested. terra ($2.50/$15) is stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25) the cheapest. Any other model goes in the custom field below, at your own risk.")]
+            HintText = "gpt-5.6-luna ($0.20/$1.20 per MTok since the July 2026 price cut) is the default and tested pick - now also nearly the cheapest. gpt-5.4-mini ($0.75/$4.50) is the proven fallback; terra ($2/$12) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25). Any other model goes in the custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 1);
+        public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0);
 
         [SettingPropertyText("OpenAI model (type any id)", Order = 6, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: the exact OpenAI model id to use (e.g. gpt-4.1) — also the place for a custom endpoint's model id. Empty = the dropdown chooses. Unlisted models still work; the ~$ estimate just may not know their prices.")]
@@ -71,9 +71,9 @@ namespace ImmersiveAI.Mcm
         public string OpenRouterApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenRouter model", Order = 8, RequireRestart = false,
-            HintText = "openai/gpt-5.6-luna is the tested pick, openai/gpt-5.4-mini the cheaper fallback — same prices as going direct. Claude, Gemini, Grok, DeepSeek and Mistral are verified to carry the NPCs' tools but are not what the mod is tuned to. Any other id goes in the custom field below, at your own risk.")]
+            HintText = "openai/gpt-5.6-luna is the default and tested pick (cheap since the July 2026 price cut), openai/gpt-5.4-mini the proven fallback — same prices as going direct. Claude, Gemini, Grok, DeepSeek and Mistral are verified to carry the NPCs' tools but are not what the mod is tuned to. Any other id goes in the custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 7);
+        public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0);
 
         [SettingPropertyText("OpenRouter model (type any id)", Order = 9, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: any id from openrouter.ai/models, pasted exactly in OpenRouter's own spelling (e.g. qwen/qwen3-235b-a22b). Empty = the dropdown chooses. A mistyped id answers as a clear error naming the model.")]
@@ -81,7 +81,7 @@ namespace ImmersiveAI.Mcm
         public string OpenRouterModelCustom { get; set; } = string.Empty;
 
         [SettingPropertyText("Gemini API key", Order = 10, RequireRestart = false,
-            HintText = "FREE: get a key at aistudio.google.com — no card needed. Roughly 10-15 requests a minute and ~1,500 a day, enough for a long evening. The honest catch: on the FREE tier Google reads what passes through to improve their products, so nothing said here is private. Paying moves the same key to the paid tier, where they say they do not.")]
+            HintText = "FREE: a key from aistudio.google.com, no card — ~1,500 replies a day. Two catches: Google trains on free-tier traffic (nothing said here is private; paying stops that), and replies are SLOW — Gemini's thinking cannot be switched off, so prefer the chat window over face-to-face.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string GeminiApiKey { get; set; } = string.Empty;
 

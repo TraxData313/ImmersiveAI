@@ -24,19 +24,25 @@ namespace ImmersiveAI.Mcm
         public static readonly string[] AnthropicModels =
             { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8", "claude-fable-5" };
 
+        // 2026.08.02, the ONE sanctioned deviation from append-only: luna SWAPPED to the top of both
+        // cloud lists (Anton's call once luna proved itself in live play — and since the July price
+        // cut it is cheaper than 5.4-mini too). A swap, not a shift, so only the two exchanged slots
+        // change meaning for old store files; the bridge's value-based push self-heals stored
+        // indices at every successful bind, and the once-per-process rescue can at worst adopt the
+        // swapped sibling — both fine models. Everything else remains append-at-the-END.
         public static readonly string[] OpenAIModels =
-            { "gpt-5.4-mini", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" };
+            { "gpt-5.6-luna", "gpt-5.4-mini", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" };
 
         public static readonly string[] OpenRouterModels =
         {
-            "openai/gpt-5.4-mini",
+            "openai/gpt-5.6-luna",
             "anthropic/claude-haiku-4.5",
             "deepseek/deepseek-v4-flash",
             "google/gemini-2.5-flash",
             "google/gemini-3.5-flash",
             "mistralai/mistral-large-2512",
             "anthropic/claude-sonnet-5",
-            "openai/gpt-5.6-luna",
+            "openai/gpt-5.4-mini",
             "openai/gpt-5.6-terra",
             "x-ai/grok-4.5",
             "anthropic/claude-opus-4.8",

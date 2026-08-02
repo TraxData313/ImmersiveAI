@@ -422,11 +422,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   field is omitted — except fable/mythos where explicit disabled is a hard 400 and the field stays
   omitted; the old `OpenAIReasoningEffort` config key is gone and ignored on load, no MCM dial;
   gpt-5.x/o-series still get `max_completion_tokens` instead of `max_tokens` — REQUIRED or gpt-5.6
-  400s; OpenAI default model is now
-  gpt-5.4-mini for fresh configs (2026.07.12, settled by live play after terra → luna both stumbled on
-  access-propagation 401s; the MCM dropdown offers 5.4-mini/luna/terra/sol/5.5/5.4/5.4-nano — NO 5.5
-  mini/nano exist; older models live on as config.json hand edits), existing configs deliberately
-  unmigrated — see docs/models-and-costs.md),
+  400s; OpenAI default model is gpt-5.6-luna (2026.07.28 — and on 2026.08.02, luna having proven
+  itself in live play AND become nearly the cheapest after the July price cut, it was SWAPPED to the
+  top of both cloud dropdowns with Anton's blessing: a swap with 5.4-mini, not a shift, so only the
+  two exchanged slots change meaning for old MCM store files — the one sanctioned deviation from
+  McmChoiceLists' append-only rule; historical: 5.4-mini was the default 2026.07.12–28 after terra →
+  luna both stumbled on access-propagation 401s; NO 5.5 mini/nano exist; older models live on as
+  config.json hand edits), existing configs deliberately unmigrated — see docs/models-and-costs.md),
   `ConfigVersion` (format stamp, 3 — migrations key off it; V2 = the letter hotkey's U→Y move,
   V3 = correcting superseded built-in `ModelPrices` after OpenAI cut luna 80% / terra 20% on
   2026.07.30 — only entries still equal to the exact old figure move, hand-edits survive; the list

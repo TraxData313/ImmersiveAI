@@ -10,7 +10,7 @@ as you scroll — **read only as far as you need.**
 | If you want… | Pick | Key from |
 |---|---|---|
 | **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
-| **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card | aistudio.google.com |
+| **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best writing** | OpenRouter + `openai/gpt-5.6-terra` or `anthropic/claude-sonnet-5` | openrouter.ai |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
@@ -46,19 +46,24 @@ Every option has exactly one thing worth knowing before you commit.
 |---|---|
 | **OpenRouter** | None, really. One key reaches every model. Avoid the `:free` models — they're rate-limited and congested. |
 | **OpenAI** | None. Same models as above, going direct. |
-| **Gemini** | **Google trains on free-tier traffic.** Their own pricing page says free-tier content is used to improve their products. Paying moves the same key to the paid tier, where they say they don't. Also: its *paid* rates are worse than luna's, so only use it free. |
+| **Gemini** | **Google trains on free-tier traffic** (their own pricing page says so; paying moves the same key to the paid tier, where they say they don't). **And it's slow** — Gemini's thinking cannot be switched off, so every reply carries silent thought before the words: live in the chat window (hotkey `O`), because the face-to-face panel handles the long wait poorly. Its *paid* rates are worse than luna's, so only use it free. |
 | **DeepSeek** | Prices **double during Beijing peak hours** (09:00–12:00 and 14:00–18:00 UTC+8 — European evenings fall in the cheap window). Servers are in China. |
 | **Anthropic** | Works fine, just less tested here. Pricier per word than the rest. |
 | **Local** | It's a project, not a setting. [See below.](#local-models-tinkerers-only) |
 
 ### Is the free Gemini tier actually good enough?
 
-Yes — `gemini-3.6-flash` is a genuinely capable model and it carries the tools the NPCs need.
-The limits are ~10–15 requests/minute and ~1,500/day, which is a long evening of play.
+The words are — `gemini-3.6-flash` is a genuinely capable model and it carries the tools the
+NPCs need. The limits are ~10–15 requests/minute and ~1,500/day, a long evening of play.
 
-The reason it isn't the mod's default is the training clause, not the quality. **If you'd rather
-not have your roleplay read, don't take the free tier** — luna costs about a tenth of a cent per
-exchange, and $5 will outlast your campaign.
+**But expect it to feel slow.** Google won't let Gemini 3.x stop thinking (see
+[below](#2-its-thinking-must-be-switchable-off)), so every reply spends seconds of silent thought
+before the first word — and with the tools the NPCs reach for, several thinking rounds can stack
+into one answer. The chat window (hotkey `O`) wears the wait fine; the face-to-face panel can
+show `...` before the words arrive — clicking "(wait for them to answer)" again shows the reply.
+
+So: free, capable, slow, and read by Google. **If you'd rather have snappy and private, luna
+costs about a tenth of a cent per exchange** — $5 will outlast your campaign.
 
 ---
 
@@ -103,7 +108,8 @@ thinking off on every backend**, and each provider spells that differently:
 Gemini is the awkward one: its 3.x models cannot be silenced at all, and their token ceiling
 covers thinking *and* speech. The mod handles this by quietly widening Gemini's budget so there's
 always room left to actually say something. You don't have to do anything — but it's why Gemini
-replies cost a little more thought than the number suggests.
+is **the slow backend**: every reply pays a thinking toll before the first word, which no setting
+on our side can remove.
 
 ### 3. Context window
 

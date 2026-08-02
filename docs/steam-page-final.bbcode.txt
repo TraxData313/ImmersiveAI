@@ -42,12 +42,12 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [list]
 [*][b]Just works[/b] — OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
-[*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. One catch — Google trains on free-tier traffic, so your roleplay isn't private there; paying moves the same key to their paid tier.
+[*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Two catches — Google trains on free-tier traffic (paying stops that), and it's slow: its thinking can't be switched off, so prefer the chat window over face-to-face.
 [*][b]Cheapest paid[/b] — DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
 [*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model if you like to tinker.
 [/list]
 
-[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default — $10 covers many thousands of messages, shown as you play, with daily totals and a hard cap you can't outrun.
+[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default — $10 covers many thousands of messages, shown as you play, with daily totals and a hard cap.
 
 [b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 

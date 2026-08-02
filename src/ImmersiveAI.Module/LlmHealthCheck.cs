@@ -67,8 +67,12 @@ namespace ImmersiveAI
                 };
 
                 // A local server may be LOADING the model on this very first request — give it
-                // minutes, where a cloud service gets seconds.
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(isLocal ? 180 : 30)))
+                // minutes, where a cloud service gets seconds. Gemini sits between: its thinking
+                // cannot be switched off, and even the tiny ping can chew half a minute of silent
+                // thought (30s expired live on 2026.08.02 and misread a healthy backend as a dead
+                // internet connection).
+                var pingSeconds = isLocal ? 180 : config?.Backend == "Gemini" ? 90 : 30;
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(pingSeconds)))
                 {
                     await client.CompleteAsync(messages, cts.Token).ConfigureAwait(false);
                 }
@@ -100,6 +104,14 @@ namespace ImmersiveAI
                     return "could not reach your local AI server at " + HostOf(config.LocalEndpoint)
                         + " — is it running, with its server switched on (LM Studio: Developer tab, Start Server; "
                         + "Ollama serves at localhost:11434)? Start it with your model loaded, then restart the game.";
+                // Gemini answering slowly is Gemini being Gemini, not a dead connection — its
+                // thinking cannot be switched off, and blaming the internet sends the player
+                // entirely the wrong way.
+                if (config?.Backend == "Gemini")
+                    return "Gemini took too long to answer the startup ping — its thinking cannot be switched off, "
+                        + "so replies run slow. It may still speak fine in play (the chat window, hotkey "
+                        + (config.ChatWindowHotkey ?? "O") + ", wears the wait best); if it stays silent, pick "
+                        + "another backend in the mod options.";
                 return "could not reach the AI service — check your internet connection, then restart the game.";
             }
 

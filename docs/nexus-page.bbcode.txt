@@ -43,7 +43,7 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [list]
 [*][b]Just works[/b] - OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
-[*][b]Free[/b] - Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. One catch - Google trains on free-tier traffic, so your roleplay isn't private there; paying moves the same key to their paid tier.
+[*][b]Free[/b] - Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Two catches - Google trains on free-tier traffic (paying stops that), and it's slow: Gemini's thinking can't be switched off, so prefer the chat window over face-to-face.
 [*][b]Cheapest paid[/b] - DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
 [*][b]Also fine[/b] - OpenAI, Anthropic (Claude), a local model, or any OpenAI-compatible service via the Custom endpoint option.
 [/list]

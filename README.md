@@ -64,7 +64,7 @@ Bring **your own API key**. Pick a row:
 | If you want… | Pick | Key from |
 |---|---|---|
 | **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
-| **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card | aistudio.google.com |
+| **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best writing** | `openai/gpt-5.6-terra` or `anthropic/claude-sonnet-5` | openrouter.ai |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — tinkerers only | — |
@@ -73,9 +73,10 @@ A typical exchange costs about a tenth of a cent on the default — $10 covers m
 messages. Every interaction shows its tokens and price in-game, daily totals are kept, and an
 optional hard daily cap makes runaway costs impossible.
 
-**The one catch worth knowing about free:** Google states that free-tier traffic is used to
-improve their products, so your roleplay isn't private there. Paying moves the same key to their
-paid tier.
+**Two catches worth knowing about free:** Google states that free-tier traffic is used to improve
+their products, so your roleplay isn't private there (paying moves the same key to their paid
+tier). And Gemini's thinking **cannot be switched off**, so its replies are slow — live in the
+chat window (hotkey `O`); the face-to-face panel handles the wait poorly.
 
 📖 **[Which AI should I use?](docs/choosing-a-model.md)** — prices side by side, the catch with
 each provider, what makes a model good enough (native tool calling, thinking off), and the whole

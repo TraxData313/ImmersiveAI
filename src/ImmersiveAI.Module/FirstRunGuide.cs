@@ -40,7 +40,7 @@ namespace ImmersiveAI
                     "Immersive AI gives every character a real, remembering mind — but the minds speak " +
                     "through an AI service, with YOUR OWN key, and no key is set yet. Until one is, the world stays silent.\n\n" +
                     "1. GET A KEY — openrouter.ai is recommended: one key, every model, and the mod comes set " +
-                    "to openai/gpt-5.6-luna (openai/gpt-5.4-mini is the cheaper fallback). platform.openai.com " +
+                    "to openai/gpt-5.6-luna (openai/gpt-5.4-mini is the proven fallback). platform.openai.com " +
                     "with those same two works as well; console.anthropic.com (Claude) works but is less tested. " +
                     "All bill by use — an evening of conversation is typically well under a dollar, and the mod " +
                     "shows each exchange's cost as you play.\n\n" +
