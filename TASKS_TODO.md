@@ -49,6 +49,7 @@ NEXT UPDATE:
       • MCM: EnableConversationMarriage (default on?), MarriageNeedsFamilyConsent,
         CourtshipCharmSlack; test levers: show-the-road odds view line + a DevMode "reveal her
         quiet asks" + reroll-asks lever.
+- [ ] BUG The buttons "Their prompt", "World prompt", Memory (dev option, forgot the real name) are stacking over each other and over the NPC name and details (example screenshot C:\Program Files (x86)\Steam\userdata\258577504\760\remote\261550\screenshots\20260807193017_1)
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
