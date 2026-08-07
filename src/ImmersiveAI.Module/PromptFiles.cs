@@ -26,7 +26,8 @@ namespace ImmersiveAI
 @"# Immersive AI - Global Prompt: how to shape your whole world
 #
 # Whatever you write here (except lines starting with # or //, which are ignored)
-# is added to EVERY character's mind, woven into how they see their world and speak.
+# enters EVERY character's mind under the words ""Of this world, this I know:"" -
+# so write it as knowledge of the world, the way its people would hold it.
 # Keep it short - a few plain sentences carry further than a page of rules, and
 # too many rules make every soul answer the same.
 #
@@ -34,17 +35,18 @@ namespace ImmersiveAI
 #
 #   The world is harsh and medieval. People speak plainly and fear their lords.
 #
-#   Everyone is aware the year is one of famine; food and coin weigh on every mind.
+#   This year is one of famine; food and coin weigh on every mind.
 #
 #   People speak in short sentences, rarely more than two or three at a time.
 #
-#   Answer in the language the traveler speaks to you, whatever it may be.
+#   People answer in the language spoken to them, whatever it may be.
 #
 # Each character ALSO has their own file - custom_instructions.txt inside their
-# folder under NPCs\ - for things only they should carry (""You secretly resent
-# the player"", ""You stutter when nervous""). This file is the world; that file
-# is the person. Changes take effect the next time you speak with someone -
-# no restart needed.
+# folder under NPCs\ - for things only they should carry. Write THAT file in the
+# character's own first person (""I secretly resent the traveler"", ""I stutter
+# when I am nervous"") - it enters their mind as their own private truth. This
+# file is the world; that file is the person. Changes take effect the next time
+# you speak with someone - no restart needed.
 ";
 
         /// <summary>Reads the global prompt, creating a commented template on first run. Returns the text with comment lines stripped.</summary>
@@ -75,10 +77,12 @@ namespace ImmersiveAI
                 {
                     var template =
 $@"# Immersive AI - Custom instructions for {npcName}
-# This text is added only for this character. Lines starting with # or // are ignored.
+# This text is added only for this character, entering their mind under the
+# words ""Of myself, this I hold true:"" - so write it in THEIR own first person,
+# as truths they privately carry. Lines starting with # or // are ignored.
 #
 # Example:
-#   You secretly resent the player. You never forget an insult.
+#   I secretly resent the traveler. I never forget an insult.
 ";
                     File.WriteAllText(path, template);
                 }
@@ -119,6 +123,100 @@ $@"# Immersive AI - Custom instructions for {npcName}
         {
             LoadGlobalPrompt();
             WriteKeepingComments(GlobalPromptPath, text);
+        }
+
+        // ── The director's spark (the generated starting persona) ──────────────────────
+        // The spark lands in the SAME per-NPC file the player edits; a "# spark:" comment line
+        // marks that the director has already passed (or was declined), so a soul is sparked at
+        // most once. Deleting the whole file — or the DevMode reroll lever — invites him back.
+
+        public const string SparkStampPrefix = "# spark:";
+
+        /// <summary>True when this soul still awaits the director: the file is missing, or it
+        /// carries no authored content AND no spark stamp. Any hand-written prompt counts as the
+        /// player having already shaped them. Unreadable files answer false — never generate
+        /// against a file that cannot be checked.</summary>
+        public static bool NeedsPersonaSpark(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return true;
+                var raw = File.ReadAllText(path);
+                if (StripComments(raw).Length > 0) return false;
+                return !HasSparkStamp(raw);
+            }
+            catch { return false; }
+        }
+
+        private static bool HasSparkStamp(string raw) =>
+            (raw ?? string.Empty).Split('\n')
+                .Any(l => l.TrimStart().StartsWith(SparkStampPrefix, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>Writes the director's spark into the NPC's prompt file: the template's comments
+        /// stay at the top, a stamp comment records the moment, and the spark itself becomes the
+        /// file's body (NeedsPersonaSpark guaranteed it was empty). Takes hold on the next reply.</summary>
+        public static void WritePersonaSpark(string path, string npcName, string spark, string when)
+        {
+            LoadNpcPrompt(path, npcName); // ensures the file and its template exist
+            AppendStampedBody(path,
+                $"{SparkStampPrefix} written once by the unseen director at first meeting ({when}). Yours to edit or erase.",
+                spark);
+        }
+
+        /// <summary>Records that the player declined the director for this soul, so they are never
+        /// asked again (the stamp is a comment; the file stays otherwise empty and editable).</summary>
+        public static void MarkPersonaSparkDeclined(string path, string npcName)
+        {
+            LoadNpcPrompt(path, npcName);
+            AppendStampedBody(path,
+                $"{SparkStampPrefix} declined by your hand — the director will not ask again. Delete this line to be asked anew.",
+                null);
+        }
+
+        /// <summary>The DevMode reroll: strips every spark stamp AND the file's body (the template
+        /// comments survive), so the very next interaction invites the director afresh.</summary>
+        public static void ClearPersonaSpark(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return;
+                var kept = File.ReadAllLines(path)
+                    .Where(l =>
+                    {
+                        var t = l.TrimStart();
+                        return (t.StartsWith("#") || t.StartsWith("//"))
+                            && !t.StartsWith(SparkStampPrefix, StringComparison.OrdinalIgnoreCase);
+                    })
+                    .Select(l => l.TrimEnd('\r'));
+                File.WriteAllText(path, string.Join(Environment.NewLine, kept) + Environment.NewLine);
+            }
+            catch { /* the reroll is best-effort */ }
+        }
+
+        // Rewrites the file as: its existing comment lines, the new stamp comment, then the body.
+        private static void AppendStampedBody(string path, string stampComment, string? body)
+        {
+            var comments = new List<string>();
+            try
+            {
+                foreach (var line in File.ReadAllLines(path))
+                {
+                    var t = line.TrimStart();
+                    if (t.StartsWith("#") || t.StartsWith("//")) comments.Add(line.TrimEnd('\r'));
+                }
+            }
+            catch { /* a fresh file simply has no comments to keep */ }
+            comments.Add(stampComment);
+
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in comments) sb.AppendLine(c);
+            var text = (body ?? string.Empty).Trim();
+            if (text.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(text);
+            }
+            File.WriteAllText(path, sb.ToString());
         }
 
         private static string Flatten(string text)

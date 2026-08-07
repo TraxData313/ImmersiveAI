@@ -77,6 +77,11 @@ namespace ImmersiveAI
 
         private readonly Random _rng = new Random();
 
+        // The director's spark bookkeeping (see the persona-spark region): souls mid-generation,
+        // and souls already asked this session in "Ask" mode (the file's stamp is the durable no).
+        private readonly HashSet<string> _sparkBusy = new HashSet<string>();
+        private readonly HashSet<string> _sparkAsked = new HashSet<string>();
+
         // True from the moment an offer is being prepared until it is resolved (accepted, declined by the
         // player, or declined by the NPC herself), so two initiations never overlap. The timestamp lets an
         // hourly tick self-heal the flag if an offer is ever lost without resolving (see OnHourlyTick).
@@ -518,9 +523,9 @@ namespace ImmersiveAI
                 {
                     InformationManager.DisplayMessage(new InformationMessage(
                         $"The bargain could not be sealed — {BargainBlockForPlayer(block)}.", ConversationLogColor));
-                    AppendAngelTurn(npc,
-                        $"{playerName} reached to seal your bargain of {price} denars, but the world would " +
-                        $"not allow it — {BargainBlockForNpc(block)}. No gold passed; you remain your own.",
+                    AppendRecordedTurn(npc,
+                        $"{playerName} reached to seal my bargain of {price} denars, but the world would " +
+                        $"not allow it — {BargainBlockForNpc(block)}. No gold passed; I remain my own.",
                         string.Empty);
                     return;
                 }
@@ -533,9 +538,10 @@ namespace ImmersiveAI
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"The bargain is sealed: {npc.Name} enters your service for {price} denars.",
                     new Color(0.45f, 0.85f, 0.45f, 1f)));
-                AppendAngelTurn(npc,
-                    $"The bargain was sealed by {playerName}'s own hand: {price} denars passed to you, and " +
-                    "you entered their service — a companion of their company now, your keep on their purse.",
+                AppendRecordedTurn(npc,
+                    $"The bargain was sealed by {playerName}'s own hand: {price} denars passed to me, and " +
+                    "I entered their service — a companion of their company now, my keep on their purse. " +
+                    "They hired me; I ride with them.",
                     string.Empty, OutreachMark.PlayerEngaged);
                 UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
             }
@@ -555,10 +561,10 @@ namespace ImmersiveAI
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
                 InformationManager.DisplayMessage(new InformationMessage(
                     "You let the bargain lie.", ConversationLogColor));
-                AppendAngelTurn(npc,
-                    $"You laid your terms of service before {playerName} — {price} denars for the hiring — " +
-                    "and they let the offer lie unsealed. No gold passed; you remain your own, and the " +
-                    "matter is theirs to return to, not yours to press.",
+                AppendRecordedTurn(npc,
+                    $"I laid my terms of service before {playerName} — {price} denars for the hiring — " +
+                    "and they let the offer lie unsealed. No gold passed; I remain my own, and the " +
+                    "matter is theirs to return to, not mine to press.",
                     string.Empty);
             }
             catch { /* the beat is best-effort */ }
@@ -806,7 +812,7 @@ namespace ImmersiveAI
         }
 
         // A conversation just closed. If it never became recorded beats (no free chat, no accepted
-        // reaching-out), leave a silent Angel note that the two met — no words fabricated, only the
+        // reaching-out), leave a silent first-person note that the two met — no words fabricated, only the
         // meeting itself with its [place, time] stamp — so returning later never rings "hello, stranger"
         // after a quest talk, a bargain, or words on the road.
         private void OnConversationEnded(IEnumerable<CharacterObject> characters)
@@ -854,13 +860,15 @@ namespace ImmersiveAI
                 {
                     var turn = memory.RecentTurns[i];
                     if (Math.Floor(turn.GameDay) < today) break;
-                    if (turn.IsFromAngel && PromptBuilder.IsMeetingLine(turn.PlayerLine)) return;
+                    // Meetings recorded before 2026.08.07 are Angel turns, newer ones inner turns —
+                    // the same day's meeting must not be noted twice across either era.
+                    if ((turn.IsFromAngel || turn.IsInnerThought) && PromptBuilder.IsMeetingLine(turn.PlayerLine)) return;
                 }
 
                 bool firstMeeting = !PromptBuilder.HasRememberedHistory(memory);
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
                 // The meeting itself is the player engaging — any outreach that waited unanswered, isn't.
-                AppendAngelTurn(npc, PromptBuilder.MeetingLine(playerName, firstMeeting), string.Empty,
+                AppendRecordedTurn(npc, PromptBuilder.MeetingLine(playerName, firstMeeting), string.Empty,
                     OutreachMark.PlayerEngaged);
             }
             catch { /* best-effort; the meeting mattered, the bookkeeping must not */ }
@@ -1056,6 +1064,13 @@ namespace ImmersiveAI
                 starter.AddPlayerLine("immersiveai_test_rename", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestRename}I would call you by another name. [Immersive AI • test — rename them]",
                     null, () => { OnDebugRenameNpc(); RequestLeaveFromPartyEncounter(); }, 92);
+
+                // Test lever: strip this soul's generated spark and let the director pass anew —
+                // the way to taste the muse deck's variety without a fresh campaign. The new spark
+                // is written as the talk closes and speaks from the next meeting.
+                starter.AddPlayerLine("immersiveai_test_spark", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestSpark}Let us part now. [Immersive AI • test — reroll their spark]",
+                    null, () => { OnDebugRerollSpark(); RequestLeaveFromPartyEncounter(); }, 91);
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
@@ -1179,20 +1194,23 @@ namespace ImmersiveAI
             using var _cost = UsageLedger.BeginInteraction("greeting", npc?.Name?.ToString());
             try
             {
+                // A first meeting may first receive its spark, so her very first words carry it.
+                await EnsurePersonaSparkAsync(npc, canAsk: true).ConfigureAwait(false);
+
                 var ctx = BuildContext(npc);
 
-                // The player's visit is a real beat in her story: the Angel narrates the arrival and she
-                // speaks the greeting, and the whole exchange is recorded as an Angel turn — exactly like
+                // The player's visit is a real beat in her story: her own mind marks the arrival and she
+                // speaks the greeting, and the whole exchange is recorded as an inner turn — exactly like
                 // her own reaching-out and the letters. So her memory shows WHEN the player came to her,
                 // and the next reply needs no woven-in ephemeral opening (the turn is already history).
                 var arrivalLine = PromptBuilder.ArrivalLine(
                     ctx.PlayerName, firstMeeting: !PromptBuilder.HasRememberedHistory(ctx.Memory));
-                var messages = _promptBuilder.BuildAngelPrompt(
+                var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
                 var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
-                AppendAngelTurn(npc, arrivalLine, greeting);
+                AppendRecordedTurn(npc, arrivalLine, greeting);
                 _lastNpcLine = greeting;
 
                 MainThreadDispatcher.Enqueue(() =>
@@ -1318,12 +1336,11 @@ namespace ImmersiveAI
                 _config.SystemVoiceName);
 
             var name = npc.Name?.ToString() ?? "Unknown";
-            var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
 
             var sb = new StringBuilder();
             foreach (var msg in messages)
             {
-                sb.AppendLine("--- " + RawPromptLabel(msg.Role, voice, name, ctx.PlayerName) + " ---");
+                sb.AppendLine("--- " + RawPromptLabel(msg.Role, name, ctx.PlayerName) + " ---");
                 sb.AppendLine(msg.Content);
                 sb.AppendLine();
             }
@@ -1364,13 +1381,13 @@ namespace ImmersiveAI
         }
 
         // Human-readable speaker label for each message in the raw-prompt view. The underlying LLM roles
-        // are still System/User/Assistant, but the NPC is never shown a cold "SYSTEM": the system message
-        // is the gentle voice (Angel) speaking into her mind, and the turns are named for who spoke them.
-        private static string RawPromptLabel(ChatRole role, string voice, string npcName, string playerName)
+        // are still System/User/Assistant, but the sheet is never labeled a cold "SYSTEM": it is the
+        // NPC's own mind, first person, and the turns are named for who spoke them.
+        private static string RawPromptLabel(ChatRole role, string npcName, string playerName)
         {
             switch (role)
             {
-                case ChatRole.System: return $"{voice}, into {npcName}'s mind";
+                case ChatRole.System: return $"{npcName}, within their own mind";
                 case ChatRole.Assistant: return npcName;
                 default: return playerName;
             }
@@ -1486,6 +1503,10 @@ namespace ImmersiveAI
             // question, and any compression all land on this line ("message: X → Y tokens, ~$Z").
             using var _cost = UsageLedger.BeginInteraction("message", npc?.Name?.ToString());
 
+            // A first exchange may first receive the director's spark (recap-off face-to-face and
+            // the chat window both begin here).
+            await EnsurePersonaSparkAsync(npc, canAsk: true).ConfigureAwait(false);
+
             // The bargain's hand rides only here — the live reply, an unhired sellsword facing the
             // player — so its whisper and its tool can never drift apart (both keyed to this tally).
             var bargain = CanStrikeBargain(npc) ? new Tools.BargainTool.Tally() : null;
@@ -1493,7 +1514,7 @@ namespace ImmersiveAI
             var ctx = BuildContext(npc, situationOverride, bargainRides: bargain != null);
             var memory = ctx.Memory;
 
-            // The opening greeting (if any) is already a recorded Angel turn in the loaded memory,
+            // The opening greeting (if any) is already a recorded turn in the loaded memory,
             // so the history carries it — no ephemeral opening to weave in.
             var messages = _promptBuilder.Build(
                 ctx.Persona, memory, ctx.Scene, ctx.PlayerName, playerInput, _config.SystemVoiceName);
@@ -1523,7 +1544,7 @@ namespace ImmersiveAI
                 try
                 {
                     var feelingMessages = _promptBuilder.BuildFeelingQuery(
-                        ctx.Persona, ctx.PlayerName, playerInput, reply, _config.SystemVoiceName);
+                        ctx.Persona, ctx.PlayerName, playerInput, reply);
                     var feelingRaw = await _client.CompleteAsync(feelingMessages).ConfigureAwait(false);
                     feltShift = FeelingParser.ParseShift(feelingRaw) ?? 0;
                 }
@@ -1736,8 +1757,8 @@ namespace ImmersiveAI
         //
         // The first way the NPCs act on the world instead of only answering it. Each hour, every NPC the
         // player has a history with who is co-located rolls their own bond-scaled chance to reach out (see
-        // PickInitiatingNpcForThisHour); when one is moved, we ask HER — privately, in the Angel's voice —
-        // whether she truly wishes to, and only then does the player get the offer.
+        // PickInitiatingNpcForThisHour); when one is moved, SHE weighs it privately, within her own mind,
+        // and only on her yes does the player get the offer.
 
         private void OnHourlyTick()
         {
@@ -1991,9 +2012,9 @@ namespace ImmersiveAI
             catch { return false; }   // fail open: a model hiccup must never silence a whole keep
         }
 
-        // The reaching-out as beats the NPC actually lives and remembers, never hidden from them. First the
-        // Angel asks — privately, in their voice — whether they wish to go to the player at all, and their
-        // yes/no is recorded as a real Angel turn. Only on a yes is the player offered the choice; the
+        // The reaching-out as beats the NPC actually lives and remembers, never hidden from them. First
+        // their own mind weighs — privately — whether they wish to go to the player at all, and the
+        // resolution is recorded as a real inner turn. Only on a yes is the player offered the choice; the
         // approach itself (welcomed, or too busy) is narrated and answered afterward, once the player has
         // decided — see DeliverApproachAsync via OnInitiationAccepted / OnInitiationDeclinedByPlayer.
         private async Task BeginInitiationAsync(Hero npc)
@@ -2002,6 +2023,10 @@ namespace ImmersiveAI
             using var _cost = UsageLedger.BeginInteraction("reaching out", npc?.Name?.ToString(), quiet: true);
             try
             {
+                // A stranger crossing the room for the first time is a first interaction too — the
+                // spark is seeded before the ponder, so even the wish to approach carries it.
+                await EnsurePersonaSparkAsync(npc, canAsk: false).ConfigureAwait(false);
+
                 // Capture the situation now and reuse it for the beats to come; the offer pauses the game,
                 // so the moment does not drift between the asking and the answering. The NEARBY shape:
                 // the player is about their own affairs, not arriving — the meeting shape's closing
@@ -2026,7 +2051,7 @@ namespace ImmersiveAI
                 // the player never reaches should still not turn into an hourly knock (the delivery beat
                 // below marks the true outreach on top of this). Memory keeps the condensed note, not the
                 // working instruction — the resolution beside it carries their own stated cause.
-                AppendAngelTurn(npc, PromptBuilder.ReachOutPonderNote(ctx.PlayerName, stranger), resolution,
+                AppendRecordedTurn(npc, PromptBuilder.ReachOutPonderNote(ctx.PlayerName, stranger), resolution,
                     OutreachMark.Considered, ConversationTurn.InnerSpeaker);
 
                 if (!InitiationParser.WantsToGo(resolution, out var reason)) { PassOnInitiation(npc); return; }
@@ -2050,19 +2075,21 @@ namespace ImmersiveAI
             }
         }
 
-        // What an Angel beat means for the NPC's own outreach bookkeeping (the anti-spam brake —
-        // see InitiationScorer.OutreachDamping): Reached = they went to the player of their own will
-        // (counts as unanswered until the player engages); Considered = they weighed it, or answered
-        // an invited letter (rests them without a pride wound); PlayerEngaged = the beat itself IS
-        // the player engaging (a meeting note, a letter of the player's read), clearing the count.
+        // What a recorded inner beat means for the NPC's own outreach bookkeeping (the anti-spam
+        // brake — see InitiationScorer.OutreachDamping): Reached = they went to the player of their
+        // own will (counts as unanswered until the player engages); Considered = they weighed it, or
+        // answered an invited letter (rests them without a pride wound); PlayerEngaged = the beat
+        // itself IS the player engaging (a meeting note, a letter of the player's read), clearing it.
         private enum OutreachMark { None, Reached, Considered, PlayerEngaged }
 
-        // Records one Angel↔NPC exchange (or, with speaker = ConversationTurn.InnerSpeaker, one of the
-        // NPC's own inner reckonings — the reach-out beats) as a real turn in the NPC's memory, so their
-        // whole dialogue with the meta-voice lives in the same remembered, inspectable stream as their
-        // talks with the player. The line is stored verbatim (framed only when replayed). Best-effort:
-        // bookkeeping must never throw into a tick or a UI callback.
-        private void AppendAngelTurn(Hero npc, string angelLine, string npcReply,
+        // Records one of the NPC's own inner beats (an arrival met, a reach-out weighed, a letter
+        // written, a bargain lived) as a real turn in the NPC's memory, so their whole inner story
+        // lives in the same remembered, inspectable stream as their talks with the player. First
+        // person since 2026.08.07 — the Angel narrator is retired; the speaker defaults to
+        // ConversationTurn.InnerSpeaker and old recorded Angel turns replay unchanged. The line is
+        // stored verbatim (framed only when replayed). Best-effort: bookkeeping must never throw
+        // into a tick or a UI callback.
+        private void AppendRecordedTurn(Hero npc, string innerLine, string npcReply,
             OutreachMark mark = OutreachMark.None, string? speaker = null)
         {
             try
@@ -2071,8 +2098,8 @@ namespace ImmersiveAI
                 memory.NpcName = npc.Name?.ToString() ?? memory.NpcName;
                 memory.AddTurn(new ConversationTurn
                 {
-                    Speaker = speaker ?? ConversationTurn.AngelSpeaker,
-                    PlayerLine = angelLine,
+                    Speaker = speaker ?? ConversationTurn.InnerSpeaker,
+                    PlayerLine = innerLine,
                     NpcLine = npcReply,
                     GameDay = CampaignTime.Now.ToDays,
                     CalradiaTime = SituationBuilder.Timestamp(),
@@ -2257,7 +2284,7 @@ namespace ImmersiveAI
         }
 
         // The face-to-face reach-out click (Anton's ask, 2026.07.11): no accept/decline stands here — the
-        // player clicked because they want to see the person. Her greeting is already a recorded Angel turn
+        // player clicked because they want to see the person. Her greeting is already a recorded turn
         // (DeliverFirstWordAsync spoke it up front), so we simply open the conversation and show it, then
         // fall into the ordinary talk loop. Dismissing the notice instead leaves that greeting unanswered
         // in her memory — the stamps tell the story of the silence, nothing needs fabricating. Runs on the
@@ -2290,10 +2317,10 @@ namespace ImmersiveAI
             }
         }
 
-        // The player chose to receive them: open the real conversation and, now that they are welcomed, let
-        // the Angel narrate the approach and the NPC speak their own greeting into it (DeliverApproachAsync),
-        // which the root dialog lines show first before the talk loop. The greeting is a recorded Angel turn,
-        // so nothing needs weaving and the NPC will not repeat it.
+        // The player chose to receive them: open the real conversation and, now that they are welcomed,
+        // the NPC lives the approach in their own mind and speaks their greeting into it
+        // (DeliverApproachAsync), which the root dialog lines show first before the talk loop. The
+        // greeting is a recorded inner turn, so nothing needs weaving and the NPC will not repeat it.
         private void OnInitiationAccepted()
         {
             var npc = _initiationNpc;
@@ -2323,8 +2350,8 @@ namespace ImmersiveAI
         }
 
         // The player was too busy just now. Rather than a cold "you were refused", the NPC lives it: the
-        // Angel narrates the closed door and they answer it in their own voice (DeliverApproachAsync), which
-        // is recorded and shown back with their face. No conversation opens.
+        // closed door passes through their own mind and they answer it in their own voice
+        // (DeliverApproachAsync), which is recorded and shown back with their face. No conversation opens.
         private void OnInitiationDeclinedByPlayer()
         {
             var npc = _initiationNpc;
@@ -2334,9 +2361,10 @@ namespace ImmersiveAI
             _ = DeliverApproachAsync(npc, welcomed: false);
         }
 
-        // Narrates the NPC's approach to the player — welcomed, so they greet and the talk loop begins; or
-        // turned away for now, so they answer the moment and it passes — and records their reply as a real
-        // Angel turn either way. Runs after the player's choice, so the approach truthfully reflects it.
+        // The NPC's approach to the player, lived first person — welcomed, so they greet and the talk loop
+        // begins; or turned away for now, so they answer the moment and it passes — and their reply is
+        // recorded as a real inner turn either way. Runs after the player's choice, so the approach
+        // truthfully reflects it.
         private async Task DeliverApproachAsync(Hero npc, bool welcomed)
         {
             using var _cost = UsageLedger.BeginInteraction("approach", npc?.Name?.ToString());
@@ -2350,7 +2378,7 @@ namespace ImmersiveAI
                 var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
-                AppendAngelTurn(npc, PromptBuilder.ApproachNote(ctx.PlayerName, welcomed, reason), npcLine,
+                AppendRecordedTurn(npc, PromptBuilder.ApproachNote(ctx.PlayerName, welcomed, reason), npcLine,
                     OutreachMark.Reached, ConversationTurn.InnerSpeaker);
 
                 if (welcomed)
@@ -2874,7 +2902,7 @@ namespace ImmersiveAI
         }
 
         // The chat-window shape of a reaching-out: no offer stands between them — having wished it, she
-        // crosses the room and simply SPEAKS, and her words wait in the window (a recorded Angel turn
+        // crosses the room and simply SPEAKS, and her words wait in the window (a recorded inner turn
         // either way, so whatever silence follows is part of the story she remembers: the stamps let her
         // see whether the player answered at once, later, or not at all). The toast carries the flash of
         // it ("Ava sees you and says…"); the notice stack keeps a quiet knock that opens the window.
@@ -2890,7 +2918,7 @@ namespace ImmersiveAI
                 var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
                 var words = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
-                AppendAngelTurn(npc, PromptBuilder.FirstWordNote(ctx.PlayerName, reason), words,
+                AppendRecordedTurn(npc, PromptBuilder.FirstWordNote(ctx.PlayerName, reason), words,
                     OutreachMark.Reached, ConversationTurn.InnerSpeaker);
                 PersistSituation(npc, situation);
 
@@ -2974,7 +3002,7 @@ namespace ImmersiveAI
         // uses when a character has something to say — AND a copy in the persistent message log, so a moment
         // that flashes past can still be read back later (the log the player scrolls through). Must run on
         // the game thread.
-        private static readonly Color InitiationLogColor = new Color(0.80f, 0.78f, 0.95f, 1f); // soft, Angel-lit
+        private static readonly Color InitiationLogColor = new Color(0.80f, 0.78f, 0.95f, 1f); // soft, lantern-lit
 
         private static void NotifyWithFace(Hero npc, string message)
         {
@@ -3001,8 +3029,9 @@ namespace ImmersiveAI
             memory.NpcName = npcName;
 
             var persona = PersonaBuilder.Build(npc, _config);
-            // Kept separate (not merged) so the prompt can present them under distinct headings near
-            // the top: the global prompt as "About Calradia:", the per-NPC prompt as "About you:".
+            // Kept separate (not merged) so the prompt can present them under distinct first-person
+            // headings near the top: the global prompt as "Of this world, this I know:", the per-NPC
+            // prompt as "Of myself, this I hold true:".
             persona.WorldInstructions = PromptFiles.LoadGlobalPrompt();
             persona.CustomInstructions = PromptFiles.LoadNpcPrompt(
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
@@ -3043,6 +3072,168 @@ namespace ImmersiveAI
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
             return new ChatContext(memory, persona, scene, playerName);
+        }
+
+        // ============================ the director's spark ============================
+        //
+        // At a soul's FIRST interaction — before their first words — one small LLM call (the
+        // "casting director", a plain utility call like the search refiner) writes them a private
+        // starting truth: 1–3 first-person sentences seeded from their real story, traits, speech
+        // style and the player's global prompt, steered by two drawn muse cards and a weighted
+        // intensity die (PersonaSpark, Core). The spark lands in custom_instructions.txt — the very
+        // file the player edits — under a "# spark:" stamp comment, and from there rides every
+        // prompt as "Of myself, this I hold true:". Modes (PersonaSparkMode): Generate (default,
+        // quiet), Ask (a once-per-soul popup on the player-facing paths), Off. Deleting the file,
+        // or the DevMode reroll lever, invites the director back.
+
+        /// <summary>Seeds the spark if this soul still needs one. Cheap no-op in the common case
+        /// (returns synchronously — no thread hop). Facts are gathered before the first await, so
+        /// campaign reads stay on the calling (game) thread, the discipline the letter flows keep.
+        /// canAsk marks the player-facing paths, where "Ask" mode may put up its popup — on
+        /// autonomous paths (reach-outs, letters) Ask simply waits for a real meeting.</summary>
+        private async Task EnsurePersonaSparkAsync(Hero npc, bool canAsk)
+        {
+            try
+            {
+                if (npc == null) return;
+                var mode = _config.PersonaSparkMode;
+                if (mode == "Off") return;
+
+                NpcPaths.EnsureMigrated(npc);
+                var path = NpcPaths.CustomInstructionsFile(npc);
+                if (!PromptFiles.NeedsPersonaSpark(path)) return;
+                if (_sparkBusy.Contains(npc.StringId)) return;
+
+                if (mode == "Ask")
+                {
+                    if (!canAsk || _sparkAsked.Contains(npc.StringId)) return;
+                    _sparkAsked.Add(npc.StringId);
+                    // The current exchange proceeds plain; a granted spark speaks from the next.
+                    MainThreadDispatcher.Enqueue(() => ShowSparkInquiry(npc, path));
+                    return;
+                }
+
+                await GenerateSparkAsync(npc, path).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("inviting the director for " + (npc?.Name?.ToString() ?? "?"), ex);
+            }
+        }
+
+        // The generation itself: draw, prompt, one plain completion, clamp, write, log. No stamp is
+        // written on failure or an unusable answer, so a later meeting simply tries again.
+        private async Task GenerateSparkAsync(Hero npc, string path)
+        {
+            if (_sparkBusy.Contains(npc.StringId)) return;
+            _sparkBusy.Add(npc.StringId);
+            try
+            {
+                var facts = GatherSparkFacts(npc);
+                var (cardOne, cardTwo) = PersonaSpark.DrawCards(_rng);
+                var intensity = PersonaSpark.DrawIntensity(_rng);
+                var prompt = PersonaSpark.BuildPrompt(facts, cardOne, cardTwo, intensity);
+
+                var raw = await _client.CompleteAsync(
+                    new List<ChatMessage> { ChatMessage.User(prompt) }).ConfigureAwait(false);
+                var spark = PersonaSpark.ClampToSentences(raw);
+                if (spark.Length == 0) return;
+
+                PromptFiles.WritePersonaSpark(path, npc.Name?.ToString() ?? "Unknown", spark,
+                    SituationBuilder.Timestamp());
+                ModLog.Info($"the director's spark for {npc.Name} ({intensity.Name}; {cardOne} / {cardTwo}): {spark}");
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("writing the director's spark of " + (npc?.Name?.ToString() ?? "?"), ex);
+            }
+            finally
+            {
+                _sparkBusy.Remove(npc.StringId);
+            }
+        }
+
+        // Everything the director is told, read from the live campaign. Runs on the game thread
+        // (callers gather facts before their first await).
+        private PersonaSpark.Facts GatherSparkFacts(Hero npc)
+        {
+            var persona = PersonaBuilder.Build(npc, _config);
+            var place = string.Empty;
+            try { place = SituationBuilder.Place(npc) ?? string.Empty; } catch { }
+            var backstory = string.Empty;
+            try { backstory = Personas.BackstoryBuilder.BuildInitialSelf(npc) ?? string.Empty; } catch { }
+
+            var world = PromptFiles.LoadGlobalPrompt();
+            var guidance = ApplyTokens(_config.RoleplayGuidance, persona.Name);
+            var worldText = string.Join("\n",
+                new[] { world, guidance }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            return new PersonaSpark.Facts
+            {
+                Name = persona.Name,
+                GenderWord = npc.IsFemale ? "woman" : "man",
+                Age = (int)npc.Age,
+                Station = LowerFirstChar((persona.RoleDescription ?? string.Empty).Trim().TrimEnd('.')),
+                WherePhrase = string.IsNullOrWhiteSpace(place) ? string.Empty : "met at " + place,
+                Traits = persona.PersonalityDescription ?? string.Empty,
+                SpeechStyle = persona.SpeechStyle ?? string.Empty,
+                Backstory = backstory,
+                WorldText = worldText,
+            };
+        }
+
+        private static string LowerFirstChar(string s) =>
+            string.IsNullOrEmpty(s) ? s : char.ToLowerInvariant(s[0]) + s.Substring(1);
+
+        // "Ask" mode's door, once per soul: shape them, or leave them plain (the durable stamp).
+        private void ShowSparkInquiry(Hero npc, string path)
+        {
+            try
+            {
+                var name = npc.Name?.ToString() ?? "This stranger";
+                var data = new InquiryData(
+                    "A new face: " + name,
+                    $"{name} steps into your story for the first time. Shall the unseen director " +
+                    "write them a private spark — a hidden truth of their own — before your tale " +
+                    "together begins? You can read or change it anytime (\"Their prompt\").",
+                    true, true, "Shape them", "Leave them plain",
+                    new Action(() => { _ = GenerateSparkAsync(npc, path); }),
+                    new Action(() =>
+                    {
+                        try { PromptFiles.MarkPersonaSparkDeclined(path, npc.Name?.ToString() ?? "Unknown"); }
+                        catch { /* declining is best-effort; they would simply be asked again */ }
+                    }),
+                    "", 0f, (Action?)null,
+                    (Func<ValueTuple<bool, string>>?)null,
+                    (Func<ValueTuple<bool, string>>?)null);
+                InformationManager.ShowInquiry(data, pauseGameActiveState: true);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("asking about the spark of " + (npc?.Name?.ToString() ?? "?"), ex);
+            }
+        }
+
+        // The DevMode lever: strip the spark and have the director pass anew — the way to taste
+        // the deck's variety without a fresh campaign. Fires as the conversation closes; the new
+        // spark speaks from the next meeting.
+        private void OnDebugRerollSpark()
+        {
+            var npc = Hero.OneToOneConversationHero ?? _currentNpc;
+            if (npc == null) return;
+            try
+            {
+                NpcPaths.EnsureMigrated(npc);
+                var path = NpcPaths.CustomInstructionsFile(npc);
+                PromptFiles.ClearPersonaSpark(path);
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"The director looks at {npc.Name} afresh...", ConversationLogColor));
+                _ = GenerateSparkAsync(npc, path);
+            }
+            catch (Exception ex)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
         }
 
         // Resolves the {name} / {voice} tokens a player may use in the configurable atmosphere line and

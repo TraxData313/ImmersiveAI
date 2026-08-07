@@ -75,7 +75,7 @@ public class MemoryCompressorTests
         Assert.Contains("p0", prompt);
         Assert.Contains("p3", prompt);
         // The kept turns are shown as still-fresh context, not folded in.
-        Assert.Contains("Still fresh in your mind", prompt);
+        Assert.Contains("Still fresh in my mind", prompt);
         Assert.Contains("p4", prompt);
         Assert.Contains("p5", prompt);
     }
@@ -126,20 +126,44 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public async Task CompressAsync_AddressesNpcAsIndividualViaNamedSystemVoice()
+    public async Task CompressAsync_IsTheNpcsOwnFirstPersonMind_NoNarratorVoice()
     {
+        // The Angel narrator is retired (2026.08.07): memory work is her own inner monologue. The
+        // voice name is kept only to attribute legacy Angel turns in the transcript — it must never
+        // speak the prompt itself.
         var client = new FakeChatClient { Response = "SUMMARY:\nok" };
         var memory = MemoryWithTurns(6);
 
         await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: "Muse");
 
         var prompt = client.LastRequest![0].Content;
-        Assert.Contains("Muse speaks gently into your mind, Gafnir:", prompt);
+        Assert.StartsWith("(Within my own mind — I, Gafnir:", prompt);
         Assert.Contains("what to carry forward and what to let go", prompt);
-        Assert.Contains("Answer Muse", prompt);
+        Assert.DoesNotContain("Muse", prompt);   // no legacy turns folded, so the voice appears nowhere
+        Assert.Contains("I set it down in exactly this shape:", prompt);
         // Kept the machine-readable contract the parser depends on.
         Assert.Contains("SUMMARY:", prompt);
         Assert.Contains("FACTS:", prompt);
+    }
+
+    [Fact]
+    public void BuildCompressionRequest_AttributesLegacyAngelTurnsByTheVoiceName()
+    {
+        // Turns recorded by the retired narrator (older saves) must still be attributed truthfully
+        // when folded in, so the summary never mistakes the old voice for the player.
+        var memory = new NpcMemory { NpcId = "lord_1", NpcName = "Gafnir" };
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = "Vulgrim comes to you again and greets you.",
+            NpcLine = "Well met!",
+            GameDay = 1,
+        });
+
+        var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns, systemVoiceName: "Muse")[0].Content;
+
+        Assert.Contains("Muse said: Vulgrim comes to you again", prompt);
+        Assert.Contains("I answered: Well met!", prompt);
     }
 
     [Fact]
@@ -202,9 +226,9 @@ public class MemoryCompressorTests
         var prompt = MemoryCompressor.BuildCompressionRequest(
             memory, memory.RecentTurns, systemVoiceName: null, maxFacts: 7)[0].Content;
 
-        Assert.Contains("Write your truths anew", prompt);
+        Assert.Contains("I write my truths anew", prompt);
         Assert.Contains("at most 7", prompt);
-        Assert.Contains("falls away from you", prompt);
+        Assert.Contains("falls away from me", prompt);
     }
 
     [Fact]
@@ -216,13 +240,22 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public void BuildCompressionRequest_DefaultsSystemVoiceToAngel()
+    public void BuildCompressionRequest_DefaultsTheLegacyAttributionVoiceToAngel()
     {
-        var memory = MemoryWithTurns(2);
+        // With no voice given, a legacy narrator turn is attributed by the old default name — the
+        // only place the retired Angel still appears, and only for turns that already carry it.
+        var memory = new NpcMemory { NpcId = "lord_1", NpcName = "Gafnir" };
+        memory.AddTurn(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = "Do you wish to write to Vulgrim?",
+            NpcLine = "Yes.",
+            GameDay = 1,
+        });
 
         var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
 
-        Assert.Contains("Angel speaks gently into your mind, Gafnir:", prompt);
+        Assert.Contains("Angel said: Do you wish to write to Vulgrim?", prompt);
     }
 
     [Fact]
@@ -302,7 +335,7 @@ public class MemoryCompressorTests
         var prompt = MemoryCompressor.BuildReflectionRequest(
             memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: "I am a cautious soul.")[0].Content;
 
-        Assert.Contains("consider who you have become", prompt);
+        Assert.Contains("who have I become", prompt);
         Assert.Contains("I am a cautious soul.", prompt); // current self shown for revision
         Assert.Contains("SELF:", prompt);                 // and the SELF answer slot is offered
     }
@@ -377,7 +410,7 @@ public class MemoryCompressorTests
             memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: null,
             maxFacts: 10, goals: new[] { "Win back my father's hall" }, maxGoals: 4)[0].Content;
 
-        Assert.Contains("what you strive for", prompt);
+        Assert.Contains("what I strive for", prompt);
         Assert.Contains("Win back my father's hall", prompt); // current aims shown for reworking
         Assert.Contains("GOALS:", prompt);                    // the answer slot is offered
         Assert.Contains("at most 4", prompt);                 // the budget carried
@@ -391,7 +424,7 @@ public class MemoryCompressorTests
         var prompt = MemoryCompressor.BuildReflectionRequest(memory, System.Array.Empty<ConversationTurn>())[0].Content;
 
         Assert.DoesNotContain("GOALS:", prompt);
-        Assert.DoesNotContain("what you strive for", prompt);
+        Assert.DoesNotContain("what I strive for", prompt);
     }
 
     [Fact]

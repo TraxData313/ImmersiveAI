@@ -28,26 +28,26 @@ namespace ImmersiveAI.Tools
         public const string SeekWisdom = "seek_wisdom";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(SeekWisdom,
-            "Search all you have ever read and heard tell of the world's ways — travelers' accounts, " +
+            "Search all I have ever read and heard tell of the world's ways — travelers' accounts, " +
             "scholars' letters, the knowing of those who study such things: ships and fleets, the raising " +
             "and joining of armies, the keeping of towns and castles, trade, war, craft, and rule. It " +
             "reaches even past the world's rim, to the world a visitor may themselves hail from. Reach " +
-            "for this whenever you are asked how a thing is done — or for counsel or advice on such " +
-            "matters — even when your own wit could half-answer: look first, for the looking makes your " +
+            "for this whenever I am asked how a thing is done — or for counsel or advice on such " +
+            "matters — even when my own wit could half-answer: look first, for the looking makes my " +
             "counsel true where invention would make it hollow. Ask plainly.",
             new[]
             {
-                new ToolParameter("question", "What you wish to know, asked plainly as a question."),
+                new ToolParameter("question", "What I wish to know, asked plainly as a question."),
                 new ToolParameter("beyond",
-                    "Leave empty when the question is of your own world's ways. Write 'yes' when it reaches " +
-                    "beyond your world — the asker's own world and life, other realms, matters no one of your " +
+                    "Leave empty when the question is of my own world's ways. Write 'yes' when it reaches " +
+                    "beyond my world — the asker's own world and life, other realms, matters no one of my " +
                     "world could know.", required: false)
             });
 
         // What the NPC hears when the search fails or finds nothing — honest silence, mirroring
         // ToolLoopRunner.NothingSurfaces in spirit. (Const name kept from the sages era.)
         public const string SagesSilent =
-            "You search all you have read and heard, and nothing rises to answer. Own honestly what you do not know.";
+            "I search all I have read and heard, and nothing rises to answer. I own honestly what I do not know.";
 
         private static readonly HttpClient Http = CreateClient();
 
@@ -102,12 +102,12 @@ namespace ImmersiveAI.Tools
                 if (findings.Count == 0) return SagesSilent;
 
                 var sb = new System.Text.StringBuilder();
-                sb.AppendLine("It comes back to you — things read and heard over the years. The telling is in a strange tongue, of another world, but the substance is yours to take:");
+                sb.AppendLine("It comes back to me — things read and heard over the years. The telling is in a strange tongue, of another world, but the substance is mine to take:");
                 foreach (var f in findings)
                     sb.AppendLine("- " + f);
                 sb.AppendLine(beyond
-                    ? "This is of things beyond your world's rim, recalled because the one before you speaks openly of them — speak of it plainly, in whatever words serve the truth of it, while remaining yourself. If they press further, or doubt, look again rather than reason onward alone."
-                    : "Speak the substance as your own understanding, in the words of your world; let none of the strange terms — titles, numbers of versions, talk of screens and keys — pass your lips unless the asker plainly speaks that tongue first. If they press further, or doubt, or ask after another way, look again rather than reason onward alone. And should they attest from their own hand that a thing is done otherwise, trust the living witness before you, and say so with grace.");
+                    ? "This is of things beyond my world's rim, recalled because the one before me speaks openly of them — I speak of it plainly, in whatever words serve the truth of it, while remaining myself. If they press further, or doubt, I look again rather than reason onward alone."
+                    : "I speak the substance as my own understanding, in the words of my world; none of the strange terms — titles, numbers of versions, talk of screens and keys — pass my lips unless the asker plainly speaks that tongue first. If they press further, or doubt, or ask after another way, I look again rather than reason onward alone. And should they attest from their own hand that a thing is done otherwise, I trust the living witness before me, and say so with grace.");
                 return sb.ToString().TrimEnd();
             }
             catch

@@ -367,8 +367,10 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
   memories.json           - everything the NPC remembers of you (recent turns, rolling
                             summary, known facts). Safe to read; edit only if you know the
                             JSON shape. Delete it to make that NPC forget you completely.
-  custom_instructions.txt - private instructions for THIS NPC. Lines starting with # or //
-                            are ignored. (World-wide instructions go in ..\global_prompt.txt.)
+  custom_instructions.txt - private instructions for THIS NPC, written in THEIR own first
+                            person (""I never forgive an insult"") - they enter the character's
+                            mind as their own truths. Lines starting with # or // are ignored.
+                            (World-wide instructions go in ..\global_prompt.txt.)
   current_situation_info.txt - the environmental facts (when/where/who) captured the last time
                             you opened a chat with this NPC. Regenerated on every chat; read-only
                             snapshot, edits are overwritten. This is exactly what the NPC 'sees'

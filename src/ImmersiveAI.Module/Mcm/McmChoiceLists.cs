@@ -58,6 +58,10 @@ namespace ImmersiveAI.Mcm
         public static readonly string[] HotkeyKeys =
             { "O", "P", "K", "J", "U", "N", "B", "L", "Y", "H", "G", "V", "F9", "F10", "F11", "F12" };
 
+        /// <summary>The director's-spark modes as the MENU spells them; config.json spells them
+        /// "Generate"/"Ask"/"Off" (see McmBridge.SparkModeValue for the mapping). Append-only.</summary>
+        public static readonly string[] SparkModes = { "Generate", "Ask first", "Off" };
+
         /// <summary>The value an MCM-persisted dropdown index means, or null when the index falls
         /// outside the list (older/newer store files, or lists grown at runtime by SelectOrAdd).</summary>
         public static string? AtIndex(string[] choices, int? index) =>

@@ -19,38 +19,38 @@ namespace ImmersiveAI.Tools
         public const string HoldTruth = "hold_truth";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(HoldTruth,
-            "Set down one lasting truth about the one you speak with — something from this exchange " +
-            "that should stay with you long after: a name, a bond, a promise, a deed, a debt. Reach " +
+            "Set down one lasting truth about the one I speak with — something from this exchange " +
+            "that should stay with me long after: a name, a bond, a promise, a deed, a debt. Reach " +
             "for it when something truly worth keeping is revealed; not for passing small talk. One " +
-            "truth to a call, short, in your own words. You may instead release a truth that has " +
+            "truth to a call, short, in my own words. I may instead release a truth that has " +
             "proven false or spent.",
             new[]
             {
                 new ToolParameter("truth",
-                    "The truth as one short line in your own words (\"They saved my caravan at Omor\", " +
+                    "The truth as one short line in my own words (\"They saved my caravan at Omor\", " +
                     "\"They are hunting the man who burned their village\"). To release one, restate " +
-                    "the held truth you mean, as near to how you hold it as you can."),
+                    "the held truth I mean, as near to how I hold it as I can."),
                 new ToolParameter("release",
                     "Leave empty to set the truth down and keep it. Write 'yes' to instead release " +
-                    "the named truth from what you hold.", required: false),
+                    "the named truth from what I hold.", required: false),
             });
 
         /// <summary>What the tool answers when the truth was kept — steering them back to words.</summary>
         public const string Kept =
-            "It is set down among the truths you hold; it will stay with you. Speak on.";
+            "It is set down among the truths I hold; it will stay with me. I speak on.";
 
         /// <summary>What the tool answers when a held truth was released.</summary>
         public const string Released =
-            "It is released; you hold it no longer. Speak on.";
+            "It is released; I hold it no longer. I speak on.";
 
         /// <summary>When the mind already carries all it can — reflection is where the list resettles.</summary>
         public const string Full =
-            "You hold as many truths as your mind will carry; release one first, or let them settle " +
-            "when next you gather your thoughts. Speak on.";
+            "I hold as many truths as my mind will carry; I may release one first, or let them settle " +
+            "when next I gather my thoughts. I speak on.";
 
         /// <summary>When nothing changed (a duplicate, a release that matched nothing, an empty line).</summary>
         public const string NoChange =
-            "Nothing changed among the truths you hold just now. Speak on.";
+            "Nothing changed among the truths I hold just now. I speak on.";
 
         /// <summary>
         /// Applies one truth operation to the live <paramref name="memory"/> and returns the in-world

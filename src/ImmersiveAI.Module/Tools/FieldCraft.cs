@@ -35,18 +35,18 @@ namespace ImmersiveAI.Tools
         public static readonly IReadOnlyList<ToolDefinition> Tools = new[]
         {
             new ToolDefinition(SurveySurroundings,
-                "Cast your eyes over the country about your company — every band, caravan, and army moving " +
-                "within sight: whose they are, which way they lie, their strength as well as your eyes can " +
-                "count it, whether they are friend or foe, what they are about, and whether they or you are " +
+                "Cast my eyes over the country about my company — every band, caravan, and army moving " +
+                "within sight: whose they are, which way they lie, their strength as well as my eyes can " +
+                "count it, whether they are friend or foe, what they are about, and whether I or they are " +
                 "the swifter. Also the villages, towns and castles within sight and how they fare — whether " +
-                "one burns under a raid, lies under siege, or was lately plundered — any den of brigands your " +
-                "company has spotted nearby, and your own company's pace and what slows it. Reach for this " +
+                "one burns under a raid, lies under siege, or was lately plundered — any den of brigands my " +
+                "company has spotted nearby, and my own company's pace and what slows it. Reach for this " +
                 "before ever speaking of who or what is near, of a place that burns or is beset, of hideouts " +
                 "and lairs, of pursuit, of escape, or of the speed of the march."),
 
             new ToolDefinition(WeighBattle,
-                "Set a foe upon the scales against your own company: their numbers and kinds of fighters " +
-                "against yours, and how the day would likely go. Works against a band or army moving in the " +
+                "Set a foe upon the scales against my own company: their numbers and kinds of fighters " +
+                "against mine, and how the day would likely go. Works against a band or army moving in the " +
                 "country, against the garrison of a named town or castle, against a village and whoever is " +
                 "putting it to the torch, or against a spotted den of brigands. Reach for this before ever " +
                 "counselling battle or retreat.",
@@ -105,7 +105,7 @@ namespace ImmersiveAI.Tools
         {
             var party = asker?.PartyBelongedTo;
             if (party == null)
-                return "You have no company upon the map to look out from — the country about is another's to watch.";
+                return "I have no company upon the map to look out from — the country about is another's to watch.";
 
             var lines = new List<string>();
             int eyes = CraftsBuilder.ValueFor(asker, DefaultSkills.Scouting);
@@ -115,7 +115,7 @@ namespace ImmersiveAI.Tools
             Try(() =>
             {
                 float speed = party.Speed;
-                lines.Add($"Your company moves at a pace of {speed:0.0} upon the map.");
+                lines.Add($"My company moves at a pace of {speed:0.0} upon the map.");
                 var drags = party.SpeedExplained.GetLines()?
                     .Where(l => l.number < -0.005f && !string.IsNullOrWhiteSpace(l.name))
                     .OrderBy(l => l.number)
@@ -188,7 +188,7 @@ namespace ImmersiveAI.Tools
                 told = told.OrderBy(x => x.Dist).ToList();
 
                 sawPlaces = true;
-                lines.Add("And the places within sight of you:");
+                lines.Add("And the places within sight of me:");
                 foreach (var x in told)
                     lines.Add("- " + PlaceBrief(x.Place, x.Dist, party));
             });
@@ -209,18 +209,18 @@ namespace ImmersiveAI.Tools
                 if (dens.Count == 0) return;
 
                 sawDens = true;
-                lines.Add("And the lairs your company has spotted:");
+                lines.Add("And the lairs my company has spotted:");
                 foreach (var x in dens)
                     lines.Add("- " + DenBrief(x.Den, x.Dist, party, eyes));
             });
 
             if (!sawAnyone && !sawPlaces && !sawDens)
-                lines.Add("The country about lies empty as far as your eyes reach — no band moves within sight, no settlement stands near, and no den of brigands is known nearby.");
+                lines.Add("The country about lies empty as far as my eyes reach — no band moves within sight, no settlement stands near, and no den of brigands is known nearby.");
             else if (!sawAnyone)
-                lines.Add("No band moves within sight of you just now.");
+                lines.Add("No band moves within sight of me just now.");
 
             if (eyes < 50)
-                lines.Add("(Your eyes are not the sharpest at this craft — trust the shapes, not the counts.)");
+                lines.Add("(My eyes are not the sharpest at this craft — trust the shapes, not the counts.)");
 
             return string.Join("\n", lines.Where(l => !string.IsNullOrWhiteSpace(l)));
         }
@@ -260,7 +260,7 @@ namespace ImmersiveAI.Tools
             {
                 bool foe = Safe(() => FactionManager.IsAtWarAgainstFaction(p.MapFaction, ours.MapFaction))
                     || Safe(() => p.IsBandit);
-                sb.Append(foe ? " — FOES" : " — no quarrel with you");
+                sb.Append(foe ? " — FOES" : " — no quarrel with me");
             });
 
             sb.Append(", " + Whereabouts(dist, ours, () => p.Position));
@@ -279,9 +279,9 @@ namespace ImmersiveAI.Tools
                     || Safe(() => p.IsBandit);
                 if (!foe) return;
                 float theirs = p.Speed, mine = ours.Speed;
-                if (mine > theirs * 1.05f) sb.Append("; your company is the swifter — you could outdistance them");
-                else if (theirs > mine * 1.05f) sb.Append("; they are the swifter — flight alone would not save you");
-                else sb.Append("; the pace between you is even — a chase would run long");
+                if (mine > theirs * 1.05f) sb.Append("; my company is the swifter — I could outdistance them");
+                else if (theirs > mine * 1.05f) sb.Append("; they are the swifter — flight alone would not save me");
+                else sb.Append("; the pace between us is even — a chase would run long");
             });
 
             return sb.ToString() + ".";
@@ -438,17 +438,17 @@ namespace ImmersiveAI.Tools
         {
             var party = asker?.PartyBelongedTo;
             if (party == null)
-                return "You have no company of your own to set upon the scales.";
+                return "I have no company of my own to set upon the scales.";
 
             // Our side: the whole army when we march within one, else the company alone.
-            float ours = 0; int ourMen = 0; string ourWord = "your company";
+            float ours = 0; int ourMen = 0; string ourWord = "my company";
             Try(() =>
             {
                 if (party.Army != null)
                 {
                     ours = party.Army.Parties?.Sum(p => Safe(() => p.Party?.EstimatedStrength ?? 0f, 0f)) ?? 0f;
                     ourMen = party.Army.TotalManCount;
-                    ourWord = $"the army you march within ({party.Army.Name})";
+                    ourWord = $"the army I march within ({party.Army.Name})";
                 }
                 else
                 {
@@ -472,7 +472,7 @@ namespace ImmersiveAI.Tools
 
             return string.IsNullOrWhiteSpace(name)
                 ? "No hostile band stands within sight to weigh against — name a foe, a place, or a spotted den, and the scales can be set."
-                : $"Search the country and your memory as you may, no band, place, or spotted den called \"{name}\" comes to mind to weigh against.";
+                : $"Search the country and my memory as I may, no band, place, or spotted den called \"{name}\" comes to mind to weigh against.";
         }
 
         private static string WeighAgainstParty(MobileParty target, MobileParty ours, Hero asker, float ourStrength, int ourMen, string ourWord)
@@ -497,10 +497,10 @@ namespace ImmersiveAI.Tools
 
             var lines = new List<string>
             {
-                $"You set {theirWord} upon the scales against {ourWord}.",
-                $"Yours: {ourMen} souls. Theirs: {theirMen}.",
+                $"I set {theirWord} upon the scales against {ourWord}.",
+                $"Mine: {ourMen} souls. Theirs: {theirMen}.",
             };
-            Try(() => lines.Add("Your ranks: " + Composition(ours.MemberRoster) + "."));
+            Try(() => lines.Add("My ranks: " + Composition(ours.MemberRoster) + "."));
             Try(() => lines.Add("Their ranks: " + Composition(target.MemberRoster) + "."));
             lines.Add(Verdict(ourStrength, theirs, asker));
             return string.Join(" ", lines);
@@ -515,7 +515,7 @@ namespace ImmersiveAI.Tools
 
             var lines = new List<string>
             {
-                $"You set the walls of {s.Name} upon the scales against {ourWord} ({ourMen} souls).",
+                $"I set the walls of {s.Name} upon the scales against {ourWord} ({ourMen} souls).",
                 garrison > 0
                     ? $"Its garrison stands some {garrison} strong" + (militia > 0 ? $", and perhaps {militia} militia would take up arms beside them." : ".")
                     : (militia > 0 ? $"No true garrison holds it, only some {militia} militia." : "Neither garrison nor militia comes to mind for the place."),
@@ -542,7 +542,7 @@ namespace ImmersiveAI.Tools
             Try(() => militia = (int)v.Militia);
             var lines = new List<string>
             {
-                $"You set {v.Name} upon the scales against {ourWord} ({ourMen} souls).",
+                $"I set {v.Name} upon the scales against {ourWord} ({ourMen} souls).",
                 "It is a village: no wall, no gate, no garrison —" +
                 (militia > 0 ? $" only some {militia} villagers who might take up what tools they have." : " only its folk."),
             };
@@ -567,13 +567,13 @@ namespace ImmersiveAI.Tools
 
             var lines = new List<string>
             {
-                $"You set {DenName(den)} upon the scales against {ourWord} ({ourMen} souls).",
+                $"I set {DenName(den)} upon the scales against {ourWord} ({ourMen} souls).",
                 lurkers > 0
                     ? $"Some {lurkers} brigands lurk within it."
                     : "It seems to lie quiet — its brigands gone, or out riding the roads.",
             };
             if (theirs > 0) lines.Add(Verdict(ourStrength, theirs, asker)
-                + " And know that a den is stormed by a chosen few, not a whole company — the boldest hands at your side, come what may.");
+                + " And know that a den is stormed by a chosen few, not a whole company — the boldest hands at my side, come what may.");
             return string.Join(" ", lines);
         }
 
@@ -581,18 +581,18 @@ namespace ImmersiveAI.Tools
         private static string Verdict(float ours, float theirs, Hero asker)
         {
             if (theirs <= 0.01f) return "There is nothing on their side of the scales to speak of.";
-            if (ours <= 0.01f) return "You have nothing on your side of the scales — this is no fight at all.";
+            if (ours <= 0.01f) return "I have nothing on my side of the scales — this is no fight at all.";
 
             double r = ours / theirs;
             string call =
-                r >= 2.0 ? "They could not stand against you — the scales fall wholly your way" :
-                r >= 1.3 ? "The scales lean well toward you; the day should be yours, though not without cost" :
+                r >= 2.0 ? "They could not stand against me — the scales fall wholly my way" :
+                r >= 1.3 ? "The scales lean well toward me; the day should be mine, though not without cost" :
                 r >= 0.8 ? "The scales stand near even — the day would be bought dear, and could fall either way" :
-                r >= 0.5 ? "The scales lean against you; only ground, cunning, or fortune could turn it" :
-                           "It would be folly — they would break you";
+                r >= 0.5 ? "The scales lean against me; only ground, cunning, or fortune could turn it" :
+                           "It would be folly — they would break me";
 
             var judgment = CraftsBuilder.WordFor(asker, DefaultSkills.Tactics);
-            return $"{call}. So you judge — and your eye for such judgments is {judgment}.";
+            return $"{call}. So I judge — and my eye for such judgments is {judgment}.";
         }
 
         // "40 foot, 25 horse, 30 bowmen, 10 horse-archers" from a real roster.

@@ -186,13 +186,13 @@ namespace ImmersiveAI.UI.ChatWindow
                 foreach (var turn in memory.RecentTurns)
                 {
                     var stamp = Stamp(turn);
-                    if (turn.IsFromAngel)
+                    if (turn.IsFromAngel || turn.IsInnerThought)
                     {
                         // Letter beats wear their letters openly (Anton's ask, 2026.07.10): the
                         // moment she wrote to the player, or the player's letter reaching her
                         // hands, shows as a letter card in its place in the thread — instead of
-                        // the Angel's raw quill-instruction narration. Everything else the Angel
-                        // spoke stays as soft stage directions, never hidden.
+                        // the raw quill narration. Recognized across both eras: the retired Angel's
+                        // recorded beats (pre-2026.08.07 saves) and the first-person inner ones.
                         if (Core.Prompts.PromptBuilder.IsComposeLetterBeat(turn.PlayerLine))
                         {
                             // A letter still on the road stays sealed: she remembers writing it, but
@@ -226,28 +226,31 @@ namespace ImmersiveAI.UI.ChatWindow
                             continue;
                         }
 
-                        // The Angel's beats are the story's stage directions — shown softly, never
-                        // hidden: the same recorded stream her own prompt replays.
-                        messages.Add(new ChatMessageVM(string.Empty,
-                            WithStamp(stamp, $"{voice}, softly into {npcName}'s mind: {turn.PlayerLine}"),
-                            isNarration: true, Colors.White));
-                    }
-                    else if (turn.IsInnerThought)
-                    {
-                        // Her own mind at work (the reach-out beats since 2026.07.26 — no Angel). A
-                        // ponder is wholly inner — reckoning and resolution fold into one soft line,
-                        // nothing was spoken aloud; a delivery beat narrates the going and lets the
-                        // words she actually spoke stand as a spoken card below.
-                        if (Core.Prompts.PromptBuilder.IsPonderBeat(turn.PlayerLine))
+                        if (turn.IsFromAngel)
                         {
+                            // A retired narrator's recorded beats (older saves) — still shown softly,
+                            // exactly as her own prompt replays them, never hidden.
+                            messages.Add(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, $"{voice}, softly into {npcName}'s mind: {turn.PlayerLine}"),
+                                isNarration: true, Colors.White));
+                        }
+                        else if (Core.Prompts.PromptBuilder.IsPonderBeat(turn.PlayerLine))
+                        {
+                            // A ponder is wholly inner — reckoning and resolution fold into one soft
+                            // line, nothing was spoken aloud.
                             messages.Add(new ChatMessageVM(string.Empty,
                                 WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine} {turn.NpcLine})".TrimEnd()),
                                 isNarration: true, Colors.White));
                             continue;
                         }
-                        messages.Add(new ChatMessageVM(string.Empty,
-                            WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine})"),
-                            isNarration: true, Colors.White));
+                        else
+                        {
+                            // Her own mind at work — an arrival met, an approach made, a bargain
+                            // lived; the words she actually spoke stand as a spoken card below.
+                            messages.Add(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine})"),
+                                isNarration: true, Colors.White));
+                        }
                     }
                     else
                     {
@@ -411,7 +414,7 @@ namespace ImmersiveAI.UI.ChatWindow
             var npc = _selected?.Hero;
             if (npc == null) return;
             _promptEditNpc = npc;
-            PromptEditTitle = $"Their prompt — {npc.Name}";
+            PromptEditTitle = $"Their prompt — {npc.Name} — write it in their own voice: \"I ...\"";
             PromptEditText = PromptFiles.LoadNpcPromptForEdit(
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
             IsPromptEditShown = true;
@@ -420,7 +423,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public void ExecuteEditGlobalPrompt()
         {
             _promptEditNpc = null;
-            PromptEditTitle = "World prompt — carried by every soul in Calradia";
+            PromptEditTitle = "World prompt — what every soul knows of this world";
             PromptEditText = PromptFiles.LoadGlobalPromptForEdit();
             IsPromptEditShown = true;
         }

@@ -43,9 +43,9 @@ namespace ImmersiveAI.Core.Prompts
             string.IsNullOrWhiteSpace(voiceName) ? "Angel" : voiceName!.Trim();
 
         // Replays the remembered turns as real user/assistant messages. The incoming line is normally the
-        // player's (tagged with when/where it was said); when it was the Angel's — the NPC's own exchanges
-        // with the meta-voice — it is framed in the Angel's voice, exactly as it was when first spoken, so
-        // the NPC re-reads its own past truthfully rather than mistaking the Angel for the player.
+        // player's (tagged with when/where it was said) or the NPC's own inner mind (InnerFrame); a turn
+        // recorded by the retired Angel narrator (pre-2026.08.07 saves) is still framed in the Angel's
+        // voice, exactly as it was when first spoken, so the NPC re-reads its own past truthfully.
         //
         // Silent beats — a moment witnessed but no reply recorded (NpcLine empty, e.g. a meeting noted in
         // passing) — cannot stand as their own user/assistant pair: both backends require the roles to
@@ -85,42 +85,15 @@ namespace ImmersiveAI.Core.Prompts
             return parts.Count == 0 ? line : "[" + string.Join(", ", parts) + "] " + line;
         }
 
-        // How the Angel's words are always rendered to the NPC — softly, by name, into their mind. Used both
-        // for a live reaching-out beat and when replaying a recorded Angel turn, so the two read identically.
+        // LEGACY REPLAY ONLY (the Angel narrator retired 2026.08.07): how a recorded Angel turn from an
+        // older save is still rendered to the NPC — softly, by name, into their mind, exactly as it was
+        // when first spoken. No new Angel turns are ever minted; new beats are the NPC's own inner mind.
         private static string AngelFrame(string voice, string line) =>
             $"{voice} speaks softly into your mind: \"{line}\"";
 
         // How the NPC's OWN inner reckonings are rendered — no voice speaks; the line is their own mind at
         // work. Same frame live and on replay, so a remembered thought reads exactly as it did when thought.
         private static string InnerFrame(string line) => $"(Within my own mind: {line})";
-
-        /// <summary>
-        /// Builds an exchange in which the Angel speaks a given line into the NPC's mind and the NPC answers.
-        /// This is the shape of the letter beats and other Angel-voiced moments (the reach-out flow moved to
-        /// <see cref="BuildInnerPrompt"/> on 2026.07.26 — the NPC's own mind, no Angel). The NPC's reply is
-        /// recorded as a real Angel turn, so their
-        /// whole exchange with the meta-voice lives in the same remembered stream — never hidden from them.
-        /// The caller stores <paramref name="angelLine"/> verbatim as the turn's incoming line; here it is
-        /// framed in the Angel's voice, identically to how <see cref="AppendRememberedTurns"/> will replay it.
-        /// </summary>
-        public IReadOnlyList<ChatMessage> BuildAngelPrompt(
-            NpcPersona persona,
-            NpcMemory memory,
-            string sceneContext,
-            string playerName,
-            string angelLine,
-            string? voiceName = null)
-        {
-            var voice = Voice(voiceName);
-            var messages = new List<ChatMessage>
-            {
-                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
-            };
-
-            var carried = AppendRememberedTurns(messages, memory, voice);
-            messages.Add(ChatMessage.User(carried + AngelFrame(voice, angelLine)));
-            return messages;
-        }
 
         /// <summary>
         /// Builds an exchange in which the NPC's OWN mind poses itself a moment to weigh or act on — no
@@ -218,79 +191,102 @@ namespace ImmersiveAI.Core.Prompts
             string.IsNullOrWhiteSpace(reason) ? string.Empty : $" — what brought me: {reason!.Trim()}";
 
         // ------------------------- letters (correspondence across the map) -------------------------
-        // Each beat below is spoken by the Angel and recorded as a real Angel turn, so the NPC's
-        // memory holds the whole correspondence truthfully — the wishing, the words, the reading.
+        // Each beat below is the NPC's OWN mind at the writing desk (first person, recorded with
+        // ConversationTurn.InnerSpeaker since 2026.08.07 — the Angel narrator is retired), so the
+        // NPC's memory holds the whole correspondence truthfully — the wishing, the words, the reading.
 
-        /// <summary>The Angel's line asking whether the NPC wishes, of their own will, to write to the
+        /// <summary>The NPC's own weighing of whether they wish, of their own will, to write to the
         /// far-away player (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).</summary>
         public static string WriteLetterDesireLine(string playerName) =>
-            $"The road lies long between you and {playerName} — they are far from here, beyond an easy ride. " +
-            $"Yet a letter could reach them: a courier stands ready to carry your words across the distance. " +
-            $"Tell me, from your own heart: do you wish, of your own will, to write to {playerName} now? " +
-            "Answer with a single word — yes or no. The choice is wholly yours, and I will not press you.";
+            $"The road lies long between me and {playerName} — they are far from here, beyond an easy ride. " +
+            $"Yet a letter could reach them: a courier stands ready to carry my words across the distance. " +
+            $"Do I wish, of my own will, to write to {playerName} now? " +
+            "I answer in a single word — yes or no. The choice is wholly mine, and no one presses me.";
 
-        /// <summary>The Angel's line inviting the NPC to set the letter itself onto the page. For one
-        /// in the player's own service (<paramref name="inService"/> — their clan: a party or caravan
-        /// on the road, a governor at their post) the Angel adds the field-report invitation, so the
-        /// letter home may carry word of their charge. The added sentence follows the marker fragment
-        /// (<see cref="IsComposeLetterBeat"/> matches by prefix), so recorded beats stay recognized.</summary>
+        /// <summary>The NPC sitting down to set the letter itself onto the page, in their own first
+        /// person. For one in the player's own service (<paramref name="inService"/> — their clan: a
+        /// party or caravan on the road, a governor at their post) a field-report invitation is added,
+        /// so the letter home may carry word of their charge. The added sentence follows the marker
+        /// fragment (<see cref="IsComposeLetterBeat"/> matches by prefix), so recorded beats stay
+        /// recognized.</summary>
         public static string ComposeLetterLine(string playerName, bool inService = false) =>
-            $"Then sit, and set your heart to paper. Give me only the letter itself — the words that will " +
-            $"stand on the page before {playerName}'s eyes, in your own hand and your own voice. " +
-            "Do not tell me about the letter; write it." +
+            $"I sit, and set my heart to paper. What I set down now is only the letter itself — the words " +
+            $"that will stand on the page before {playerName}'s eyes, in my own hand and my own voice. " +
+            "I do not tell about the letter; I write it." +
             (inService
-                ? $" And as one who serves their house, if there is aught to tell of your charge — your company " +
-                  "and its state, the road behind you, battles fought or dangers passed — let the letter carry " +
-                  "your account of it, plainly, as a captain reports home."
+                ? $" And as one who serves their house, if there is aught to tell of my charge — my company " +
+                  "and its state, the road behind me, battles fought or dangers passed — I let the letter " +
+                  "carry my account of it, plainly, as a captain reports home."
                 : string.Empty);
 
-        /// <summary>The Angel's line placing a received letter into the NPC's hands — the reading is part
-        /// of the line, so it enters their memory even if they choose not to answer — and asking whether
-        /// they wish to write back (yes/no).</summary>
+        /// <summary>A received letter in the NPC's own hands — the reading is part of the line, so it
+        /// enters their memory even if they choose not to answer — closing on whether they wish to
+        /// write back (yes/no).</summary>
         public static string AnswerLetterDesireLine(string playerName, string letterBody) =>
-            $"A courier has found you, bearing a letter from {playerName}, written in their own hand. " +
-            "You break the seal and read:\n\n" +
+            $"A courier has found me, bearing a letter from {playerName}, written in their own hand. " +
+            "I break the seal and read:\n\n" +
             $"{(letterBody ?? string.Empty).Trim()}\n\n" +
-            $"Tell me, from your own heart: do you wish to write back to {playerName}? " +
-            "Answer with a single word — yes or no. You may also let it lie unanswered; the choice is wholly yours.";
+            $"Do I wish to write back to {playerName}? " +
+            "I answer in a single word — yes or no. I may also let it lie unanswered; the choice is wholly mine.";
 
-        /// <summary>The Angel's line inviting the NPC to write their answer to a letter just read.</summary>
+        /// <summary>The NPC sitting down to write their answer to a letter just read.</summary>
         public static string ComposeReplyLine(string playerName) =>
-            $"Then answer them. Give me only the letter you would send back to {playerName} — the words that " +
-            "will stand on the page, in your own hand and your own voice. Do not tell me about the letter; write it.";
+            $"I answer them now. What I set down is only the letter I send back to {playerName} — the words " +
+            "that will stand on the page, in my own hand and my own voice. I do not tell about the letter; I write it.";
 
         // ------------------------------ recognizing letter beats ------------------------------
-        // The letter moments live in memory as ordinary Angel turns; these markers let a VIEW (the
-        // chat window's thread) recognize them and dress them as letters instead of raw narration.
-        // They must stay word-for-word fragments of the lines above — recorded memories already
-        // carry the shipped phrasing, so change a template and its marker together, never one.
+        // The letter moments live in memory as ordinary recorded turns; these markers let a VIEW
+        // (the chat window's thread) recognize them and dress them as letters instead of raw
+        // narration. Each marker must stay a word-for-word fragment of its template — recorded
+        // memories carry the phrasing they were born with forever, so the LEGACY (Angel-voiced,
+        // pre-2026.08.07) fragments stay recognized beside the first-person ones. Change a live
+        // template and its "Own" marker together, never one; never touch the legacy markers.
 
-        private const string ComposeLetterMark = "Then sit, and set your heart to paper";
-        private const string ComposeReplyMark = "Then answer them. Give me only the letter";
-        private const string ReadLetterOpenMark = "You break the seal and read:";
-        private const string ReadLetterCloseMark = "Tell me, from your own heart";
+        private const string ComposeLetterMark = "Then sit, and set your heart to paper";       // legacy (Angel)
+        private const string ComposeReplyMark = "Then answer them. Give me only the letter";    // legacy (Angel)
+        private const string ComposeLetterMarkOwn = "I sit, and set my heart to paper";
+        private const string ComposeReplyMarkOwn = "I answer them now. What I set down is only the letter";
+        private const string ReadLetterOpenMark = "You break the seal and read:";               // legacy (Angel)
+        private const string ReadLetterCloseMark = "Tell me, from your own heart";               // legacy (Angel)
+        private const string ReadLetterOpenMarkOwn = "I break the seal and read:";
+        private const string ReadLetterCloseMarkOwn = "Do I wish to write back";
 
-        /// <summary>True when this Angel line invited the NPC to write a letter (first word or
-        /// reply) — the turn's spoken side IS the letter that went to the player.</summary>
-        public static bool IsComposeLetterBeat(string? angelLine)
+        /// <summary>True when this recorded line is the NPC sitting down to write a letter (first
+        /// word or reply) — the turn's spoken side IS the letter that went to the player.</summary>
+        public static bool IsComposeLetterBeat(string? recordedLine)
         {
-            var line = (angelLine ?? string.Empty).TrimStart();
-            return line.StartsWith(ComposeLetterMark, StringComparison.Ordinal)
+            var line = (recordedLine ?? string.Empty).TrimStart();
+            return line.StartsWith(ComposeLetterMarkOwn, StringComparison.Ordinal)
+                || line.StartsWith(ComposeReplyMarkOwn, StringComparison.Ordinal)
+                || line.StartsWith(ComposeLetterMark, StringComparison.Ordinal)
                 || line.StartsWith(ComposeReplyMark, StringComparison.Ordinal);
         }
 
-        /// <summary>When this Angel line placed the PLAYER's letter into the NPC's hands, hands back
+        /// <summary>When this recorded line placed the PLAYER's letter into the NPC's hands, hands back
         /// the letter's body (it lives inside the line so the reading is remembered verbatim).</summary>
-        public static bool TryExtractReceivedLetter(string? angelLine, out string body)
+        public static bool TryExtractReceivedLetter(string? recordedLine, out string body)
         {
             body = string.Empty;
-            var line = angelLine ?? string.Empty;
+            var line = recordedLine ?? string.Empty;
 
-            int open = line.IndexOf(ReadLetterOpenMark, StringComparison.Ordinal);
+            int open = line.IndexOf(ReadLetterOpenMarkOwn, StringComparison.Ordinal);
+            int markLen = ReadLetterOpenMarkOwn.Length;
+            if (open < 0)
+            {
+                open = line.IndexOf(ReadLetterOpenMark, StringComparison.Ordinal);
+                markLen = ReadLetterOpenMark.Length;
+            }
             if (open < 0) return false;
-            int start = open + ReadLetterOpenMark.Length;
+            int start = open + markLen;
 
-            int close = line.IndexOf(ReadLetterCloseMark, start, StringComparison.Ordinal);
+            // The tail differs between the legacy and first-person templates; whichever close
+            // phrase comes first past the body bounds it.
+            int close = -1;
+            foreach (var mark in new[] { ReadLetterCloseMarkOwn, ReadLetterCloseMark })
+            {
+                int at = line.IndexOf(mark, start, StringComparison.Ordinal);
+                if (at >= 0 && (close < 0 || at < close)) close = at;
+            }
             body = (close > start ? line.Substring(start, close - start) : line.Substring(start)).Trim();
             return body.Length > 0;
         }
@@ -302,29 +298,33 @@ namespace ImmersiveAI.Core.Prompts
             || !string.IsNullOrWhiteSpace(memory.Summary)
             || memory.KnownFacts.Count > 0;
 
-        /// <summary>The Angel's line narrating the player coming to the NPC, asking her to speak the
-        /// greeting. Spoken through <see cref="BuildAngelPrompt"/> and recorded — with her greeting —
-        /// as a real Angel turn, so every visit becomes a durable beat in her memory: she can later see
-        /// WHEN the player came to her, just as she sees when she reached out or when letters travelled.</summary>
+        /// <summary>The NPC's own awareness of the player coming to them, closing on the greeting
+        /// being theirs to speak. Spoken through <see cref="BuildInnerPrompt"/> and recorded — with
+        /// the greeting — as a real inner turn, so every visit becomes a durable beat in her memory:
+        /// she can later see WHEN the player came to her, just as she sees when she reached out or
+        /// when letters travelled. (Angel-narrated until 2026.08.07; recorded arrivals keep whichever
+        /// phrasing they were born with.)</summary>
         public static string ArrivalLine(string playerName, bool firstMeeting) => firstMeeting
-            ? $"{playerName} draws near and greets you. You have never spoken with them before — they are a stranger to you. Greet them as you would, and open the way to talk."
-            : $"{playerName} comes to you again and greets you. Greet them warmly, as one you have spoken with before, and let a little of what you remember of them colour your words.";
+            ? $"{playerName} draws near and greets me. We have never spoken before — they are a stranger to me. I greet them as I would, and open the way to talk."
+            : $"{playerName} comes to me again and greets me. I greet them as one I have spoken with before, and let a little of what I remember of them colour my words.";
 
         // The shared marker phrase of every meeting beat — one distinctive clause present in both
         // variants of MeetingLine, so the game layer can recognize an already-recorded meeting
         // (IsMeetingLine) and not note the same day's meeting twice.
         private const string MeetingMarker = "though the words of it are not set down here";
 
-        /// <summary>The Angel's quiet note that the player and the NPC met and spoke face to face
+        /// <summary>The NPC's own quiet note that they and the player met and spoke face to face
         /// OUTSIDE a free conversation — a bargain struck, a quest discussed, words on the road — so
         /// the meeting itself endures in memory even though no words were recorded. Stored as a
-        /// SILENT Angel turn (no reply asked or fabricated): at replay it folds into the next
+        /// SILENT inner turn (no reply asked or fabricated): at replay it folds into the next
         /// incoming line; the [place, time] stamp carries the when and where.</summary>
         public static string MeetingLine(string playerName, bool firstMeeting) => firstMeeting
-            ? $"You and {playerName} met and spoke face to face for the first time — a stranger no longer, {MeetingMarker}."
-            : $"{playerName} came and spoke with you awhile — of the business of the day, {MeetingMarker}.";
+            ? $"{playerName} and I met and spoke face to face for the first time — a stranger no longer, {MeetingMarker}."
+            : $"{playerName} came and spoke with me awhile — of the business of the day, {MeetingMarker}.";
 
-        /// <summary>True when a recorded Angel line is a meeting beat (see <see cref="MeetingLine"/>).</summary>
+        /// <summary>True when a recorded line is a meeting beat (see <see cref="MeetingLine"/>). The
+        /// marker clause is shared by the legacy Angel-voiced and the first-person variants, so both
+        /// eras of recorded meetings are recognized.</summary>
         public static bool IsMeetingLine(string? line) =>
             !string.IsNullOrEmpty(line) && line!.IndexOf(MeetingMarker, System.StringComparison.Ordinal) >= 0;
 
@@ -384,15 +384,15 @@ namespace ImmersiveAI.Core.Prompts
         }
 
         /// <summary>
-        /// Builds the tiny, isolated call that asks the NPC — in the Angel's gentle voice — how the
-        /// exchange just past moved their regard for the player, expecting only a single signed number
-        /// back. Kept apart from the spoken reply on purpose: a chatty model will narrate a number in
-        /// prose and forget any hidden mark, but it will reliably answer a question whose whole job is
-        /// to return one number. The NPC still decides it themselves, and they are deliberately NOT
-        /// told where their standing currently rests: the heart is asked only how the moment moved it,
-        /// so a soul already at the deepest love can still be moved (+N shows even when the game rail
-        /// is pinned at 100 — the shift is the impact, the rail is just where it lands; see
-        /// <see cref="FeelingParser"/> and the game layer's ApplyRelationShift).
+        /// Builds the tiny, isolated call in which the NPC — within their own mind, first person —
+        /// weighs how the exchange just past moved their regard for the player, expecting only a
+        /// single signed number back. Kept apart from the spoken reply on purpose: a chatty model
+        /// will narrate a number in prose and forget any hidden mark, but it will reliably answer a
+        /// question whose whole job is to return one number. The NPC still decides it themselves, and
+        /// they are deliberately NOT told where their standing currently rests: the heart is asked
+        /// only how the moment moved it, so a soul already at the deepest love can still be moved
+        /// (+N shows even when the game rail is pinned at 100 — the shift is the impact, the rail is
+        /// just where it lands; see <see cref="FeelingParser"/> and the game layer's ApplyRelationShift).
         /// (An in-message &lt;relation&gt; tag was tried on 2026.07.09 and reverted the same day: even with
         /// a firm instruction, gpt-4o spoke the number aloud in its reply and never emitted the tag.)
         /// </summary>
@@ -400,26 +400,23 @@ namespace ImmersiveAI.Core.Prompts
             NpcPersona persona,
             string playerName,
             string playerLine,
-            string npcReply,
-            string? voiceName = null)
+            string npcReply)
         {
-            var voice = Voice(voiceName);
-
             var system = new StringBuilder();
-            system.AppendLine($"You are {persona.Name}, a living soul in the world of Calradia.");
+            system.AppendLine($"I am {persona.Name}, a living soul in the world of Calradia.");
             if (!string.IsNullOrWhiteSpace(persona.PersonalityDescription))
-                system.AppendLine("In your nature, you are " + LowerFirst(persona.PersonalityDescription.Trim()));
+                system.AppendLine("My traits are " + LowerFirst(persona.PersonalityDescription.Trim()));
             system.AppendLine();
-            system.AppendLine($"A gentle voice you trust — {voice} — speaks quietly into your mind, asking you to look honestly at your own heart. What you answer is yours alone to decide.");
-            system.AppendLine("Answer with a single whole number and nothing else — no words.");
+            system.AppendLine("For a quiet moment I look honestly into my own heart. What I answer is mine alone to decide.");
+            system.AppendLine("I answer with a single whole number and nothing else — no words.");
 
             var user = new StringBuilder();
-            user.AppendLine($"{voice} whispers: \"{playerName} came to you. They said:");
+            user.AppendLine($"(Within my own mind: {playerName} came to me. They said:");
             user.AppendLine($"  “{playerLine.Trim()}”");
-            user.AppendLine("and from your heart you answered:");
+            user.AppendLine("and from my heart I answered:");
             user.AppendLine($"  “{npcReply.Trim()}”");
             user.AppendLine();
-            user.AppendLine($"Tell me only this: how far did that moment move your heart toward or away from {playerName}? Give me one whole number — a positive one if they warmed you, a negative one if they wounded you, or 0 if nothing truly changed. A word or a small kindness moves a heart a little (1 to 3); only something that shakes the soul moves it greatly. The number alone.\"");
+            user.AppendLine($"Only this, now: how far did that moment move my heart toward or away from {playerName}? One whole number — positive if they warmed me, negative if they wounded me, 0 if nothing truly changed. A word or a small kindness moves a heart a little (1 to 3); only something that shakes the soul moves it greatly. The number alone.)");
 
             return new List<ChatMessage>
             {
@@ -484,18 +481,19 @@ namespace ImmersiveAI.Core.Prompts
             }
 
             // The player-authored guidance rides high, right after who they are: the world they live in
-            // (the global prompt) and words meant for them alone (the per-NPC prompt).
+            // (the global prompt) and words meant for them alone (the per-NPC prompt). Both are folded
+            // in as the NPC's OWN knowledge, first person — no narrator hands them anything.
             if (!string.IsNullOrWhiteSpace(persona.WorldInstructions))
             {
                 sb.AppendLine();
-                sb.AppendLine("About Calradia:");
+                sb.AppendLine("Of this world, this I know:");
                 sb.AppendLine(persona.WorldInstructions.Trim());
             }
 
             if (!string.IsNullOrWhiteSpace(persona.CustomInstructions))
             {
                 sb.AppendLine();
-                sb.AppendLine("About me:");
+                sb.AppendLine("Of myself, this I hold true:");
                 sb.AppendLine(persona.CustomInstructions.Trim());
             }
 

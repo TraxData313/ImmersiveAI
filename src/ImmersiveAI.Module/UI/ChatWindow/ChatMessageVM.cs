@@ -4,7 +4,7 @@ namespace ImmersiveAI.UI.ChatWindow
 {
     /// <summary>
     /// One rendered line of the chat window: a spoken message (player or NPC, with a small
-    /// speaker-and-when header) or a narration line (the Angel's beats, and transient notes like
+    /// speaker-and-when header) or a narration line (inner-mind beats, and transient notes like
     /// "considers your words…" — shown softly, without a header, because they are the story's
     /// stage directions rather than anyone's spoken words). Nothing the NPC remembers is hidden:
     /// the window shows the same recorded stream her prompt replays.

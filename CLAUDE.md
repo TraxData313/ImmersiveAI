@@ -67,7 +67,8 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
   Memory/                 NpcMemory (3-layer per-person), NpcSelf (general self-concept),
                           NpcGoals (general personal aims + fuzzy add/drop/revise/replace),
                           ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self + goals)
-  Prompts/                PromptBuilder (multi-turn message assembly + Angel letter lines), NpcPersona
+  Prompts/                PromptBuilder (multi-turn message assembly + first-person beat/letter lines
+                          + legacy Angel replay), NpcPersona
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
@@ -223,22 +224,33 @@ Concrete rules for every prompt, instruction, and piece of text an NPC could eve
   me:… Truths I decided to hold:… How should I speak:"*. Short headers in their own voice; never a
   clinical data sheet, never `SYSTEM:` / `Rules:`. The situation too: *"This moment finds me… And now
   Vulgrim, my husband, comes to me."*
-- **The Angel remains a real person to them, not the sheet's narrator**: it still speaks in the second
-  person in the DIALOGUE beats (arrival lines, ALL letter beats, memory reflection) — a kind voice by
-  its name (`SystemVoiceName`), leaving choices to them. Recorded Angel turns replay exactly as spoken
-  forever; never rewrite shipped Angel templates that memories already carry. **The reach-out flow lost
-  the Angel on 2026.07.26** (Anton: its tenderness bred emotional small-talk visits — "what are you, my
-  wife?") — those beats are now the NPC's OWN first-person reckoning (`BuildInnerPrompt`,
-  `ConversationTurn.InnerSpeaker`, framed "(Within my own mind: …)"); see the reach-out section.
+- **THE ANGEL IS RETIRED (2026.08.07, Anton's call — "no more angels, they break the immersion").**
+  There is NO narrator voice anywhere anymore: every beat an NPC lives — arrivals, meetings, ALL
+  letter beats, the reach-out ponder, the feeling weighing, memory reflection/compression, the hiring
+  beats — is their OWN first-person mind (`BuildInnerPrompt` / `InnerFrame` "(Within my own mind: …)",
+  recorded with `ConversationTurn.InnerSpeaker`; memory work opens "(Within my own mind — I, Name: …)").
+  Any doc/comment below still saying "the Angel narrates X" describes the pre-2026.08.07 shape — read
+  it as "her own mind lives X, first person". NEVER reintroduce a narrator voice in any new feature.
+  **Legacy rails (keep forever):** recorded Angel turns from older saves replay/render exactly as
+  spoken (`AngelFrame`, `ConversationTurn.AngelSpeaker`, `SystemVoiceName` — all legacy-only now);
+  the letter-beat markers recognize BOTH eras (`IsComposeLetterBeat`/`TryExtractReceivedLetter` hold
+  the old Angel fragments beside the new first-person ones — never touch the legacy constants); and
+  `MemoryCompressor`/window views still attribute old Angel turns by the voice's name. History: the
+  Angel spoke second-person dialogue beats from the start; reach-outs were de-Angeled 2026.07.26
+  ("what are you, my wife?"), everything else on 2026.08.07.
+- **Player-authored prompts are first person too**: the global prompt folds in as "Of this world,
+  this I know:", the per-NPC prompt as "Of myself, this I hold true:", and every hint (file
+  templates, the in-game editors' titles, NPCs\_README) tells the player to write the per-NPC file
+  in the character's own "I …" voice.
 - **Never break the fourth wall to them.** No "AI", no "prompt", no game title, no "the player" as a
   cold label. To them, Calradia is simply the world they live in and the player is a person.
 - **Short rules, more freedom.** Long prompt rules make every soul answer the same; keep guidance to
   the basics and offer the rest as invitation.
 - Debug/inspection views the *player* sees (raw-prompt dump, etc.) may be plainer, but even there
-  label the system message as the Angel's voice, not `SYSTEM`.
+  the system message is labeled as the NPC's own mind ("Name, within their own mind"), never `SYSTEM`.
 
 The two builders that carry this tone are `PromptBuilder` (Core) and `SituationBuilder` (Module),
-plus the reflection prompts in `MemoryCompressor` (still Angel-voiced dialogue by design). The scene
+plus the reflection prompts in `MemoryCompressor` (first-person inner monologue too). The scene
 and THE MOMENT are joined by `PromptBuilder.MeetingSeparator` (`[[the-moment]]`): the sheet splits
 there to slot deep memory right before the arrival; the separator never reaches the LLM, and the
 situation file shows it as a soft `· · ·` divider.
@@ -361,7 +373,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   same QueueLetter road and rules as the courier menu; "Write back" on an arrival opens it, popup
   fallback when it cannot; letter beats ALSO render as "✉ by letter" cards inside the chat window's
   thread via `PromptBuilder.IsComposeLetterBeat`/`TryExtractReceivedLetter` — markers that must stay
-  word-for-word fragments of the Angel letter templates; BOTH windows carry a "?" info overlay beside
+  word-for-word fragments of the letter templates, both eras (first-person + legacy Angel); BOTH
+  windows carry a "?" info overlay beside
   the X (2026.07.12: what the window is, how it works, what to try — texts in the VMs' `InfoText` with
   hotkey names read live from config; Escape folds the overlay first, a second press closes; Enter-to-
   send suppressed while it is open); both default on),
@@ -381,6 +394,20 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   two toggles above),
   `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
   a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
+  `PersonaSparkMode` (2026.08.07 — THE DIRECTOR'S SPARK: at a soul's FIRST interaction, before their
+  first words, one plain LLM call — the "casting director", a refiner-class utility call — writes 1–3
+  first-person sentences of private starting truth into their custom_instructions.txt under a
+  "# spark:" stamp comment, seeded from their real story (BackstoryBuilder), traits, assigned speech
+  style, the global prompt + RoleplayGuidance, and steered by two drawn muse cards (~24-card deck) +
+  a weighted intensity die (subtle 30% / marked 50% / vivid 20%) — Core `PersonaSpark` (deck, prompt,
+  ClampToSentences; prompt LIVE-VALIDATED on gpt-5.6-terra before shipping), Module
+  `EnsurePersonaSparkAsync` hooked into all five first-interaction paths (recap, player turn,
+  reach-out ponder, letter write, letter answer; facts gathered before the first await = game
+  thread). "Generate" (default) / "Ask" (once-per-soul popup, player-facing paths only; declining
+  writes a durable declined stamp) / "Off". The spark file is the PLAYER'S file: hand-written
+  content blocks generation, deleting the file re-seeds, a `# spark:` stamp means done; DevMode
+  lever "[test — reroll their spark]". MCM dropdown "Starting personality" (McmChoiceLists.SparkModes,
+  menu "Ask first" ↔ config "Ask") wired through repair/signatures/push/pull/rescue),
   `EnableActingOut` (2026.07.12: the acting-out grammar — NPCs invited to set a small acted gesture
   between single *asterisks*, apart from their spoken words, as the ONE exception to the plain-speech
   rule (`PromptBuilder.ActingOutGuidance`, right after `PlainSpeechGuidance` because it IS that rule's
@@ -415,7 +442,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   checkbox, live) around `CompanionHiringPriceCalculationModel`; the daily wage is never negotiable
   and is quoted from `CharacterObject.TroopWage` — NEVER `PartyWageModel.GetCharacterWage`, which
   answers 1 for heroes (the "one denar a day" lie). Sealed = vanilla's three acts (GiveGold +
-  AddCompanion + AddHeroToParty) + a silent Angel beat; declined/blocked = honest beats too. The
+  AddCompanion + AddHeroToParty) + a silent first-person beat ("They hired me; I ride with them");
+  declined/blocked = honest beats too. The
   seal inquiry (QueryManager) rides a global layer at order 19501, safely above the chat window's
   4500; both default on. The unhired one's terms + seller's mindset live at the TOP of her sheet —
   `PersonaBuilder.SellswordTerms` — and the tool's out-of-rails refusal deliberately does NOT name
@@ -484,7 +512,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
 - `NPCs\campaign_<id>\<stringId>_<FirstName>\` — one folder per NPC (e.g. `lord_7_13_1_Gunjadrid\`).
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
-  - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
+  - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored), written in the
+    character's own first person; folds in as "Of myself, this I hold true:". Usually begins with
+    the director's spark (a generated 1–3 sentence starting truth under a `# spark:` stamp comment —
+    see `PersonaSparkMode`); the stamp marks the soul as sparked (or declined), hand-written content
+    always wins, and deleting the file invites the director back.
   - `current_situation_info.txt` — environmental facts (when/where/who) snapshot plus recent world
     tidings and local rumors (see `TidingsBuilder` below), rewritten every time the player opens a
     chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as a gentle
@@ -551,7 +583,7 @@ the call again once eleven tools rode along — a whole warm playtest landed 0s)
 weighed when a `move_heart` call actually CAME with a readable number (`HeartTool.Tally.Weighed`; an
 honest mid-reply 0 is respected and asks nothing twice) — when the tool never came,
 `ExecutePlayerTurnAsync` falls back to the **second, isolated feeling call**
-(`PromptBuilder.BuildFeelingQuery`, Angel-voiced, one signed number via `FeelingParser.ParseShift`,
+(`PromptBuilder.BuildFeelingQuery`, her own first-person inner weighing, one signed number via `FeelingParser.ParseShift`,
 deliberately NOT told where the standing rests), the same path used when the tool shape is off or the
 backend cannot carry tools. `ChangeRelationAction` folds shifts into the real game relation
 (clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
@@ -567,10 +599,10 @@ different, first-class API channel (the one the recalls ride reliably on both ba
 for it, `RelationshipChangesViaTool: false` restores the separate question without a redeploy.
 
 **Every visit is a recorded beat** (2026.07.10, Anton's ask): the opening recap greeting is no longer
-ephemeral — the Angel narrates the arrival (`PromptBuilder.ArrivalLine`, first-meeting vs "comes to you
-again") and her greeting is stored as a real Angel turn, exactly like reaching-out and letter beats, so
+ephemeral — her own mind marks the arrival (`PromptBuilder.ArrivalLine`, first person, first-meeting vs
+"comes to me again") and her greeting is stored as a real inner turn, exactly like reaching-out and letter beats, so
 her memory shows WHEN the player came to her; the old `_lastGreeting` weaving hack is gone (the history
-carries the greeting), and Angel turns replay with their `[place, time]` stamp. With recap disabled no
+carries the greeting), and recorded beats replay with their `[place, time]` stamp. With recap disabled no
 beat is recorded (nothing is fabricated). **The prompt sheet reads like a mind waking toward the moment**
 (same day): identity → kin → self → About Calradia/About you → deep memory of the player (summary +
 truths) → the situation LAST — itself ordered setting → who you are → tidings/rumors → "And now X comes
@@ -581,8 +613,8 @@ the same heart twice).
 **Even meetings without free chat are remembered** (2026.07.10): when any hero conversation ends
 (`CampaignEvents.ConversationEnded`) that never became recorded beats (no free chat — `PrepareChat`
 marks it via `_conversationBeatNpcId`; no accepted reach-out — `DeliverApproachAsync` marks it too), a
-**silent Angel note** lands in their memory: "You and X met and spoke face to face for the first time —
-a stranger no longer, though the words of it are not set down here" (`PromptBuilder.MeetingLine`,
+**silent first-person note** lands in their memory: "X and I met and spoke face to face for the first
+time — a stranger no longer, though the words of it are not set down here" (`PromptBuilder.MeetingLine`,
 first-meeting vs familiar), stamped `[place, time]`, no LLM call, one per NPC per game day
 (`IsMeetingLine` dedupe). Silent beats (empty `NpcLine`) are a Core capability: both backends demand
 user/assistant alternation, so `AppendRememberedTurns` folds a silent turn's incoming line into the
@@ -609,8 +641,8 @@ bribe price, vanilla's own paid-bribe rule) for anyone the `LocationComplex` pla
 known one still shows "(away)" in the window pointing to a letter, which DOES find them; fail-open so a
 model hiccup never silences a keep; distant NPCs write letters instead) joins ONE bond-scaled group roll to
 reach out — including people never spoken with: everyone carries at least `InitiationPullFloor` (default
-0.1) of a full bond's pull, so a stranger may cross the room and begin their story (the Angel's desire
-question tells them honestly it would be a first acquaintance — `ReachOutDesireLine(stranger: true)` —
+0.1) of a full bond's pull, so a stranger may cross the room and begin their story (their own ponder
+tells them honestly it would be a first acquaintance — `ReachOutPonderLine(stranger: true)` —
 and their first beat creates their memory). A real history raises the pull from there: each NPC's *pull*
 in [0,1] is `InitiationScorer.Pull` = `frequency × closeness × recency`: `frequency`
 saturates at `FrequencyFullAt` lifetime turns (`NpcMemory.StoryRichness` = lifetime `TotalTurns`, floored
@@ -632,7 +664,7 @@ multiplied by `InitiationScorer.OutreachDamping` — zero right after any self-i
 recovering over 0.75d, with each UNANSWERED outreach adding +4d patience and ×0.4 on the ceiling
 (2 unanswered ≈ 16% max). Any player engagement resets the count: a player turn (`AddTurn` auto-reset),
 a meeting note, reading the player's letter, or the player's letter leaving the courier. The beats mark
-themselves via `AppendAngelTurn`'s `OutreachMark` (Reached / Considered / PlayerEngaged — desire
+themselves via `AppendRecordedTurn`'s `OutreachMark` (Reached / Considered / PlayerEngaged — desire
 weighings and invited replies rest without the pride wound). The damping multiplies AFTER the presence
 floor (else the floor re-arms the spam); `MemoryIndex` carries both fields so the hourly rolls stay
 cheap, and BondStatsLabel/the odds view show the damped truth ("awaits your answer (2 unanswered)"). Firing only happens at *safe* moments
@@ -652,8 +684,9 @@ her or from the player on inspect. **De-Angeled 2026.07.26** (Anton: the Angel's
 heart" framing bred emotional small-talk visits — the steward asking how you feel, the quartermaster's
 "troops are good, how are you today"): the beats are now first-person inner reckonings
 (`ConversationTurn.InnerSpeaker` = "Self", replayed via `InnerFrame` "(Within my own mind: …)", rendered
-in the window as "(Name, within: …)" narration and in reflection as "Your own thought, then:"; the Angel
-still owns arrivals, letters, and reflection). The situation for these beats is the **NEARBY shape**
+in the window as "(Name, within: …)" narration and in reflection as "My own thought, then:"; since
+2026.08.07 EVERY beat lives this way — arrivals, letters, reflection, all of it, no narrator
+anywhere). The situation for these beats is the **NEARBY shape**
 (`SituationBuilder.BuildNearby` — "X is nearby, about their own affairs"), because the meeting shape's
 closing "And now X comes to me" contradicted the question of whether to go. The beats:
 (1) `PromptBuilder.BuildInnerPrompt` with `PromptBuilder.ReachOutPonderLine` — the full sheet (news, mood,
@@ -674,12 +707,12 @@ right-side map notice wearing her live portrait** (see the Harmony section below
 accept/decline inquiry (which pauses per `PauseOnInitiationOffer`). The notice waits up to 2 in-game days,
 then quietly lapses (she is not told of a door the player never reached); several NPCs can be knocking at
 once. Without the notice UI the inquiry shows directly, as before. (3) The approach is narrated *after* the choice (`DeliverApproachAsync` with
-`PromptBuilder.ApproachLine`): **Receive them** → the Angel narrates a glad welcome and she speaks her
-greeting (a recorded Angel turn — no weaving needed, so she never repeats it), the conversation opens
-(`CampaignMapConversation.OpenConversation`) and falls into the talk loop; **Not now** → the Angel narrates
-that the player is too busy just now and she answers in her own voice (recorded, shown back with her face) —
+`PromptBuilder.ApproachLine`): **Receive them** → she lives the welcome in her own mind and speaks her
+greeting (a recorded inner turn — no weaving needed, so she never repeats it), the conversation opens
+(`CampaignMapConversation.OpenConversation`) and falls into the talk loop; **Not now** → the closed door
+passes through her own mind and she answers it in her own voice (recorded, shown back with her face) —
 a lived moment, not a cold "you were refused". Two LLM calls per fired offer; she can always choose silence.
-`MemoryCompressor` renders Angel turns attributed to the voice (not "They") so summaries stay truthful.
+`MemoryCompressor` attributes legacy Angel turns by the voice's name (not "They") so summaries stay truthful.
 Toggle with `EnableNpcInitiatedChats`. Nothing about the schedule is persisted (stateless hourly rolls), so
 save/load is a non-issue. Three `[Immersive AI • test]` free-chat options
 (gated by `DevMode` + `ShowInitiationTestButton`): `OnDebugForceReachOut` forces the NPC just spoken with to reach out
@@ -726,7 +759,7 @@ under the chosen name (`ImmersiveChatBehavior.BondStatsLabel` — richness, days
 the odds view's per-soul hourly reach-out/letter chance, night factor included; both windows show it)
 plus the chosen one's **deep-memory overview up top**
 (summary + held truths, collapsible — so a long story needs no scrolling) and the **recorded turns as
-a thread** (Angel beats rendered as soft gray narration — nothing she remembers is hidden), with an
+a thread** (inner-mind beats rendered as soft gray narration — nothing she remembers is hidden), with an
 input line below. The player **writes first, with no arrival beat and no forced greeting** — the line
 goes straight through `ExecutePlayerTurnAsync`, the shared trunk factored out of `RespondAsync`
 (prompt → spoken reply with recall/wisdom riding along → the private feeling number → recorded turn →
@@ -740,7 +773,7 @@ quick-chat reply, the delivered first word, and the "not now" approach; letters 
 **Reach-outs become messages** (`SendInitiationsToChatWindow`, default on): after her recorded yes to
 the desire question, there is NO accept/decline — `DeliverFirstWordAsync` has her simply speak
 (`PromptBuilder.FirstWordLine`, stranger-aware, honest that the player may answer only later), records
-it as a real Angel turn, fires a faced toast ("Ava sees you and says: …"), marks the thread unread,
+it as a real inner turn, fires a faced toast ("Ava sees you and says: …"), marks the thread unread,
 and (window closed, notice UI available) parks a portrait map notice whose click now opens the window
 on her thread. If the player never replies, nothing is faked: the `[place, time]` stamps on the
 recorded turns already let her see the silence and its length — that falls out of the recorded-beats
@@ -882,7 +915,7 @@ each hour, distant NPCs with history roll `LetterCourier.WriteRateFactor` (0.5) 
 chance × `LetterCourier.StoryDepthFactor` (richness/12 capped at 1 — one shallow conversation funds
 half-weight letters at best, 2026.07.26) × the same `OutreachDamping` as the visits (a writer whose
 letters met silence holds their pen — duty writers too: one field report, then patience until answered);
-one moved soul is asked by the Angel — privately, yes/no, recorded — whether they wish to write,
+one moved soul weighs privately, within their own mind — yes/no, recorded — whether they wish to write,
 and on a yes composes the letter with their full self (persona, memory, the situation built *apart*
 via `SituationBuilder.Build(..., apart: true)`, and the gift of recall). **The player's own clan writes
 out of duty** (2026.07.12): `InitiationScorer.Pull(..., inPlayersService)` floors recency (0.6) and
@@ -905,9 +938,9 @@ player can also send first: a "Send a letter by courier" option in every town/ca
 the LETTER WINDOW itself (2026.07.12 — the same one the letter hotkey opens; the old recipient-picker popups
 remain only as the fallback when `EnableLetterWindow` is off or the window cannot come up; one courier
 per bond at a time, co-located people pointed to go and speak). When the player's letter reaches the NPC, *reading it is a recorded moment* (the body
-lives inside the Angel's line, so it enters memory even if they let it lie), and they may answer at most
+lives inside the recorded line, so it enters memory even if they let it lie), and they may answer at most
 once per letter — correspondence is a chain of choices, not an echo. Undeliverable (recipient dead) comes
-back as a quiet notice. All beats are Angel turns in `memories.json`; each NPC folder keeps a plain
+back as a quiet notice. All beats are first-person inner turns in `memories.json`; each NPC folder keeps a plain
 `letters.txt` of the whole correspondence. One letter LLM job at a time (3-min self-heal watchdog), at
 most one delivery per direction per hour. Test lever: "[test — trigger them to write you a letter]"
 (co-located → lands in ~6 game-hours). The odds view shows distant NPCs' letter chance. Config:
@@ -927,10 +960,11 @@ composer's tall draft mirror is the "letter-writing screen" the encyclopedia tas
 half is only the encyclopedia button. "Write back" on an arrival opens the window preselected
 (`OpenWriteBack`, next-tick via the dispatcher so the inquiry is gone; popup-composer fallback). In the
 CHAT window's thread, letter beats now wear their letters openly: `PromptBuilder.IsComposeLetterBeat` and
-`TryExtractReceivedLetter` (Core, unit-tested) recognize the recorded Angel letter turns and render them
-as "✉ by letter" cards between the spoken messages — those markers must remain word-for-word fragments
-of the shipped Angel letter templates (recorded memories carry the old phrasing forever), so change a
-template and its marker together, never one.
+`TryExtractReceivedLetter` (Core, unit-tested) recognize the recorded letter turns of BOTH eras — the
+first-person templates and the retired Angel's legacy fragments — and render them as "✉ by letter"
+cards between the spoken messages. Each marker must remain a word-for-word fragment of its template
+(recorded memories carry the phrasing they were born with forever), so change a live template and its
+"Own" marker together, never one — and never touch the legacy marker constants.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

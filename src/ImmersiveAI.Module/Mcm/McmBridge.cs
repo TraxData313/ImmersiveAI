@@ -206,6 +206,7 @@ namespace ImmersiveAI.Mcm
             if (s.DeepSeekModel == null) { s.DeepSeekModel = new Dropdown<string>(McmChoiceLists.DeepSeekModels, 0); repaired = true; }
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
+            if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
             if (repaired)
                 ModLog.Warn("MCM served an uninitialized settings instance — dropdowns rebuilt by hand " +
                             "(an MCM/dependency version mismatch; the menu should still work now).");
@@ -237,6 +238,7 @@ namespace ImmersiveAI.Mcm
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch, s.MaxKnownFacts, s.MaxNpcGoals,
                 s.EnableConversationHiring, s.ConversationHiringHagglePercent,
+                SelectedOf(s.PersonaSparkMode),
                 s.RevertMemoriesWithSaves, s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
         }
 
@@ -254,6 +256,7 @@ namespace ImmersiveAI.Mcm
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
                 c.EnableLetters, c.EnableWorldRecall, c.EnableWebSearch, c.MaxKnownFacts, c.MaxNpcGoals,
                 c.EnableConversationHiring, c.ConversationHiringHagglePercent,
+                c.PersonaSparkMode,
                 c.RevertMemoriesWithSaves, c.ShowCostNotices, c.MaxDailyRequests, c.DevMode);
         }
 
@@ -298,6 +301,7 @@ namespace ImmersiveAI.Mcm
             s.MaxNpcGoals = Clamp(c.MaxNpcGoals, 1, 20);
             s.EnableConversationHiring = c.EnableConversationHiring;
             s.ConversationHiringHagglePercent = Clamp(c.ConversationHiringHagglePercent, 0, 90);
+            Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
 
             s.ShowCostNotices = c.ShowCostNotices;
@@ -353,6 +357,7 @@ namespace ImmersiveAI.Mcm
             c.MaxNpcGoals = s.MaxNpcGoals;
             c.EnableConversationHiring = s.EnableConversationHiring;
             c.ConversationHiringHagglePercent = s.ConversationHiringHagglePercent;
+            c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;
 
             c.ShowCostNotices = s.ShowCostNotices;
@@ -418,6 +423,14 @@ namespace ImmersiveAI.Mcm
                 {
                     live.LocalEndpoint = storeLocal.Trim();
                     adopted.Add("local endpoint");
+                }
+
+                // The spark mode: adopted only over the untouched default, like the models.
+                var storeSpark = SparkModeValue(McmChoiceLists.AtIndex(McmChoiceLists.SparkModes, IntOf(store, "PersonaSparkMode")));
+                if (storeSpark != null && live.PersonaSparkMode == "Generate" && storeSpark != "Generate")
+                {
+                    live.PersonaSparkMode = storeSpark;
+                    adopted.Add("starting personality " + storeSpark);
                 }
 
                 // The backend, last — so a key adopted above already counts toward "can speak".
@@ -556,6 +569,13 @@ namespace ImmersiveAI.Mcm
             }
             catch { /* this field stays as it was; the rest of the push proceeds */ }
         }
+
+        // The spark mode's two spellings: the menu says "Ask first", config.json says "Ask".
+        private static string SparkModeLabel(string configValue) =>
+            configValue == "Ask" ? "Ask first" : configValue;
+
+        private static string? SparkModeValue(string? menuLabel) =>
+            menuLabel == null ? null : (menuLabel == "Ask first" ? "Ask" : menuLabel);
 
         private static int Clamp(int value, int min, int max) =>
             value < min ? min : (value > max ? max : value);

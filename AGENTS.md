@@ -157,11 +157,14 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
 - `NPCs\campaign_<id>\<stringId>_<FirstName>\` — one folder per NPC (e.g. `lord_7_13_1_Gunjadrid\`).
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
-  - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored).
+  - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored), written in the
+    character's own first person; folds in as "Of myself, this I hold true:". Usually begins with
+    the director's spark (a generated 1–3 sentence starting truth under a `# spark:` stamp — see
+    `PersonaSparkMode` in CLAUDE.md); hand-written content always wins, deleting the file re-seeds.
   - `current_situation_info.txt` — environmental facts (when/where/who) snapshot plus recent
     world tidings & local rumors (`TidingsBuilder`), rewritten every time the player opens a
-    chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as a
-    gentle second-person narration and folded into her prompt.
+    chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as the
+    NPC's own first-person awareness and folded into her prompt.
   - `self.txt` — the NPC's OWN evolving sense of self (`NpcSelf`), written by them in first
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded

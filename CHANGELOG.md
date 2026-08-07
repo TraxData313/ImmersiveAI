@@ -12,6 +12,25 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **New: the director's spark — every soul begins as somebody.** The first time you interact
+  with a character, one small AI call writes them a private starting truth (1–3 sentences in
+  their own voice — an old wound, an odd habit, a vanity, sometimes something wilder), grown
+  from their real story, traits, way of speaking and your world prompt. It lands in their
+  editable prompt file, so you can read, rewrite or erase it anytime ("Their prompt" in the
+  windows); delete the file to have them re-shaped. New mod option "Starting personality":
+  Generate (default), Ask first (a popup per new face), or Off.
+- **The narrator is gone — everything is first person now.** Characters no longer hear an unseen
+  "Angel" voice narrating their lives: arriving visitors, letters written and received, the urge
+  to seek you out, a hiring struck, even the quiet settling of old memories — all of it now
+  passes through their own mind, in their own first-person voice ("A courier has found me…",
+  "They hired me; I ride with them"). Old saves keep their recorded moments exactly as they were.
+- Your prompts speak from inside their heads too: the world prompt enters every mind as "Of this
+  world, this I know:", and each character's personal prompt as "Of myself, this I hold true:" —
+  write the personal one in the character's own voice ("I stutter when I am nervous"), as the
+  file templates and the in-game editors now hint.
+- Characters' inner tools (recall, the survey, the scales of battle, web-wisdom, the heart) now
+  answer them in their own voice as well — "Ilya comes back to me…", "I take stock of my
+  company…" — instead of a voice talking at them.
 - The model guide now names `gpt-5.6-terra` the recommended step-up for those who don't pinch
   denars — live play found it noticeably sharper than the default at holding character and
   long threads (the cheap default stays the default).

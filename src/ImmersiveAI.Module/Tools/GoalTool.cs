@@ -25,29 +25,29 @@ namespace ImmersiveAI.Tools
         public const string Revise = "revise";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(TendGoals,
-            "Set one of your own aims in order — the purposes you carry of your own will. Reach for this " +
-            "only when what you strive for has genuinely shifted: a new purpose kindled, an old one won, " +
-            "lost, or turned to ash. Most talk changes nothing; do not touch your aims out of habit. One " +
-            "aim to a call. The choice is wholly yours, and no aim need ever be spoken aloud.",
+            "Set one of my own aims in order — the purposes I carry of my own will. Reach for this " +
+            "only when what I strive for has genuinely shifted: a new purpose kindled, an old one won, " +
+            "lost, or turned to ash. Most talk changes nothing; I do not touch my aims out of habit. One " +
+            "aim to a call. The choice is wholly mine, and no aim need ever be spoken aloud.",
             new[]
             {
                 new ToolParameter("action",
-                    "What you would do with an aim: \"add\" to take up a new one, \"drop\" to let go of one " +
-                    "you have finished with or abandoned, or \"revise\" to reshape one that has changed."),
+                    "What I would do with an aim: \"add\" to take up a new one, \"drop\" to let go of one " +
+                    "I have finished with or abandoned, or \"revise\" to reshape one that has changed."),
                 new ToolParameter("goal",
-                    "For \"add\", the new aim in your own words (a single short line — \"win back my father's " +
-                    "hall\", \"see my sister safely wed\"). For \"drop\" or \"revise\", name the aim you mean, " +
-                    "as near to how you hold it as you can."),
+                    "For \"add\", the new aim in my own words (a single short line — \"win back my father's " +
+                    "hall\", \"see my sister safely wed\"). For \"drop\" or \"revise\", name the aim I mean, " +
+                    "as near to how I hold it as I can."),
                 new ToolParameter("into",
                     "Only for \"revise\": the aim as it now stands, reshaped.", required: false),
             });
 
         /// <summary>What the tool answers on a change taken — steering the NPC back to their words.</summary>
-        public const string Done = "It is done; your aim is set in order. Speak on, and let it live in what you do.";
+        public const string Done = "It is done; my aim is set in order. I speak on, and let it live in what I do.";
 
         /// <summary>What the tool answers when nothing could be changed (an unknown action, a drop or
         /// revise that matched no held aim, an add that was full or duplicate) — an honest stillness.</summary>
-        public const string NoChange = "Nothing changed in your aims just now. Speak on.";
+        public const string NoChange = "Nothing changed in my aims just now. I speak on.";
 
         /// <summary>
         /// Applies one goal operation to <paramref name="goals"/>, returning true when the list actually

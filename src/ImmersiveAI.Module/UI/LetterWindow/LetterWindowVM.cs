@@ -222,7 +222,7 @@ namespace ImmersiveAI.UI.LetterWindow
             var npc = _selected?.Hero;
             if (npc == null) return;
             _promptEditNpc = npc;
-            PromptEditTitle = $"Their prompt — {npc.Name}";
+            PromptEditTitle = $"Their prompt — {npc.Name} — write it in their own voice: \"I ...\"";
             PromptEditText = PromptFiles.LoadNpcPromptForEdit(
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
             IsPromptEditShown = true;
@@ -231,7 +231,7 @@ namespace ImmersiveAI.UI.LetterWindow
         public void ExecuteEditGlobalPrompt()
         {
             _promptEditNpc = null;
-            PromptEditTitle = "World prompt — carried by every soul in Calradia";
+            PromptEditTitle = "World prompt — what every soul knows of this world";
             PromptEditText = PromptFiles.LoadGlobalPromptForEdit();
             IsPromptEditShown = true;
         }

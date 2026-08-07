@@ -17,7 +17,7 @@ namespace ImmersiveAI.Tools
     /// The NPCs' "gift of recall": tools an NPC may quietly call upon mid-thought to bring to mind
     /// what is truly known of a person, place, clan, or realm — live campaign data instead of
     /// hallucinated cousins and misplaced towns. Definitions are in-world ("call to mind..."), and
-    /// every answer is written as gentle second-person remembrance, so nothing here breaks the
+    /// every answer is written as the NPC's own first-person recall, so nothing here breaks the
     /// fourth wall for the NPC.
     ///
     /// Resolution touches campaign state, so it is marshaled to the game thread via
@@ -38,43 +38,43 @@ namespace ImmersiveAI.Tools
         {
             new ToolDefinition(RecallPerson,
                 "Call to mind what is truly known of a person of the world — who they are, their kin and house, " +
-                "their standing, where word last placed them, and, if they stand before your eyes, what you see " +
-                "of their garb and arms. Reach for this whenever a person is spoken of and your memory of them " +
+                "their standing, where word last placed them, and, if they stand before my eyes, what I see " +
+                "of their garb and arms. Reach for this whenever a person is spoken of and my memory of them " +
                 "is dim, rather than guessing.",
-                new[] { new ToolParameter("name", "The person's name, as best you know it.") }),
+                new[] { new ToolParameter("name", "The person's name, as best I know it.") }),
 
             new ToolDefinition(RecallCompany,
-                "Take stock of your own company — the warband you lead or ride with: how many souls it counts, " +
-                "the kinds of fighters among them, the hale and the wounded, prisoners in your train, the food " +
+                "Take stock of my own company — the warband I lead or ride with: how many souls it counts, " +
+                "the kinds of fighters among them, the hale and the wounded, prisoners in my train, the food " +
                 "in the wagons, the men's spirits, their wages, and what the company is presently about. Reach " +
-                "for this before ever speaking in numbers of your own men."),
+                "for this before ever speaking in numbers of my own men."),
 
             new ToolDefinition(RecallPlace,
                 "Call to mind what is known of a town, castle, or village — who holds it, whose realm it lies " +
                 "in, its walls and garrison, and how it fares. Reach for this when a place is spoken of and " +
-                "your memory of it is dim, and always before speaking in numbers of its defenses.",
-                new[] { new ToolParameter("name", "The place's name, as best you know it.") }),
+                "my memory of it is dim, and always before speaking in numbers of its defenses.",
+                new[] { new ToolParameter("name", "The place's name, as best I know it.") }),
 
             new ToolDefinition(RecallClan,
                 "Call to mind what is known of a clan or noble house — who leads it, whom it serves, its people " +
                 "and its holdings.",
-                new[] { new ToolParameter("name", "The clan's name, as best you know it.") }),
+                new[] { new ToolParameter("name", "The clan's name, as best I know it.") }),
 
             new ToolDefinition(RecallRealm,
                 "Call to mind what is known of a realm or kingdom — who rules it, its great houses, its lands, " +
                 "and the wars it wages.",
-                new[] { new ToolParameter("name", "The realm's name, as best you know it.") }),
+                new[] { new ToolParameter("name", "The realm's name, as best I know it.") }),
 
             new ToolDefinition(RecallTroop,
                 "Call to mind what is known of a kind of soldier — recruit, warrior, knight, of any people: " +
                 "how seasoned they are, their skill at arms, the gear they carry, and what they may become " +
                 "with training. Reach for this when soldiers or their worth are spoken of — and when weighing " +
-                "one kind against another, call each to mind in turn before you judge.",
+                "one kind against another, call each to mind in turn before I judge.",
                 new[] { new ToolParameter("name", "The soldier kind's name, e.g. \"Vlandian Recruit\" or \"Battanian Fian\".") }),
 
             new ToolDefinition(RecallMarket,
-                "Call to mind the day's trade in the market about you — what goods truly fetch here, this " +
-                "day, in the place where you stand. Reach for this before ever quoting a price or speaking " +
+                "Call to mind the day's trade in the market about me — what goods truly fetch here, this " +
+                "day, in the place where I stand. Reach for this before ever quoting a price or speaking " +
                 "of what the market bears; prices shift with the seasons and the wars, and yesterday's " +
                 "figure is a lie by morning.",
                 new[] { new ToolParameter("item", "One good to price — grain, tools, wine, a horse. Leave it out to survey the market's staples.", required: false) }),
@@ -143,7 +143,7 @@ namespace ImmersiveAI.Tools
         {
             var matches = FindHeroes(name);
             if (matches.Count == 0)
-                return $"Search your memory as you may, no one called \"{name}\" comes clearly to mind.";
+                return $"Search my memory as I may, no one called \"{name}\" comes clearly to mind.";
 
             if (matches.Count == 1)
                 return PersonRemembrance(matches[0], asker);
@@ -216,7 +216,7 @@ namespace ImmersiveAI.Tools
             {
                 var what = PersonRole(h);
                 var culture = h.Culture?.Name?.ToString();
-                var opening = $"{name} comes back to you: {what}";
+                var opening = $"{name} comes back to me: {what}";
                 if (!string.IsNullOrWhiteSpace(culture)) opening += $", {culture} by blood";
                 if (h.IsAlive) opening += $", of some {(int)h.Age} years";
                 lines.Add(opening + ".");
@@ -260,7 +260,7 @@ namespace ImmersiveAI.Tools
                 if (asker == null || asker == h) return;
                 int standing = h.GetRelation(asker);
                 if (standing != 0)
-                    lines.Add($"Between you and them, the standing is {PersonaBuilder.DescribeRelation(standing)} ({standing}).");
+                    lines.Add($"Between me and them, the standing is {PersonaBuilder.DescribeRelation(standing)} ({standing}).");
             });
 
             // What they are honestly good at — the crafts a captain weighs before hiring: would this
@@ -315,8 +315,8 @@ namespace ImmersiveAI.Tools
 
             if (garb.Count == 0 && arms.Count == 0) return string.Empty;
             var clad = garb.Count > 0 ? "clad in " + string.Join(", ", garb) : "clad plainly";
-            var bearing = arms.Count > 0 ? "bearing " + string.Join(", ", arms) : "bearing no arms you can see";
-            return $"And they stand before your very eyes, {clad}, {bearing}.";
+            var bearing = arms.Count > 0 ? "bearing " + string.Join(", ", arms) : "bearing no arms I can see";
+            return $"And they stand before my very eyes, {clad}, {bearing}.";
         }
 
         private static string PersonBrief(Hero h)
@@ -397,7 +397,7 @@ namespace ImmersiveAI.Tools
 
             Try(() =>
             {
-                var line = $"{s.Name} comes back to you: {kind}";
+                var line = $"{s.Name} comes back to me: {kind}";
                 var culture = s.Culture?.Name?.ToString();
                 if (!string.IsNullOrWhiteSpace(culture)) line += $" of {culture} lands";
                 lines.Add(line + ".");
@@ -469,7 +469,7 @@ namespace ImmersiveAI.Tools
                 var governor = town.Governor;
                 if (governor == null) return;
                 lines.Add(governor == asker
-                    ? "Its keeping rests in your own hands — you are its governor."
+                    ? "Its keeping rests in my own hands — I am its governor."
                     : $"Its keeping rests in the hands of {governor.Name}, its governor.");
             });
 
@@ -541,7 +541,7 @@ namespace ImmersiveAI.Tools
 
             Try(() =>
             {
-                var line = $"Clan {clan.Name} comes back to you";
+                var line = $"Clan {clan.Name} comes back to me";
                 if (clan.Leader != null) line += $", led by {clan.Leader.Name}";
                 if (clan.Kingdom != null) line += $", sworn to {clan.Kingdom.Name}";
                 lines.Add(line + ".");
@@ -592,7 +592,7 @@ namespace ImmersiveAI.Tools
 
             Try(() =>
             {
-                var line = $"The realm of {kingdom.Name} comes back to you";
+                var line = $"The realm of {kingdom.Name} comes back to me";
                 if (kingdom.Leader != null) line += $", ruled by {kingdom.Leader.Name}";
                 var culture = kingdom.Culture?.Name?.ToString();
                 if (!string.IsNullOrWhiteSpace(culture)) line += $", {culture} in blood and custom";
@@ -648,13 +648,13 @@ namespace ImmersiveAI.Tools
                 // the right one to mind instead of shrugging.
                 var kindsOfPeople = TroopKindsOfNamedCulture(troops, name);
                 return kindsOfPeople != null
-                    ? $"No kind of soldier called \"{name}\" comes to mind — that people names their fighters otherwise. Of them you know these kinds: {kindsOfPeople}. Call the one you mean to mind."
+                    ? $"No kind of soldier called \"{name}\" comes to mind — that people names their fighters otherwise. Of them I know these kinds: {kindsOfPeople}. Call the one I mean to mind."
                     : $"No kind of soldier called \"{name}\" comes to mind.";
             }
             if (matches.Count > 1)
             {
                 var sb = new StringBuilder();
-                sb.AppendLine($"More than one kind of soldier answers to \"{name}\" — call the one you mean to mind by its fuller name:");
+                sb.AppendLine($"More than one kind of soldier answers to \"{name}\" — call the one I mean to mind by its fuller name:");
                 foreach (var c in matches.Take(6))
                     sb.AppendLine("- " + c.Name);
                 return sb.ToString().TrimEnd();
@@ -762,7 +762,7 @@ namespace ImmersiveAI.Tools
             }
         }
 
-        // ------------------------------ the market about you ------------------------------
+        // ------------------------------ the market about me ------------------------------
 
         // The day's trade where the asker stands, read from the settlement's real market — so a
         // headman quotes what grain truly fetches in his village today instead of inventing a
@@ -772,7 +772,7 @@ namespace ImmersiveAI.Tools
             Settlement? s = null;
             Try(() => s = asker?.CurrentSettlement ?? Settlement.CurrentSettlement);
             if (s == null)
-                return "You stand in no market — out here there are no stalls, no scales, and no day's prices to call to mind.";
+                return "I stand in no market — out here there are no stalls, no scales, and no day's prices to call to mind.";
 
             // Towns, castles, and villages all keep their own ledger of what a thing trades at.
             // Priced against the player's party, so the figures match the trade screen to the denar
@@ -851,8 +851,8 @@ namespace ImmersiveAI.Tools
                 string kept = null;
                 Try(() => kept = asker.GovernorOf?.Settlement?.Name?.ToString());
                 return kept != null
-                    ? $"No warband rides under you upon the road — your charge is {kept} itself, and its garrison comes to mind when you think upon the place."
-                    : "You take stock, and the truth is plain: no company rides with you now — no warband of your own, and none you march among.";
+                    ? $"No warband rides under me upon the road — my charge is {kept} itself, and its garrison comes to mind when I think upon the place."
+                    : "I take stock, and the truth is plain: no company rides with me now — no warband of my own, and none I march among.";
             }
 
             var lines = new List<string>();
@@ -866,11 +866,11 @@ namespace ImmersiveAI.Tools
                 int wounded = party.MemberRoster?.TotalWounded ?? 0;
                 var woundedNote = wounded > 0 ? $", {wounded} of them nursing wounds" : "";
                 if (leading)
-                    lines.Add($"Your company comes to mind as clearly as your own hand: {total} souls ride under your command{woundedNote}.");
+                    lines.Add($"My company comes to mind as clearly as my own hand: {total} souls ride under my command{woundedNote}.");
                 else if (leader != null)
-                    lines.Add($"You take stock of {leader.Name}'s company, which you ride with: {total} souls in all{woundedNote}.");
+                    lines.Add($"I take stock of {leader.Name}'s company, which I ride with: {total} souls in all{woundedNote}.");
                 else
-                    lines.Add($"You take stock of the company you march among: {total} souls in all{woundedNote}.");
+                    lines.Add($"I take stock of the company I march among: {total} souls in all{woundedNote}.");
             });
 
             // The named few first, then the ranks by kind — a captain reads his roll this way.
@@ -885,7 +885,7 @@ namespace ImmersiveAI.Tools
                     .Select(e => e.Character.HeroObject?.Name?.ToString())
                     .Where(n => !string.IsNullOrWhiteSpace(n)).Take(8).ToList();
                 if (companions.Count > 0)
-                    lines.Add("At your side ride " + string.Join(", ", companions) + ".");
+                    lines.Add("At my side ride " + string.Join(", ", companions) + ".");
 
                 var kinds = roster
                     .Where(e => Safe(() => e.Character != null && !e.Character.IsHero && e.Number > 0))
@@ -904,7 +904,7 @@ namespace ImmersiveAI.Tools
             Try(() =>
             {
                 int prisoners = party.PrisonRoster?.TotalManCount ?? 0;
-                if (prisoners > 0) lines.Add($"Some {prisoners} prisoners are marched along in your train.");
+                if (prisoners > 0) lines.Add($"Some {prisoners} prisoners are marched along in my train.");
             });
 
             Try(() =>
@@ -934,7 +934,7 @@ namespace ImmersiveAI.Tools
                 int ranks = (int)model.GetDailyHealingForRegulars(party.Party, false).ResultNumber;
                 var surgeon = party.EffectiveSurgeon;
                 var care = surgeon == null ? "with no surgeon named to the charge"
-                    : surgeon == asker ? "under your own care"
+                    : surgeon == asker ? "under my own care"
                     : $"under {surgeon.Name}'s care";
                 if (wounded > 0)
                     lines.Add($"The hurt mend {care}: the named heal some {named} points of vigor a day, the ranks some {ranks}.");
@@ -946,11 +946,11 @@ namespace ImmersiveAI.Tools
             {
                 if (leading)
                 {
-                    lines.Add($"Their keep runs some {party.TotalWage} denars a day in wages, and your own purse holds {asker.Gold}.");
+                    lines.Add($"Their keep runs some {party.TotalWage} denars a day in wages, and my own purse holds {asker.Gold}.");
                     return;
                 }
                 if (leader != null && Safe(() => party.EffectiveQuartermaster == asker))
-                    lines.Add($"You keep the books yourself: the keep runs some {party.TotalWage} denars a day in wages, and the war chest — {leader.Name}'s purse — holds some {leader.Gold} denars.");
+                    lines.Add($"I keep the books myself: the keep runs some {party.TotalWage} denars a day in wages, and the war chest — {leader.Name}'s purse — holds some {leader.Gold} denars.");
             });
 
             Try(() => lines.Add(CompanyDoing(party)));
@@ -961,7 +961,7 @@ namespace ImmersiveAI.Tools
                 if (army == null) return;
                 var armyName = army.Name?.ToString() ?? "a gathered army";
                 if (army.LeaderParty == party)
-                    lines.Add($"And more than that: the banners of {armyName} — {army.TotalManCount} men in all — march at your word.");
+                    lines.Add($"And more than that: the banners of {armyName} — {army.TotalManCount} men in all — march at my word.");
                 else
                 {
                     var armyLeader = army.LeaderParty?.LeaderHero?.Name?.ToString();

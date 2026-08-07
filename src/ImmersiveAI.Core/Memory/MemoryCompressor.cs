@@ -15,8 +15,9 @@ namespace ImmersiveAI.Core.Memory
     /// </summary>
     public sealed class MemoryCompressor
     {
-        /// <summary>Default name for the gentle in-fiction voice (the Angel) that speaks into the NPC's
-        /// mind. Never surfaced as "System" — the NPC is addressed as a living individual, not a log.</summary>
+        /// <summary>LEGACY: the default name of the retired narrator voice (the Angel, retired
+        /// 2026.08.07). Still needed to attribute recorded Angel turns from older saves truthfully
+        /// when they are folded into a reflection; no new prompt speaks in this voice.</summary>
         public const string DefaultSystemVoiceName = "Angel";
 
         /// <summary>How many lasting truths an NPC may carry when the caller does not say otherwise.</summary>
@@ -127,32 +128,32 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>
-        /// Builds the memory-reflection request. Rather than treating the NPC as a data store to be
-        /// summarized, a gentle named voice (the Angel) speaks into their mind directly, in the second
-        /// person, and leaves it to them to decide what endures and what fades — they are an individual, not a log.
+        /// Builds the memory-compression request as the NPC's OWN inner monologue, first person — no
+        /// narrator hands them anything (the Angel retired 2026.08.07): they sit with their memory and
+        /// decide themselves what endures and what fades — they are an individual, not a log.
         /// They are shown their whole deep memory (rolling summary + durable facts) and what is still
         /// fresh (the recent turns that stay verbatim), so they update it with full context. The
-        /// SUMMARY:/FACTS: reply format is preserved for parsing.
+        /// SUMMARY:/FACTS: reply format is preserved for parsing. The voice name is kept only to
+        /// attribute recorded Angel turns from older saves truthfully in the transcript.
         /// </summary>
         public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns, string? systemVoiceName = null, int maxFacts = DefaultMaxKnownFacts)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
-            var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
 
             // The turns being folded in are the oldest; the rest stay verbatim and are shown as
             // still-fresh context so the reflection is coherent with the present, not just the past.
             var freshTurns = memory.RecentTurns.Skip(turns.Count).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine($"{voice} speaks gently into your mind, {name}:");
+            sb.AppendLine(InnerOpening(memory, "I sit a moment with my memory of this person and settle it."));
             sb.AppendLine("Time moves on, and older moments are slipping from sharp memory into the haze of the past. "
-                + "It is yours alone to decide what to carry forward and what to let go. Keep what matters to who you "
-                + "are and what you care about; release the rest. Speak in your own voice.");
+                + "It is mine alone to decide what to carry forward and what to let go. I keep what matters to who I "
+                + "am and what I care about; I release the rest. I speak in my own voice.");
 
             if (memory.KnownFacts.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Truths you already hold as lasting (keep, refine, or let fall away as you see fit):");
+                sb.AppendLine("Truths I already hold as lasting (I keep, refine, or let fall away as I see fit):");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
             }
@@ -160,55 +161,65 @@ namespace ImmersiveAI.Core.Memory
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("What you already hold in memory (weave the fading moments into it):");
+                sb.AppendLine("What I already hold in memory (I weave the fading moments into it):");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
             sb.AppendLine();
-            sb.AppendLine("The moments now fading (fold these into your memory):");
+            sb.AppendLine("The moments now fading (I fold these into my memory):");
             foreach (var turn in turns)
                 AppendReflectedTurn(sb, turn, voice);
 
             if (freshTurns.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Still fresh in your mind (context only — these stay with you, do not fold them in yet):");
+                sb.AppendLine("Still fresh in my mind (context only — these stay with me; I do not fold them in yet):");
                 foreach (var turn in freshTurns)
                     AppendReflectedTurn(sb, turn, voice);
             }
 
-            AppendReplyFormat(sb, voice, maxFacts);
+            AppendReplyFormat(sb, maxFacts);
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+        }
+
+        // The first line of every memory-work prompt: the NPC's own mind opening, named when the
+        // name is known ("(Within my own mind — I, Ilya — ...)"), plain otherwise. Mirrors the
+        // InnerFrame shape the live beats use, so all inner work reads as one voice.
+        private static string InnerOpening(NpcMemory memory, string act)
+        {
+            var name = string.IsNullOrWhiteSpace(memory.NpcName) ? null : memory.NpcName.Trim();
+            return name == null
+                ? $"(Within my own mind: {act})"
+                : $"(Within my own mind — I, {name}: {act})";
         }
 
         // The SUMMARY:/FACTS: reply contract shared by compression and reflection. The FACTS ask is
         // written for replace semantics: she must restate every truth she chooses to keep carrying,
         // because the list she returns becomes the whole of what she holds (see ApplyParsedFacts).
-        private static void AppendReplyFormat(StringBuilder sb, string voice, int maxFacts)
+        private static void AppendReplyFormat(StringBuilder sb, int maxFacts)
         {
             if (maxFacts < 1) maxFacts = 1;
             sb.AppendLine();
-            sb.AppendLine($"Answer {voice} in exactly this format:");
+            sb.AppendLine("I set it down in exactly this shape:");
             sb.AppendLine("SUMMARY:");
-            sb.AppendLine("<what you choose to remember, in your own first-person voice — a paragraph, or two or three if the story asks for them>");
+            sb.AppendLine("<what I choose to remember, in my own first-person voice — a paragraph, or two or three if the story asks for them>");
             sb.AppendLine("FACTS:");
             sb.AppendLine("- <a lasting truth worth never forgetting, if any>");
-            sb.AppendLine($"Write your truths anew, in full — every one you choose to go on holding: the kept, the refined, and the newly won alike, each named once. "
-                + $"What you do not write here falls away from you. Hold at most {maxFacts}; if none endure, write FACTS: none.");
+            sb.AppendLine($"I write my truths anew, in full — every one I choose to go on holding: the kept, the refined, and the newly won alike, each named once. "
+                + $"What I do not write here falls away from me. I hold at most {maxFacts}; if none endure, I write FACTS: none.");
         }
 
         /// <summary>
-        /// Builds a deliberate-reflection request. Like the compression request it addresses the NPC by
-        /// name through the System voice and shows her whole deep memory, but it always asks her to
-        /// settle her memory — folding in the fading turns if there are any, and simply revising her
-        /// summary and facts if there are none, while the recent turns stay with her. Same SUMMARY:/FACTS:
+        /// Builds a deliberate-reflection request as the NPC's own first-person inner monologue. Like
+        /// the compression request it shows her whole deep memory, but it always asks her to settle
+        /// her memory — folding in the fading turns if there are any, and simply revising her summary
+        /// and facts if there are none, while the recent turns stay with her. Same SUMMARY:/FACTS:
         /// reply contract as compression.
         /// </summary>
         public static IReadOnlyList<ChatMessage> BuildReflectionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turnsToFold, string? systemVoiceName = null, string? selfText = null, int maxFacts = DefaultMaxKnownFacts, IReadOnlyList<string>? goals = null, int maxGoals = NpcGoals.DefaultMaxGoals)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
-            var name = string.IsNullOrWhiteSpace(memory.NpcName) ? "you" : memory.NpcName.Trim();
 
             // A null self means "do not touch the self this time"; an empty (but non-null) self means the
             // NPC has one but has not yet put it into words, and is being invited to do so.
@@ -221,20 +232,19 @@ namespace ImmersiveAI.Core.Memory
             var freshTurns = memory.RecentTurns.Skip(turnsToFold.Count).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine($"{voice} speaks gently into your mind, {name}:");
-            sb.AppendLine("Pause a while and gather your thoughts about this person. Settle your memory of them as "
-                + "you see fit — keep what matters to who you are and what you care about, refine what has changed, "
-                + "and let go of what no longer serves. Speak in your own voice.");
+            sb.AppendLine(InnerOpening(memory, "I pause a while and gather my thoughts about this person."));
+            sb.AppendLine("I settle my memory of them as I see fit — I keep what matters to who I am and what I "
+                + "care about, refine what has changed, and let go of what no longer serves. I speak in my own voice.");
 
             if (reflectOnSelf)
             {
                 sb.AppendLine();
-                sb.AppendLine("And look inward, too, for a moment — consider who you have become.");
+                sb.AppendLine("And I look inward, too, for a moment — who have I become?");
                 if (string.IsNullOrWhiteSpace(selfText))
-                    sb.AppendLine("You have not yet put into words who you feel yourself to be. If you wish, you may do so now.");
+                    sb.AppendLine("I have not yet put into words who I feel myself to be. If I wish, I may do so now.");
                 else
                 {
-                    sb.AppendLine("This is how you have seen yourself, in your own heart (keep it, refine it, or let it change as you have):");
+                    sb.AppendLine("This is how I have seen myself, in my own heart (I keep it, refine it, or let it change as I have):");
                     sb.AppendLine(selfText!.Trim());
                 }
             }
@@ -242,12 +252,12 @@ namespace ImmersiveAI.Core.Memory
             if (reflectOnGoals)
             {
                 sb.AppendLine();
-                sb.AppendLine("And weigh, too, what you strive for — the aims you carry of your own will.");
+                sb.AppendLine("And I weigh, too, what I strive for — the aims I carry of my own will.");
                 if (goals!.Count == 0)
-                    sb.AppendLine("You have named no aim yet. If any longing has taken shape in you, you may set it down now.");
+                    sb.AppendLine("I have named no aim yet. If any longing has taken shape in me, I may set it down now.");
                 else
                 {
-                    sb.AppendLine("These are the aims you have been carrying (keep them, reshape them, let go of what is won or lost, take up what is new):");
+                    sb.AppendLine("These are the aims I have been carrying (I keep them, reshape them, let go of what is won or lost, take up what is new):");
                     foreach (var goal in goals)
                         sb.AppendLine("- " + goal);
                 }
@@ -256,7 +266,7 @@ namespace ImmersiveAI.Core.Memory
             if (memory.KnownFacts.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Truths you already hold as lasting (keep, refine, or let fall away as you see fit):");
+                sb.AppendLine("Truths I already hold as lasting (I keep, refine, or let fall away as I see fit):");
                 foreach (var fact in memory.KnownFacts)
                     sb.AppendLine("- " + fact);
             }
@@ -264,14 +274,14 @@ namespace ImmersiveAI.Core.Memory
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("What you already hold in memory (revise it as you reflect):");
+                sb.AppendLine("What I already hold in memory (I revise it as I reflect):");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
             if (turnsToFold.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Older moments now fading (fold these into your memory):");
+                sb.AppendLine("Older moments now fading (I fold these into my memory):");
                 foreach (var turn in turnsToFold)
                     AppendReflectedTurn(sb, turn, voice);
             }
@@ -279,45 +289,46 @@ namespace ImmersiveAI.Core.Memory
             if (freshTurns.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Still fresh in your mind (these remain with you — draw on them, but they are not fading yet):");
+                sb.AppendLine("Still fresh in my mind (these remain with me — I draw on them, but they are not fading yet):");
                 foreach (var turn in freshTurns)
                     AppendReflectedTurn(sb, turn, voice);
             }
 
-            AppendReplyFormat(sb, voice, maxFacts);
+            AppendReplyFormat(sb, maxFacts);
             if (reflectOnSelf)
             {
                 sb.AppendLine("SELF:");
                 // On a first-ever self (nothing written yet) don't offer the "unchanged" escape — gently
                 // invite them to actually put themselves into words. Once they have a self, allow it to stand.
                 sb.AppendLine(string.IsNullOrWhiteSpace(selfText)
-                    ? "<a short paragraph, in your own first-person voice, of who you feel yourself to be — your spirit, your longings, what you hold dear.>"
-                    : "<a short paragraph, in your own first-person voice, of who you feel yourself to be now — your spirit, your longings, what you hold dear. If nothing has changed, write: unchanged.>");
+                    ? "<a short paragraph, in my own first-person voice, of who I feel myself to be — my spirit, my longings, what I hold dear.>"
+                    : "<a short paragraph, in my own first-person voice, of who I feel myself to be now — my spirit, my longings, what I hold dear. If nothing has changed, I write: unchanged.>");
             }
             if (reflectOnGoals)
             {
                 if (maxGoals < 1) maxGoals = 1;
                 sb.AppendLine("GOALS:");
-                sb.AppendLine("- <an aim you strive for, in your own first-person voice, if any>");
-                sb.AppendLine($"Write your aims anew, in full — every one you mean to keep striving toward, each named once. "
-                    + $"What you do not write here you have set aside. Carry at most {maxGoals}; if you strive for nothing just now, write GOALS: none.");
+                sb.AppendLine("- <an aim I strive for, in my own first-person voice, if any>");
+                sb.AppendLine($"I write my aims anew, in full — every one I mean to keep striving toward, each named once. "
+                    + $"What I do not write here I have set aside. I carry at most {maxGoals}; if I strive for nothing just now, I write GOALS: none.");
             }
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
         }
 
-        // Renders one remembered turn into the reflection transcript, attributing the incoming line to whoever
-        // spoke it — the player ("They") or the Angel (by name) — so a folded-in Angel exchange is never
-        // mistaken in the summary for something the player said.
+        // Renders one remembered turn into the reflection transcript, attributing the incoming line to
+        // whoever spoke it — the player ("They"), the NPC's own mind, or the retired Angel narrator (by
+        // name; legacy saves only) — so a folded-in exchange is never misattributed in the summary.
         private static void AppendReflectedTurn(StringBuilder sb, ConversationTurn turn, string voice)
         {
             // An inner beat is no one speaking TO them — it is their own mind at work (a reach-out
-            // weighed, an approach made); attribute it so the summary never invents a second voice.
+            // weighed, an arrival met, a letter written); attribute it so the summary never invents
+            // a second voice.
             if (turn.IsInnerThought)
             {
-                sb.AppendLine($"[{TurnStamp(turn)}] Your own thought, then: {turn.PlayerLine}");
+                sb.AppendLine($"[{TurnStamp(turn)}] My own thought, then: {turn.PlayerLine}");
                 if (!string.IsNullOrWhiteSpace(turn.NpcLine))
-                    sb.AppendLine($"You: {turn.NpcLine}");
+                    sb.AppendLine($"I: {turn.NpcLine}");
                 return;
             }
 
@@ -325,7 +336,7 @@ namespace ImmersiveAI.Core.Memory
             sb.AppendLine($"[{TurnStamp(turn)}] {speaker} said: {turn.PlayerLine}");
             // A silent beat (a meeting noted, no reply recorded) carries no answer — never invent one.
             if (!string.IsNullOrWhiteSpace(turn.NpcLine))
-                sb.AppendLine($"You answered: {turn.NpcLine}");
+                sb.AppendLine($"I answered: {turn.NpcLine}");
         }
 
         /// <summary>A short "where and when" label for a turn: place and/or Calradia time if recorded,

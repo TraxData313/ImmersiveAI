@@ -204,6 +204,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int ConversationHiringHagglePercent { get; set; } = 30;
 
+        [SettingPropertyDropdown("Starting personality (the director's spark)", Order = 11, RequireRestart = false,
+            HintText = "At a character's first interaction, one small AI call writes them a private starting truth (1-3 sentences - a wound, a habit, a vanity) into their editable prompt file, grown from their real story, traits and your world prompt. 'Ask first' shows a popup per new face; Off leaves souls to begin plain.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public Dropdown<string> PersonaSparkMode { get; set; } = new Dropdown<string>(McmChoiceLists.SparkModes, 0);
+
         [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]

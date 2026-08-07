@@ -12,7 +12,7 @@ public class PromptBuilderTests
         RoleDescription = "A Sturgian lord of clan Vidgrip.",
         PersonalityDescription = "Calculating, cautious, values loyalty.",
         SpeechStyle = "Terse northern speech, dry humor, never flowery.",
-        CustomInstructions = "You distrust Imperial nobility."
+        CustomInstructions = "I distrust Imperial nobility."
     };
 
     [Fact]
@@ -128,19 +128,23 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void BuildAngelPrompt_FramesTheAngelLineInTheConfiguredVoice()
+    public void LetterDesireLine_RidesAsTheNpcsOwnMind_NoNarratorVoice()
     {
+        // The Angel narrator is retired (2026.08.07): every letter beat is the NPC's own first-person
+        // mind, framed through BuildInnerPrompt exactly like the reach-out ponders.
         var memory = new NpcMemory();
         memory.AddTurn(new ConversationTurn { PlayerLine = "Hail, Gafnir", NpcLine = "Hail, stranger." });
 
         var line = PromptBuilder.WriteLetterDesireLine("Vulgrim");
-        var messages = new PromptBuilder().BuildAngelPrompt(Persona(), memory, "In the tavern.", "Vulgrim", line, "Seraph");
+        var messages = new PromptBuilder().BuildInnerPrompt(Persona(), memory, "In the tavern.", "Vulgrim", line, "Seraph");
 
-        // System, the one remembered player turn (user+assistant), then the Angel's line as the last user turn.
+        // System, the one remembered player turn (user+assistant), then her own weighing as the last user turn.
         Assert.Equal(4, messages.Count);
         Assert.Equal(ChatRole.User, messages[3].Role);
-        Assert.Contains("Seraph speaks softly into your mind", messages[3].Content); // framed in the voice
-        Assert.Contains("yes or no", messages[3].Content);                            // the desire line's ask
+        Assert.StartsWith("(Within my own mind:", messages[3].Content);
+        Assert.DoesNotContain("Seraph", messages[3].Content);   // no voice speaks to her
+        Assert.Contains("Do I wish, of my own will, to write", messages[3].Content);
+        Assert.Contains("yes or no", messages[3].Content);       // the desire line's ask
     }
 
     [Fact]
@@ -299,7 +303,7 @@ public class PromptBuilderTests
 
         // system + one combined user message; no empty assistant message anywhere.
         Assert.Equal(2, messages.Count);
-        Assert.Contains("came and spoke with you awhile", messages[1].Content);
+        Assert.Contains("came and spoke with me awhile", messages[1].Content);
         Assert.EndsWith("Hello again", messages[1].Content);
         Assert.DoesNotContain(messages, m => m.Role == ChatRole.Assistant);
     }
@@ -327,31 +331,32 @@ public class PromptBuilderTests
         Assert.Contains("On the road near Balgard.", system);
         Assert.Contains("You fought beside Vulgrim at Omor.", system);
         Assert.Contains("Vulgrim rules Sargot", system);
-        Assert.Contains("You distrust Imperial nobility.", system);
+        Assert.Contains("I distrust Imperial nobility.", system);
         Assert.Contains("How should I speak:", system);
     }
 
     [Fact]
-    public void SystemPrompt_PlacesWorldAndCustomInstructionsHigh_UnderTheirHeadings()
+    public void SystemPrompt_PlacesWorldAndCustomInstructionsHigh_UnderFirstPersonHeadings()
     {
         var persona = Persona();
         persona.WorldInstructions = "Magic is rare and feared in this land.";
-        persona.CustomInstructions = "You distrust Imperial nobility.";
+        persona.CustomInstructions = "I distrust Imperial nobility.";
 
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
         var system = new PromptBuilder()
             .Build(persona, memory, "On the road near Balgard.", "Vulgrim", "Hello")[0].Content;
 
-        // Both authored blocks are shown under the requested headings...
-        Assert.Contains("About Calradia:", system);
+        // Both authored blocks are shown under first-person headings — the NPC's own knowledge,
+        // never a narrator handing them anything.
+        Assert.Contains("Of this world, this I know:", system);
         Assert.Contains("Magic is rare and feared in this land.", system);
-        Assert.Contains("About me:", system);
-        Assert.Contains("You distrust Imperial nobility.", system);
+        Assert.Contains("Of myself, this I hold true:", system);
+        Assert.Contains("I distrust Imperial nobility.", system);
 
         // ...and they ride high — before the passing scene and memory.
-        Assert.True(system.IndexOf("About Calradia:") < system.IndexOf("About me:"));
-        Assert.True(system.IndexOf("About me:") < system.IndexOf("On the road near Balgard."));
-        Assert.True(system.IndexOf("About me:") < system.IndexOf("What Vulgrim is to me"));
+        Assert.True(system.IndexOf("Of this world, this I know:") < system.IndexOf("Of myself, this I hold true:"));
+        Assert.True(system.IndexOf("Of myself, this I hold true:") < system.IndexOf("On the road near Balgard."));
+        Assert.True(system.IndexOf("Of myself, this I hold true:") < system.IndexOf("What Vulgrim is to me"));
     }
 
     [Fact]
@@ -389,18 +394,19 @@ public class PromptBuilderTests
     public void BuildFeelingQuery_AsksForOneNumber_WithTheExchange()
     {
         var messages = new PromptBuilder().BuildFeelingQuery(
-            Persona(), "Vulgrim", "You honor me.", "The honor is mine.", "Angel");
+            Persona(), "Vulgrim", "You honor me.", "The honor is mine.");
 
-        // A tight two-message call: the Angel's framing, then the question.
+        // A tight two-message call: her own mind, then the weighing.
         Assert.Equal(2, messages.Count);
         Assert.Equal(ChatRole.System, messages[0].Role);
         Assert.Equal(ChatRole.User, messages[1].Role);
 
-        // The system message constrains the output to a single number in the Angel's voice.
-        Assert.Contains("Angel", messages[0].Content);
+        // The system message is her own first person and constrains the output to a single number.
+        Assert.Contains("I am Gafnir", messages[0].Content);
         Assert.Contains("single whole number", messages[0].Content);
 
-        // The question carries the exchange and asks only for the movement.
+        // The weighing carries the exchange and asks only for the movement — within her own mind.
+        Assert.StartsWith("(Within my own mind:", messages[1].Content);
         Assert.Contains("You honor me.", messages[1].Content);
         Assert.Contains("The honor is mine.", messages[1].Content);
         Assert.Contains("Vulgrim", messages[1].Content);
@@ -412,19 +418,23 @@ public class PromptBuilderTests
         // The heart is asked only how the moment moved it — never where it currently rests — so a
         // soul already at the deepest love can still be moved, and the shown shift is the impact.
         var messages = new PromptBuilder().BuildFeelingQuery(
-            Persona(), "Vulgrim", "Hail.", "Well met.", "Angel");
+            Persona(), "Vulgrim", "Hail.", "Well met.");
 
-        Assert.DoesNotContain("your regard for", messages[1].Content);
+        Assert.DoesNotContain("my regard rests", messages[1].Content);
         Assert.DoesNotContain("rests at", messages[1].Content);
+        Assert.DoesNotContain("stands at", messages[1].Content);
     }
 
     [Fact]
-    public void BuildFeelingQuery_DefaultsTheVoiceName_WhenNoneGiven()
+    public void BuildFeelingQuery_SpeaksNoNarratorVoice()
     {
+        // The Angel narrator is retired (2026.08.07): the weighing is wholly her own mind.
         var messages = new PromptBuilder().BuildFeelingQuery(
-            Persona(), "Vulgrim", "Hail.", "Well met.", voiceName: null);
+            Persona(), "Vulgrim", "Hail.", "Well met.");
 
-        Assert.Contains("Angel", messages[0].Content);
+        Assert.DoesNotContain("Angel", messages[0].Content);
+        Assert.DoesNotContain("Angel", messages[1].Content);
+        Assert.DoesNotContain("whispers", messages[1].Content);
     }
 
     [Fact]
@@ -556,8 +566,54 @@ public class PromptBuilderTests
 
         Assert.Contains("never spoken", first);
         Assert.Contains("open the way to talk", first);
-        Assert.Contains("comes to you again", again);
+        Assert.Contains("comes to me again", again);
         Assert.DoesNotContain("never spoken", again);
+    }
+
+    [Fact]
+    public void LetterMarkers_RecognizeBothTheLegacyAngelPhrasing_AndTheFirstPersonOne()
+    {
+        // Recorded memories carry the phrasing they were born with forever: beats written by the
+        // retired Angel narrator (pre-2026.08.07 saves) must stay recognized beside the live
+        // first-person templates — the letter cards in the chat window depend on it.
+        const string legacyCompose = "Then sit, and set your heart to paper. Give me only the letter itself — the words that will stand on the page before Vulgrim's eyes, in your own hand and your own voice. Do not tell me about the letter; write it.";
+        const string legacyReply = "Then answer them. Give me only the letter you would send back to Vulgrim — the words that will stand on the page, in your own hand and your own voice. Do not tell me about the letter; write it.";
+        const string legacyReceived = "A courier has found you, bearing a letter from Vulgrim, written in their own hand. " +
+            "You break the seal and read:\n\nMeet me at Sargot.\n\nTell me, from your own heart: do you wish to write back to Vulgrim? " +
+            "Answer with a single word — yes or no. You may also let it lie unanswered; the choice is wholly yours.";
+
+        Assert.True(PromptBuilder.IsComposeLetterBeat(legacyCompose));
+        Assert.True(PromptBuilder.IsComposeLetterBeat(legacyReply));
+        Assert.True(PromptBuilder.TryExtractReceivedLetter(legacyReceived, out var legacyBody));
+        Assert.Equal("Meet me at Sargot.", legacyBody);
+
+        // And the live first-person templates are recognized the same way.
+        Assert.True(PromptBuilder.IsComposeLetterBeat(PromptBuilder.ComposeLetterLine("Vulgrim")));
+        Assert.True(PromptBuilder.IsComposeLetterBeat(PromptBuilder.ComposeReplyLine("Vulgrim")));
+        Assert.True(PromptBuilder.TryExtractReceivedLetter(
+            PromptBuilder.AnswerLetterDesireLine("Vulgrim", "Meet me at Sargot."), out var ownBody));
+        Assert.Equal("Meet me at Sargot.", ownBody);
+    }
+
+    [Fact]
+    public void LetterAndArrivalLines_SpeakOnlyInTheFirstPerson()
+    {
+        // No line an NPC newly receives may address them as "you" — the narrator is retired.
+        foreach (var line in new[]
+        {
+            PromptBuilder.WriteLetterDesireLine("Vulgrim"),
+            PromptBuilder.ComposeLetterLine("Vulgrim", inService: true),
+            PromptBuilder.ComposeReplyLine("Vulgrim"),
+            PromptBuilder.AnswerLetterDesireLine("Vulgrim", "Meet me at Sargot."),
+            PromptBuilder.ArrivalLine("Vulgrim", firstMeeting: true),
+            PromptBuilder.ArrivalLine("Vulgrim", firstMeeting: false),
+            PromptBuilder.MeetingLine("Vulgrim", firstMeeting: true),
+            PromptBuilder.MeetingLine("Vulgrim", firstMeeting: false),
+        })
+        {
+            Assert.DoesNotContain(" you ", " " + line.Replace("\n", " ") + " ");
+            Assert.DoesNotContain(" your ", " " + line.Replace("\n", " ") + " ");
+        }
     }
 
     [Fact]

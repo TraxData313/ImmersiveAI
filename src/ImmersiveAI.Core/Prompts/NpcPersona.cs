@@ -55,7 +55,7 @@ namespace ImmersiveAI.Core.Prompts
         public System.Collections.Generic.List<string> Goals { get; set; } = new System.Collections.Generic.List<string>();
 
         /// <summary>Optional world-wide, user-authored instructions shared by every NPC
-        /// (the global prompt file). Shown near the top as "About Calradia:".</summary>
+        /// (the global prompt file). Shown near the top as "Of this world, this I know:".</summary>
         public string WorldInstructions { get; set; } = string.Empty;
 
         /// <summary>Optional user-authored extra instructions for THIS NPC (per-NPC prompt file).

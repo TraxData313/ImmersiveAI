@@ -217,7 +217,7 @@ namespace ImmersiveAI
         /// mid-reply through the same native tool channel the recalls ride (move_heart) — one call
         /// per exchange instead of two, and a greeting, a reaching-out, or a letter can move the
         /// heart too; reaching for nothing leaves it where it stood. Set false to keep the second,
-        /// isolated feeling call after each spoken reply (one number, in the Angel's voice; also the
+        /// isolated feeling call after each spoken reply (one number, weighed within their own mind; also the
         /// automatic fallback whenever the backend cannot carry tools). Does nothing while
         /// <see cref="EnableRelationshipChanges"/> is off.</summary>
         public bool RelationshipChangesViaTool { get; set; } = true;
@@ -458,6 +458,15 @@ namespace ImmersiveAI
         /// to begin unwritten.</summary>
         public bool SeedSelfFromWorldStory { get; set; } = true;
 
+        /// <summary>The director's spark: at an NPC's FIRST interaction, one small LLM call writes them
+        /// a private starting truth (1–3 first-person sentences — a wound, a habit, a vanity, sometimes
+        /// something wilder) into their custom_instructions.txt, seeded from their real story, traits,
+        /// speech style and the world's global prompt, plus drawn muse cards for variety. The file stays
+        /// yours to edit or erase (delete the whole file to reroll; a "# spark:" comment marks it done).
+        /// Values: "Generate" (default — write it quietly), "Ask" (a popup asks you first, once per soul),
+        /// "Off" (no spark; souls begin plain).</summary>
+        public string PersonaSparkMode { get; set; } = "Generate";
+
         /// <summary>When true, NPCs carry their own personal aims — what they strive for of their own will
         /// (win back a lost hall, see a child wed well, be free of a lord's leash) — held in a goals.txt
         /// beside their self. They shape these two ways: one aim at a time mid-conversation, through the
@@ -501,9 +510,10 @@ namespace ImmersiveAI
         /// pruned first). Normally each save slot keeps only its own, so this bites only many-slot players.</summary>
         public int MaxMemorySnapshots { get; set; } = 40;
 
-        /// <summary>The in-fiction name of the "System" voice that addresses an NPC directly when the
-        /// mod asks them to do something out-of-conversation (e.g. decide what to remember or forget
-        /// when their memory is compressed). Treats each NPC as an individual rather than a data store.</summary>
+        /// <summary>LEGACY (the narrator retired 2026.08.07 — every prompt is the NPC's own first-person
+        /// mind now): the in-fiction name of the old narrator voice. Still used to replay and render the
+        /// Angel turns recorded in older saves truthfully, and to resolve the {voice} token in the
+        /// configurable atmosphere/roleplay lines. No new beats speak in it.</summary>
         public string SystemVoiceName { get; set; } = "Angel";
 
         /// <summary>How many verbatim turns an NPC keeps before old ones are compressed into the summary.</summary>
@@ -699,6 +709,11 @@ namespace ImmersiveAI
             }
 
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
+
+            // The spark mode knows exactly three spellings; anything else (typos, old hand edits)
+            // falls back to the default so a soul is never silently left plain by a misspelling.
+            if (PersonaSparkMode != "Generate" && PersonaSparkMode != "Ask" && PersonaSparkMode != "Off")
+                PersonaSparkMode = "Generate";
 
             // The OpenAI-compatible endpoints: blank falls back to each backend's default; a pasted
             // base URL ending in /v1 (the way every provider states it) is completed to the full

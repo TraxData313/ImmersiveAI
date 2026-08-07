@@ -12,12 +12,14 @@ namespace ImmersiveAI.Core.Memory
         public string NpcLine { get; set; } = string.Empty;
 
         /// <summary>Who spoke the incoming line: null/empty means the player (the default, and what every
-        /// turn saved before this field existed loads as); <see cref="AngelSpeaker"/> means the Angel — the
-        /// gentle meta-voice asking or narrating (e.g. the reaching-out beats). Kept so the line is framed
-        /// and shown correctly to the NPC and to the player, rather than mistaken for the player speaking.</summary>
+        /// turn saved before this field existed loads as); <see cref="InnerSpeaker"/> means the NPC's own
+        /// mind; <see cref="AngelSpeaker"/> is legacy — the retired narrator voice found only in turns
+        /// recorded before 2026.08.07. Kept so the line is framed and shown correctly to the NPC and to
+        /// the player, rather than mistaken for the player speaking.</summary>
         public string Speaker { get; set; } = string.Empty;
 
-        /// <summary>The <see cref="Speaker"/> value marking the Angel (the meta-voice) as the one who spoke.</summary>
+        /// <summary>LEGACY <see cref="Speaker"/> value: the retired Angel narrator (pre-2026.08.07 saves).
+        /// Never minted anew; kept forever so old recorded turns replay and render truthfully.</summary>
         public const string AngelSpeaker = "Angel";
 
         /// <summary>The <see cref="Speaker"/> value marking the NPC's OWN mind as the source of the

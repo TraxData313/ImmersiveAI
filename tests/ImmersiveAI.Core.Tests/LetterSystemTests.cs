@@ -127,7 +127,7 @@ public class LetterSystemTests
         finally { try { File.Delete(path); } catch { } }
     }
 
-    // ------------------------------ the Angel's letter lines ------------------------------
+    // ------------------------- the letter lines (the NPC's own first person) -------------------------
 
     [Fact]
     public void LetterLines_CarryTheNamesAndTheWords()

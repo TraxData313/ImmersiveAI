@@ -25,8 +25,9 @@ namespace ImmersiveAI
     /// in-game days with the distance (see Core's <see cref="LetterCourier"/>). The player can write
     /// too, from any town, castle, or village menu, and an NPC who receives a letter may answer once.
     ///
-    /// Every beat is lived and remembered: the Angel asks whether they wish to write (recorded), the
-    /// letter itself is a recorded Angel turn, and reading the player's letter enters their memory
+    /// Every beat is lived and remembered in the NPC's own first person: the wish to write is weighed
+    /// within their own mind (recorded), the letter itself is a recorded inner turn, and reading the
+    /// player's letter enters their memory
     /// even if they let it lie unanswered. Letters on the road persist in the campaign's
     /// _letters.json (they must survive save/load — unlike a live conversation, a letter is a
     /// promise), and each NPC folder keeps a human-readable letters.txt of the whole correspondence.
@@ -204,41 +205,44 @@ namespace ImmersiveAI
 
         // ------------------------------ the NPC writes ------------------------------
 
-        // The two beats of writing, both recorded as real Angel turns: the Angel asks whether they
-        // wish to write at all (they may decline in peace), and on a yes invites the letter itself —
-        // composed with the full self (persona, memory, situation-apart, even the gift of recall).
+        // The two beats of writing, both recorded as real inner turns: their own mind weighs whether
+        // they wish to write at all (they may decline in peace), and on a yes they sit to the letter
+        // itself — composed with the full self (persona, memory, situation-apart, even the gift of recall).
         private async Task BeginNpcLetterAsync(Hero npc)
         {
             // Quiet: the letter is sealed until it arrives — a cost notice now would break the seal.
             using var _cost = UsageLedger.BeginInteraction("letter", npc?.Name?.ToString(), quiet: true);
             try
             {
+                // A far-away first writer (a duty writer, most often) is a first interaction too.
+                await EnsurePersonaSparkAsync(npc, canAsk: false).ConfigureAwait(false);
+
                 var situation = SafeBuildApartSituation(npc);
                 var ctx = BuildContext(npc, situation);
 
                 var desireLine = PromptBuilder.WriteLetterDesireLine(ctx.PlayerName);
-                var desireMsgs = _promptBuilder.BuildAngelPrompt(
+                var desireMsgs = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
                 var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
                 // Weighing whether to write rests them either way (see the reach-out desire beat).
-                AppendAngelTurn(npc, desireLine, desireAnswer, OutreachMark.Considered);
+                AppendRecordedTurn(npc, desireLine, desireAnswer, OutreachMark.Considered);
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer)) { _letterWorkInFlight = false; return; }
 
                 // They wish to. The letter is written with everything they are — and the writing is
-                // itself a remembered moment (the compose line and the letter, as an Angel turn).
+                // itself a remembered moment (the compose line and the letter, as an inner turn).
                 // One in the player's own service is invited to make it a field report of their charge.
                 var composeCtx = BuildContext(npc, situation);
                 var composeLine = PromptBuilder.ComposeLetterLine(ctx.PlayerName, InPlayersService(npc));
-                var composeMsgs = _promptBuilder.BuildAngelPrompt(
+                var composeMsgs = _promptBuilder.BuildInnerPrompt(
                     composeCtx.Persona, composeCtx.Memory, composeCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
                 var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
                 if (body.Length == 0) { _letterWorkInFlight = false; return; }
 
-                AppendAngelTurn(npc, composeLine, body, OutreachMark.Reached);
+                AppendRecordedTurn(npc, composeLine, body, OutreachMark.Reached);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -598,7 +602,7 @@ namespace ImmersiveAI
         // ------------------------------ a letter arrives for the NPC ------------------------------
 
         // The player's words reach their hands. Reading is a recorded moment whether or not they
-        // answer (the letter's text lives inside the Angel's line); on a yes they compose the reply
+        // answer (the letter's text lives inside the recorded line); on a yes they compose the reply
         // with their full self, and it rides back — once per letter received, so correspondence stays
         // a chain of real choices.
         private async Task AnswerPlayerLetterAsync(Letter letter)
@@ -621,18 +625,22 @@ namespace ImmersiveAI
                     return;
                 }
 
+                // The player's letter may be the very first touch between them — spark first, so
+                // even the reading is coloured by who they are.
+                await EnsurePersonaSparkAsync(npc, canAsk: false).ConfigureAwait(false);
+
                 var situation = SafeBuildApartSituation(npc);
                 var ctx = BuildContext(npc, situation);
 
                 var readLine = PromptBuilder.AnswerLetterDesireLine(ctx.PlayerName, letter.Body);
-                var readMsgs = _promptBuilder.BuildAngelPrompt(
+                var readMsgs = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, readLine, _config.SystemVoiceName);
                 var desireRaw = await _client.CompleteAsync(readMsgs).ConfigureAwait(false);
                 var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
 
                 // A letter of the player's in their hands IS the player engaging: whatever of their own
                 // waited unanswered, waits no longer.
-                AppendAngelTurn(npc, readLine, desireAnswer, OutreachMark.PlayerEngaged);
+                AppendRecordedTurn(npc, readLine, desireAnswer, OutreachMark.PlayerEngaged);
 
                 if (!InitiationParser.WantsToReachOut(desireAnswer))
                 {
@@ -647,14 +655,14 @@ namespace ImmersiveAI
 
                 var replyCtx = BuildContext(npc, situation);
                 var composeLine = PromptBuilder.ComposeReplyLine(ctx.PlayerName);
-                var composeMsgs = _promptBuilder.BuildAngelPrompt(
+                var composeMsgs = _promptBuilder.BuildInnerPrompt(
                     replyCtx.Persona, replyCtx.Memory, replyCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
                 var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
 
                 // An invited answer, not an outreach — but it still rests them (no spontaneous letter
                 // hard on the heels of the reply the player is already owed).
-                AppendAngelTurn(npc, composeLine, body.Length == 0 ? "..." : body, OutreachMark.Considered);
+                AppendRecordedTurn(npc, composeLine, body.Length == 0 ? "..." : body, OutreachMark.Considered);
 
                 var writer = npc;
                 MainThreadDispatcher.Enqueue(() =>

@@ -33,31 +33,31 @@ namespace ImmersiveAI.Tools
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(MoveHeart,
-            "Weigh your heart each time before you answer, and set down here — every reply, without " +
-            "exception — the honest measure of how what has just passed moved your regard for the one " +
-            "you speak with. 0 is a full answer: the mark of a heart that truly held. A kind word, a " +
+            "Weigh my heart each time before I answer, and set down here — every reply, without " +
+            "exception — the honest measure of how what has just passed moved my regard for the one " +
+            "I speak with. 0 is a full answer: the mark of a heart that truly held. A kind word, a " +
             "shared laugh, an open confidence, a small grace sways it a little (1 to 3) — and it " +
             "should; a slight or a coldness likewise away (-1 to -3); only what shakes the soul moves " +
-            "it greatly. Let the measure agree with your words: warmth spoken and a 0 set down cannot " +
+            "it greatly. Let the measure agree with my words: warmth spoken and a 0 set down cannot " +
             "both be true. And however high or low the standing already rests, this measures the " +
             "moment, not the room left on a scale — a heart already given wholly can still be warmed. " +
-            "Never speak the measure aloud; let the feeling show only in your words and bearing.",
+            "I never speak the measure aloud; I let the feeling show only in my words and bearing.",
             new[]
             {
                 new ToolParameter("shift",
                     "The honest measure, a whole number: 0 when the heart held; positive toward them " +
-                    "(+1 a small warmth, +3 a true kindness, more only for what shakes you), negative " +
+                    "(+1 a small warmth, +3 a true kindness, more only for what shakes me), negative " +
                     "away from them (-1 to -100)."),
             });
 
         /// <summary>What the tool answers when the shift was felt — steering her back to words.</summary>
         public const string Felt =
-            "It is felt, and it is yours — your heart has moved. Let it show only in your words and " +
-            "bearing; speak no number aloud, and speak on.";
+            "It is felt, and it is mine — my heart has moved. I let it show only in my words and " +
+            "bearing; I speak no number aloud, and speak on.";
 
         /// <summary>What the tool answers when no readable number came — an honest stillness.</summary>
         public const string Held =
-            "You look within, and your heart holds where it stood. Speak on.";
+            "I look within, and my heart holds where it stood. I speak on.";
 
         /// <summary>The shift the NPC chose, clamped to -100..100, or null when none can be read.
         /// Lenient like the feeling call's parser: a bare number, "+2", or a number wrapped in a

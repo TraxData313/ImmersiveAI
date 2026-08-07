@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace ImmersiveAI.Core.Prompts
 {
     /// <summary>
-    /// Reads the NPC's own answer to the Angel's private question "how did that exchange move your
+    /// Reads the NPC's own answer to their private inner weighing "how did that exchange move my
     /// heart?" — a single signed number. Kept deliberately lenient: weaker models sometimes wrap the
     /// number in a word or two ("about +5"), so we take the first integer we find and clamp it to the
     /// game's -100..100 standing rail.

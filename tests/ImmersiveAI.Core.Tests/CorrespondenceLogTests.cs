@@ -77,7 +77,7 @@ public class CorrespondenceLogTests
     }
 
     [Fact]
-    public void TryExtractReceivedLetter_HandsBackTheBodyInsideTheAngelLine()
+    public void TryExtractReceivedLetter_HandsBackTheBodyInsideTheRecordedLine()
     {
         var body = "Dear friend,\nthe snows have thinned.\nCome north.";
         var line = PromptBuilder.AnswerLetterDesireLine("Gunjadrid", body);
