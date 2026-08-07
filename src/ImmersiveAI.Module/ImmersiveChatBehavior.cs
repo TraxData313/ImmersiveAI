@@ -161,7 +161,7 @@ namespace ImmersiveAI
         // counsel of the far-seeing sages (a web search, resolved off-thread). Every spoken path
         // goes through here; short utility calls (the feeling number, the yes/no of a reaching-out)
         // stay on plain CompleteAsync, where a recall would only slow the answer down.
-        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null)
+        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null, Tools.BargainTool.Tally? bargain = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
@@ -175,6 +175,10 @@ namespace ImmersiveAI
             if (goalsRide) tools.Add(Tools.GoalTool.Tool);
             bool truthsRide = CanHoldTruths();
             if (truthsRide) tools.Add(Tools.TruthTool.Tool);
+            // The bargain's hand rides only where the caller passed a tally — the live reply trunk
+            // with an unhired sellsword facing the player (see CanStrikeBargain); never greetings,
+            // letters, or reach-out beats, where "we agreed on terms just now" cannot be true.
+            if (bargain != null) tools.Add(Tools.BargainTool.Tool);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
@@ -182,12 +186,12 @@ namespace ImmersiveAI
             // question ("how might I grant my ships…") becomes a query that truly finds answers.
             var recentContext = LastIncomingWords(messages);
 
-            // The heart's hand and the personal hands (aims, truths) are not recalls: they keep at
-            // least one round even when the recall budget is zeroed out.
-            int rounds = (heartRides || goalsRide || truthsRide) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
+            // The heart's hand and the personal hands (aims, truths, the bargain) are not recalls:
+            // they keep at least one round even when the recall budget is zeroed out.
+            int rounds = (heartRides || goalsRide || truthsRide || bargain != null) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
-                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext),
+                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain),
                 rounds);
         }
 
@@ -211,7 +215,7 @@ namespace ImmersiveAI
         // Routes one tool call to its resolver, announcing the activity to the player first so the
         // wait is never silent ("remembering…", "researching…"). The heart's shift gets no notice
         // of its own — the colored relation line that follows IS the notice.
-        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext)
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null)
         {
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
@@ -221,6 +225,9 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.TruthTool.HoldTruth)
                 return Task.FromResult(ResolveTruthEdit(call, npc, liveMemory));
+
+            if (call.Name == Tools.BargainTool.StrikeBargain)
+                return Task.FromResult(ResolveBargainLay(call, npc, bargain));
 
             NotifyActivity(npc, call);
             if (call.Name == Tools.WebWisdom.SeekWisdom)
@@ -330,6 +337,256 @@ namespace ImmersiveAI
             return Tools.GoalTool.Done;
         }
 
+        // ------------------------- the hiring bargain (strike_bargain) -------------------------
+        //
+        // Design rails (Anton, 2026.08.07 — "много внимателно"): words alone can never hire.
+        // The tool only LAYS terms; the one door through which service and gold actually move is
+        // the seal popup, clicked by the player, and both the lay and the seal re-run the same
+        // hard checks the vanilla tavern dialog enforces (free wanderer, truly present, enough
+        // gold, room under the companion limit). The price may be haggled in words but the
+        // resolver refuses anything beyond ±30% of the game's own reckoning, and the daily wage
+        // is never negotiable. A blocked or declined offer is still recorded honestly in her
+        // memory, so she knows what happened and does not press.
+
+        private enum BargainBlock { None, Gone, NotForHire, BoundElsewhere, NotHere, PurseShort, CompanyFull }
+
+        // The hard rules, checked when the offer is laid AND again the instant the player seals it
+        // (gold and company room can drift between the two moments).
+        private static BargainBlock BargainBlockReason(Hero npc, int price)
+        {
+            try
+            {
+                if (npc == null || !npc.IsAlive || npc.IsPrisoner) return BargainBlock.Gone;
+                if (!npc.IsWanderer) return BargainBlock.NotForHire;
+                if (npc.Clan != null || npc.CompanionOf != null || npc.PartyBelongedTo != null)
+                    return BargainBlock.BoundElsewhere;
+                if (!IsCoLocated(npc)) return BargainBlock.NotHere;
+                var player = Hero.MainHero;
+                if (player == null || player.Gold < price) return BargainBlock.PurseShort;
+                if (Clan.PlayerClan == null || Clan.PlayerClan.Companions.Count >= Clan.PlayerClan.CompanionLimit)
+                    return BargainBlock.CompanyFull;
+                return BargainBlock.None;
+            }
+            catch { return BargainBlock.Gone; }
+        }
+
+        // The game's own price reckoning and the hard haggling rail around it — the rail's width is
+        // the player's own setting (ConversationHiringHagglePercent, 0 = the reckoned price or
+        // nothing). False when no honest price can be reckoned (a throwing or zero model) — then no
+        // bargain can be laid at all.
+        private bool BargainRails(Hero npc, out int basePrice, out int min, out int max)
+        {
+            basePrice = 0; min = 0; max = 0;
+            try
+            {
+                basePrice = Campaign.Current.Models.CompanionHiringPriceCalculationModel.GetCompanionHiringPrice(npc);
+                if (basePrice <= 0) return false;
+                double rail = Math.Max(0, Math.Min(90, _config.ConversationHiringHagglePercent)) / 100.0;
+                min = (int)Math.Ceiling(basePrice * (1 - rail));
+                max = (int)Math.Floor(basePrice * (1 + rail));
+                return true;
+            }
+            catch { return false; }
+        }
+
+        // The lay: validates everything, fills the turn's tally, and answers the NPC honestly. The
+        // seal popup comes only after her reply lands (the trunk presents it), so her closing words
+        // are spoken first; gold moves only in OnBargainSealed, by the player's own click.
+        private string ResolveBargainLay(Core.Llm.ToolCall call, Hero npc, Tools.BargainTool.Tally? bargain)
+        {
+            try
+            {
+                if (bargain == null)
+                    return "This is not the moment for hiring terms — I let the talk carry on.";
+                if (bargain.Laid)
+                    return "The offer already lies before them, laid this very breath — theirs to seal " +
+                           "or let lie, and I need not lay it twice.";
+
+                if (!BargainRails(npc, out int basePrice, out int min, out int max))
+                    return "No honest price can be reckoned for my service just now; I let the matter rest.";
+
+                int price = Tools.BargainTool.ParsePrice(call) ?? basePrice;
+                // The refusal must NOT hand her the floor as a ready-made offer: the first cut said
+                // "below 1478 I will not go" and she promptly offered exactly 1478 (the Sibuga
+                // negotiation, 2026.08.07). She knows her bounds from her own sheet; here she is only
+                // reminded to bargain like a seller — concede what was earned, never volunteer the edge.
+                if (price < min)
+                    return $"That lies beneath my floor, and I already know my own bounds — I do not " +
+                           $"counter with my lowest. I answer in my own words with a figure their words " +
+                           $"and circumstances have honestly earned, nearer my true worth of {basePrice}, " +
+                           "and I yield further ground only as they earn it, step by step.";
+                if (price > max)
+                    return $"That is above my ceiling — more than honor lets me take. I name instead " +
+                           $"the most that can honestly be asked of one of my seasoning, near my true " +
+                           $"worth of {basePrice}, and I say it in my own words.";
+
+                switch (BargainBlockReason(npc, price))
+                {
+                    case BargainBlock.None:
+                        break;
+                    case BargainBlock.PurseShort:
+                        return $"Their purse cannot carry it: {price} denars is more than they hold just " +
+                               "now. No offer can be laid — I may say so kindly, and leave the door open " +
+                               "for a richer day.";
+                    case BargainBlock.CompanyFull:
+                        return "Their company already carries as many companions as their name can hold. " +
+                               "No offer can be laid until a place opens — I may say so plainly.";
+                    case BargainBlock.BoundElsewhere:
+                        return "I am not free to be hired: I am already bound to a company or a house.";
+                    case BargainBlock.NotHere:
+                        return "We do not truly stand together just now; hiring terms are struck face to face.";
+                    default:
+                        return "The moment does not allow it; I let the matter rest.";
+                }
+
+                bargain.Laid = true;
+                bargain.Price = price;
+                if (_config.ShowNpcActivity)
+                {
+                    var name = npc?.Name?.ToString() ?? "They";
+                    MainThreadDispatcher.Enqueue(() => InformationManager.DisplayMessage(
+                        new InformationMessage($"{name} lays the terms of a bargain…", ActivityColor)));
+                }
+                return $"The terms are laid: {price} denars for the hiring, my keep thereafter as any " +
+                       "companion's. When my words here are done the offer will stand before them, to seal " +
+                       "or let lie by their own hand — nothing is settled until they choose. I finish my " +
+                       "say knowing this, and I do not press.";
+            }
+            catch { return "The moment does not allow it; I let the matter rest."; }
+        }
+
+        // Presents a bargain the turn laid, after the reply is rendered (both callers run this in
+        // their game-thread render block, so the popup never outruns her words).
+        private void PresentBargainIfAny(Hero npc, TurnOutcome outcome)
+        {
+            if (outcome.BargainPrice > 0) ShowBargainSealInquiry(npc, outcome.BargainPrice);
+        }
+
+        // The seal: the ONLY door through which a conversation can hire. Pauses while up, and names
+        // the exact price — plus the game's own reckoning when they differ, so a sweet-tongued
+        // sellsword can never talk the player 30% up without the popup saying so to their face.
+        private void ShowBargainSealInquiry(Hero npc, int price)
+        {
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "Someone";
+                var title = new TextObject("{=ImmersiveAI_BargainTitle}A bargain is laid before you").ToString();
+
+                string reckon = string.Empty;
+                if (BargainRails(npc, out int basePrice, out _, out _) && basePrice != price)
+                    reckon = $" (The common reckoning for one of their skills is {basePrice} denars.)";
+                string keep = string.Empty;
+                try
+                {
+                    // TroopWage, not the wage model: for heroes the ledger pays 2 + Level×2, while
+                    // GetCharacterWage keys on Tier and answers 1 for them (the one-denar-a-day lie).
+                    int wage = npc.CharacterObject.TroopWage;
+                    if (wage > 0) keep = $" Their keep will then run some {wage} denars a day, as any companion's.";
+                }
+                catch { /* the keep line is a nicety */ }
+
+                var body = $"{name} offers to enter your service as a companion for {price} denars — " +
+                           $"the price spoken between you.{reckon}{keep}\n\nSeal the bargain?";
+                var accept = $"Seal it — pay {price} denars";
+                var decline = new TextObject("{=ImmersiveAI_BargainDecline}Let it lie").ToString();
+
+                var data = new InquiryData(
+                    title, body, true, true, accept, decline,
+                    new Action(() => OnBargainSealed(npc, price)),
+                    new Action(() => OnBargainDeclined(npc, price)),
+                    "", 0f, (Action?)null,
+                    (Func<ValueTuple<bool, string>>?)null,
+                    (Func<ValueTuple<bool, string>>?)null);
+                InformationManager.ShowInquiry(data, pauseGameActiveState: true);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("laying the hiring bargain of " + (npc?.Name?.ToString() ?? "?"), ex);
+            }
+        }
+
+        // The player sealed it. Every rule is checked AGAIN at this instant (gold and company room
+        // may have drifted since the lay) — only then the same three acts as vanilla's tavern hire.
+        // The outcome, whichever way, becomes a recorded beat so her memory stays true.
+        private void OnBargainSealed(Hero npc, int price)
+        {
+            try
+            {
+                var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
+                var block = BargainBlockReason(npc, price);
+                if (block != BargainBlock.None)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"The bargain could not be sealed — {BargainBlockForPlayer(block)}.", ConversationLogColor));
+                    AppendAngelTurn(npc,
+                        $"{playerName} reached to seal your bargain of {price} denars, but the world would " +
+                        $"not allow it — {BargainBlockForNpc(block)}. No gold passed; you remain your own.",
+                        string.Empty);
+                    return;
+                }
+
+                GiveGoldAction.ApplyBetweenCharacters(Hero.MainHero, npc, price);
+                AddCompanionAction.Apply(Clan.PlayerClan, npc);
+                AddHeroToPartyAction.Apply(npc, MobileParty.MainParty);
+                MarkMetInWorldsEyes(npc);
+
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"The bargain is sealed: {npc.Name} enters your service for {price} denars.",
+                    new Color(0.45f, 0.85f, 0.45f, 1f)));
+                AppendAngelTurn(npc,
+                    $"The bargain was sealed by {playerName}'s own hand: {price} denars passed to you, and " +
+                    "you entered their service — a companion of their company now, your keep on their purse.",
+                    string.Empty, OutreachMark.PlayerEngaged);
+                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("sealing the hiring bargain of " + (npc?.Name?.ToString() ?? "?"), ex);
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+        }
+
+        // The player let it lie. Recorded honestly — and the tool's own guidance keeps her from
+        // laying it again unless the player themselves return to it.
+        private void OnBargainDeclined(Hero npc, int price)
+        {
+            try
+            {
+                var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "You let the bargain lie.", ConversationLogColor));
+                AppendAngelTurn(npc,
+                    $"You laid your terms of service before {playerName} — {price} denars for the hiring — " +
+                    "and they let the offer lie unsealed. No gold passed; you remain your own, and the " +
+                    "matter is theirs to return to, not yours to press.",
+                    string.Empty);
+            }
+            catch { /* the beat is best-effort */ }
+        }
+
+        // The same blocked seal, told to each side in their own words.
+        private static string BargainBlockForPlayer(BargainBlock block)
+        {
+            switch (block)
+            {
+                case BargainBlock.PurseShort: return "your purse no longer carries the price";
+                case BargainBlock.CompanyFull: return "your company has no room left for another companion";
+                case BargainBlock.NotHere: return "they are no longer at your side";
+                default: return "they are no longer free to be hired";
+            }
+        }
+
+        private static string BargainBlockForNpc(BargainBlock block)
+        {
+            switch (block)
+            {
+                case BargainBlock.PurseShort: return "their purse could not carry it when the moment came";
+                case BargainBlock.CompanyFull: return "their company had no room left for another companion";
+                case BargainBlock.NotHere: return "you were no longer at their side";
+                default: return "you were no longer free to be taken on";
+            }
+        }
+
         // The gift is real only when it is both enabled and the backend can carry tools.
         private bool CanRecallWorld() =>
             _config.EnableWorldRecall && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
@@ -359,6 +616,23 @@ namespace ImmersiveAI
         {
             if (!CanRecallWorld()) return false;
             try { return npc?.PartyBelongedTo != null; }
+            catch { return false; }
+        }
+
+        // The bargain's hand (strike_bargain) rides only for an unhired sellsword truly standing
+        // with the player — never the hired, the sworn, or anyone reached by letter. Offered by the
+        // live reply trunk alone (ExecutePlayerTurnAsync); the same conditions vanilla's hire dialog
+        // asks (free wanderer, no party, no clan) plus our own "they must truly be here".
+        private bool CanStrikeBargain(Hero npc)
+        {
+            if (!_config.EnableConversationHiring) return false;
+            if (!(_client is IToolChatClient)) return false;
+            try
+            {
+                if (npc == null || !npc.IsAlive || npc.IsPrisoner || !npc.IsWanderer) return false;
+                if (npc.Clan != null || npc.CompanionOf != null || npc.PartyBelongedTo != null) return false;
+                return IsCoLocated(npc);
+            }
             catch { return false; }
         }
 
@@ -1155,6 +1429,9 @@ namespace ImmersiveAI
                     // the reply in the box. The full reply goes to the message log only if the player opts in.
                     NotifyReplyReady(npc);
                     LogConversationLine(npc, reply);
+                    // A hiring bargain laid this turn is presented only now, after her words are
+                    // shown — the seal popup is the one door through which gold and service move.
+                    PresentBargainIfAny(npc, outcome);
                 });
             }
             catch (Exception ex)
@@ -1173,15 +1450,20 @@ namespace ImmersiveAI
 
         private readonly struct TurnOutcome
         {
-            public TurnOutcome(string reply, int feltShift, bool feltShiftApplied)
+            public TurnOutcome(string reply, int feltShift, bool feltShiftApplied, int bargainPrice = 0)
             {
                 Reply = reply; FeltShift = feltShift; FeltShiftApplied = feltShiftApplied;
+                BargainPrice = bargainPrice;
             }
             public string Reply { get; }
             public int FeltShift { get; }
             /// <summary>True when the shift already reached the game standing mid-reply (the
             /// move_heart tool applies as it resolves); callers must then only render, not apply.</summary>
             public bool FeltShiftApplied { get; }
+            /// <summary>A hiring price this turn laid on the table (0 = none): the caller presents
+            /// the seal popup only AFTER rendering the reply, so her closing words come first and
+            /// the choice — the only door through which gold and service move — stays the player's.</summary>
+            public int BargainPrice { get; }
         }
 
         // The trunk of one player→NPC exchange, shared by the conversation panel and the chat window:
@@ -1195,7 +1477,11 @@ namespace ImmersiveAI
             // question, and any compression all land on this line ("message: X → Y tokens, ~$Z").
             using var _cost = UsageLedger.BeginInteraction("message", npc?.Name?.ToString());
 
-            var ctx = BuildContext(npc, situationOverride);
+            // The bargain's hand rides only here — the live reply, an unhired sellsword facing the
+            // player — so its whisper and its tool can never drift apart (both keyed to this tally).
+            var bargain = CanStrikeBargain(npc) ? new Tools.BargainTool.Tally() : null;
+
+            var ctx = BuildContext(npc, situationOverride, bargainRides: bargain != null);
             var memory = ctx.Memory;
 
             // The opening greeting (if any) is already a recorded Angel turn in the loaded memory,
@@ -1205,7 +1491,7 @@ namespace ImmersiveAI
             var heart = CanMoveHeart() ? new Tools.HeartTool.Tally() : null;
             // The live memory rides along so a hold_truth mid-reply lands in the same instance this
             // turn will record into and save — the end-of-exchange save can never clobber it.
-            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory).ConfigureAwait(false);
+            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
             // How the exchange moved her heart. In the tool shape she moves it herself mid-reply
@@ -1270,7 +1556,8 @@ namespace ImmersiveAI
             }
 
             SaveMemory(npc, memory);
-            return new TurnOutcome(reply, feltShift, feltShiftApplied);
+            return new TurnOutcome(reply, feltShift, feltShiftApplied,
+                bargain != null && bargain.Laid ? bargain.Price : 0);
         }
 
         // The NPC's current standing toward the player, read from the live game relation. Used to give
@@ -2518,6 +2805,10 @@ namespace ImmersiveAI
                     UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: true);
                     if (!viewing) NotifyReplyReady(npc);
                     LogConversationLine(npc, outcome.Reply);
+                    // A bargain laid in the window is presented the same way: after the words, the
+                    // seal — the native inquiry rides its own global layer (order 19501) above the
+                    // window (4500), takes the keys while up, and returns them when it closes.
+                    PresentBargainIfAny(npc, outcome);
                 });
             }
             catch (Exception ex)
@@ -2653,14 +2944,14 @@ namespace ImmersiveAI
         // user's prompt-file instructions folded in, the scene line, and the player's name. An explicit
         // sceneOverride lets a background flow (an NPC reaching out) pin the exact situation it captured,
         // rather than falling back to the cached-or-rebuilt one used by an open chat.
-        private ChatContext BuildContext(Hero npc, string? sceneOverride = null)
+        private ChatContext BuildContext(Hero npc, string? sceneOverride = null, bool bargainRides = false)
         {
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
             var memory = LoadMemory(npc);
             memory.NpcName = npcName;
 
-            var persona = PersonaBuilder.Build(npc);
+            var persona = PersonaBuilder.Build(npc, _config);
             // Kept separate (not merged) so the prompt can present them under distinct headings near
             // the top: the global prompt as "About Calradia:", the per-NPC prompt as "About you:".
             persona.WorldInstructions = PromptFiles.LoadGlobalPrompt();
@@ -2686,6 +2977,9 @@ namespace ImmersiveAI
             persona.CanTendGoals = CanTendGoals();
             persona.CanHoldTruths = CanHoldTruths();
             persona.CanSurveyField = CanSurveyField(npc);
+            // The bargain's whisper is keyed to the caller's tally (the live reply trunk alone), so
+            // whisper and tool always ride together — a letter or a greeting never speaks of it.
+            persona.CanStrikeBargain = bargainRides;
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;
 

@@ -56,7 +56,7 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
-            HintText = "gpt-5.6-luna ($0.20/$1.20 per MTok since the July 2026 price cut) is the default and tested pick - now also nearly the cheapest. gpt-5.4-mini ($0.75/$4.50) is the proven fallback; terra ($2/$12) stronger, sol and 5.5 ($5/$30) the flagships, 5.4-nano ($0.20/$1.25). Any other model goes in the custom field below, at your own risk.")]
+            HintText = "gpt-5.6-luna ($0.20/$1.20 per MTok since the July 2026 price cut) is the default and tested pick - now also nearly the cheapest. terra ($2/$12) is the RECOMMENDED step-up if you don't pinch denars - noticeably sharper in live play. gpt-5.4-mini ($0.75/$4.50) the proven fallback; sol/5.5 ($5/$30) flagships. Any other id: custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0);
 
@@ -194,7 +194,17 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int MaxNpcGoals { get; set; } = 6;
 
-        [SettingPropertyBool("Memories rewind with your saves", Order = 8, RequireRestart = false,
+        [SettingPropertyBool("Hiring by handshake", Order = 8, RequireRestart = false,
+            HintText = "An unhired wanderer you talk terms with may strike the hiring bargain in the conversation itself. Nothing is settled by talk alone: a popup names the exact price, and only your click pays and hires — the same rules as the tavern dialog (enough gold, room in your company).")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableConversationHiring { get; set; } = true;
+
+        [SettingPropertyInteger("Haggling range (max % off the fair price)", 0, 90, "0", Order = 9, RequireRestart = false,
+            HintText = "How far words can move a hiring price from the game's own reckoning, either way. 0 = no haggling (the reckoned price or nothing); 30 = up to 30% above or below. A hard rule the mod enforces, whatever is said. The daily wage is never negotiable.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int ConversationHiringHagglePercent { get; set; } = 30;
+
+        [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool RevertMemoriesWithSaves { get; set; } = true;

@@ -12,11 +12,16 @@ as you scroll — **read only as far as you need.**
 | **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
-| **The best writing** | OpenRouter + `openai/gpt-5.6-terra` or `anthropic/claude-sonnet-5` | openrouter.ai |
+| **The best play, denars no object** | OpenRouter + `openai/gpt-5.6-terra` (or `anthropic/claude-sonnet-5`) | openrouter.ai |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
 
 **Not sure? Take the first row.** It's what the mod is built and tested against, and since
 OpenAI cut its price 80% on 30 July 2026 it's also one of the cheapest options there is.
+
+**Playing seriously and not pinching denars?** `gpt-5.6-terra` is the recommended step-up —
+live play (August 2026) found it noticeably sharper than luna at holding character, terms, and
+long threads, at roughly ten times luna's still-small price (~0.9¢ an exchange). Same key,
+switch in the mod options, no restart.
 
 ---
 

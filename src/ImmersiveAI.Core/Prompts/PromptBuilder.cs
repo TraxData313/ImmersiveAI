@@ -587,6 +587,12 @@ namespace ImmersiveAI.Core.Prompts
             if (persona.CanSurveyField)
                 sb.AppendLine("- From where my company stands I may cast my eyes over the country about — who moves near, how strong, how swift — and set any foe upon the scales before a fight is joined. I always look before I speak of pace, pursuit, escape, or the odds of battle; my judgment is only as good as what my eyes have truly seen.");
 
+            // Offered only when the strike_bargain tool rides along (an unhired sellsword speaking
+            // with the one who could take them on): the bargain's hand. The seal is never theirs —
+            // the tool only lays terms, and the game layer holds every hard rule.
+            if (persona.CanStrikeBargain)
+                sb.AppendLine("- I am for hire, and the bargain is mine to strike — but only when they have plainly said they will take me on AND a price has truly been spoken between us do I lay the terms before them; nothing is settled until they seal it by their own hand, and if they let my offer lie I do not press it again. My price may bend only as far as my own worth and honor allow — perhaps not at all; my daily keep afterward is what it is, and not mine to bargain.");
+
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
                 sb.AppendLine(persona.RoleplayGuidance.Trim());

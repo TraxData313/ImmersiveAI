@@ -397,6 +397,44 @@ namespace ImmersiveAI.Personas
 
             Try(() => { if (h.IsFemale && h.IsPregnant) sentences.Add("I carry a child within me."); });
 
+            // What I truly carry — the whole of the war-kit by name, so no soul promises a bow
+            // her hands have never held (the Sibuga playtest find, 2026.08.07: asked what she had
+            // before the hiring, she offered a bow she does not own). Only for folk who bear arms;
+            // a shopkeeper asked the same may honestly say she is no fighter.
+            Try(() =>
+            {
+                bool bearsArms = h.IsWanderer || h.IsLord || h.PartyBelongedTo != null
+                    || h.Occupation == Occupation.Mercenary || h.Occupation == Occupation.GangLeader;
+                if (!bearsArms) return;
+                var eq = h.BattleEquipment;
+                if (eq == null) return;
+                string ItemAt(TaleWorlds.Core.EquipmentIndex i) { try { return eq[i].Item?.Name?.ToString(); } catch { return null; } }
+                var arms = new[] { TaleWorlds.Core.EquipmentIndex.Weapon0, TaleWorlds.Core.EquipmentIndex.Weapon1,
+                    TaleWorlds.Core.EquipmentIndex.Weapon2, TaleWorlds.Core.EquipmentIndex.Weapon3 }
+                    .Select(ItemAt).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList();
+                var horse = ItemAt(TaleWorlds.Core.EquipmentIndex.Horse);
+                var armsClause = arms.Count > 0
+                    ? $"for arms I own {JoinAnd(arms)}, and nothing besides"
+                    : "I own no arms at all";
+                var horseClause = string.IsNullOrWhiteSpace(horse)
+                    ? "I keep no horse of my own"
+                    : $"for the road I have {A(horse)} {horse} of my own";
+                sentences.Add($"My own gear, the whole of it: {armsClause}; on the field I go {GarbWords(h)}; and {horseClause}.");
+            });
+
+            // A hired companion knows the wage she truly draws. (An UNHIRED sellsword's terms — worth,
+            // wage, haggling bounds, and the seller's own mind — moved UP to the persona head, 2026.08.07:
+            // PersonaBuilder.SellswordTerms; buried here mid-situation they came too late and too weak.)
+            // The wage MUST be TroopWage: for heroes it is 2 + Level×2, the number the party ledger
+            // truly pays — the wage MODEL's GetCharacterWage keys on Tier and answers 1 for heroes
+            // (Sibuga promised to serve for one denar a day, 2026.08.07).
+            Try(() =>
+            {
+                if (!h.IsWanderer || h.CompanionOf == null) return;
+                int wage = h.CharacterObject.TroopWage;
+                sentences.Add($"My keep in this service is some {wage} denars a day, paid from my captain's purse.");
+            });
+
             // The company they keep upon the map — named even inside walls, so a captain berthed in
             // a town still holds his command in mind (details live in the recall of one's company).
             // A named duty in another's warband (scout, surgeon…) is their place in it — their role.
@@ -589,12 +627,25 @@ namespace ImmersiveAI.Personas
             // ten riders is no noble in anyone's eyes yet — name them what they truly are.
             if (partner == Hero.MainHero) occ = PlayerStation(partner) ?? occ;
 
-            var head = $"{them} is";
-            if (culture != null && occ != null) head += $" {A(culture)} {culture} {occ}";
-            else if (culture != null) head += $" of {culture} stock";
-            else if (occ != null) head += $" {A(occ)} {occ}";
-            else head = $"{them} stands before me";
-            head += GenderAgeClause(gender, age, false);
+            // Gender leads the sentence (2026.08.07): with "a man" trailing after culture and station,
+            // a Bulgarian-speaking soul greeted the male player in the feminine ("чула си") — in
+            // gendered tongues the model needs the anchor FIRST: "Mizam is a man of some 30 years —
+            // a Khuzait free adventurer."
+            string station = culture != null && occ != null ? $"{A(culture)} {culture} {occ}"
+                : culture != null ? $"of {culture} stock"
+                : occ != null ? $"{A(occ)} {occ}"
+                : null;
+            string head;
+            if (gender != null)
+            {
+                head = $"{them} is {gender}";
+                if (age != null) head += $" {age}";
+                if (station != null) head += $" — {station}";
+            }
+            else if (station != null)
+                head = $"{them} is {station}" + (age != null ? $", {age}" : string.Empty);
+            else
+                head = $"{them} stands before me" + (age != null ? $", {age}" : string.Empty);
             sentences.Add(head.TrimEnd() + ".");
 
             var house = HouseLine(partner, clan, kingdom);
@@ -702,19 +753,6 @@ namespace ImmersiveAI.Personas
             // An unsworn clan IS its own map faction — never say "clan X, sworn to X" (Cadfin find).
             if (k != null && cl != null && k == cl) k = null;
             gender = g; age = a; culture = c; occ = o; clan = cl; kingdom = k;
-        }
-
-        // ", a woman of some 34 years" / ", a woman" / ", of some 34 years" — the trailing clause after
-        // the identity head. When it is the whole sentence (no culture/occupation), it opens with "you are".
-        private static string GenderAgeClause(string gender, string age, bool isWholeSentence)
-        {
-            string body;
-            if (gender != null && age != null) body = $"{gender} {age}";
-            else if (gender != null) body = gender;
-            else if (age != null) body = age;
-            else return string.Empty;
-
-            return isWholeSentence ? " " + body : ", " + body;
         }
 
         // Turns the raw Occupation enum name into a warmer, gender-neutral station word.

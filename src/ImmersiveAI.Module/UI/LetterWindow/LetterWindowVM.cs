@@ -39,6 +39,9 @@ namespace ImmersiveAI.UI.LetterWindow
         private string _statusText = string.Empty;
         private bool _canWrite;
         private bool _isInfoShown;
+        private bool _isPromptEditShown;
+        private string _promptEditTitle = string.Empty;
+        private string _promptEditText = string.Empty;
 
         public LetterWindowVM(ModConfig config)
         {
@@ -210,6 +213,52 @@ namespace ImmersiveAI.UI.LetterWindow
 
         public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
 
+        // The editing doors, same in-game overlay as the chat window's: a wrapped mirror + a
+        // writing line, Save/Discard. Prompts are re-read on every reply, so no restart.
+        private Hero? _promptEditNpc;   // null while editing the world's global prompt
+
+        public void ExecuteEditNpcPrompt()
+        {
+            var npc = _selected?.Hero;
+            if (npc == null) return;
+            _promptEditNpc = npc;
+            PromptEditTitle = $"Their prompt — {npc.Name}";
+            PromptEditText = PromptFiles.LoadNpcPromptForEdit(
+                NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
+            IsPromptEditShown = true;
+        }
+
+        public void ExecuteEditGlobalPrompt()
+        {
+            _promptEditNpc = null;
+            PromptEditTitle = "World prompt — carried by every soul in Calradia";
+            PromptEditText = PromptFiles.LoadGlobalPromptForEdit();
+            IsPromptEditShown = true;
+        }
+
+        public void ExecutePromptSave()
+        {
+            try
+            {
+                if (_promptEditNpc != null)
+                    PromptFiles.SaveNpcPromptFromGame(
+                        NpcPaths.CustomInstructionsFile(_promptEditNpc),
+                        _promptEditNpc.Name?.ToString() ?? "Unknown", PromptEditText);
+                else
+                    PromptFiles.SaveGlobalPromptFromGame(PromptEditText);
+                InformationManager.DisplayMessage(new InformationMessage(_promptEditNpc != null
+                    ? $"{_promptEditNpc.Name}'s prompt is set — it speaks from their next reply."
+                    : "The world prompt is set — it speaks from the next reply."));
+            }
+            catch (Exception ex)
+            {
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+            }
+            IsPromptEditShown = false;
+        }
+
+        public void ExecutePromptCancel() => IsPromptEditShown = false;
+
         // ------------------------------ bound properties ------------------------------
 
         [DataSourceProperty]
@@ -360,6 +409,33 @@ namespace ImmersiveAI.UI.LetterWindow
             get => _isInfoShown;
             set { if (value != _isInfoShown) { _isInfoShown = value; OnPropertyChangedWithValue(value, "IsInfoShown"); } }
         }
+
+        /// <summary>The in-game prompt editor overlay — Escape discards it before the info overlay
+        /// and before closing (the manager checks this flag first of all).</summary>
+        [DataSourceProperty]
+        public bool IsPromptEditShown
+        {
+            get => _isPromptEditShown;
+            set { if (value != _isPromptEditShown) { _isPromptEditShown = value; OnPropertyChangedWithValue(value, "IsPromptEditShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string PromptEditTitle
+        {
+            get => _promptEditTitle;
+            set { if (value != _promptEditTitle) { _promptEditTitle = value; OnPropertyChangedWithValue(value, "PromptEditTitle"); } }
+        }
+
+        [DataSourceProperty]
+        public string PromptEditText
+        {
+            get => _promptEditText;
+            set { if (value != _promptEditText) { _promptEditText = value; OnPropertyChangedWithValue(value, "PromptEditText"); } }
+        }
+
+        [DataSourceProperty]
+        public string PromptEditHint =>
+            "One flowing text — write below; the whole of it stays readable here. # comment lines stay in the file, out of sight. Save speaks from the very next reply; Discard (or Escape) changes nothing.";
 
         [DataSourceProperty]
         public string InfoButtonText => "?";

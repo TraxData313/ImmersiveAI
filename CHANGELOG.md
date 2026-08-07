@@ -1,9 +1,39 @@
 # Changelog
 
-The player-facing history of Immersive AI. The version lives in `module\SubModule.xml`
-(`package.ps1` stamps the zip from it). For each release: bump the version there, add a
-section here, copy its text into `tools\WorkshopUpdate.xml` (`ChangeNotes`) for the
-Workshop and into the Nexus changelog field when uploading the new file.
+The player-facing history of Immersive AI — short lines written for players, no file names, no
+internals (the developer's full record is `TASKS_DONE.md`).
+
+**The running list:** every player-visible change lands under **[Unreleased]** the day it is
+made. At release time: bump the version in `module\SubModule.xml` (`package.ps1` stamps the zip
+from it), retitle the [Unreleased] section to the new version + date, start a fresh empty
+[Unreleased] above it, and copy the section's text into `tools\WorkshopUpdate.xml`
+(`ChangeNotes`) for the Workshop and into the Nexus changelog field when uploading — so the
+change notes are already written when it is time to ship (see `tools/WORKSHOP-UPLOAD.md`).
+
+## [Unreleased]
+
+- The model guide now names `gpt-5.6-terra` the recommended step-up for those who don't pinch
+  denars — live play found it noticeably sharper than the default at holding character and
+  long threads (the cheap default stays the default).
+- NPCs now know their own gear. Ask a wanderer what she carries and she answers from her real
+  equipment — no more promised bows she never owned.
+- Sellswords know their price. An unhired wanderer quotes her true hiring cost and her real
+  daily wage (the same numbers the game charges), instead of inventing figures.
+- **New: hiring by handshake.** Agree on service and price with an unhired wanderer in
+  conversation itself, and she can strike the bargain — a confirmation popup names the exact
+  price (and the fair reckoning beside it), and only your click pays and hires. All the usual
+  rules hold: enough gold, room in your company, and the daily wage is never negotiable.
+- Haggling, within honest bounds: the hiring price can be talked up or down, but never beyond
+  a hard limit around the game's own reckoning. New settings in the mod options — "Hiring by
+  handshake" on/off and "Haggling range" (0–90%, 0 = fixed price).
+- Sellswords now bargain like people who live by it: they open at their worth, concede only
+  what your words have earned, and never volunteer their lowest price.
+- Fix: the player is no longer mis-gendered in gendered languages (the NPC is told who you are
+  in a way the model can't miss).
+- The chat and letter windows gained editing doors: "Their prompt" (the selected character's
+  personal instructions) and "World prompt" (the whole world's) open an editor right inside the
+  game — edit, Save, and the change speaks from the very next reply. No restart, no leaving the
+  game; your # comment notes in the files are kept.
 
 ## v1.5.0 — 2026.08.02
 

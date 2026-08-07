@@ -100,5 +100,11 @@ namespace ImmersiveAI.Core.Prompts
         /// FieldCraft: survey_surroundings and weigh_battle). Adds a whisper to look before judging
         /// pace, pursuit, escape, or odds aloud.</summary>
         public bool CanSurveyField { get; set; }
+
+        /// <summary>True when this NPC is an unhired sellsword speaking with the one who could take
+        /// them on, and the strike_bargain tool rides along (see the game layer's BargainTool). Adds
+        /// a whisper that the bargain is theirs to strike — but only once service and price were
+        /// plainly agreed in words, and the seal always belongs to the other side.</summary>
+        public bool CanStrikeBargain { get; set; }
     }
 }

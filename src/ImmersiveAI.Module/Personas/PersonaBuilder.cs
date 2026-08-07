@@ -31,12 +31,12 @@ namespace ImmersiveAI.Personas
             "Playful and teasing; answers with jokes first, substance second.",
         };
 
-        public static NpcPersona Build(Hero npc)
+        public static NpcPersona Build(Hero npc, ModConfig config = null)
         {
             var persona = new NpcPersona
             {
                 Name = npc.Name?.ToString() ?? "Unknown",
-                RoleDescription = BuildRole(npc),
+                RoleDescription = BuildRole(npc, config),
                 PersonalityDescription = BuildPersonality(npc),
                 SpeechStyle = PickSpeechStyle(npc),
             };
@@ -51,7 +51,7 @@ namespace ImmersiveAI.Personas
             return SpeechStyles[Math.Abs(hash) % SpeechStyles.Length];
         }
 
-        private static string BuildRole(Hero npc)
+        private static string BuildRole(Hero npc, ModConfig config = null)
         {
             var sb = new StringBuilder();
             var culture = npc.Culture?.Name?.ToString();
@@ -86,10 +86,53 @@ namespace ImmersiveAI.Personas
             var trade = TradeKnowledge(npc);
             if (trade.Length > 0) sb.Append(' ').Append(trade);
 
+            // An unhired sellsword's terms and her seller's mind ride at the TOP of the sheet, part
+            // of who she is — not buried mid-situation where the first cut left them.
+            var terms = SellswordTerms(npc, config);
+            if (terms.Length > 0) sb.Append(' ').Append(terms);
+
             // The standing toward the player deliberately does NOT ride here: the situation block
             // (SituationBuilder.DescribeOther) speaks it once, beside the person it belongs to, so the
             // sheet never tells her the same heart twice in two places.
             return sb.ToString();
+        }
+
+        // The unhired sellsword's own terms, known from the first breath — her worth, her fixed
+        // day-wage, the hard bounds words may move the hiring price within — and the SELLER'S mind:
+        // open at her worth, concede only what the talk has earned, never volunteer the floor.
+        // (Anton's design, 2026.08.07, from the Sibuga negotiation playtest: with the terms buried
+        // mid-situation and no mindset at all, she accepted 500, then jumped to 2111, then collapsed
+        // straight to the floor the tool's refusal message had just taught her.)
+        private static string SellswordTerms(Hero npc, ModConfig config)
+        {
+            try
+            {
+                if (!npc.IsWanderer) return string.Empty;
+                if (npc.Clan != null || npc.CompanionOf != null || npc.PartyBelongedTo != null)
+                    return string.Empty;
+
+                int worth = Campaign.Current.Models.CompanionHiringPriceCalculationModel.GetCompanionHiringPrice(npc);
+                int wage = npc.CharacterObject.TroopWage;
+                if (worth <= 0) return string.Empty;
+
+                var sb = new StringBuilder();
+                sb.Append($"I live by selling my sword, and I know my own terms before anyone asks: my service is honestly worth some {worth} denars to take me on, and my keep thereafter is {wage} denars a day — the day-wage is set by the custom of the world for one of my seasoning, a hard rule; no words of mine or theirs can move it, and I say so plainly if pressed.");
+
+                bool hiringByWord = config == null || config.EnableConversationHiring;
+                int percent = config?.ConversationHiringHagglePercent ?? 30;
+                if (hiringByWord && percent > 0)
+                {
+                    int floor = (int)Math.Ceiling(worth * (1 - percent / 100.0));
+                    int ceiling = (int)Math.Floor(worth * (1 + percent / 100.0));
+                    sb.Append($" The hiring price alone can be bargained, and I keep my bounds to myself: never below {floor}, never above {ceiling} — a hard limit of my honor and my need, not a starting position, and I do not speak these numbers aloud. And I bargain as one who truly lives by this trade: I open at my worth or a little above it, I yield ground slowly and only as their words, their need, or their circumstances earn it, and I never volunteer my lowest — if they want my floor, they must walk me there step by step, and a fair price won by good bargaining is my pride, not my shame.");
+                }
+                else if (hiringByWord)
+                {
+                    sb.Append($" The hiring price too stands where it stands — {worth}, no more and no less; such is the rule I live under, and I say so plainly.");
+                }
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
         }
 
         // A warmer station word for the folk the head cases above don't cover, from the live occupation.

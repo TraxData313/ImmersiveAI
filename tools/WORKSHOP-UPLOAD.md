@@ -17,8 +17,10 @@ Item: **3764210301** (already created via `WorkshopCreate.xml` — never run tha
    This rebuilds `dist\ImmersiveAI` from scratch — that folder is what gets uploaded.
 
 2. **Edit `tools\WorkshopUpdate.xml`**: set `<ChangeNotes Value="..."/>` to what changed
-   in this release (players see it on the item's Change Notes tab). Bump the game-version
-   `<Tag>` if the supported game version moved.
+   in this release (players see it on the item's Change Notes tab). The text is already
+   written: it is `CHANGELOG.md`'s **[Unreleased]** section — retitle that section to the
+   new version + date in the same commit, and start a fresh empty [Unreleased] above it.
+   Bump the game-version `<Tag>` if the supported game version moved.
 
 3. **Run the uploader** (Steam open and logged in):
    ```powershell

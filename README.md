@@ -66,7 +66,7 @@ Bring **your own API key**. Pick a row:
 | **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
-| **The best writing** | `openai/gpt-5.6-terra` or `anthropic/claude-sonnet-5` | openrouter.ai |
+| **The best play, denars no object** | `gpt-5.6-terra` — the live-tested step-up | openrouter.ai |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — tinkerers only | — |
 
 A typical exchange costs about a tenth of a cent on the default — $10 covers many thousands of

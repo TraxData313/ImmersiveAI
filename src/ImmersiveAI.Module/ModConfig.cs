@@ -470,6 +470,23 @@ namespace ImmersiveAI
         /// both honor it). Kept small so the prompt stays lean and their striving stays focused.</summary>
         public int MaxNpcGoals { get; set; } = 6;
 
+        /// <summary>When true, an unhired wanderer the player speaks with may strike the hiring bargain
+        /// inside the conversation itself (the strike_bargain tool — needs a tool-capable backend).
+        /// NOTHING is settled by talk alone: the tool only lays the terms, a confirm popup names the
+        /// exact price, and only the player's seal moves gold and service — the same three acts and the
+        /// same rules as the vanilla tavern hiring (enough gold, room under the companion limit). The
+        /// price can be haggled in words, but the mod refuses anything beyond
+        /// <see cref="ConversationHiringHagglePercent"/> of the game's own reckoning; the daily wage
+        /// is never negotiable. Set false to keep hiring in the vanilla dialog alone.</summary>
+        public bool EnableConversationHiring { get; set; } = true;
+
+        /// <summary>How far spoken haggling may move a conversation-struck hiring price from the
+        /// game's own reckoning, either way, in percent — a HARD rail enforced by the mod, not a
+        /// suggestion to the NPC. 0 means no haggling at all (the reckoned price or nothing);
+        /// 30 (the default) lets words earn up to 30% off — or talk you 30% up, which the seal
+        /// popup then says to your face. Clamped to [0,90] in <see cref="Normalize"/>.</summary>
+        public int ConversationHiringHagglePercent { get; set; } = 30;
+
         /// <summary>
         /// Reverting a bad turn: when on, each save quietly photographs this campaign's whole memory folder
         /// (every NPC's memories/self/goals/letters + the letters still on the road) and loading that save
@@ -772,6 +789,9 @@ namespace ImmersiveAI
             // Aims budget: at least one aim when goals are on, and a small ceiling so striving stays focused.
             if (MaxNpcGoals <= 0) MaxNpcGoals = 6;
             if (MaxNpcGoals > 20) MaxNpcGoals = 20;
+
+            if (ConversationHiringHagglePercent < 0) ConversationHiringHagglePercent = 0;
+            if (ConversationHiringHagglePercent > 90) ConversationHiringHagglePercent = 90;
 
             // Recall rounds: 0 is a legitimate "none"; more than a handful only slows replies down.
             if (MaxRecallsPerReply < 0) MaxRecallsPerReply = 0;

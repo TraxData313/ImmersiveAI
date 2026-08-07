@@ -90,6 +90,67 @@ $@"# Immersive AI - Custom instructions for {npcName}
             }
         }
 
+        // ── The in-game prompt editor's read & write ────────────────────────────────
+        // The windows' "Their prompt" / "World prompt" buttons edit IN PLACE (Anton's ask,
+        // 2026.08.07 — the first cut opened Notepad and he wanted to stay in the game). The editor
+        // shows the EFFECTIVE prompt as one flowing line (the Gauntlet input line cannot hold
+        // newlines — same constraint the letter composer lives with); the file's # comment lines
+        // are kept aside on save, so hand-written notes and the template survive. No restart is
+        /// ever needed: prompts are re-read every time a context is built, never cached.
+
+        /// <summary>The NPC's effective prompt as one flowing line for the in-game editor (file and
+        /// template created first if missing).</summary>
+        public static string LoadNpcPromptForEdit(string path, string npcName)
+            => Flatten(LoadNpcPrompt(path, npcName));
+
+        /// <summary>The global prompt as one flowing line for the in-game editor.</summary>
+        public static string LoadGlobalPromptForEdit() => Flatten(LoadGlobalPrompt());
+
+        /// <summary>Writes an in-game edit of this NPC's prompt back to their file, keeping its
+        /// comment lines at the top. Takes hold on the very next reply.</summary>
+        public static void SaveNpcPromptFromGame(string path, string npcName, string text)
+        {
+            LoadNpcPrompt(path, npcName); // ensures the file and its template exist
+            WriteKeepingComments(path, text);
+        }
+
+        /// <summary>Writes an in-game edit of the global prompt back, keeping its comment lines.</summary>
+        public static void SaveGlobalPromptFromGame(string text)
+        {
+            LoadGlobalPrompt();
+            WriteKeepingComments(GlobalPromptPath, text);
+        }
+
+        private static string Flatten(string text)
+            => string.Join(" ", (text ?? string.Empty)
+                .Split('\n')
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0));
+
+        // The file keeps its own voice: every #/'//' line it already carries (template or
+        // hand-written) gathers at the top, then the edited prompt below. Interleaved comments
+        // lose their exact position — a fair price for never losing them at all.
+        private static void WriteKeepingComments(string path, string text)
+        {
+            var comments = new List<string>();
+            try
+            {
+                foreach (var line in File.ReadAllLines(path))
+                {
+                    var t = line.TrimStart();
+                    if (t.StartsWith("#") || t.StartsWith("//")) comments.Add(line.TrimEnd('\r'));
+                }
+            }
+            catch { /* a fresh file simply has no comments to keep */ }
+
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in comments) sb.AppendLine(c);
+            if (comments.Count > 0) sb.AppendLine();
+            var body = (text ?? string.Empty).Trim();
+            if (body.Length > 0) sb.AppendLine(body);
+            File.WriteAllText(path, sb.ToString());
+        }
+
         private static string StripComments(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return string.Empty;

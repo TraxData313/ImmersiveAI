@@ -98,6 +98,22 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void Build_OffersTheBargainWhisper_OnlyWhenTheBargainsHandRidesAlong()
+    {
+        // The strike_bargain whisper must ride only with the tool (an unhired sellsword facing the
+        // player, live talk) — and it must always name the two gates: THEIR plain agreement, and
+        // that nothing is settled until THEY seal it. Words alone can never hire.
+        var withTool = Persona();
+        withTool.CanStrikeBargain = true;
+        var on = new PromptBuilder().Build(withTool, new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.Contains("the bargain is mine to strike", on);
+        Assert.Contains("seal it by their own hand", on);
+
+        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
+        Assert.DoesNotContain("the bargain is mine to strike", off);
+    }
+
+    [Fact]
     public void ComposeLetterLine_InService_StaysARecognizedLetterBeat()
     {
         // The field-report invitation is appended AFTER the marker fragment, so both variants must

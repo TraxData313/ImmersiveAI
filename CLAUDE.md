@@ -90,10 +90,17 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           claim broke the map's right-drag camera)
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style + one
                           trade-knowledge sentence per station (artisan, tavern-keeper, ransom broker…)
+                          + 2026.08.07 SellswordTerms (optional ModConfig param): an UNHIRED wanderer's
+                          sheet opens with her worth, her FIXED day-wage, her private haggling bounds
+                          (live percent) and the seller's mind — open high, concede only what the talk
+                          earned, never volunteer the floor
   Personas/CraftsBuilder.cs  real skills weighed into honest craft-words ("masterly in Medicine") —
                           the sheet line, the duty sentences, and recall_person all draw on it
   Personas/SituationBuilder.cs  builds the first-person "current situation" narration (+ mood, + the
-                          moment, + party-duty depth, + the beholder's eye on unknown callers)
+                          moment, + party-duty depth, + the beholder's eye on unknown callers,
+                          + 2026.08.07: one's OWN war-kit by real item name — "and nothing besides",
+                          the anti-phantom-bow clause — and a wanderer's true hiring price + daily
+                          wage from the game's own models, so sellswords quote real terms)
   PromptFiles.cs          loads user-editable global/per-NPC prompt files
   ModConfig.cs            JSON config (API keys, model, token/memory limits) — the single source of truth
   Mcm/                    ImmersiveAiMcmSettings + McmBridge + McmChoiceLists: the in-game MCM settings menu
@@ -118,6 +125,9 @@ tests/ImmersiveAI.Core.Tests/  xUnit tests for Core (net8.0)
 module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)
 module/GUI/               Gauntlet prefab overrides (MapNotificationItem.xml — the portrait notice)
 lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin via deploy.ps1
+CHANGELOG.md              the PLAYER-FACING running list: every player-visible change lands under
+                          [Unreleased] the day it ships; at release the section becomes the version's
+                          Workshop/Nexus change notes verbatim (dev history stays in TASKS_DONE.md)
 tools/deploy.ps1          build + install into the game as Modules\ImmersiveAI.Dev — "Immersive AI (dev)",
                           its own Id so it coexists with the Workshop copy (enable only ONE); keep the
                           script ASCII-only (BOM-less .ps1 + em-dash bytes = smart quote = PS 5.1 parse error)
@@ -395,6 +405,29 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   sparingly unlike the every-reply heart — and reworked wholesale in reflection (a `GOALS:` section with
   the same replace/none contract as `FACTS:`, works on any backend); folded into the prompt as "What you
   strive for" right after "Who you have become"; default on, cap 6, clamp 1..20),
+  `EnableConversationHiring` + `ConversationHiringHagglePercent` (2026.08.07 — HIRING BY HANDSHAKE:
+  an unhired wanderer facing the player may strike the hiring bargain in the talk itself via the
+  `strike_bargain` tool (`Tools\BargainTool`), riding ONLY the live reply trunk. The one law: words
+  alone can never hire — the tool only LAYS terms, the sole door is a confirm popup naming the exact
+  price (plus the game's reckoning when they differ), and lay AND seal both re-run vanilla's own
+  rules (free wanderer, co-located, gold, companion limit — `BargainBlockReason`). Haggling is railed
+  hard to ±`ConversationHiringHagglePercent` (default 30, clamp 0..90, 0 = fixed price; MCM slider +
+  checkbox, live) around `CompanionHiringPriceCalculationModel`; the daily wage is never negotiable
+  and is quoted from `CharacterObject.TroopWage` — NEVER `PartyWageModel.GetCharacterWage`, which
+  answers 1 for heroes (the "one denar a day" lie). Sealed = vanilla's three acts (GiveGold +
+  AddCompanion + AddHeroToParty) + a silent Angel beat; declined/blocked = honest beats too. The
+  seal inquiry (QueryManager) rides a global layer at order 19501, safely above the chat window's
+  4500; both default on. The unhired one's terms + seller's mindset live at the TOP of her sheet —
+  `PersonaBuilder.SellswordTerms` — and the tool's out-of-rails refusal deliberately does NOT name
+  the floor as an offer: the first cut did, and she parroted it verbatim the next breath),
+  BOTH windows also carry the prompt-editing doors (2026.08.07): "Their prompt" (the selected NPC's
+  custom_instructions.txt) and "World prompt" (global_prompt.txt) open an IN-GAME editor overlay
+  (Anton asked for no-alt-tab the same day the first cut opened Notepad) — the letters-composer
+  shape: tall wrapped mirror + single writing line (Gauntlet inputs hold no newlines, so the text
+  edits as ONE flow), Save/Discard buttons, Escape discards first (before the info overlay, before
+  closing), Enter never sends while it is up; saving keeps the file's #-comment lines gathered at
+  the top (PromptFiles.LoadNpcPromptForEdit/SaveNpcPromptFromGame + the global pair) — no restart,
+  prompts are re-read at every context build,
   `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
   `RevertMemoriesWithSaves` (save-scoped memory — each save photographs the whole campaign memory folder
   and loading it restores the photo, so a reload truly un-remembers a bad turn, the way the game already
@@ -900,6 +933,10 @@ template and its marker together, never one.
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md
 - When dove move it to the end of TASKS_DONE.md, rename it if it changed or is badly formatted and add a done ts at the end (YYYY.MM.DD HH.MM.SS)
+- **Every player-visible change also gets a one-liner in CHANGELOG.md under [Unreleased]** —
+  written for players (no file names, no internals). At release time that section is retitled to
+  the version + date and becomes the Workshop ChangeNotes / Nexus changelog verbatim, so the
+  change notes are already written when it is time to ship (see tools/WORKSHOP-UPLOAD.md step 2).
 - When done with changed and tested them, recompile so the mod is rebuild automaticaly in C:\Users\Trax\Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI - dont ask the user to rebuild
 
 ## Conventions

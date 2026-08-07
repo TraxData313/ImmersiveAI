@@ -236,6 +236,7 @@ namespace ImmersiveAI.Mcm
                 s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch, s.MaxKnownFacts, s.MaxNpcGoals,
+                s.EnableConversationHiring, s.ConversationHiringHagglePercent,
                 s.RevertMemoriesWithSaves, s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
         }
 
@@ -252,6 +253,7 @@ namespace ImmersiveAI.Mcm
                 c.EnableChatWindow, c.ChatWindowHotkey, c.LetterWindowHotkey,
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
                 c.EnableLetters, c.EnableWorldRecall, c.EnableWebSearch, c.MaxKnownFacts, c.MaxNpcGoals,
+                c.EnableConversationHiring, c.ConversationHiringHagglePercent,
                 c.RevertMemoriesWithSaves, c.ShowCostNotices, c.MaxDailyRequests, c.DevMode);
         }
 
@@ -294,6 +296,8 @@ namespace ImmersiveAI.Mcm
             s.EnableWebSearch = c.EnableWebSearch;
             s.MaxKnownFacts = Clamp(c.MaxKnownFacts, 1, 30);
             s.MaxNpcGoals = Clamp(c.MaxNpcGoals, 1, 20);
+            s.EnableConversationHiring = c.EnableConversationHiring;
+            s.ConversationHiringHagglePercent = Clamp(c.ConversationHiringHagglePercent, 0, 90);
             s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
 
             s.ShowCostNotices = c.ShowCostNotices;
@@ -347,6 +351,8 @@ namespace ImmersiveAI.Mcm
             c.EnableWebSearch = s.EnableWebSearch;
             c.MaxKnownFacts = s.MaxKnownFacts;
             c.MaxNpcGoals = s.MaxNpcGoals;
+            c.EnableConversationHiring = s.EnableConversationHiring;
+            c.ConversationHiringHagglePercent = s.ConversationHiringHagglePercent;
             c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;
 
             c.ShowCostNotices = s.ShowCostNotices;

@@ -31,6 +31,15 @@ client, a second failure mode, and a second personality — postponed to post-V1
   NO mini/nano siblings, the small tier jumped 5.4 → 5.6), gpt-5.4, gpt-5.4-nano. gpt-4o and
   kin are markedly worse with the NPCs (the whole move_heart saga) and live on solely as hand
   edits in config.json (a hand-set model still appears and works, via the bridge's SelectOrAdd).
+- **Terra is the recommended step-up since 2026.08.07** — Anton's live verdict after a day of
+  play on `gpt-5.6-terra`: "спрява се много по-добре" (holds character, hiring terms, and long
+  threads noticeably better than luna). The DEFAULT stays luna — terra is ~10× the price and
+  the default must protect the casual subscriber — but every recommendation surface (README /
+  choosing-a-model.md pick-a-row, MCM OpenAI hint) now names terra the step-up "if you don't
+  pinch denars". Terra is also a 1M-context model, which pairs with the big-chat memory knobs
+  (`MaxRecentMemoryPercent` etc.) for players who want NPCs to carry very long verbatim threads —
+  at 20% that is a 200k-token rolling chat, worth ~$0.40 of input per exchange when saturated:
+  a knob for the unpinching, never a default.
 - **Reasoning is OFF everywhere, hardcoded** (2026.07.13, revised from `OpenAIReasoningEffort:
   low` after Opus NPCs answered "..." — silent thinking spends billed tokens against the spoken
   budget and slows every reply). The clients enforce it themselves: OpenAI sends
