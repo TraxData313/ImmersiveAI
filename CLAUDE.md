@@ -31,6 +31,7 @@ You usually only need to open:
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
+- **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipAsk DSL, MatchmakerLedger, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
 installs as **"Immersive AI (dev)"** (`Modules\ImmersiveAI.Dev`), its own identity beside the Steam
@@ -451,6 +452,30 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   4500; both default on. The unhired one's terms + seller's mindset live at the TOP of her sheet —
   `PersonaBuilder.SellswordTerms` — and the tool's out-of-rails refusal deliberately does NOT name
   the floor as an offer: the first cut did, and she parroted it verbatim the next breath),
+  `EnableConversationMarriage` + `AllowCompanionMarriage` + `MarriageNeedsFamilyConsent` +
+  `MarriageDowryHagglePercent` + `CourtshipCharmSlack` + `MinBetrothalDays` (2026.08.08 — MARRIAGE
+  BY COURTSHIP, the bargain mold applied to the biggest bond: an NPC walks her OWN persisted road
+  (Core `CourtshipStage` in `NpcMemory` → snapshots rewind it) via `tend_courtship`
+  (`Tools\TrothTool`), railed by Core `CourtshipRoad` — relation floors, one step/day, the STATION
+  GATE (her station tier minus the charm slack, binding only from Ready — the heart is free, the
+  HAND has rails) — and her own generated quiet asks (Core `MatchmakerLedger`, spark-sibling, tiny
+  checkable DSL, live met-marks in her sheet; refusals NEVER name a number — Core-tested). Souls
+  with real history are SEEDED once from their lived story (Core `CourtshipSeed`, capped at
+  Betrothed). Betrothal + wedding lay only; popups seal; both re-run everything
+  (`TrothBlockReason`). The wedding is REAL: nobles `MarriageAction.Apply`; a companion bride is
+  graduated `SetNewOccupation(Lord)` (vanilla's companion-to-lord shape — keeps party place and
+  duties) then the same Apply — cutscene/log/tidings arrive from vanilla's listeners. Noble kin:
+  `bless_marriage` on her clan HEAD (a second bargain, ±haggle around her clan's Renown with
+  vanilla's spinster relief; sealed = gold + a blessing beat reaching HER anywhere); once betrothed
+  the head is UNLOCKED as a letter correspondent (ours or vanilla's CoupleAgreedOnMarriage).
+  Stages mirror into vanilla Romance (Warmth+ → 4, Betrothed → 6 — removes her from the
+  NPC-marriage lottery, re-asserted each exchange). Marry Anyone detected by assembly scan →
+  the player's own marriage stops hard-blocking, the (patched) model stays the law. OFFERS RIDE
+  LETTERS: the letter-answer flow carries bargain/troth/bless hands (`byLetter`), the laid offer
+  persists ON the `Letter` (LaidKind/Price/Word/BrideId) and is presented at delivery; the
+  wedding day alone refuses paper. Road stage shows in both windows' bond line + the odds view;
+  DevMode levers "[test — courtship & quiet asks]" + "[test — reroll their quiet asks]". Lives in
+  the `ImmersiveChatBehavior.Courtship.cs` partial; decision record docs/marriage-courtship-design.md),
   BOTH windows also carry the prompt-editing doors (2026.08.07): "Their prompt" (the selected NPC's
   custom_instructions.txt) and "World prompt" (global_prompt.txt) open an IN-GAME editor overlay
   (Anton asked for no-alt-tab the same day the first cut opened Notepad) — the letters-composer

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ImmersiveAI.Core.Courtship;
 using ImmersiveAI.Core.Llm;
 using ImmersiveAI.Core.Memory;
+using ImmersiveAI.Personas;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
@@ -13,6 +14,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
+using TaleWorlds.MountAndBlade;
 
 namespace ImmersiveAI
 {
@@ -36,8 +38,51 @@ namespace ImmersiveAI
     /// </summary>
     public partial class ImmersiveChatBehavior
     {
-        // Souls whose seeding/matchmaker calls are mid-flight — one at a time each.
+        // Souls whose seeding/matchmaker calls are mid-flight — one at a time each. Touched from
+        // the game thread (live trunk) AND worker threads (the letter flow), so entry and exit are
+        // atomic under a lock: the check-then-act is one motion, never a race.
         private readonly HashSet<string> _courtshipBusy = new HashSet<string>();
+        private readonly object _courtshipBusyLock = new object();
+
+        private bool TryBeginCourtshipWork(string npcId)
+        {
+            lock (_courtshipBusyLock)
+            {
+                if (_courtshipBusy.Contains(npcId)) return false;
+                _courtshipBusy.Add(npcId);
+                return true;
+            }
+        }
+
+        private void EndCourtshipWork(string npcId)
+        {
+            lock (_courtshipBusyLock) _courtshipBusy.Remove(npcId);
+        }
+
+        // A blessing sealed while the BRIDE'S own exchange is mid-flight would be clobbered by her
+        // turn's end-of-exchange save (it holds a stale memory instance loaded before the seal).
+        // The paid truth therefore also lives here until folded: SaveMemory folds it into ANY
+        // instance of hers being written that does not carry it yet — so the gold can never buy
+        // a blessing the world forgets. Session-scoped; the fold is idempotent.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (double Day, int Price, string NewsBeat)>
+            _pendingBlessingFolds = new System.Collections.Concurrent.ConcurrentDictionary<string, (double, int, string)>();
+
+        // Called by SaveMemory for every write: folds a sealed blessing into a stale instance.
+        private static void FoldPendingBlessing(Hero npc, NpcMemory memory)
+        {
+            try
+            {
+                if (npc == null || memory == null) return;
+                if (!_pendingBlessingFolds.TryGetValue(npc.StringId, out var fold)) return;
+                if (memory.FamilyBlessingDay >= 0) return; // already carried — nothing to heal
+                memory.FamilyBlessingDay = fold.Day;
+                memory.FamilyBlessingPrice = fold.Price;
+                if (!string.IsNullOrEmpty(fold.NewsBeat)
+                    && !memory.RecentTurns.Any(t => t != null && t.PlayerLine == fold.NewsBeat))
+                    AddSilentInnerBeat(memory, npc, fold.NewsBeat);
+            }
+            catch { /* the direct write already landed once; the fold is the safety net */ }
+        }
 
         // The road's own notice color — a warm rose beside the sea-glass of the activity notices.
         private static readonly Color RoadColor = new Color(0.93f, 0.62f, 0.72f, 1f);
@@ -46,22 +91,26 @@ namespace ImmersiveAI
 
         // ------------------------- gates: when the hands ride -------------------------
 
-        // The troth's hand rides only on the live reply trunk, facing someone the road is truly
-        // open to — same shape as the bargain: whisper and tool keyed to one tally.
-        private bool CanTendTroth(Hero npc)
+        // The troth's hand rides the live reply trunk — and the letter-answer flow (byLetter: a
+        // heart moves in writing too; only the wedding day itself refuses to be laid on paper).
+        // Same shape as the bargain: whisper and tool keyed to one tally.
+        private bool CanTendTroth(Hero npc, bool byLetter = false)
         {
             if (!_config.EnableConversationMarriage) return false;
             if (!(_client is IToolChatClient)) return false;
             try
             {
-                return TrothBlockReason(npc, forWedding: false) == TrothBlock.None && IsCoLocated(npc);
+                return TrothBlockReason(npc, forWedding: false) == TrothBlock.None
+                    && (byLetter || IsCoLocated(npc));
             }
             catch { return false; }
         }
 
         // The blessing's hand rides only for the head of a house whose kinswoman (or kinsman) is
-        // betrothed to the player with the blessing still unspoken — and never across a war.
-        private bool CanBlessTroth(Hero npc, out Hero? bride)
+        // betrothed to the player with the blessing still unspoken — and never across a war. By
+        // letter too (Anton's ask, 2026.08.08 — where in the world would one even FIND the father?):
+        // the blessing and its price can be settled in writing, sealed when his reply arrives.
+        private bool CanBlessTroth(Hero npc, out Hero? bride, bool byLetter = false)
         {
             bride = null;
             if (!_config.EnableConversationMarriage || !_config.MarriageNeedsFamilyConsent) return false;
@@ -74,7 +123,7 @@ namespace ImmersiveAI
                 if (clan == null || clan == Clan.PlayerClan || clan.Leader != npc) return false;
                 if (npc.MapFaction != null && player.MapFaction != null
                     && npc.MapFaction.IsAtWarWith(player.MapFaction)) return false;
-                if (!IsCoLocated(npc)) return false;
+                if (!byLetter && !IsCoLocated(npc)) return false;
 
                 foreach (var kin in clan.Heroes)
                 {
@@ -101,6 +150,33 @@ namespace ImmersiveAI
             CompanionBarred, UnhiredWanderer, NotHere, WarCamp, AtWar, WorldRefuses, BlessingMissing,
         }
 
+        // Marry Anyone compatibility (Anton runs it on his saves): with a polygamy mod loaded, the
+        // player's OWN standing marriage no longer bars a new courtship — the LAW remains the
+        // marriage model, which such mods patch, so the seal still asks the world's (patched) rules;
+        // without one, vanilla's model refuses at the seal, honestly. Her side stays as the world
+        // wills it either way. Detected once by loaded assembly name (module DLLs load before any
+        // campaign), same soft-reflection stance as the MCM bridge.
+        private static bool? _polygamyLoaded;
+        private static bool PolygamyLoose()
+        {
+            if (_polygamyLoaded.HasValue) return _polygamyLoaded.Value;
+            try
+            {
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    var name = asm.GetName()?.Name ?? string.Empty;
+                    if (name.IndexOf("MarryAnyone", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _polygamyLoaded = true;
+                        return true;
+                    }
+                }
+            }
+            catch { }
+            _polygamyLoaded = false;
+            return false;
+        }
+
         // The world's own law over the pair — vanilla's own suitability where it can speak (nobles),
         // our matching checks where vanilla has no words (companion brides). forWedding adds the
         // legs only a wedding needs; the courtship road itself may be walked by an unhired wanderer.
@@ -113,7 +189,10 @@ namespace ImmersiveAI
                 if (npc == null || player == null || !npc.IsAlive || !player.IsAlive
                     || npc.IsPrisoner || npc == player) return TrothBlock.Gone;
                 if (npc.IsFemale == player.IsFemale) return TrothBlock.NotTheCustom;
-                if (npc.Spouse != null || player.Spouse != null) return TrothBlock.NotFree;
+                if (npc.Spouse != null) return TrothBlock.NotFree;
+                // The player's own marriage bars a new road only in a monogamous world — with a
+                // polygamy mod (Marry Anyone) loaded, the road opens and the model stays the judge.
+                if (player.Spouse != null && !PolygamyLoose()) return TrothBlock.NotFree;
                 if (npc.IsChild || npc.Age < 18f || player.Age < 18f) return TrothBlock.TooYoung;
                 if (npc.IsNotable || npc.IsMinorFactionHero || npc.IsTemplate) return TrothBlock.NotForMarriage;
 
@@ -206,16 +285,20 @@ namespace ImmersiveAI
             catch { return false; }
         }
 
-        // The player may walk many roads, but may hold only ONE standing troth at a time.
+        // The player may walk many roads, but may hold only ONE standing troth at a time — with
+        // a LIVING soul: the dead cannot release a promise by their own hand, so a betrothed who
+        // died must never wedge every future troth (review find, 2026.08.08).
         private bool PlayerPromisedToAnother(Hero npc)
         {
             try
             {
-                var root = NpcPaths.CampaignRoot();
+                var root = NpcPaths.CampaignRoot;
                 foreach (var known in MemoryIndex.All(root, NpcPaths.MemoryFileName, _memoryStore))
                 {
                     if (known.NpcId == npc.StringId) continue;
-                    if ((CourtshipStage)known.CourtshipStage == CourtshipStage.Betrothed) return true;
+                    if ((CourtshipStage)known.CourtshipStage != CourtshipStage.Betrothed) continue;
+                    var other = FindAliveHero(known.NpcId);
+                    if (other != null && other.IsAlive) return true;
                 }
                 return false;
             }
@@ -326,6 +409,9 @@ namespace ImmersiveAI
                 if (!_config.EnableConversationMarriage) return string.Empty;
                 if (memory.CourtshipStage <= CourtshipStage.None || memory.CourtshipStage >= CourtshipStage.Wed)
                     return string.Empty;
+                // A soul already wed (to anyone — vanilla barter, another mod, the world's own
+                // turnings) wears no courtship section: the kin lines carry the marriage.
+                if (npc?.Spouse != null) return string.Empty;
 
                 var facts = SuitorFactsOf(npc);
                 var asks = memory.CourtshipAsks
@@ -432,7 +518,9 @@ namespace ImmersiveAI
                     troth.Acted = true; troth.SteppedBack = true; troth.NewStage = to; troth.Word = word;
                     AddSilentInnerBeat(memory, npc, CourtshipText.StepBackBeat(playerName, stage, to, word));
                     SaveMemory(npc, memory);
-                    NotifyRoadStep(npc, to, forward: false, brokeTroth: brokeTroth);
+                    // A letter's heart-movement stays sealed until the letter arrives (the courier's
+                    // law) — no notice spoils words still on the road.
+                    if (!troth.ByLetter) NotifyRoadStep(npc, to, forward: false, brokeTroth: brokeTroth);
                     MirrorRomance(npc, to);
                     return "My heart has stepped back, and it is set down. I speak from where I now truly stand — and I owe no explanation beyond what I choose to give.";
                 }
@@ -454,11 +542,15 @@ namespace ImmersiveAI
                 if (target == CourtshipStage.Betrothed)
                 {
                     troth.Acted = true; troth.LaidBetrothal = true; troth.Word = word;
-                    NotifyRoadActivity(npc, "lays their promise before you…");
-                    return "The moment is laid: when my words here are done, my promise will stand before them — to take, or to let lie, by their own hand. Nothing is settled until they choose, and I do not press.";
+                    if (!troth.ByLetter) NotifyRoadActivity(npc, "lays their promise before you…");
+                    return troth.ByLetter
+                        ? "The promise is laid in this very letter: when it reaches their hands, it will stand before them — to take, or to let lie, by their own hand. Nothing is settled until they choose, and I do not press."
+                        : "The moment is laid: when my words here are done, my promise will stand before them — to take, or to let lie, by their own hand. Nothing is settled until they choose, and I do not press.";
                 }
                 if (target == CourtshipStage.Wed)
                 {
+                    if (troth.ByLetter)
+                        return "A wedding day is not laid on paper — such a thing is done face to face, hand in hand. I may say so in my letter, warmly, and long for the meeting.";
                     troth.Acted = true; troth.LaidWedding = true; troth.Word = word;
                     NotifyRoadActivity(npc, "reaches for the wedding day…");
                     return "The day is laid: when my words here are done, our wedding will stand before them — to seal, or to let lie, by their own hand. Nothing is settled until they choose.";
@@ -470,7 +562,7 @@ namespace ImmersiveAI
                 troth.Acted = true; troth.SteppedForward = true; troth.NewStage = target; troth.Word = word;
                 AddSilentInnerBeat(memory, npc, CourtshipText.StepBeat(playerName, target, word));
                 SaveMemory(npc, memory);
-                NotifyRoadStep(npc, target, forward: true);
+                if (!troth.ByLetter) NotifyRoadStep(npc, target, forward: true);
                 MirrorRomance(npc, target);
                 return $"It is so, and it is set down: {CourtshipText.StagePhrase(target, playerName)}. I speak now from this truth — warmly, in my own way — and I need not name the change aloud unless my heart moves me to.";
             }
@@ -509,8 +601,10 @@ namespace ImmersiveAI
 
                 bless.Laid = true;
                 bless.Price = price;
-                NotifyRoadActivity(npc, "weighs the suitor of their house…");
-                return $"It is laid: my blessing on the match, at {price} denars as the bride-price. When my words here are done the offer will stand before them, to seal or let lie by their own hand; nothing is settled until they choose, and I do not press.";
+                if (!bless.ByLetter) NotifyRoadActivity(npc, "weighs the suitor of their house…");
+                return bless.ByLetter
+                    ? $"It is laid in this very letter: my blessing on the match, at {price} denars as the bride-price. When it reaches their hands the offer will stand before them, to seal or let lie by their own hand; nothing is settled until they choose, and I do not press."
+                    : $"It is laid: my blessing on the match, at {price} denars as the bride-price. When my words here are done the offer will stand before them, to seal or let lie by their own hand; nothing is settled until they choose, and I do not press.";
             }
             catch { return "The moment does not allow it; I let the matter rest."; }
         }
@@ -601,15 +695,41 @@ namespace ImmersiveAI
         {
             try
             {
-                if (npc == null || _courtshipBusy.Contains(npc.StringId)) return;
+                if (npc == null) return;
                 var memory = LoadMemory(npc);
+
+                // A marriage completed OUTSIDE our seal (vanilla's own final-terms barter — the
+                // mirror parks her at exactly the state whose barter vanilla offers) leaves the
+                // road's stage behind the world's truth: reconcile, so a wed pair never wears a
+                // "betrothed" sheet (review find, 2026.08.08).
+                if (memory.CourtshipStage > CourtshipStage.None
+                    && memory.CourtshipStage < CourtshipStage.Wed
+                    && npc.Spouse == Hero.MainHero && Hero.MainHero != null)
+                {
+                    memory.CourtshipStage = CourtshipStage.Wed;
+                    memory.CourtshipSeeded = true;
+                    SaveMemory(npc, memory);
+                    return;
+                }
+
                 bool needsSeed = !memory.CourtshipSeeded;
                 bool needsAsks = memory.CourtshipStage > CourtshipStage.None
                     && memory.CourtshipStage < CourtshipStage.Wed
                     && memory.CourtshipAsks.Count == 0;
-                if (!needsSeed && !needsAsks) return;
+                if (!needsSeed && !needsAsks)
+                {
+                    // The betrothal's shield, re-asserted (Anton's ask: no one takes her while we
+                    // are still arranging): vanilla can demote a mirrored romance state when its own
+                    // dialog opens in a blocked hour (a war, a map event) — re-mirroring on every
+                    // courtship exchange heals it, so a courted or betrothed soul never falls back
+                    // into the daily NPC-marriage lottery. Idempotent: MirrorRomance writes only on
+                    // a real difference.
+                    if (memory.CourtshipStage > CourtshipStage.None && memory.CourtshipStage < CourtshipStage.Wed)
+                        MirrorRomance(npc, memory.CourtshipStage);
+                    return;
+                }
 
-                _courtshipBusy.Add(npc.StringId);
+                if (!TryBeginCourtshipWork(npc.StringId)) return;
                 try
                 {
                     var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
@@ -678,7 +798,7 @@ namespace ImmersiveAI
                         // else: retried on a later exchange, exactly like the spark.
                     }
                 }
-                finally { _courtshipBusy.Remove(npc.StringId); }
+                finally { EndCourtshipWork(npc.StringId); }
             }
             catch (Exception ex)
             {
@@ -746,6 +866,37 @@ namespace ImmersiveAI
         }
 
         // ------------------------- the seals (the only doors) -------------------------
+
+        // An offer that rode with a LETTER, presented as its reading closes: the same seal doors,
+        // re-run rules and all — only the courier carried the laying. Called from the letter-arrival
+        // inquiry's callbacks (game thread); a dead writer's offers die with the writer upstream.
+        private void PresentLetterOfferIfAny(Hero npc, Core.Letters.Letter letter)
+        {
+            try
+            {
+                if (npc == null || letter == null || string.IsNullOrEmpty(letter.LaidKind)) return;
+                switch (letter.LaidKind)
+                {
+                    case "hiring":
+                        ShowBargainSealInquiry(npc, letter.LaidPrice, byLetter: true);
+                        break;
+                    case "betrothal":
+                        ShowBetrothalInquiry(npc, letter.LaidWord);
+                        break;
+                    case "blessing":
+                        var bride = FindAliveHero(letter.LaidBrideId);
+                        if (bride == null) break;
+                        ShowBlessingInquiry(npc, new Tools.TrothTool.BlessTally
+                        {
+                            Laid = true,
+                            Price = letter.LaidPrice,
+                            Bride = bride,
+                        });
+                        break;
+                }
+            }
+            catch (Exception ex) { ModLog.Error("presenting a letter-borne offer", ex); }
+        }
 
         // Called from both render blocks AFTER the reply is shown, exactly like the bargain's seal.
         private void PresentTrothIfAny(Hero npc, TurnOutcome outcome)
@@ -845,8 +996,10 @@ namespace ImmersiveAI
                 var name = npc?.Name?.ToString() ?? "They";
                 bool isFemale = npc?.IsFemale ?? true;
                 var spouseWord = isFemale ? "wife" : "husband";
+                // Honest to the letter: the line appears only when the blessing was truly given
+                // (the lay already refuses without it, but the popup never claims what is not).
                 string blessingLine = string.Empty;
-                if (BlessingRequired(npc))
+                if (BlessingRequired(npc) && LoadMemory(npc).FamilyBlessingDay >= 0)
                     blessingLine = "\n\nTheir kin have blessed the match.";
                 string standingLine = npc != null && npc.IsWanderer
                     ? $"\n\nThey will stand a full member of your house from this day — your {spouseWord}, and still at your side on the road."
@@ -1007,6 +1160,11 @@ namespace ImmersiveAI
                 else if (player == null || player.Gold < bless.Price) blocked = "your purse no longer carries the price";
                 else if (npc.MapFaction != null && player.MapFaction != null
                     && npc.MapFaction.IsAtWarWith(player.MapFaction)) blocked = "your realms now stand at war";
+                // The pair's own hard rules re-run at the seal too (the one law): a bride married
+                // off in the meantime, or a player no longer free, must never sell a blessing —
+                // gold for a match that can no longer be wed (review find, 2026.08.08).
+                else if (TrothBlockReason(bride, forWedding: false, _config) != TrothBlock.None)
+                    blocked = "the match itself no longer stands in the world's eyes";
                 else
                 {
                     var brideMemory = LoadMemory(bride);
@@ -1026,14 +1184,20 @@ namespace ImmersiveAI
 
                 GiveGoldAction.ApplyBetweenCharacters(player, npc, bless.Price);
 
+                var newsBeat = CourtshipText.BlessingNewsBeat(playerName,
+                    npc.Name?.ToString() ?? "the head of my house", npc.IsFemale);
+                var day = CampaignTime.Now.ToDays;
+
+                // The paid truth, twice held: written to her file now, AND parked to fold into any
+                // stale in-flight instance of hers that saves later — the gold can never buy a
+                // blessing the world forgets (review find, 2026.08.08).
+                _pendingBlessingFolds[bride.StringId] = (day, bless.Price, newsBeat);
                 var memory = LoadMemory(bride);
-                memory.FamilyBlessingDay = CampaignTime.Now.ToDays;
+                memory.FamilyBlessingDay = day;
                 memory.FamilyBlessingPrice = bless.Price;
-                SaveMemory(bride, memory);
                 // The news reaches HER, wherever she stands — a silent beat in her own memory.
-                AppendRecordedTurn(bride,
-                    CourtshipText.BlessingNewsBeat(playerName, npc.Name?.ToString() ?? "the head of my house"),
-                    string.Empty);
+                AddSilentInnerBeat(memory, bride, newsBeat);
+                SaveMemory(bride, memory);
 
                 AppendRecordedTurn(npc,
                     CourtshipText.BlessingSealedBeat(playerName, brideName, bless.Price),
@@ -1094,6 +1258,7 @@ namespace ImmersiveAI
                     }
                 }
                 ShowScrollPopup($"The road of {npc.Name}'s heart", sb.ToString().Trim());
+                MBTextManager.SetTextVariable(InfoVar, "(You read the road of their heart.)", false);
             }
             catch (Exception ex) { ModLog.Error("revealing the courtship road", ex); }
         }

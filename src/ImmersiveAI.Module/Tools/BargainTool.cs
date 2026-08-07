@@ -27,6 +27,10 @@ namespace ImmersiveAI.Tools
         {
             public bool Laid;
             public int Price;
+            /// <summary>True when this turn is a LETTER being written, not a live talk: the terms
+            /// may be laid in writing and ride the courier — presented, and sealed, only when the
+            /// letter arrives (the co-location rule yields; she makes her own way when sealed).</summary>
+            public bool ByLetter;
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(StrikeBargain,

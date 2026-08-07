@@ -166,7 +166,7 @@ namespace ImmersiveAI
         // counsel of the far-seeing sages (a web search, resolved off-thread). Every spoken path
         // goes through here; short utility calls (the feeling number, the yes/no of a reaching-out)
         // stay on plain CompleteAsync, where a recall would only slow the answer down.
-        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null, Tools.BargainTool.Tally? bargain = null)
+        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
@@ -184,6 +184,10 @@ namespace ImmersiveAI
             // with an unhired sellsword facing the player (see CanStrikeBargain); never greetings,
             // letters, or reach-out beats, where "we agreed on terms just now" cannot be true.
             if (bargain != null) tools.Add(Tools.BargainTool.Tool);
+            // The troth's and the blessing's hands ride the same tally-keyed way (the live reply
+            // trunk, and the letter-answer flow — a promise or a price can be agreed in writing too).
+            if (troth != null) tools.Add(Tools.TrothTool.Tend);
+            if (bless != null) tools.Add(Tools.TrothTool.Bless);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
@@ -191,12 +195,12 @@ namespace ImmersiveAI
             // question ("how might I grant my ships…") becomes a query that truly finds answers.
             var recentContext = LastIncomingWords(messages);
 
-            // The heart's hand and the personal hands (aims, truths, the bargain) are not recalls:
-            // they keep at least one round even when the recall budget is zeroed out.
-            int rounds = (heartRides || goalsRide || truthsRide || bargain != null) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
+            // The heart's hand and the personal hands (aims, truths, the bargain, the troth) are not
+            // recalls: they keep at least one round even when the recall budget is zeroed out.
+            int rounds = (heartRides || goalsRide || truthsRide || bargain != null || troth != null || bless != null) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
-                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain),
+                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain, troth, bless),
                 rounds);
         }
 
@@ -220,7 +224,7 @@ namespace ImmersiveAI
         // Routes one tool call to its resolver, announcing the activity to the player first so the
         // wait is never silent ("remembering…", "researching…"). The heart's shift gets no notice
         // of its own — the colored relation line that follows IS the notice.
-        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null)
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null)
         {
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
@@ -233,6 +237,12 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.BargainTool.StrikeBargain)
                 return Task.FromResult(ResolveBargainLay(call, npc, bargain));
+
+            if (call.Name == Tools.TrothTool.TendCourtship)
+                return Task.FromResult(ResolveTendCourtship(call, npc, troth, liveMemory));
+
+            if (call.Name == Tools.TrothTool.BlessMarriage)
+                return Task.FromResult(ResolveBlessLay(call, npc, bless));
 
             NotifyActivity(npc, call);
             if (call.Name == Tools.WebWisdom.SeekWisdom)
@@ -357,7 +367,7 @@ namespace ImmersiveAI
 
         // The hard rules, checked when the offer is laid AND again the instant the player seals it
         // (gold and company room can drift between the two moments).
-        private static BargainBlock BargainBlockReason(Hero npc, int price)
+        private static BargainBlock BargainBlockReason(Hero npc, int price, bool byLetter = false)
         {
             try
             {
@@ -365,7 +375,9 @@ namespace ImmersiveAI
                 if (!npc.IsWanderer) return BargainBlock.NotForHire;
                 if (npc.Clan != null || npc.CompanionOf != null || npc.PartyBelongedTo != null)
                     return BargainBlock.BoundElsewhere;
-                if (!IsCoLocated(npc)) return BargainBlock.NotHere;
+                // A bargain struck in correspondence needs no shared roof — she makes her own way
+                // to the banner when the seal calls her (Anton's QoL ask, 2026.08.08).
+                if (!byLetter && !IsCoLocated(npc)) return BargainBlock.NotHere;
                 var player = Hero.MainHero;
                 if (player == null || player.Gold < price) return BargainBlock.PurseShort;
                 if (Clan.PlayerClan == null || Clan.PlayerClan.Companions.Count >= Clan.PlayerClan.CompanionLimit)
@@ -425,7 +437,10 @@ namespace ImmersiveAI
                            $"the most that can honestly be asked of one of my seasoning, near my true " +
                            $"worth of {basePrice}, and I say it in my own words.";
 
-                switch (BargainBlockReason(npc, price))
+                // A letter-borne lay yields the co-location rule (she rides to the banner when
+                // sealed) — the tally carries the road it was laid on (review find, 2026.08.08:
+                // without this, hire-by-letter refused itself at the lay, dead on arrival).
+                switch (BargainBlockReason(npc, price, bargain.ByLetter))
                 {
                     case BargainBlock.None:
                         break;
@@ -446,16 +461,23 @@ namespace ImmersiveAI
 
                 bargain.Laid = true;
                 bargain.Price = price;
-                if (_config.ShowNpcActivity)
+                // No notice for a letter-borne lay: the offer is sealed inside the letter until it
+                // arrives, and no line on the map may spoil words still on the road.
+                if (_config.ShowNpcActivity && !bargain.ByLetter)
                 {
                     var name = npc?.Name?.ToString() ?? "They";
                     MainThreadDispatcher.Enqueue(() => InformationManager.DisplayMessage(
                         new InformationMessage($"{name} lays the terms of a bargain…", ActivityColor)));
                 }
-                return $"The terms are laid: {price} denars for the hiring, my keep thereafter as any " +
-                       "companion's. When my words here are done the offer will stand before them, to seal " +
-                       "or let lie by their own hand — nothing is settled until they choose. I finish my " +
-                       "say knowing this, and I do not press.";
+                return bargain.ByLetter
+                    ? $"The terms are laid in this very letter: {price} denars for the hiring, my keep " +
+                      "thereafter as any companion's. When it reaches their hands the offer will stand " +
+                      "before them, to seal or let lie by their own hand — nothing is settled until they " +
+                      "choose, and I do not press."
+                    : $"The terms are laid: {price} denars for the hiring, my keep thereafter as any " +
+                      "companion's. When my words here are done the offer will stand before them, to seal " +
+                      "or let lie by their own hand — nothing is settled until they choose. I finish my " +
+                      "say knowing this, and I do not press.";
             }
             catch { return "The moment does not allow it; I let the matter rest."; }
         }
@@ -470,7 +492,7 @@ namespace ImmersiveAI
         // The seal: the ONLY door through which a conversation can hire. Pauses while up, and names
         // the exact price — plus the game's own reckoning when they differ, so a sweet-tongued
         // sellsword can never talk the player 30% up without the popup saying so to their face.
-        private void ShowBargainSealInquiry(Hero npc, int price)
+        private void ShowBargainSealInquiry(Hero npc, int price, bool byLetter = false)
         {
             try
             {
@@ -489,15 +511,18 @@ namespace ImmersiveAI
                     if (wage > 0) keep = $" Their keep will then run some {wage} denars a day, as any companion's.";
                 }
                 catch { /* the keep line is a nicety */ }
+                string road = byLetter
+                    ? " Sealed by letter, they will make their own way to your banner at once."
+                    : string.Empty;
 
                 var body = $"{name} offers to enter your service as a companion for {price} denars — " +
-                           $"the price spoken between you.{reckon}{keep}\n\nSeal the bargain?";
+                           $"the price spoken between you.{reckon}{keep}{road}\n\nSeal the bargain?";
                 var accept = $"Seal it — pay {price} denars";
                 var decline = new TextObject("{=ImmersiveAI_BargainDecline}Let it lie").ToString();
 
                 var data = new InquiryData(
                     title, body, true, true, accept, decline,
-                    new Action(() => OnBargainSealed(npc, price)),
+                    new Action(() => OnBargainSealed(npc, price, byLetter)),
                     new Action(() => OnBargainDeclined(npc, price)),
                     "", 0f, (Action?)null,
                     (Func<ValueTuple<bool, string>>?)null,
@@ -513,12 +538,12 @@ namespace ImmersiveAI
         // The player sealed it. Every rule is checked AGAIN at this instant (gold and company room
         // may have drifted since the lay) — only then the same three acts as vanilla's tavern hire.
         // The outcome, whichever way, becomes a recorded beat so her memory stays true.
-        private void OnBargainSealed(Hero npc, int price)
+        private void OnBargainSealed(Hero npc, int price, bool byLetter = false)
         {
             try
             {
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
-                var block = BargainBlockReason(npc, price);
+                var block = BargainBlockReason(npc, price, byLetter);
                 if (block != BargainBlock.None)
                 {
                     InformationManager.DisplayMessage(new InformationMessage(
@@ -533,6 +558,17 @@ namespace ImmersiveAI
                 GiveGoldAction.ApplyBetweenCharacters(Hero.MainHero, npc, price);
                 AddCompanionAction.Apply(Clan.PlayerClan, npc);
                 AddHeroToPartyAction.Apply(npc, MobileParty.MainParty);
+                // A letter-sealed hire may find her half a map away: if the roster call alone did
+                // not bring her, the game's own teleport does — she rides hard, and arrives.
+                if (byLetter)
+                {
+                    try
+                    {
+                        if (npc.PartyBelongedTo != MobileParty.MainParty && MobileParty.MainParty != null)
+                            TeleportHeroAction.ApplyImmediateTeleportToParty(npc, MobileParty.MainParty);
+                    }
+                    catch { /* she will find her own road; the roster holds her either way */ }
+                }
                 MarkMetInWorldsEyes(npc);
 
                 InformationManager.DisplayMessage(new InformationMessage(
@@ -629,7 +665,7 @@ namespace ImmersiveAI
         // with the player — never the hired, the sworn, or anyone reached by letter. Offered by the
         // live reply trunk alone (ExecutePlayerTurnAsync); the same conditions vanilla's hire dialog
         // asks (free wanderer, no party, no clan) plus our own "they must truly be here".
-        private bool CanStrikeBargain(Hero npc)
+        private bool CanStrikeBargain(Hero npc, bool byLetter = false)
         {
             if (!_config.EnableConversationHiring) return false;
             if (!(_client is IToolChatClient)) return false;
@@ -637,7 +673,7 @@ namespace ImmersiveAI
             {
                 if (npc == null || !npc.IsAlive || npc.IsPrisoner || !npc.IsWanderer) return false;
                 if (npc.Clan != null || npc.CompanionOf != null || npc.PartyBelongedTo != null) return false;
-                return IsCoLocated(npc);
+                return byLetter || IsCoLocated(npc);
             }
             catch { return false; }
         }
@@ -726,9 +762,12 @@ namespace ImmersiveAI
             return _memoryStore.LoadFrom(NpcPaths.MemoryFile(npc), npc.StringId);
         }
 
-        // Persists this NPC's memory into its own folder.
+        // Persists this NPC's memory into its own folder. Every write first folds in any blessing
+        // sealed while this instance was in flight (see the Courtship partial's pending folds) —
+        // a stale instance must never erase a paid truth.
         private void SaveMemory(Hero npc, NpcMemory memory)
         {
+            FoldPendingBlessing(npc, memory);
             _memoryStore.SaveTo(NpcPaths.MemoryFile(npc), memory);
         }
 
@@ -1089,6 +1128,17 @@ namespace ImmersiveAI
                 starter.AddPlayerLine("immersiveai_test_spark", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestSpark}Let us part now. [Immersive AI • test — reroll their spark]",
                     null, () => { OnDebugRerollSpark(); RequestLeaveFromPartyEncounter(); }, 91);
+
+                // Courtship levers: the road's whole arithmetic bared (the PLAYER'S debug eyes —
+                // her own refusals stay numberless forever), and a reroll of her quiet asks.
+                starter.AddPlayerLine("immersiveai_test_troth", "immersiveai_input", "immersiveai_test_troth_out",
+                    "{=ImmersiveAI_TestTroth}Show me the road of their heart. [Immersive AI • test — courtship & quiet asks]",
+                    () => _config.EnableConversationMarriage, OnDebugRevealCourtship, 90);
+                starter.AddDialogLine("immersiveai_test_troth_line", "immersiveai_test_troth_out", "immersiveai_input",
+                    "{=!}{" + InfoVar + "}", null, null);
+                starter.AddPlayerLine("immersiveai_test_asks", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestAsks}Let us part now. [Immersive AI • test — reroll their quiet asks]",
+                    () => _config.EnableConversationMarriage, () => { OnDebugRerollAsks(); RequestLeaveFromPartyEncounter(); }, 89);
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
@@ -1476,6 +1526,8 @@ namespace ImmersiveAI
                     // A hiring bargain laid this turn is presented only now, after her words are
                     // shown — the seal popup is the one door through which gold and service move.
                     PresentBargainIfAny(npc, outcome);
+                    // Same law for the troth and the blessing: the words first, then the seal.
+                    PresentTrothIfAny(npc, outcome);
                 });
             }
             catch (Exception ex)
@@ -1494,10 +1546,11 @@ namespace ImmersiveAI
 
         private readonly struct TurnOutcome
         {
-            public TurnOutcome(string reply, int feltShift, bool feltShiftApplied, int bargainPrice = 0)
+            public TurnOutcome(string reply, int feltShift, bool feltShiftApplied, int bargainPrice = 0,
+                Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null)
             {
                 Reply = reply; FeltShift = feltShift; FeltShiftApplied = feltShiftApplied;
-                BargainPrice = bargainPrice;
+                BargainPrice = bargainPrice; Troth = troth; Bless = bless;
             }
             public string Reply { get; }
             public int FeltShift { get; }
@@ -1508,6 +1561,11 @@ namespace ImmersiveAI
             /// the seal popup only AFTER rendering the reply, so her closing words come first and
             /// the choice — the only door through which gold and service move — stays the player's.</summary>
             public int BargainPrice { get; }
+            /// <summary>The courtship road's tally when its hand rode this turn — a laid betrothal
+            /// or wedding is presented AFTER the words, same law as the bargain.</summary>
+            public Tools.TrothTool.Tally? Troth { get; }
+            /// <summary>The blessing's tally when the head of a house weighed the suitor.</summary>
+            public Tools.TrothTool.BlessTally? Bless { get; }
         }
 
         // The trunk of one player→NPC exchange, shared by the conversation panel and the chat window:
@@ -1529,7 +1587,21 @@ namespace ImmersiveAI
             // player — so its whisper and its tool can never drift apart (both keyed to this tally).
             var bargain = CanStrikeBargain(npc) ? new Tools.BargainTool.Tally() : null;
 
-            var ctx = BuildContext(npc, situationOverride, bargainRides: bargain != null);
+            // The blessing's hand comes FIRST: while a kinswoman of this soul awaits their word,
+            // the talk's purpose is the blessing — were the troth's hand to preempt it (many clan
+            // heads are themselves courtable), the blessing could never be laid and the wedding
+            // would deadlock (review find, 2026.08.08). Never both hands at once.
+            Hero? blessBride = null;
+            var bless = CanBlessTroth(npc, out blessBride)
+                ? new Tools.TrothTool.BlessTally { Bride = blessBride } : null;
+            // The troth's hand — and, first, the road's one-time readiness: a soul with a real
+            // lived story is seeded from it ("where does my heart already stand"), and a soul on
+            // the road receives her quiet asks from the matchmaker's ledger.
+            var troth = bless == null && CanTendTroth(npc) ? new Tools.TrothTool.Tally() : null;
+            if (troth != null) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
+
+            var ctx = BuildContext(npc, situationOverride, bargainRides: bargain != null,
+                trothRides: troth != null, blessBride: bless?.Bride);
             var memory = ctx.Memory;
 
             // The opening greeting (if any) is already a recorded turn in the loaded memory,
@@ -1539,7 +1611,7 @@ namespace ImmersiveAI
             var heart = CanMoveHeart() ? new Tools.HeartTool.Tally() : null;
             // The live memory rides along so a hold_truth mid-reply lands in the same instance this
             // turn will record into and save — the end-of-exchange save can never clobber it.
-            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain).ConfigureAwait(false);
+            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
             // How the exchange moved her heart. In the tool shape she moves it herself mid-reply
@@ -1605,7 +1677,7 @@ namespace ImmersiveAI
 
             SaveMemory(npc, memory);
             return new TurnOutcome(reply, feltShift, feltShiftApplied,
-                bargain != null && bargain.Laid ? bargain.Price : 0);
+                bargain != null && bargain.Laid ? bargain.Price : 0, troth, bless);
         }
 
         // The NPC's current standing toward the player, read from the live game relation. Used to give
@@ -1663,6 +1735,15 @@ namespace ImmersiveAI
                     ? $"spoke {richness} time{(richness == 1 ? "" : "s")}"
                     : "no words shared yet");
                 if (daysSince >= 0) sb.Append($" · last {daysSince:0.#}d ago");
+                // The heart's road, worn openly (Anton's ask, 2026.08.08): both windows show where
+                // the courtship stands — the betrothal in its own proud word.
+                if (self._config.EnableConversationMarriage && known != null && known.CourtshipStage > 0)
+                {
+                    var stage = (Core.Courtship.CourtshipStage)known.CourtshipStage;
+                    if (stage == Core.Courtship.CourtshipStage.Betrothed) sb.Append(" · betrothed to you");
+                    else if (stage == Core.Courtship.CourtshipStage.Wed) sb.Append(" · wed to you");
+                    else sb.Append($" · heart's road: {Core.Courtship.CourtshipRoad.StageName(stage)}");
+                }
                 // Why the quiet, in a word: waiting on an answer, or simply resting after a visit paid.
                 if (known != null && known.UnansweredOutreach > 0)
                     sb.Append($" · awaits your answer ({known.UnansweredOutreach} unanswered)");
@@ -2632,8 +2713,11 @@ namespace ImmersiveAI
                         string quietNote = known.UnansweredOutreach > 0
                             ? $", {known.UnansweredOutreach} outreach{(known.UnansweredOutreach == 1 ? "" : "es")} of theirs unanswered (pull damped ×{damping:0.00})"
                             : damping < 0.999 ? $", resting after reaching out (pull damped ×{damping:0.00})" : "";
+                        string roadNote = _config.EnableConversationMarriage && known.CourtshipStage > 0
+                            ? $", heart's road: {Core.Courtship.CourtshipRoad.StageName((Core.Courtship.CourtshipStage)known.CourtshipStage)}"
+                            : string.Empty;
                         sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
-                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago{quietNote}");
+                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago{quietNote}{roadNote}");
                         if (coLocated)
                             sb.AppendLine($"    → pull {pull * 100:0.0}% of a full bond (alone that would be ~{alone:0.00} visits/day; here it is their share of the group's total)");
                         else
@@ -2904,6 +2988,7 @@ namespace ImmersiveAI
                     // seal — the native inquiry rides its own global layer (order 19501) above the
                     // window (4500), takes the keys while up, and returns them when it closes.
                     PresentBargainIfAny(npc, outcome);
+                    PresentTrothIfAny(npc, outcome);
                 });
             }
             catch (Exception ex)
@@ -3039,7 +3124,8 @@ namespace ImmersiveAI
         // user's prompt-file instructions folded in, the scene line, and the player's name. An explicit
         // sceneOverride lets a background flow (an NPC reaching out) pin the exact situation it captured,
         // rather than falling back to the cached-or-rebuilt one used by an open chat.
-        private ChatContext BuildContext(Hero npc, string? sceneOverride = null, bool bargainRides = false)
+        private ChatContext BuildContext(Hero npc, string? sceneOverride = null, bool bargainRides = false,
+            bool trothRides = false, Hero? blessBride = null)
         {
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
@@ -3076,6 +3162,16 @@ namespace ImmersiveAI
             // The bargain's whisper is keyed to the caller's tally (the live reply trunk alone), so
             // whisper and tool always ride together — a letter or a greeting never speaks of it.
             persona.CanStrikeBargain = bargainRides;
+            // The troth's and the blessing's whispers ride the same tally-keyed way; the ROAD
+            // section itself rides every sheet while a road is walked (a betrothed soul writing a
+            // letter knows she is betrothed), tool or no tool.
+            persona.CanTendTroth = trothRides;
+            persona.CourtshipTerms = BuildRoadTerms(npc, memory);
+            if (blessBride != null)
+            {
+                persona.CanBlessTroth = true;
+                persona.SuitorTerms = BuildSuitorTerms(npc, blessBride);
+            }
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;
 

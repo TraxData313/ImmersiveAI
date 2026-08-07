@@ -134,6 +134,30 @@ blesses the match. The blessing is won in conversation WITH HIM — the bargain 
   with consent OFF, or a clanless/companion bride, or a bride who leads her own clan, no
   blessing is asked of anyone.
 
+## The night's additions (2026.08.08, Anton's asks before bed)
+
+- **The road in the windows**: the bond-stats line in BOTH windows carries the stand ("heart's
+  road: devotion" / "betrothed to you"), and the odds view lists it per soul.
+- **The betrothal's shield**: mirroring into vanilla romance (any state ≥ 3) removes a courted
+  lady from the daily NPC-marriage lottery; vanilla can demote the mirror when its own dialog
+  opens in a blocked hour, so the mirror is RE-ASSERTED on every courtship exchange (idempotent).
+- **The father in the letter window**: once a betrothal stands — ours, or even one agreed the
+  vanilla way (CoupleAgreedOnMarriage) — the head of the bride's house is unlocked as a letter
+  correspondent, met or never met. His memory begins the day he reads the first letter.
+- **Marry Anyone (polygamy)**: detected by loaded assembly name; with it present the player's
+  own standing marriage no longer hard-blocks a new courtship — the marriage MODEL (which such
+  mods patch) remains the law at every seal, so without the mod vanilla still refuses honestly.
+  One standing troth at a time either way; wives archive into ExSpouses exactly as the mod
+  ecosystem already expects (FamilyBuilder reads them as wives).
+- **Offers ride letters**: the letter-ANSWER flow carries the bargaining hands (byLetter). What
+  a reply lays — hiring terms, a betrothal, a blessing — travels WITH the letter (persisted in
+  the bag; old letters load as plain) and is presented when it arrives, after the reading; the
+  seal re-runs every rule days later. A letter-sealed hire brings her to the banner (teleport
+  fallback); the WEDDING day alone refuses paper — face to face only. Offer letters skip the
+  parked-notice road so the offer is never stranded behind an unopened window.
+- **Same-sex matches**: deliberately not built — the road defers to the world's own law
+  (vanilla's opposite-sex rule), no separate editorializing, no test investment.
+
 ## Config surface
 
 | Key | Default | MCM |

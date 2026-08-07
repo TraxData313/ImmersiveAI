@@ -92,27 +92,30 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@HasSelection">
                   <Children>
 
-                    <!-- header: their name, and the road's state -->
-                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="44" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                    <!-- header: their name, and the road's state. Sits 28px down so it clears the
+                         window bar's own right-side row (World prompt / ? / X, window y 8–42) —
+                         the two rows once stacked over each other (Anton's screenshots, 2026.08.07);
+                         MarginRight clears this row's own button. -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="28" MarginRight="210" StackLayout.LayoutMethod="HorizontalLeftToRight">
                       <Children>
                         <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
                         <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="16" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@RelationColor" Brush.TextHorizontalAlignment="Left" Text="@RelationText" IsVisible="@HasRelation" />
                       </Children>
                     </ListPanel>
                     <!-- the editing door to this one's custom_instructions.txt (in-game editor; edits ride the next reply) -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginRight="44" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@HasSelection">
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="44" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@HasSelection">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="Their prompt" />
                       </Children>
                     </ButtonWidget>
 
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="42" MarginRight="200" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@StatusText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="72" MarginRight="200" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@StatusText" />
 
                     <!-- the bond's own mechanics: shared story, freshness, the hour's chance they write -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="63" MarginRight="44" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="93" MarginRight="44" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
 
                     <!-- the letters -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="88" MarginBottom="@EntriesBottomMargin">
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="120" MarginBottom="@EntriesBottomMargin">
                       <Children>
                         <ScrollablePanel Id="LettersScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="LettersClip" InnerPanel="LettersClip\LettersList" VerticalScrollbar="..\LettersScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
                           <Children>

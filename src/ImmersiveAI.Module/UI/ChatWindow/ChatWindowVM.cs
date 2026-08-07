@@ -588,9 +588,11 @@ namespace ImmersiveAI.UI.ChatWindow
         public bool ShowOverviewBlock => HasOverview && _isOverviewShown;
 
         /// <summary>Where the thread begins vertically: under the header and its bond line, or under
-        /// the unfolded overview block. Bound as the thread's top margin so the layout reflows.</summary>
+        /// the unfolded overview block. Bound as the thread's top margin so the layout reflows.
+        /// (Shifted +36 on 2026.08.08 with the header's own move below the window bar — the corner
+        /// buttons once stacked over each other and the name; Anton's screenshots.)</summary>
         [DataSourceProperty]
-        public float MessagesTopMargin => ShowOverviewBlock ? 256f : 68f;
+        public float MessagesTopMargin => ShowOverviewBlock ? 288f : 104f;
 
         private void OnOverviewLayoutChanged()
         {

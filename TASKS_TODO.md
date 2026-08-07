@@ -1,55 +1,12 @@
 BUGS:
 
 NEXT UPDATE:
-- [ ] MARRIAGE BY COURTSHIP — the wedding handshake (Anton, 2026.08.07; DESIGN BRIEF, take in a
-      FRESH session: needs an ilspycmd pass over vanilla Romance/Marriage first). The bargain-tool
-      mold applied to marriage: words move the heart, ONLY the player's sealed click weds.
-      THE ONE LAW (inherited from strike_bargain): talk alone never marries — a native tool only
-      LAYS the moment (betrothal, then wedding), the only door is a confirm popup, and lay AND seal
-      both re-run every hard rule. The refusal must never name a threshold verbatim (the Sibuga
-      floor lesson — she parroted it); she hints, she never quotes her own rails.
-      • THE ROAD (his "стълбове"): a persistent courtship stage per NPC — Stranger → Warmth ("I
-        like him") → Devotion ("I really like him") → Ready ("no questions left; I feel ready") →
-        Betrothed (годеж — a recorded first-person beat, "I have promised myself to them") → Wed.
-        She moves HERSELF along it via a new native tool (plight_troth / tend_courtship — the
-        move_heart family), one step at a time, forward only when her asks + the rails allow,
-        backward always free (a wound can break it). PERSIST THE STAGE INSIDE memories.json (new
-        NpcMemory fields) — then RevertMemoriesWithSaves rewinds courtship with the save for free.
-      • THE STATION GATE (his clan-size rail, like the haggle %): required player Clan.Tier from
-        HER station — ruler's daughter/kin 6, great lord's kin 4–5, minor noble 3, notable's
-        daughter 2, wanderer 1 — minus up to CourtshipCharmSlack (default 2, MCM 0..4) earned only
-        at full Devotion/Ready (the Don-Juan discount). Checked at every stage-up toward Betrothed,
-        rechecked at both seals. So the emperor's daughter at tier-0 player = walls, exactly asked.
-      • HER QUIET ASKS (generated, private, checkable): at the first true marriage-talk (or on
-        reaching Warmth) a one-time utility call — the persona-spark's sibling, "the matchmaker's
-        ledger" — writes 2–4 private requirements from her story/traits/spark/world text, EACH tied
-        where possible to a checkable predicate the resolver can answer from live data: "a man of
-        his word" (Honor/known deeds/relation), "he must hold at least X denars" (Hero.Gold),
-        "no stranger to the sword" (renown/skills), "he must love God" (Anton's Biblical world
-        text). Folded into her sheet PRIVATELY ("What I quietly ask of a husband — never as a
-        list, they surface as talk turns"), exactly his 'real woman' ask: she KNOWS them, she
-        never recites them. weigh_troth (or the same tool's look mode) tells HER which are truly
-        met — she speaks it humanly.
-      • THE TWO SEALS: proposal at Ready → tool lays BETROTHAL → popup ("Take her promise?") →
-        recorded beats both sides; later (config: at once, or after N days of betrothal — decide
-        with Anton) the wedding lay → popup naming what the world requires (dowry via vanilla
-        MarriageModel? optional) → MarriageAction.Apply + honest beats ("We are wed; I am his/hers").
-      • VANILLA RESEARCH LIST (verify with ilspycmd against the real DLLs before designing final):
-        Romance.GetRomanticLevel/ChangeRomanticState + RomanceLevelEnum (does courtship state help
-        or fight us?), MarriageAction.Apply overloads (companion brides? clan moves?), MarriageModel
-        (IsCoupleSuitableForMarriage, dowry), consent/family — and the MCM toggle
-        MarriageNeedsFamilyConsent (his explicit ask: configurable skip of parent approval; decide
-        default with him). Marry Anyone interplay: ALWAYS FamilyBuilder.AreWed/SpousesOf, never bare
-        Spouse (see memory polygamy-exspouses-truth); what does a second marriage mean here?
-      • THE TWO WALKTHROUGHS to design against: SIBILA (wanderer, tier gate 1, real history + his
-        authored secret-love instruction — the road is the feature: Warmth→Ready over a few true
-        talks, asks like "he must not cage me; I ride free"); vs AN EMPEROR'S DAUGHTER (gate 6,
-        slack −2 at best → tier 4 floor, asks harder, family consent looming — near-impossible for
-        a nobody, a campaign-long prize for a Don Juan).
-      • MCM: EnableConversationMarriage (default on?), MarriageNeedsFamilyConsent,
-        CourtshipCharmSlack; test levers: show-the-road odds view line + a DevMode "reveal her
-        quiet asks" + reroll-asks lever.
-- [ ] BUG The buttons "Their prompt", "World prompt", Memory (dev option, forgot the real name) are stacking over each other and over the NPC name and details (example screenshot C:\Program Files (x86)\Steam\userdata\258577504\760\remote\261550\screenshots\20260807193017_1)
+- [ ] PLAYTEST the marriage-by-courtship wave (built 2026.08.08, all green, none of it playtested):
+      Sibylla's seeding (expect devotion/ready from her lived story), the road's steps + notices,
+      the betrothal + wedding seals, a companion wedding (graduation, cutscene, she keeps her
+      scout post), the blessing bargain with a noble bride's clan head (face to face AND by
+      letter), offers riding letters (hiring / betrothal / blessing popup on arrival), the
+      windows' fixed corner buttons, and "g" typed in chat no longer opening Training Battles.
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)

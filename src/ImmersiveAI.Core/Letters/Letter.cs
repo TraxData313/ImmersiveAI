@@ -39,5 +39,25 @@ namespace ImmersiveAI.Core.Letters
         /// road must not be readable through the letter window. Defaults true so letters persisted
         /// before this flag existed (already logged at send) are never logged twice.</summary>
         public bool Logged { get; set; } = true;
+
+        // ------------------------- an offer riding with the letter (2026.08.08) -------------------------
+        // A bargain can be agreed in writing too: the writer's reply may LAY a formal offer that
+        // travels WITH the letter and is presented to the player only on arrival — the same one law
+        // as in speech (the popup is the only door, and the seal re-runs every hard rule, days
+        // later though it may be). Empty kind = a plain letter, what every old file loads as.
+
+        /// <summary>What the letter lays, if anything: "" (nothing), "betrothal" (the writer's
+        /// promise of marriage), "blessing" (a clan head's blessing at a bride-price), or
+        /// "hiring" (an unhired sellsword's terms of service).</summary>
+        public string LaidKind { get; set; } = string.Empty;
+
+        /// <summary>The gold the laid offer names (bride-price or hiring price); 0 when none.</summary>
+        public int LaidPrice { get; set; }
+
+        /// <summary>The writer's own short word carried with the offer (a betrothal's reason).</summary>
+        public string LaidWord { get; set; } = string.Empty;
+
+        /// <summary>For a blessing: the betrothed kinswoman the blessing concerns (hero string id).</summary>
+        public string LaidBrideId { get; set; } = string.Empty;
     }
 }

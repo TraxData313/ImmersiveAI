@@ -37,6 +37,11 @@ namespace ImmersiveAI.Tools
             public bool LaidBetrothal;
             public bool LaidWedding;
             public string Word = string.Empty;
+            /// <summary>True when this turn is a LETTER being written, not a live talk: her heart
+            /// still walks its road and a betrothal may be laid in writing (presented when the
+            /// letter arrives), but a wedding day is never laid by letter — that is done face to
+            /// face, and the resolver says so.</summary>
+            public bool ByLetter;
         }
 
         /// <summary>What the head of the house laid, filled by the resolver.</summary>
@@ -45,6 +50,9 @@ namespace ImmersiveAI.Tools
             public bool Laid;
             public int Price;
             public Hero? Bride;
+            /// <summary>True when the blessing is being laid in a LETTER — no notice fires at
+            /// composing time (the courier's seal law), and the offer rides to arrival.</summary>
+            public bool ByLetter;
         }
 
         public static readonly ToolDefinition Tend = new ToolDefinition(TendCourtship,

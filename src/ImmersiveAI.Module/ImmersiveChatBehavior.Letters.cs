@@ -283,7 +283,7 @@ namespace ImmersiveAI
 
         // Queues one letter onto the road (travel time from the real map distance between the two
         // ends right now), saves the bag, and writes the human-readable correspondence log.
-        private void QueueLetter(Hero npc, string body, bool toPlayer, bool isReply)
+        private void QueueLetter(Hero npc, string body, bool toPlayer, bool isReply, Action<Letter>? dress = null)
         {
             if (_letterBag == null) return;
 
@@ -305,6 +305,9 @@ namespace ImmersiveAI
                 // be able to read words still on the road. The player's own letters log at once.
                 Logged = !toPlayer,
             };
+
+            // A laid offer (hiring / betrothal / blessing) dresses the letter before it rides.
+            dress?.Invoke(letter);
 
             _letterBag.Add(letter);
             SaveLetterBag();
@@ -412,12 +415,19 @@ namespace ImmersiveAI
                     InformationManager.DisplayMessage(new InformationMessage(
                         $"A letter from {name} has reached you.", InitiationLogColor));
 
+                // A letter carrying a laid offer (hiring terms, a promise of marriage, a house's
+                // blessing) is presented in full, popup-first: the words are read, and as the
+                // reading closes, the offer itself stands before the player to seal or let lie —
+                // the same one door as in speech, only the courier carried it. The parked-notice
+                // road would leave the offer stranded behind an unopened window.
+                bool carriesOffer = npc != null && !string.IsNullOrEmpty(letter.LaidKind);
+
                 // The knock, chat-style: a persistent portrait notice whose click opens the letter
                 // WINDOW on the writer's thread — the reading happens where the correspondence
                 // lives, not in a popup blocking the map. Needs a living writer (the window's road
                 // runs through the hero) and the notice + window UI truly up; every other case
                 // keeps the classic inquiry below.
-                if (npc != null && _config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied
+                if (npc != null && !carriesOffer && _config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied
                     && _config.EnableLetterWindow)
                 {
                     _pendingLetterNotices.Add(npc.StringId);
@@ -437,11 +447,14 @@ namespace ImmersiveAI
                 // Write back only while there is still someone to answer.
                 if (npc != null)
                 {
+                    var heldLetter = letter;
+                    Action presentOffer = () => PresentLetterOfferIfAny(npc, heldLetter);
                     var data = new InquiryData(
                         title, body, true, true,
                         new TextObject("{=ImmersiveAI_LetterReply}Write back").ToString(),
                         new TextObject("{=ImmersiveAI_LetterAside}Set it aside").ToString(),
-                        new Action(() => OpenWriteBack(npc)), new Action(() => { }),
+                        new Action(() => { OpenWriteBack(npc); presentOffer(); }),
+                        new Action(() => presentOffer()),
                         "", 0f, (Action?)null,
                         (Func<ValueTuple<bool, string>>?)null,
                         (Func<ValueTuple<bool, string>>?)null);
@@ -653,11 +666,34 @@ namespace ImmersiveAI
                     return;
                 }
 
-                var replyCtx = BuildContext(npc, situation);
+                // The bargaining hands ride the letter too (Anton's QoL ask, 2026.08.08): terms can
+                // be agreed in correspondence — a hiring, a promise of marriage, a house's blessing
+                // at a bride-price. What a reply LAYS travels WITH the letter and is presented to
+                // the player only when it arrives; the one law holds across the distance (the seal
+                // popup is the only door, and it re-runs every rule, days later though it may be).
+                // The wedding day alone refuses paper — that is made face to face. ONE hand per
+                // letter (a letter carries one laid offer), in the order of what the moment most
+                // needs: the blessing first (a deadlock otherwise — many clan heads are themselves
+                // courtable), then the troth, then the hiring.
+                Hero? blessBride = null;
+                var bless = CanBlessTroth(npc, out blessBride, byLetter: true)
+                    ? new Tools.TrothTool.BlessTally { Bride = blessBride, ByLetter = true } : null;
+                var troth = bless == null && CanTendTroth(npc, byLetter: true)
+                    ? new Tools.TrothTool.Tally { ByLetter = true } : null;
+                var bargain = bless == null && troth == null && CanStrikeBargain(npc, byLetter: true)
+                    ? new Tools.BargainTool.Tally { ByLetter = true } : null;
+                if (troth != null) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
+                // The reply flow has grown stages (spark, desire, seeding, asks, the tool-looped
+                // compose) — refresh the watchdog so a legitimate slow run is never mistaken for a
+                // lost one and doubled (review find, 2026.08.08).
+                MarkLetterWorkInFlight();
+
+                var replyCtx = BuildContext(npc, situation, bargainRides: bargain != null,
+                    trothRides: troth != null, blessBride: bless?.Bride);
                 var composeLine = PromptBuilder.ComposeReplyLine(ctx.PlayerName);
                 var composeMsgs = _promptBuilder.BuildInnerPrompt(
                     replyCtx.Persona, replyCtx.Memory, replyCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
-                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
+                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc, null, replyCtx.Memory, bargain, troth, bless).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
 
                 // An invited answer, not an outreach — but it still rests them (no spontaneous letter
@@ -667,7 +703,27 @@ namespace ImmersiveAI
                 var writer = npc;
                 MainThreadDispatcher.Enqueue(() =>
                 {
-                    if (body.Length > 0) QueueLetter(writer, body, toPlayer: true, isReply: true);
+                    if (body.Length > 0) QueueLetter(writer, body, toPlayer: true, isReply: true, dress: letter =>
+                    {
+                        // The laid offer rides the same courier as the words that made it. At most
+                        // one hand rode this reply (the exclusivity above), so nothing can be dropped.
+                        if (bless != null && bless.Laid)
+                        {
+                            letter.LaidKind = "blessing";
+                            letter.LaidPrice = bless.Price;
+                            letter.LaidBrideId = bless.Bride?.StringId ?? string.Empty;
+                        }
+                        else if (troth != null && troth.LaidBetrothal)
+                        {
+                            letter.LaidKind = "betrothal";
+                            letter.LaidWord = troth.Word;
+                        }
+                        else if (bargain != null && bargain.Laid)
+                        {
+                            letter.LaidKind = "hiring";
+                            letter.LaidPrice = bargain.Price;
+                        }
+                    });
                     _letterWorkInFlight = false;
                 });
             }
@@ -908,6 +964,57 @@ namespace ImmersiveAI
 
                     result.Add(new LetterContactInfo(
                         hero, name, folder, hasLetters, memory?.LastConversationGameDay ?? -1, detail));
+                }
+
+                // The suitor's road to the family (Anton's QoL ask, 2026.08.08): once a betrothal
+                // stands — through the courtship road, or even agreed the vanilla way — the head of
+                // the bride's house is unlocked as a correspondent, blessing still unspoken or not,
+                // so no one combs the map for a father with no known hall. He may never have spoken
+                // with the player at all; his memory begins the day he reads the first letter.
+                var cfg = self._config;
+                if (cfg.EnableConversationMarriage && cfg.MarriageNeedsFamilyConsent)
+                {
+                    // Two sources, told apart honestly: OUR betrothals can win the head's blessing
+                    // in the correspondence itself; a match agreed the VANILLA way settles its final
+                    // terms in person — the unlock there is for finding and writing the kin at all.
+                    var brides = new List<(Hero Bride, bool ModRoad)>();
+                    foreach (var known in MemoryIndex.All(root, NpcPaths.MemoryFileName, self._memoryStore))
+                    {
+                        if ((Core.Courtship.CourtshipStage)known.CourtshipStage != Core.Courtship.CourtshipStage.Betrothed)
+                            continue;
+                        var bride = FindAliveHero(known.NpcId);
+                        if (bride != null) brides.Add((bride, true));
+                    }
+                    try
+                    {
+                        foreach (var state in Romance.RomanticStateList)
+                        {
+                            if (state == null || state.Level != Romance.RomanceLevelEnum.CoupleAgreedOnMarriage) continue;
+                            var partner = state.Partner(Hero.MainHero);
+                            if (partner != null && partner.IsAlive && !brides.Any(b => b.Bride == partner))
+                                brides.Add((partner, false));
+                        }
+                    }
+                    catch { /* the vanilla ledger is a bonus source */ }
+
+                    foreach (var (bride, modRoad) in brides)
+                    {
+                        if (bride.IsWanderer) continue; // her own word is her family
+                        var clan = bride.Clan;
+                        var head = clan?.Leader;
+                        if (head == null || !head.IsAlive || head == bride
+                            || head == Hero.MainHero || clan == Clan.PlayerClan) continue;
+                        if (result.Any(c => c.Hero == head)) continue;
+
+                        NpcPaths.EnsureMigrated(head);
+                        var headFolder = NpcPaths.NpcFolder(head);
+                        result.Add(new LetterContactInfo(
+                            head, head.Name?.ToString() ?? "The head of the house", headFolder,
+                            File.Exists(Path.Combine(headFolder, NpcPaths.CorrespondenceFileName)), -1,
+                            modRoad
+                                ? $"head of {bride.Name}'s house — the blessing of your match is theirs to give"
+                                : $"head of {bride.Name}'s house — the marriage's final terms are settled with them in person"));
+                    }
                 }
             }
             catch { /* an unreadable list entry only costs the list */ }

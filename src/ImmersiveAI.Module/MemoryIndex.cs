@@ -10,8 +10,12 @@ namespace ImmersiveAI
     /// facts per NPC (richness, last-talk day, name): the hourly letter roll and the per-hour
     /// co-located pulls used to re-parse every memories.json each time — fine at 30 NPCs, real
     /// I/O at 300. Entries are keyed by file path and self-invalidate on the file's write stamp,
-    /// so saves, snapshot restores, and hand-edits all take effect with no wiring. Game-thread
-    /// only (like all the callers). Best-effort: a parse failure just means "no entry".
+    /// so saves, snapshot restores, and hand-edits all take effect with no wiring. THREAD-SAFE
+    /// since 2026.08.08 (the courtship resolvers and the letter-answer flow read it from LLM
+    /// worker threads while the hourly rolls walk it on the game thread): the cache dictionary is
+    /// guarded by a lock, file IO deliberately outside it — a rare duplicate parse is cheaper than
+    /// the game thread waiting on a worker's disk read. Best-effort: a parse failure just means
+    /// "no entry".
     /// </summary>
     internal static class MemoryIndex
     {
@@ -23,12 +27,17 @@ namespace ImmersiveAI
             public double LastTalkGameDay = -1;
             public double LastOutreachGameDay = -1;
             public int UnansweredOutreach;
+            /// <summary>The courtship road's stage as a raw int (see Core CourtshipStage) — read by
+            /// the bond-stats line, the odds view, and the one-troth-at-a-time rule without loading
+            /// the whole memory.</summary>
+            public int CourtshipStage;
             public DateTime StampUtc;
             public long Length;
         }
 
         private static readonly Dictionary<string, Entry> Cache =
             new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        private static readonly object CacheLock = new object();
 
         /// <summary>The cached facts for one memory file, re-parsed only when it changed on disk.</summary>
         internal static Entry? Get(string memFile, JsonMemoryStore store)
@@ -36,11 +45,18 @@ namespace ImmersiveAI
             try
             {
                 var info = new FileInfo(memFile);
-                if (!info.Exists) { Cache.Remove(memFile); return null; }
+                if (!info.Exists)
+                {
+                    lock (CacheLock) Cache.Remove(memFile);
+                    return null;
+                }
 
-                if (Cache.TryGetValue(memFile, out var hit)
-                    && hit.StampUtc == info.LastWriteTimeUtc && hit.Length == info.Length)
-                    return hit;
+                lock (CacheLock)
+                {
+                    if (Cache.TryGetValue(memFile, out var hit)
+                        && hit.StampUtc == info.LastWriteTimeUtc && hit.Length == info.Length)
+                        return hit;
+                }
 
                 var memory = store.LoadFrom(memFile, string.Empty);
                 var entry = new Entry
@@ -51,10 +67,11 @@ namespace ImmersiveAI
                     LastTalkGameDay = memory.LastConversationGameDay,
                     LastOutreachGameDay = memory.LastOutreachGameDay,
                     UnansweredOutreach = memory.UnansweredOutreachCount,
+                    CourtshipStage = (int)memory.CourtshipStage,
                     StampUtc = info.LastWriteTimeUtc,
                     Length = info.Length,
                 };
-                Cache[memFile] = entry;
+                lock (CacheLock) Cache[memFile] = entry;
                 return entry;
             }
             catch { return null; }

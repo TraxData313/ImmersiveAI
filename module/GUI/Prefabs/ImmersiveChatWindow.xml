@@ -96,31 +96,36 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@HasSelection">
                   <Children>
 
-                    <!-- header: their name, how their heart stands toward you, and the deep-memory toggle -->
-                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="240" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                    <!-- header: their name and how their heart stands toward you. Sits 28px down so
+                         it clears the window bar's own right-side row (World prompt / ? / X, window
+                         y 8–42): the two rows once shared the corner and stacked over each other
+                         (Anton's screenshots, 2026.08.07). MarginRight clears this row's own two
+                         buttons (Their prompt's left edge sits at inner-right 366). -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="28" MarginRight="380" StackLayout.LayoutMethod="HorizontalLeftToRight">
                       <Children>
                         <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
                         <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="16" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@RelationColor" Brush.TextHorizontalAlignment="Left" Text="@RelationText" IsVisible="@HasRelation" />
                       </Children>
                     </ListPanel>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginRight="44" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleOverview" IsVisible="@HasOverview">
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleOverview" IsVisible="@HasOverview">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Center" Text="@OverviewToggleText" />
                       </Children>
                     </ButtonWidget>
 
                     <!-- the editing door to this one's custom_instructions.txt (in-game editor; edits ride the next reply) -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginRight="252" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@HasSelection">
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="216" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@HasSelection">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="Their prompt" />
                       </Children>
                     </ButtonWidget>
 
-                    <!-- the bond's own mechanics: shared story, freshness, the hour's chance they come -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="42" MarginRight="240" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
+                    <!-- the bond's own mechanics: shared story, freshness, the hour's chance they come
+                         (full width — the buttons live on the row above now) -->
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="72" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
 
                     <!-- the deep-memory overview: what lingers of you beyond the thread -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="68" IsVisible="@ShowOverviewBlock">
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="100" IsVisible="@ShowOverviewBlock">
                       <Children>
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.05" />
                         <ScrollablePanel Id="OverviewScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="10" MarginRight="18" MarginTop="8" MarginBottom="8" ClipRect="OverviewClip" InnerPanel="OverviewClip\OverviewBody" VerticalScrollbar="..\OverviewScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">

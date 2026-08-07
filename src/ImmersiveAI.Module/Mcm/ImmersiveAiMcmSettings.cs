@@ -209,6 +209,36 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public Dropdown<string> PersonaSparkMode { get; set; } = new Dropdown<string>(McmChoiceLists.SparkModes, 0);
 
+        [SettingPropertyBool("Marriage by courtship", Order = 12, RequireRestart = false,
+            HintText = "Characters can truly be courted: their heart walks a real road (liking, love, readiness, betrothal, wedding) moved by their own judgment of your talks, with private wishes they hint at but never recite. Nothing is sealed by words alone - betrothal and wedding each take your confirming click, and the wedding is the real game marriage.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableConversationMarriage { get; set; } = true;
+
+        [SettingPropertyBool("Companion brides & grooms", Order = 13, RequireRestart = false,
+            HintText = "Allows marrying a wanderer who rides as your companion (vanilla forbids it). At the wedding they are raised to lordship the game's own way - they keep their place and duties in your party, and the marriage is fully real. Off: noble spouses only.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool AllowCompanionMarriage { get; set; } = true;
+
+        [SettingPropertyBool("Family consent for noble brides", Order = 14, RequireRestart = false,
+            HintText = "A noble bride's house must bless the match before the wedding: seek the head of her clan (in person or by letter) and settle the bride-price - haggled like any bargain, sealed only by your click. Off: no one's blessing is asked.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool MarriageNeedsFamilyConsent { get; set; } = true;
+
+        [SettingPropertyInteger("Bride-price haggling range (%)", 0, 90, "0", Order = 15, RequireRestart = false,
+            HintText = "How far words can move the bride-price from the world's own reckoning (the bride's clan renown), either way. 0 = the reckoning is the price. A hard rule the mod enforces, whatever is said.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int MarriageDowryHagglePercent { get; set; } = 30;
+
+        [SettingPropertyInteger("Courtship charm slack (clan tiers)", 0, 4, "0", Order = 16, RequireRestart = false,
+            HintText = "How many clan tiers below a bride's station your house may stand and still win her hand - earned only once her heart is fully won. At 2, an emperor's daughter (station 6) can be won by a tier-4 house. 0 = station is destiny.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int CourtshipCharmSlack { get; set; } = 2;
+
+        [SettingPropertyInteger("Days of betrothal before the wedding", 0, 30, "0", Order = 17, RequireRestart = false,
+            HintText = "How many in-game days a betrothal must season before the wedding day can be reached for. 0 = you may wed the very day of the promise.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int MinBetrothalDays { get; set; } = 3;
+
         [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]

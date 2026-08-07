@@ -187,9 +187,14 @@ namespace ImmersiveAI.Core.Courtship
         public static string BlessingDeclinedBeat(string playerName, string brideName, int price) =>
             $"I laid my terms before {playerName} — {price} denars as the bride-price for {brideName}'s hand — and they let the offer lie. The blessing of our house stays unspent, and the matter is theirs to return to.";
 
-        /// <summary>The news reaching HER, wherever she is — a silent beat in the bride's memory.</summary>
-        public static string BlessingNewsBeat(string playerName, string headOfHouse) =>
-            $"Word reaches me: {headOfHouse}, the head of my house, has given his blessing to the match between {playerName} and me. The road to our wedding day lies open.";
+        /// <summary>The news reaching HER, wherever she is — a silent beat in the bride's memory.
+        /// The head of a house may be a woman (a widowed mother, an elder sister) — the beat is
+        /// recorded forever, so the possessive must be truly theirs.</summary>
+        public static string BlessingNewsBeat(string playerName, string headOfHouse, bool headIsFemale = false)
+        {
+            var their = headIsFemale ? "her" : "his";
+            return $"Word reaches me: {headOfHouse}, the head of my house, has given {their} blessing to the match between {playerName} and me. The road to our wedding day lies open.";
+        }
 
         // ------------------------- small shared phrasing -------------------------
 

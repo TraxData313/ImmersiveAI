@@ -12,6 +12,45 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **New: marriage by courtship — win a heart, walk its road, wed for real.** Characters can now
+  truly be courted through conversation: their heart walks its own road — liking, love,
+  readiness, betrothal, wedding — moved by their own judgment of your talks, one honest step at
+  a time. Nothing is sealed by words alone: the betrothal and the wedding each take your
+  confirming click, and the wedding is the real game marriage — cutscene, clan, children, the
+  world's gossip and all.
+- Every heart keeps its own quiet wishes: at the road's start, one small AI call writes each
+  courted character 2–4 private asks of the one they would wed — grown from their story, nature
+  and your world prompt ("he must be no stranger to the sword", "he must not cage me"). They
+  know them in their bones, hint at them in talk, never recite them — and some can only be
+  judged by their own heart.
+- Station guards the hand, not the heart: a great house's daughter may come to love anyone, but
+  her hand asks a suitor of standing — softened by up to a few ranks once her heart is fully won
+  (the "charm slack"). An emperor's daughter is a campaign-long prize, exactly as it should be.
+- Noble kin must bless the match: before a noble bride can wed, the head of her house asks a
+  bride-price — haggled in real talk (or by letter) around the world's own reckoning, sealed
+  only by your click. Once betrothed, the head of her house appears in your letter window even
+  if you have never met — no more combing the map for a father.
+- Companion brides and grooms are first-class (vanilla forbids them; here they are the point):
+  wed the wanderer who rides at your side — at the wedding they are raised to lordship the
+  game's own way, keeping their place and duties in your party.
+- A love already lived is honored: a character with real history (love spoken across many talks)
+  starts the road where their own remembered story says their heart already stands — not at zero
+  just because the feature is new.
+- The road is visible: every step fires its own soft notice ("Her heart is truly given."), both
+  windows show the stand beside the bond line ("betrothed to you"), and a betrothed character is
+  shielded from the game marrying them off to someone else while you arrange the rest.
+- Bargains now travel by letter too: hiring terms, a promise of betrothal, or a house's blessing
+  can be agreed in correspondence — the offer rides with the letter and stands before you when
+  it arrives, sealed (or let lie) by the same confirming click. The wedding day alone is never
+  laid on paper — that is done face to face.
+- Plays well with polygamy mods (Marry Anyone): with one installed, an existing marriage no
+  longer bars a new courtship — the game's (patched) marriage rules stay the judge.
+- New mod options under "Life of the NPCs": Marriage by courtship (on/off), Companion brides &
+  grooms, Family consent for noble brides, Bride-price haggling range, Courtship charm slack,
+  and Days of betrothal before the wedding.
+- Fix: the chat and letter windows' corner buttons ("Their prompt", "World prompt", "Deep
+  memory") no longer stack over each other or over a long character name — the header breathes
+  now.
 - **New: the director's spark — every soul begins as somebody.** The first time you interact
   with a character, one small AI call writes them a private starting truth (1–3 sentences in
   their own voice — an old wound, an odd habit, a vanity, sometimes something wilder), grown

@@ -238,6 +238,8 @@ namespace ImmersiveAI.Mcm
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch, s.MaxKnownFacts, s.MaxNpcGoals,
                 s.EnableConversationHiring, s.ConversationHiringHagglePercent,
+                s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
+                s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 SelectedOf(s.PersonaSparkMode),
                 s.RevertMemoriesWithSaves, s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
         }
@@ -256,6 +258,8 @@ namespace ImmersiveAI.Mcm
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
                 c.EnableLetters, c.EnableWorldRecall, c.EnableWebSearch, c.MaxKnownFacts, c.MaxNpcGoals,
                 c.EnableConversationHiring, c.ConversationHiringHagglePercent,
+                c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
+                c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.PersonaSparkMode,
                 c.RevertMemoriesWithSaves, c.ShowCostNotices, c.MaxDailyRequests, c.DevMode);
         }
@@ -301,6 +305,12 @@ namespace ImmersiveAI.Mcm
             s.MaxNpcGoals = Clamp(c.MaxNpcGoals, 1, 20);
             s.EnableConversationHiring = c.EnableConversationHiring;
             s.ConversationHiringHagglePercent = Clamp(c.ConversationHiringHagglePercent, 0, 90);
+            s.EnableConversationMarriage = c.EnableConversationMarriage;
+            s.AllowCompanionMarriage = c.AllowCompanionMarriage;
+            s.MarriageNeedsFamilyConsent = c.MarriageNeedsFamilyConsent;
+            s.MarriageDowryHagglePercent = Clamp(c.MarriageDowryHagglePercent, 0, 90);
+            s.CourtshipCharmSlack = Clamp(c.CourtshipCharmSlack, 0, 4);
+            s.MinBetrothalDays = Clamp(c.MinBetrothalDays, 0, 30);
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
 
@@ -357,6 +367,12 @@ namespace ImmersiveAI.Mcm
             c.MaxNpcGoals = s.MaxNpcGoals;
             c.EnableConversationHiring = s.EnableConversationHiring;
             c.ConversationHiringHagglePercent = s.ConversationHiringHagglePercent;
+            c.EnableConversationMarriage = s.EnableConversationMarriage;
+            c.AllowCompanionMarriage = s.AllowCompanionMarriage;
+            c.MarriageNeedsFamilyConsent = s.MarriageNeedsFamilyConsent;
+            c.MarriageDowryHagglePercent = s.MarriageDowryHagglePercent;
+            c.CourtshipCharmSlack = s.CourtshipCharmSlack;
+            c.MinBetrothalDays = s.MinBetrothalDays;
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;
 

@@ -496,6 +496,47 @@ namespace ImmersiveAI
         /// popup then says to your face. Clamped to [0,90] in <see cref="Normalize"/>.</summary>
         public int ConversationHiringHagglePercent { get; set; } = 30;
 
+        /// <summary>Marriage by courtship (2026.08.07, Anton's ask — the wedding handshake): NPCs
+        /// walk a real road toward marrying the player (liking → love → readiness → betrothal →
+        /// wedding), moved by their OWN hand mid-conversation (the tend_courtship tool — needs a
+        /// tool-capable backend) under hard rails: relation floors, one step a game day, the station
+        /// gate (a great house asks a great suitor), and their own generated private asks. NOTHING
+        /// is settled by talk alone — betrothal and wedding each take a confirm popup, and the
+        /// wedding is the real game marriage with all its consequences. Souls with a real story are
+        /// seeded once from it, so a love already spoken is honored. Default on.</summary>
+        public bool EnableConversationMarriage { get; set; } = true;
+
+        /// <summary>When true (the default — vanilla forbids it, but here it is the point: the first
+        /// true bonds are with companions), a wanderer riding as the player's companion can be wed
+        /// through the courtship road. At the wedding seal she is raised to lordship by the game's
+        /// own companion-to-lord shape — she keeps her place in the party and her duties, and the
+        /// marriage is fully real (clan, children, encyclopedia). Off = noble spouses only.</summary>
+        public bool AllowCompanionMarriage { get; set; } = true;
+
+        /// <summary>When true (the default), a noble bride with kin above her cannot be WED until
+        /// the head of her house blesses the match — won in conversation (or by letter) with that
+        /// very person, at a bride-price haggled around the world's own reckoning (her clan's
+        /// renown, as vanilla's own marriage barter prices it). The betrothal itself needs no
+        /// blessing — a promise belongs to the two of them. Wanderer brides have no house to ask.
+        /// Off = no family consent asked of anyone.</summary>
+        public bool MarriageNeedsFamilyConsent { get; set; } = true;
+
+        /// <summary>How far spoken haggling may move the bride-price from the world's reckoning,
+        /// either way, in percent — the same HARD rail as the hiring haggle. 0 = the reckoning is
+        /// the price. Clamped to [0,90] in <see cref="Normalize"/>.</summary>
+        public int MarriageDowryHagglePercent { get; set; } = 30;
+
+        /// <summary>The Don-Juan discount: how many clan tiers below a bride's station the player's
+        /// house may stand and still win her hand — earned only once her heart is fully won (the
+        /// step to readiness and both seals). 2 (the default) lets a tier-4 house wed an emperor's
+        /// daughter whose station asks 6. Clamped to [0,4] in <see cref="Normalize"/>.</summary>
+        public int CourtshipCharmSlack { get; set; } = 2;
+
+        /// <summary>How many game days a betrothal must season before the wedding can be laid —
+        /// a promise is not a same-breath formality. 0 = may wed the very day of the promise.
+        /// Clamped to [0,30] in <see cref="Normalize"/>.</summary>
+        public int MinBetrothalDays { get; set; } = 3;
+
         /// <summary>
         /// Reverting a bad turn: when on, each save quietly photographs this campaign's whole memory folder
         /// (every NPC's memories/self/goals/letters + the letters still on the road) and loading that save
@@ -807,6 +848,14 @@ namespace ImmersiveAI
 
             if (ConversationHiringHagglePercent < 0) ConversationHiringHagglePercent = 0;
             if (ConversationHiringHagglePercent > 90) ConversationHiringHagglePercent = 90;
+
+            // The courtship road's rails share the haggle clamps' spirit: hard, small, honest.
+            if (MarriageDowryHagglePercent < 0) MarriageDowryHagglePercent = 0;
+            if (MarriageDowryHagglePercent > 90) MarriageDowryHagglePercent = 90;
+            if (CourtshipCharmSlack < 0) CourtshipCharmSlack = 0;
+            if (CourtshipCharmSlack > 4) CourtshipCharmSlack = 4;
+            if (MinBetrothalDays < 0) MinBetrothalDays = 0;
+            if (MinBetrothalDays > 30) MinBetrothalDays = 30;
 
             // Recall rounds: 0 is a legitimate "none"; more than a handful only slows replies down.
             if (MaxRecallsPerReply < 0) MaxRecallsPerReply = 0;
