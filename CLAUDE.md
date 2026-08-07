@@ -681,11 +681,13 @@ that the player is too busy just now and she answers in her own voice (recorded,
 a lived moment, not a cold "you were refused". Two LLM calls per fired offer; she can always choose silence.
 `MemoryCompressor` renders Angel turns attributed to the voice (not "They") so summaries stay truthful.
 Toggle with `EnableNpcInitiatedChats`. Nothing about the schedule is persisted (stateless hourly rolls), so
-save/load is a non-issue. Two `[Immersive AI • test]` free-chat options
+save/load is a non-issue. Three `[Immersive AI • test]` free-chat options
 (gated by `DevMode` + `ShowInitiationTestButton`): `OnDebugForceReachOut` forces the NPC just spoken with to reach out
 right after parting; `OnShowInitiationOdds` dumps, for every history NPC, whether they are co-located now
 and their computed daily/hourly chance — the go-to answer for "why is it quiet?" (usually: no one
-co-located, or near-neutral standings).
+co-located, or near-neutral standings); `OnDebugRenameNpc` (2026.08.07) renames the very soul spoken
+with via the game's own `Hero.SetName` (persists in the save; the memory folder heals by stringId, so
+the story follows the name — first used to turn Sibuga into Сибила).
 
 **Harmony & the portrait map notice.** Harmony (0Harmony 2.4.2, MIT) is bundled in `lib\` and ships in the
 module's bin — Anton green-lit it on 2026.07.09; use it sparingly, one intentional patch at a time. The one

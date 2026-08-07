@@ -1047,6 +1047,15 @@ namespace ImmersiveAI
                     null, OnShowInitiationOdds, 94);
                 starter.AddDialogLine("immersiveai_test_odds_line", "immersiveai_test_odds_out", "immersiveai_input",
                     "{=!}{" + InfoVar + "}", null, null);
+
+                // Test lever: give this very soul a new name. The rename is the game's own SetName
+                // (it lives inside the save from the next save on), and the NPC's memory folder
+                // heals itself to the new name on its next touch (NpcPaths resolves by stringId) —
+                // so the whole remembered story follows the name. Raising individuals includes
+                // naming them.
+                starter.AddPlayerLine("immersiveai_test_rename", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestRename}I would call you by another name. [Immersive AI • test — rename them]",
+                    null, () => { OnDebugRenameNpc(); RequestLeaveFromPartyEncounter(); }, 92);
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
@@ -2466,6 +2475,46 @@ namespace ImmersiveAI
         {
             _pendingInitiation = false;
             _initiationInFlight = false;
+        }
+
+        // The naming hand (test lever): a text box prefilled with the current name; the first word
+        // becomes the hero's FirstName (folder labels, name templates). Applied via the game's own
+        // SetName, so it persists in the save; the memory folder heals to the new name on its next
+        // touch, and memory.NpcName refreshes on the next exchange — the story follows the name.
+        // The hero is captured NOW (the conversation is closing; OneToOneConversationHero empties).
+        private void OnDebugRenameNpc()
+        {
+            var npc = _currentNpc ?? Hero.OneToOneConversationHero;
+            if (npc == null) return;
+            var current = npc.Name?.ToString() ?? string.Empty;
+
+            var inquiry = new TextInquiryData(
+                new TextObject("{=ImmersiveAI_RenameTitle}A new name").ToString(),
+                $"What shall {current} be called from now on? (The first word becomes their first name.)",
+                true, true,
+                new TextObject("{=ImmersiveAI_RenameDo}So be it").ToString(),
+                new TextObject("{=ImmersiveAI_RenameNot}Leave it").ToString(),
+                new Action<string>(text =>
+                {
+                    try
+                    {
+                        var full = (text ?? string.Empty).Trim();
+                        if (full.Length == 0 || full == current) return;
+                        var first = full.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+                            .FirstOrDefault() ?? full;
+                        npc.SetName(new TextObject(full), new TextObject(first));
+                        NpcPaths.NpcFolder(npc); // heal the folder to the new name at once
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"{current} is now {full}; their memories follow the name.", ActivityColor));
+                    }
+                    catch (Exception ex)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
+                    }
+                }),
+                new Action(() => { }),
+                false, null, "", current);
+            InformationManager.ShowTextInquiry(inquiry, false);
         }
 
         // Test lever: forces the NPC just spoken with to reach out immediately, bypassing the daily odds and
