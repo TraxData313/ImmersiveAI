@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ImmersiveAI.Core.Courtship;
 
 namespace ImmersiveAI.Core.Memory
 {
@@ -49,6 +50,39 @@ namespace ImmersiveAI.Core.Memory
         /// lifetime turn count, but never falls below what is still held verbatim — so memories saved before
         /// <see cref="TotalTurns"/> existed (where it loads as 0) still weigh in by their surviving turns.</summary>
         public int StoryRichness => Math.Max(TotalTurns, RecentTurns.Count);
+
+        // ------------------------- the courtship road (2026.08.07) -------------------------
+        // Persisted here, beside the rest of what this NPC carries of the player, so the save-scoped
+        // memory snapshots rewind a courtship with the save for free. Old files load the defaults:
+        // no road walked, never seeded — the one-time seeding then reads the lived story.
+
+        /// <summary>Where her heart stands on the road toward marrying the player
+        /// (see <see cref="Courtship.CourtshipStage"/>). Old files load as None.</summary>
+        public CourtshipStage CourtshipStage { get; set; } = CourtshipStage.None;
+
+        /// <summary>Campaign day of her last FORWARD step on the road; -1 = never. Rails forward
+        /// steps to one a day.</summary>
+        public double CourtshipStepDay { get; set; } = -1;
+
+        /// <summary>Campaign day the betrothal was sealed; -1 = not betrothed. Feeds the
+        /// troth-seasoning rail (MinBetrothalDays).</summary>
+        public double BetrothedGameDay { get; set; } = -1;
+
+        /// <summary>True once the one-time "where does my heart already stand" seeding has run (or
+        /// was judged unnecessary). False on every old file, so a soul with real history gets her
+        /// lived story honored the first time the road touches her.</summary>
+        public bool CourtshipSeeded { get; set; }
+
+        /// <summary>Her quiet asks of the one she would wed — written once by the matchmaker's
+        /// ledger, private to her sheet, each carrying its checkable predicate (or "heart").</summary>
+        public List<CourtshipAsk> CourtshipAsks { get; set; } = new List<CourtshipAsk>();
+
+        /// <summary>Campaign day her house's head blessed the match; -1 = not given. Only asked
+        /// for at all when the world requires family consent and she has kin above her.</summary>
+        public double FamilyBlessingDay { get; set; } = -1;
+
+        /// <summary>The bride-price paid for the blessing, for the record's honesty.</summary>
+        public int FamilyBlessingPrice { get; set; }
 
         public void AddTurn(ConversationTurn turn)
         {

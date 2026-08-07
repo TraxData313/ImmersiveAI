@@ -106,5 +106,29 @@ namespace ImmersiveAI.Core.Prompts
         /// a whisper that the bargain is theirs to strike — but only once service and price were
         /// plainly agreed in words, and the seal always belongs to the other side.</summary>
         public bool CanStrikeBargain { get; set; }
+
+        /// <summary>True when this NPC may tend their own courtship road with the player mid-reply
+        /// (the tend_courtship tool rides along — see the game layer's TrothTool). Adds a whisper
+        /// that the road is theirs to walk one honest step at a time, forward only when real talks
+        /// have earned it — and that laying the betrothal or the wedding settles nothing until the
+        /// other side seals it by their own hand.</summary>
+        public bool CanTendTroth { get; set; }
+
+        /// <summary>True when this NPC heads a house whose kinswoman (or kinsman) is betrothed to
+        /// the player and the bless_marriage tool rides along (see the game layer's TrothTool). Adds
+        /// a whisper that the blessing and its bride-price are theirs to lay — never their lowest
+        /// price — and that the gold and the choice remain wholly the suitor's.</summary>
+        public bool CanBlessTroth { get; set; }
+
+        /// <summary>Her private courtship stance — where her heart stands on the road and what she
+        /// quietly asks of the one she would wed, with live met-marks (built by the game layer from
+        /// persisted memory + live data via Core CourtshipText.RoadSection). Folded into the sheet
+        /// beside her deep memory of the player; empty when no road is walked.</summary>
+        public string CourtshipTerms { get; set; } = string.Empty;
+
+        /// <summary>The suitor's case as a clan head carries it — the bride-price reckoning, his
+        /// private bounds, the head-of-house bargaining mind (Core CourtshipText.SuitorTerms).
+        /// Empty unless a kinswoman of his is betrothed to the player and his word is wanted.</summary>
+        public string SuitorTerms { get; set; } = string.Empty;
     }
 }

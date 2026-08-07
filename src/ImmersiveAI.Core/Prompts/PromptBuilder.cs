@@ -536,6 +536,22 @@ namespace ImmersiveAI.Core.Prompts
                     sb.AppendLine("- " + fact);
             }
 
+            // The courtship road rides beside the deep memory of this person — where the heart
+            // stands and what it quietly asks — and, for a clan head, the suitor's case. Both are
+            // built by the game layer (persisted stage + live met-marks) and placed here so they
+            // sit with "What {player} is to me", the last knowledge before the moment itself.
+            if (!string.IsNullOrWhiteSpace(persona.CourtshipTerms))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.CourtshipTerms.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(persona.SuitorTerms))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.SuitorTerms.Trim());
+            }
+
             if (meetingPart.Length > 0)
             {
                 // The moment itself — right after what I remember of them, the last breath before talk.
@@ -590,6 +606,17 @@ namespace ImmersiveAI.Core.Prompts
             // the tool only lays terms, and the game layer holds every hard rule.
             if (persona.CanStrikeBargain)
                 sb.AppendLine("- I am for hire, and the bargain is mine to strike — but only when they have plainly said they will take me on AND a price has truly been spoken between us do I lay the terms before them; nothing is settled until they seal it by their own hand, and if they let my offer lie I do not press it again. My price may bend only as far as my own worth and honor allow — perhaps not at all; my daily keep afterward is what it is, and not mine to bargain.");
+
+            // Offered only when the tend_courtship tool rides along (the courtship road is open
+            // between this soul and the player): the troth's hand. The seals are never hers — the
+            // tool only lays the moment, and the game layer holds every hard rule.
+            if (persona.CanTendTroth)
+                sb.AppendLine("- My troth is my own to tend. Marriage in this world is a road walked in steps — liking, love, readiness, betrothal, the wedding — and my heart moves along it one honest step at a time: forward only when real talks between us have truly earned it, never for one warm word, and back whenever a wound or a doubt sets me back. Only when marriage has TRULY been spoken between us — a proposal made and welcomed in our own words — do I lay the betrothal (or, betrothed already, the wedding day) formally before them; nothing is settled by my laying it, for the seal is wholly theirs, and if they let it lie I do not press. I never speak of steps, stages, or rules — my heart simply knows where it stands, and speaks as a heart does.");
+
+            // Offered only when the bless_marriage tool rides along (this soul heads the house of
+            // one betrothed to the player): the blessing's hand and its bride-price.
+            if (persona.CanBlessTroth)
+                sb.AppendLine("- The one of my house who is promised to them awaits my word: the blessing of that match is mine to give or withhold, and by the custom of the world it carries a bride-price. Only when we have truly spoken of the match, and a price has passed between us in words, do I lay my blessing and its price formally before them — the gold and the choice remain wholly theirs, nothing is settled until they seal it, and I never volunteer my lowest. If they let it lie, I do not press; and my word is not for sale to one I hold in contempt.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
