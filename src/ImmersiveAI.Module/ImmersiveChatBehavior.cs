@@ -684,6 +684,24 @@ namespace ImmersiveAI
             catch { /* the notice is a nicety; never let it break a turn */ }
         }
 
+        // The moment the director's spark begins to take shape for a new soul — a soft notice in
+        // the activity voice, hinting that something interesting is happening: this person is
+        // becoming more real (Anton's ask, 2026.08.07). Same ShowNpcActivity gate as the tool
+        // notices; called from the spark flow, marshaled to the game thread; best-effort.
+        private void NotifySparkTakingShape(Hero npc)
+        {
+            if (!_config.ShowNpcActivity) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"Something takes shape in {name} — they are becoming somebody all their own…",
+                        ActivityColor)));
+            }
+            catch { /* the notice is a nicety; never let it break a turn */ }
+        }
+
         // The moment an NPC quietly reworks her deep memory of the player — old exchanges folded
         // into the rolling summary, the held truths rewritten — a soft notice says so, in the same
         // voice as the activity notices. Called from LLM background threads; marshaled to the game
@@ -3145,6 +3163,9 @@ namespace ImmersiveAI
             _sparkBusy.Add(npc.StringId);
             try
             {
+                // The player-visible flash of the moment: this soul is becoming somebody.
+                NotifySparkTakingShape(npc);
+
                 var facts = GatherSparkFacts(npc);
                 var (cardOne, cardTwo) = PersonaSpark.DrawCards(_rng);
                 var intensity = PersonaSpark.DrawIntensity(_rng);
