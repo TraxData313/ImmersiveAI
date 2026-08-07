@@ -3108,8 +3108,24 @@ namespace ImmersiveAI
                 {
                     if (!canAsk || _sparkAsked.Contains(npc.StringId)) return;
                     _sparkAsked.Add(npc.StringId);
-                    // The current exchange proceeds plain; a granted spark speaks from the next.
-                    MainThreadDispatcher.Enqueue(() => ShowSparkInquiry(npc, path));
+
+                    // The popup GATES the first exchange (Anton's playtest, 2026.08.07: her first
+                    // reply arrived before he had answered the popup): the flow waits here for the
+                    // player's word, and only then is the reply made — with the spark when granted.
+                    // The popup pauses the game, so the answer normally comes at once; the long
+                    // stop is a safety net so a lost popup can never hang the exchange forever.
+                    var decision = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    MainThreadDispatcher.Enqueue(() => ShowSparkInquiry(npc, path, decision));
+                    var winner = await Task.WhenAny(decision.Task, Task.Delay(TimeSpan.FromMinutes(10))).ConfigureAwait(false);
+                    if (winner != decision.Task)
+                    {
+                        // Proceed plain now; completing the source lets a LATER "Shape them" click
+                        // fall back to a background generation for the next exchange instead.
+                        decision.TrySetResult(false);
+                        return;
+                    }
+                    if (!decision.Task.Result) return; // left plain — durably stamped by the popup
+                    await GenerateSparkAsync(npc, path).ConfigureAwait(false);
                     return;
                 }
 
@@ -3186,7 +3202,9 @@ namespace ImmersiveAI
             string.IsNullOrEmpty(s) ? s : char.ToLowerInvariant(s[0]) + s.Substring(1);
 
         // "Ask" mode's door, once per soul: shape them, or leave them plain (the durable stamp).
-        private void ShowSparkInquiry(Hero npc, string path)
+        // The waiting exchange holds on <paramref name="decision"/>; if the safety net already let
+        // it proceed, an affirmative falls back to a background generation for the next exchange.
+        private void ShowSparkInquiry(Hero npc, string path, TaskCompletionSource<bool> decision)
         {
             try
             {
@@ -3197,11 +3215,15 @@ namespace ImmersiveAI
                     "write them a private spark — a hidden truth of their own — before your tale " +
                     "together begins? You can read or change it anytime (\"Their prompt\").",
                     true, true, "Shape them", "Leave them plain",
-                    new Action(() => { _ = GenerateSparkAsync(npc, path); }),
+                    new Action(() =>
+                    {
+                        if (!decision.TrySetResult(true)) _ = GenerateSparkAsync(npc, path);
+                    }),
                     new Action(() =>
                     {
                         try { PromptFiles.MarkPersonaSparkDeclined(path, npc.Name?.ToString() ?? "Unknown"); }
                         catch { /* declining is best-effort; they would simply be asked again */ }
+                        decision.TrySetResult(false);
                     }),
                     "", 0f, (Action?)null,
                     (Func<ValueTuple<bool, string>>?)null,
@@ -3211,6 +3233,7 @@ namespace ImmersiveAI
             catch (Exception ex)
             {
                 ModLog.Error("asking about the spark of " + (npc?.Name?.ToString() ?? "?"), ex);
+                decision.TrySetResult(false); // never leave the exchange waiting on a popup that died
             }
         }
 

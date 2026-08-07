@@ -18,7 +18,8 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
   from their real story, traits, way of speaking and your world prompt. It lands in their
   editable prompt file, so you can read, rewrite or erase it anytime ("Their prompt" in the
   windows); delete the file to have them re-shaped. New mod option "Starting personality":
-  Generate (default), Ask first (a popup per new face), or Off.
+  Generate (default), Ask first (a popup per new face — their first reply waits for your
+  choice, so a granted spark speaks from their very first words), or Off.
 - **The narrator is gone — everything is first person now.** Characters no longer hear an unseen
   "Angel" voice narrating their lives: arriving visitors, letters written and received, the urge
   to seek you out, a hiring struck, even the quiet settling of old memories — all of it now

@@ -403,8 +403,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   ClampToSentences; prompt LIVE-VALIDATED on gpt-5.6-terra before shipping), Module
   `EnsurePersonaSparkAsync` hooked into all five first-interaction paths (recap, player turn,
   reach-out ponder, letter write, letter answer; facts gathered before the first await = game
-  thread). "Generate" (default) / "Ask" (once-per-soul popup, player-facing paths only; declining
-  writes a durable declined stamp) / "Off". The spark file is the PLAYER'S file: hand-written
+  thread). "Generate" (default) / "Ask" (once-per-soul popup, player-facing paths only; it GATES
+  the first exchange — the reply is made only after the player's word, so a granted spark speaks
+  from her very first answer (2026.08.07 playtest fix: the popup fired async at first and her reply
+  outran it); a 10-min safety net proceeds plain and a late "Shape them" falls back to a background
+  generation; declining writes a durable declined stamp) / "Off". The spark file is the PLAYER'S file: hand-written
   content blocks generation, deleting the file re-seeds, a `# spark:` stamp means done; DevMode
   lever "[test — reroll their spark]". MCM dropdown "Starting personality" (McmChoiceLists.SparkModes,
   menu "Ask first" ↔ config "Ask") wired through repair/signatures/push/pull/rescue),
