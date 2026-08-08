@@ -61,7 +61,7 @@ Probably just honest: a fresh game is quiet because nobody knows you yet. Approa
 [*][b]Game version:[/b] built and tested on the current live version (v1.4.7). Older game versions are untested and unlikely to work — the mod uses current APIs.
 [*][b]Requires:[/b] nothing but the base game and an AI to think with — your API key, or a local model. Harmony comes bundled inside the mod — no separate Harmony, ButterLib or UIExtenderEx downloads. MCM (Mod Configuration Menu) is optional: with it you get an in-game settings menu, without it everything is set in config.json.
 [*][b]Other mods:[/b] it replaces no vanilla behavior (one light Harmony postfix is all), so it coexists peacefully with overhauls and most everything else. Characters added by other mods get minds like everyone else — personalities are built from live game data, whoever put them in the world.
-[*][b]War Sails:[/b] neither required nor conflicting.
+[*][b]War Sails:[/b] neither required nor conflicting — sea-battles even get their own entries in the battle chronicle. [b]Marry Anyone:[/b] detected automatically; with it installed an existing marriage no longer bars a new courtship, and its rules stay the judge. [b]Training Battles:[/b] drills are never mistaken for real war — nothing enters the chronicle.
 [*][b]Load order:[/b] nothing to arrange — the launcher sorts it automatically (after the game modules, and after MCM if you have it).
 [*][b]Singleplayer only.[/b]
 [/list]
@@ -70,14 +70,17 @@ Adding to an existing campaign or removing mid-campaign is covered above — bot
 [b]Can I speak my own language?[/b]
 Yes — speak anything to them and they answer in kind. The mod's own UI (windows, notices) is English for now.
 
+[b]Can I actually marry an NPC? Court one?[/b]
+Yes, and it is the heart of v2.0. It happens in conversation: their heart walks its own road (liking, love, readiness, betrothal, wedding), moved by their own judgment of your talks. When marriage truly enters the talk they write down what honestly worries them about a life together, in their own words — talk those worries over; only they decide when life has answered one. Nothing is sealed by words alone: the betrothal and the wedding each take a confirming click from you, and the wedding is the real game marriage (cutscene, clan, children). A noble bride's family asks a bride-price, haggled in talk or by letter. Companion brides and grooms work too — vanilla forbids them; here they are the point. Toggle it all with "Marriage by courtship" in Mod Options.
+
 [b]How is this different from ChatAi?[/b]
-ChatAi inspired this mod and is a good free way to taste the idea. Immersive AI is a clean-room rewrite (no code copied) built around what ChatAi doesn't do: persistent layered memory that survives long conversations, NPCs with their own goals, moods and voices, native tool use (they look things up instead of hallucinating), NPCs that approach YOU and write letters, a chat window and a letter window. The trade: you bring your own key (or a local model and the machine to run it).
+ChatAi inspired this mod and is a good free way to taste the idea. Immersive AI is a clean-room rewrite (no code copied) built around what ChatAi doesn't do: persistent layered memory that survives long conversations, NPCs with their own moods, voices and starting personality, native tool use (they look things up instead of hallucinating), NPCs that approach YOU and write letters, a chronicle of every battle you fought together, courtship and marriage, hiring by handshake, a chat window and a letter window. The trade: you bring your own key (or a local model and the machine to run it).
 
 [b]Can I shape the world or individual characters?[/b]
-Yes — plain text files under Documents\...\Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world; each character's folder has custom_instructions.txt for personal secrets and quirks, plus their memories, self-image, goals and letters as readable text. Changes apply on the next conversation, no restart.
+Yes — plain text files under Documents\...\Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world; each character's folder has custom_instructions.txt for personal secrets and quirks (write it in their own voice — "I stutter when I am nervous"), plus their memories, self-image, battles and letters as readable text. Both prompts are also editable from inside the game, in the chat and letter windows. Changes apply on the next conversation, no restart.
 
 [b]Where exactly are a character's memories? How do I wipe them?[/b]
-Everything a character remembers lives in [b]Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\NPCs\campaign_<id>\<character>\[/b] as plain files: memories.json (what they remember of you), self.txt (who they've become), goals.txt (what they strive for), letters.txt (your correspondence). Close the game, then delete what you want gone:
+Everything a character remembers lives in [b]Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\NPCs\campaign_<id>\<character>\[/b] as plain files: memories.json (what they remember of you), self.txt (who they've become), custom_instructions.txt (their own prompt, including the starting personality written for them), letters.txt (your correspondence). Close the game, then delete what you want gone:
 [list]
 [*]One file — e.g. delete memories.json and they forget your history but keep their sense of self.
 [*]A character's whole folder — they meet you as a stranger again (their self re-seeds from the story the world tells of them).

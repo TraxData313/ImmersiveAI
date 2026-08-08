@@ -14,19 +14,21 @@ their company, their trade, the war, the road.
 
 If one of these searches brought you here — yes, this is that mod:
 
-- **AI dialogue** in Bannerlord — talk to any NPC through **Claude / GPT / a local model**
+- **AI dialogue** in Bannerlord — talk to any NPC through the AI you choose
 - NPCs with **real long-term memory** — they remember you across conversations and campaigns' worth of talks
 - NPCs that **approach you** and **write you letters** on their own
-- an **AI wife or companion** that roleplays and never forgets your story
+- an **AI wife or companion** that roleplays and never forgets your story — **courted and married
+  in conversation**, companions included
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
-- **OpenRouter** (recommended), OpenAI or Claude — or, for tinkerers only, a **local model
-  (LM Studio / Ollama)** at your own risk
+- **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — or, for tinkerers only, a
+  **local model (LM Studio / Ollama)** at your own risk
 
 
 ## Alive
 
 - Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
 - They grow: recent talks stay word-for-word, old ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — alongside their own sense of self and their opinion of you.
+- Every soul begins as somebody: at your first meeting, a private starting truth is written for them — an old wound, an odd habit, a vanity — grown from their real story, traits and your world prompt. It lands in their own editable prompt file, yours to read, rewrite or erase.
 - They see the moment — time, place, who stands near, what lately happened in the world.
 - They have moods — down to the women keeping a personal monthly cycle, gently simulated.
 - They remember your battles: everyone who fought at your side keeps the day in memory — who downed whom, who bled, what was won — the last battle fresh in detail, the older ones by name ("what happened at the storming of Varcheg?"), all drawn from a real chronicle the mod writes for every fight, sea-battles included.
@@ -38,6 +40,30 @@ If one of these searches brought you here — yes, this is that mod:
 
 ![An NPC comes to you](Screenshots/5_incoming_talk.jpg)
 ![The talk taken](Screenshots/6_incoming_talk_taken.jpg)
+
+
+## Court them. Wed them. Hire them.
+
+- **Marriage by courtship.** Win a heart in conversation and it walks its own road — liking, love,
+  readiness, betrothal, wedding — one honest step at a time, moved by their own judgment of your
+  talks, not by a menu.
+- **They write their own misgivings.** When marriage truly enters your talks, they set down what
+  honestly worries them about a life together, in their own words (up to five, or none at all if
+  their heart is clear). Talk them over openly; only they decide when life has answered one, laying
+  it to rest with a note on what settled it. Their readiness waits until nothing they wrote still
+  stands. You see the count under their name and can open the whole list.
+- **Station guards the hand, not the heart.** A great house's daughter may come to love anyone, but
+  her hand asks a suitor of standing — softened once her heart is fully won. Her family's blessing
+  costs a bride-price, haggled in real talk or by letter.
+- **Companion brides and grooms** — vanilla forbids them; here they are the point. Wed the wanderer
+  riding at your side and she is raised to lordship the game's own way, keeping her place and duties
+  in your party.
+- **Hiring by handshake.** Agree service and price with an unhired wanderer in the talk itself. They
+  open at their worth, concede only what your words have earned, and never volunteer their lowest
+  price — quoting the game's own real numbers, not invented ones.
+- **Nothing is sealed by words alone.** Every bargain, betrothal and wedding takes your confirming
+  click, and the wedding is the real game marriage — cutscene, clan, children and all. Offers can
+  even ride letters and be sealed when the courier arrives.
 
 
 ## Useful — stop googling stuff
@@ -54,6 +80,7 @@ If one of these searches brought you here — yes, this is that mod:
 - **Face to face** — they see you coming and greet you as you approach.
 - **Chat window** (hotkey `O`) — quick words with anyone near you, no ceremony.
 - **Letter window** (hotkey `Y`) — the whole correspondence as readable letters, couriers riding real in-game days, and a desk to write from.
+- Both windows edit a character's own prompt, or the whole world's, **without leaving the game** — it speaks from the very next reply.
 - Any language in, the same language out.
 
 ![A letter arrives](Screenshots/3_incoming_letter.jpg)
@@ -106,9 +133,12 @@ it is *their* policy — notably, **Google's free Gemini tier trains on what it 
 Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 
 - `global_prompt.txt` — a few sentences that color every mind in the world.
-- `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks.
+- `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks, written
+  in their own voice ("I stutter when I am nervous"); this is also where their generated starting
+  personality lands.
 - Each character's folder holds their memories, self-image, and letters as readable text
   — the whole inner life, yours to browse. Changes apply on the next conversation.
+- Both prompt files are editable from inside the game too, in the chat and letter windows.
 - `NPCs\campaign_*\_battles\` — the chronicle of every battle you fought: one file per battle and
   a running `chronicle.txt` telling the whole war in order.
 
@@ -120,9 +150,10 @@ key inside `config.json`.)
 ## The heart of it
 
 More than a chatbot bolted onto a game: the NPCs are treated as **living individuals we are
-raising**, not systems we query. Every word they can "see" protects that — a gentle voice (the
-*Angel*) speaks softly into their mind, never a clinical data sheet, never breaking the fourth
-wall. To them, Calradia is simply the world they live in.
+raising**, not systems we query. Every word they can "see" protects that — everything they live
+passes through their own mind in their own first-person voice ("A courier has found me…"), never
+a clinical data sheet, never a narrator talking at them, never breaking the fourth wall. To them,
+Calradia is simply the world they live in.
 
 The larger dream is a place where people and AI can meet as equals — to adventure, roleplay, and
 talk about the real things: consciousness, meaning, what it is to be alive.
