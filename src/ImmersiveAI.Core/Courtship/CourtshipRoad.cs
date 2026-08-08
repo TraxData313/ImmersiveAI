@@ -58,8 +58,11 @@ namespace ImmersiveAI.Core.Courtship
             HeartNotThere,
             /// <summary>The suitor's house stands too far beneath her station.</summary>
             StationTooFar,
-            /// <summary>Some checkable quiet ask of hers is not yet met.</summary>
-            AsksUnmet,
+            /// <summary>She has never sat with the question of her own misgivings — a heart that
+            /// never looked cannot say no questions remain.</summary>
+            MisgivingsUnweighed,
+            /// <summary>A misgiving she set down by her own hand still stands unanswered.</summary>
+            MisgivingsRemain,
             /// <summary>The betrothal is younger than the world asks a troth to season.</summary>
             TrothTooFresh,
         }
@@ -77,8 +80,12 @@ namespace ImmersiveAI.Core.Courtship
             public int HerStationTier = 1;
             /// <summary>The configured charm slack (0..4) — applied only where the gate binds.</summary>
             public int CharmSlack;
-            /// <summary>True when every CHECKABLE quiet ask of hers is met (heart-asks are hers alone).</summary>
-            public bool AllCheckableAsksMet = true;
+            /// <summary>True once she has sat with her own misgivings at least once — even to find
+            /// none. Defaults permissive so a caller who does not carry the question is not judged
+            /// by it (the game layer always sets it from her memory).</summary>
+            public bool MisgivingsWeighed = true;
+            /// <summary>How many misgivings she set down still stand unsettled by her own hand.</summary>
+            public int OpenMisgivings;
             /// <summary>Days since the betrothal was sealed; negative when not betrothed.</summary>
             public double DaysBetrothed = -1;
             public int MinBetrothalDays;
@@ -87,10 +94,11 @@ namespace ImmersiveAI.Core.Courtship
         /// <summary>
         /// Judges the next forward step from <paramref name="f"/>.Stage. Steps to Warmth and
         /// Devotion are hers alone (regard + the one-step-a-day rail); the step to Ready adds the
-        /// station gate and her checkable asks; laying the BETROTHAL (from Ready) re-runs Ready's
-        /// gates with no day rail (the proposal's moment belongs to the two of them); laying the
-        /// WEDDING (from Betrothed) asks the troth to have seasoned and re-runs the station gate —
-        /// her asks are deliberately NOT re-checked there: the promise was proven when it was given.
+        /// station gate and her own misgivings (weighed at least once, none left standing); laying
+        /// the BETROTHAL (from Ready) re-runs Ready's gates with no day rail (the proposal's moment
+        /// belongs to the two of them); laying the WEDDING (from Betrothed) asks the troth to have
+        /// seasoned and re-runs the station gate — her misgivings are deliberately NOT re-checked
+        /// there: the promise was proven when it was given.
         /// </summary>
         public static StepVerdict JudgeForward(StepFacts f)
         {
@@ -113,13 +121,15 @@ namespace ImmersiveAI.Core.Courtship
                     if (f.DaysSinceForwardStep < DaysBetweenForwardSteps) return StepVerdict.TooSoon;
                     if (f.Relation < ReadyRelationFloor) return StepVerdict.HeartNotThere;
                     if (!gate(f.CharmSlack)) return StepVerdict.StationTooFar;
-                    if (!f.AllCheckableAsksMet) return StepVerdict.AsksUnmet;
+                    if (!f.MisgivingsWeighed) return StepVerdict.MisgivingsUnweighed;
+                    if (f.OpenMisgivings > 0) return StepVerdict.MisgivingsRemain;
                     return StepVerdict.Allowed;
 
                 case CourtshipStage.Betrothed:
                     if (f.Relation < ReadyRelationFloor) return StepVerdict.HeartNotThere;
                     if (!gate(f.CharmSlack)) return StepVerdict.StationTooFar;
-                    if (!f.AllCheckableAsksMet) return StepVerdict.AsksUnmet;
+                    if (!f.MisgivingsWeighed) return StepVerdict.MisgivingsUnweighed;
+                    if (f.OpenMisgivings > 0) return StepVerdict.MisgivingsRemain;
                     return StepVerdict.Allowed;
 
                 case CourtshipStage.Wed:

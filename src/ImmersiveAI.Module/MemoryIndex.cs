@@ -31,6 +31,12 @@ namespace ImmersiveAI
             /// the bond-stats line, the odds view, and the one-troth-at-a-time rule without loading
             /// the whole memory.</summary>
             public int CourtshipStage;
+            /// <summary>Her own written marriage misgivings, counted for the bond-stats line:
+            /// how many still stand, how many she set down in all, and whether she has weighed
+            /// her heart at least once (even to find it clear).</summary>
+            public int MisgivingsOpen;
+            public int MisgivingsTotal;
+            public bool MisgivingsWeighed;
             public DateTime StampUtc;
             public long Length;
         }
@@ -68,6 +74,9 @@ namespace ImmersiveAI
                     LastOutreachGameDay = memory.LastOutreachGameDay,
                     UnansweredOutreach = memory.UnansweredOutreachCount,
                     CourtshipStage = (int)memory.CourtshipStage,
+                    MisgivingsOpen = Core.Courtship.CourtshipMisgivings.OpenCount(memory.CourtshipMisgivings),
+                    MisgivingsTotal = Core.Courtship.CourtshipMisgivings.TotalCount(memory.CourtshipMisgivings),
+                    MisgivingsWeighed = memory.MisgivingsWeighed,
                     StampUtc = info.LastWriteTimeUtc,
                     Length = info.Length,
                 };

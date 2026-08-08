@@ -189,7 +189,9 @@ namespace ImmersiveAI
             if (bargain != null) tools.Add(Tools.BargainTool.Tool);
             // The troth's and the blessing's hands ride the same tally-keyed way (the live reply
             // trunk, and the letter-answer flow — a promise or a price can be agreed in writing too).
-            if (troth != null) tools.Add(Tools.TrothTool.Tend);
+            // The misgivings' hand rides wherever the troth's does: her own written doubts about the
+            // marriage, tended by her alone (the retired matchmaker's checkable asks, unrobotted).
+            if (troth != null) { tools.Add(Tools.TrothTool.Tend); tools.Add(Tools.MisgivingTool.Tool); }
             if (bless != null) tools.Add(Tools.TrothTool.Bless);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
@@ -243,6 +245,9 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.TrothTool.TendCourtship)
                 return Task.FromResult(ResolveTendCourtship(call, npc, troth, liveMemory));
+
+            if (call.Name == Tools.MisgivingTool.WeighMisgivings)
+                return Task.FromResult(ResolveWeighMisgivings(call, npc, troth, liveMemory));
 
             if (call.Name == Tools.TrothTool.BlessMarriage)
                 return Task.FromResult(ResolveBlessLay(call, npc, bless));
@@ -1064,9 +1069,11 @@ namespace ImmersiveAI
             // into the say/leave menu.
             if (_config.EnableConversationRecap)
             {
+                // Priority 120: the door to the mod sits at the very top of the vanilla hub
+                // (Anton's ask, 2026.08.08 — the chat option first, the farewell last).
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_greet",
                     "{=ImmersiveAI_Speak}Speak freely with me.",
-                    () => Hero.OneToOneConversationHero != null, OnChatOpened, 110);
+                    () => Hero.OneToOneConversationHero != null, OnChatOpened, 120);
 
                 // Greet state, recap is in -> the NPC delivers it, then we fall into the menu.
                 // Registered before the "still recalling" line so it wins when the condition holds.
@@ -1085,7 +1092,7 @@ namespace ImmersiveAI
             {
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_input",
                     "{=ImmersiveAI_Speak}Speak freely with me.",
-                    () => Hero.OneToOneConversationHero != null, OnChatOpenedNoRecap, 110);
+                    () => Hero.OneToOneConversationHero != null, OnChatOpenedNoRecap, 120);
             }
 
             // Menu option: say something -> shows the text box, then goes to the await state.
@@ -1168,8 +1175,8 @@ namespace ImmersiveAI
                 starter.AddDialogLine("immersiveai_test_troth_line", "immersiveai_test_troth_out", "immersiveai_input",
                     "{=!}{" + InfoVar + "}", null, null);
                 starter.AddPlayerLine("immersiveai_test_asks", "immersiveai_input", "close_window",
-                    "{=ImmersiveAI_TestAsks}Let us part now. [Immersive AI • test — reroll their quiet asks]",
-                    () => _config.EnableConversationMarriage, () => { OnDebugRerollAsks(); RequestLeaveFromPartyEncounter(); }, 89);
+                    "{=ImmersiveAI_TestAsks}Let us part now. [Immersive AI • test — clear their marriage misgivings]",
+                    () => _config.EnableConversationMarriage, () => { OnDebugClearMisgivings(); RequestLeaveFromPartyEncounter(); }, 89);
 
                 // Battle-chronicle lever: forge a plausible battle record with this very soul at
                 // your side — the beat, the JSON, chronicle.txt, the situation block and the
@@ -1185,8 +1192,10 @@ namespace ImmersiveAI
             // conversation drops the player into the engage menu ("Attack / Send troops / Leave")
             // against whoever they just spoke with (Anton's Jarlinna repro, 2026.07.12: vanilla
             // farewell = fine, ours = bug — vanilla sets the flag, ours never did).
+            // Priority 85: BELOW every DevMode lever (95..88), so the farewell always sits at the
+            // very bottom of the menu instead of stranded mid-list (Anton's ask, 2026.08.08).
             starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "close_window",
-                "{=ImmersiveAI_Done}Farewell.", null, RequestLeaveFromPartyEncounter, 100);
+                "{=ImmersiveAI_Done}Farewell.", null, RequestLeaveFromPartyEncounter, 85);
 
             // Await state, reply is in -> show it and return to the menu.
             // Registered before the "still thinking" line so it wins when the condition holds.
@@ -1435,7 +1444,17 @@ namespace ImmersiveAI
         {
             var npc = Hero.OneToOneConversationHero;
             if (npc == null) return;
+            var savedPath = RevealMindFor(npc);
+            MBTextManager.SetTextVariable(InfoVar, savedPath == null
+                ? "(She lets you see the whole of her mind.)"
+                : "(She lets you see the whole of her mind — saved uncut to " + Path.GetFileName(savedPath) + " in her folder.)",
+                false);
+        }
 
+        // The reveal itself, callable from the dialog lever AND the chat window's dev panel.
+        // Returns the snapshot file's path (null when it could not be written).
+        internal string? RevealMindFor(Hero npc)
+        {
             var ctx = BuildContext(npc);
             var messages = _promptBuilder.Build(
                 ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder,
@@ -1463,10 +1482,7 @@ namespace ImmersiveAI
                   + savedPath + ")\n\n";
 
             ShowScrollPopup(name + " — the full prompt she receives", header + full);
-            MBTextManager.SetTextVariable(InfoVar, savedPath == null
-                ? "(She lets you see the whole of her mind.)"
-                : "(She lets you see the whole of her mind — saved uncut to " + Path.GetFileName(savedPath) + " in her folder.)",
-                false);
+            return savedPath;
         }
 
         // Writes the full raw prompt to a file in the NPC's folder so the player can read every word she
@@ -1781,6 +1797,16 @@ namespace ImmersiveAI
                     if (stage == Core.Courtship.CourtshipStage.Betrothed) sb.Append(" · betrothed to you");
                     else if (stage == Core.Courtship.CourtshipStage.Wed) sb.Append(" · wed to you");
                     else sb.Append($" · heart's road: {Core.Courtship.CourtshipRoad.StageName(stage)}");
+                    // Her own written misgivings, counted openly (Anton's ask, 2026.08.08): what
+                    // still stands of what she set down — or the clear heart she declared herself.
+                    if (stage < Core.Courtship.CourtshipStage.Wed)
+                    {
+                        if (known.MisgivingsTotal > 0)
+                            sb.Append($" · misgivings {known.MisgivingsOpen}/{known.MisgivingsTotal}"
+                                + (known.MisgivingsOpen == 0 ? " (all at rest)" : string.Empty));
+                        else if (known.MisgivingsWeighed)
+                            sb.Append(" · no misgivings");
+                    }
                 }
                 // Why the quiet, in a word: waiting on an answer, or simply resting after a visit paid.
                 if (known != null && known.UnansweredOutreach > 0)
@@ -2651,6 +2677,12 @@ namespace ImmersiveAI
         {
             var npc = _currentNpc ?? Hero.OneToOneConversationHero;
             if (npc == null) return;
+            RenameNpcFor(npc);
+        }
+
+        internal void RenameNpcFor(Hero npc)
+        {
+            if (npc == null) return;
             var current = npc.Name?.ToString() ?? string.Empty;
 
             var inquiry = new TextInquiryData(
@@ -2841,6 +2873,72 @@ namespace ImmersiveAI
         // the same trunk as the conversation panel (ExecutePlayerTurnAsync), so memory, the feeling
         // number, and compression are identical; only the rendering differs. The window is a VIEW over
         // the recorded stream — closing it loses nothing.
+
+        // ------------------------- the window's dev panel (bridges) -------------------------
+        // The DevMode levers, reachable from the chat window's Dev overlay (Anton's ask, 2026.08.08 —
+        // the face-to-face menu grew crowded; the window is where he already stands). Same guts as
+        // the dialog levers, minus the conversation-only dressing (InfoVar, leave-encounter). All run
+        // on the game thread (UI commands); each is a shrug on failure, never a crash.
+
+        internal static void DevRevealMind(Hero npc)
+        {
+            try { if (npc != null) Current?.RevealMindFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: revealing the mind", ex); }
+        }
+
+        internal static void DevRevealCourtship(Hero npc)
+        {
+            try { if (npc != null) Current?.RevealCourtshipFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: revealing the road", ex); }
+        }
+
+        internal static void DevClearMisgivings(Hero npc)
+        {
+            try { if (npc != null) Current?.ClearMisgivingsFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: clearing misgivings", ex); }
+        }
+
+        internal static void DevRerollSpark(Hero npc)
+        {
+            try { if (npc != null) Current?.RerollSparkFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: rerolling the spark", ex); }
+        }
+
+        internal static void DevForceReachOut(Hero npc)
+        {
+            try
+            {
+                var self = Current;
+                if (self == null || npc == null || self._initiationInFlight) return;
+                self.MarkInitiationInFlight();
+                _ = self.BeginInitiationAsync(npc);
+            }
+            catch (Exception ex) { ModLog.Error("dev: forcing a reach-out", ex); }
+        }
+
+        internal static void DevForceLetter(Hero npc)
+        {
+            try { if (npc != null) Current?.ForceLetterFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: forcing a letter", ex); }
+        }
+
+        internal static void DevForgeBattle(Hero npc)
+        {
+            try { if (npc != null) Current?.ForgeBattleFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: forging a battle", ex); }
+        }
+
+        internal static void DevRenameNpc(Hero npc)
+        {
+            try { if (npc != null) Current?.RenameNpcFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: renaming", ex); }
+        }
+
+        internal static void DevShowOdds()
+        {
+            try { Current?.OnShowInitiationOdds(); }
+            catch (Exception ex) { ModLog.Error("dev: the odds view", ex); }
+        }
 
         // NPCs currently composing an answer to a chat-window line (stringId), so one thread carries one
         // exchange at a time. Touched only on the game thread (send) and inside dispatched completions.
@@ -3399,6 +3497,12 @@ namespace ImmersiveAI
         private void OnDebugRerollSpark()
         {
             var npc = Hero.OneToOneConversationHero ?? _currentNpc;
+            if (npc == null) return;
+            RerollSparkFor(npc);
+        }
+
+        internal void RerollSparkFor(Hero npc)
+        {
             if (npc == null) return;
             try
             {

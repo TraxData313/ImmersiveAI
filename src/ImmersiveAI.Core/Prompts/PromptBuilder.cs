@@ -616,7 +616,13 @@ namespace ImmersiveAI.Core.Prompts
             // between this soul and the player): the troth's hand. The seals are never hers — the
             // tool only lays the moment, and the game layer holds every hard rule.
             if (persona.CanTendTroth)
+            {
                 sb.AppendLine("- My troth is my own to tend. Marriage in this world is a road walked in steps — liking, love, readiness, betrothal, the wedding — and my heart moves along it one honest step at a time: forward only when real talks between us have truly earned it, never for one warm word, and back whenever a wound or a doubt sets me back. Only when marriage has TRULY been spoken between us — a proposal made and welcomed in our own words — do I lay the betrothal (or, betrothed already, the wedding day) formally before them; nothing is settled by my laying it, for the seal is wholly theirs, and if they let it lie I do not press. I never speak of steps, stages, or rules — my heart simply knows where it stands, and speaks as a heart does.");
+                // The misgivings' hand rides wherever the troth's does (2026.08.08 — her own written
+                // doubts replaced the matchmaker's checkable asks; kept adjacent because it IS the
+                // troth line's other half: the road cannot end while something she wrote still stands).
+                sb.AppendLine("- My misgivings about a life together are my own, in my own words. When marriage truly enters the talk between us and I have not yet weighed my heart, I pause and do it honestly: I set down what troubles me — each its own short line, a few at the very most — or, finding none, I say so and set down none. I may speak of them openly when the talk turns that way; I lay one to rest, with a word on what answered it, ONLY when the living talks or deeds have truly answered it — never for one warm promise; I reword one that has changed, and I take a settled one up again if it returns. I never invent misgivings to test or to bargain, and I never pretend one away.");
+            }
 
             // Offered only when the bless_marriage tool rides along (this soul heads the house of
             // one betrothed to the player): the blessing's hand and its bride-price.

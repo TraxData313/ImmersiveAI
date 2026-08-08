@@ -12,6 +12,23 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **Marriage misgivings are now truly theirs — the robotic checklist is gone.** A soul on the
+  road to marrying you no longer carries auto-generated requirements checked against your gold
+  or skills. Instead, when marriage truly enters your talks they pause and write down what
+  honestly worries them about a life together — in their own words, up to five things, or none
+  at all if their heart is clear. You can talk about those worries openly, and only they decide
+  when life has truly answered one, laying it to rest with a little note on what settled it.
+  The readiness to wed simply waits until nothing they wrote still stands (their family's
+  station still matters, as before). You see it all: the bond line counts them ("misgivings
+  2/4"), a small button in the chat window opens the full list with their settling notes, and
+  a soft rose line in the log marks every worry written down or laid to rest.
+- **The talk menu is tidied:** "Speak freely with me." now sits at the very top of the
+  conversation options, and "Farewell." at the very bottom — no more hunting for either
+  between the test entries.
+- For tinkerers with DevMode on: all the test levers now also live in a **Dev panel inside the
+  chat window** (a "Dev" button in its top bar) — reveal a soul's whole mind, their courtship
+  road, force a reach-out or a letter, forge a battle record, rename them, or read the
+  reach-out odds, all without walking over for a face-to-face talk.
 - **You can see how full an NPC's memory is.** Under their name in the chat window a grey line now
   shows the weight of what they keep of you word for word — the share of the AI's memory it fills
   against the point where it is condensed, the tokens against the same ceiling, the exchanges, and

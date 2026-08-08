@@ -612,9 +612,15 @@ namespace ImmersiveAI
         // waiting for a real fight. The muster is the player's true party; the foe is invented.
         private void OnDebugForgeBattle()
         {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+            ForgeBattleFor(npc);
+        }
+
+        internal void ForgeBattleFor(Hero npc)
+        {
             try
             {
-                var npc = Hero.OneToOneConversationHero;
                 if (npc == null || _battleLedger == null) return;
 
                 var ours = new BattleSideStats();

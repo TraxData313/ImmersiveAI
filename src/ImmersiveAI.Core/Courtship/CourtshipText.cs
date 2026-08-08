@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ImmersiveAI.Core.Courtship
@@ -14,22 +15,26 @@ namespace ImmersiveAI.Core.Courtship
     {
         // ------------------------- the sheet: where my heart stands -------------------------
 
-        /// <summary>One ask with its live met-mark: true = met, false = not yet, null = heart-judged.</summary>
-        public sealed class AskView
+        /// <summary>One misgiving as the sheet shows it: her words, whether she has laid it to
+        /// rest, and her light word on what answered it.</summary>
+        public sealed class MisgivingView
         {
             public string Text = string.Empty;
-            public bool? Met;
+            public bool Settled;
+            public string Note = string.Empty;
         }
 
         /// <summary>
-        /// Her private road-and-asks section, folded into the sheet beside her deep memory of the
-        /// player. Empty at None (no road yet) and at Wed (the real spouse machinery speaks then).
-        /// The asks are HER OWN quiet knowledge — the framing forbids reciting them as a list.
+        /// Her private road-and-misgivings section, folded into the sheet beside her deep memory of
+        /// the player. Empty at None (no road yet) and at Wed (the real spouse machinery speaks
+        /// then). The misgivings are HER OWN written doubts — unlike the retired quiet asks, she may
+        /// speak of them openly when the talk turns to marriage; only her own hand lays one to rest.
         /// </summary>
         public static string RoadSection(
             string playerName,
             CourtshipStage stage,
-            IReadOnlyList<AskView>? asks,
+            IReadOnlyList<MisgivingView>? misgivings,
+            bool misgivingsWeighed,
             bool blessingRequired,
             bool blessingGiven,
             string headOfHouse)
@@ -61,18 +66,29 @@ namespace ImmersiveAI.Core.Courtship
                     break;
             }
 
-            if (asks != null && asks.Count > 0)
+            bool anyMisgiving = misgivings != null && misgivings.Any(m => m != null && !string.IsNullOrWhiteSpace(m.Text));
+            if (anyMisgiving)
             {
                 sb.AppendLine();
-                sb.AppendLine("What I quietly ask of the one I would wed — I know these in my bones, and I never recite them as a list; they surface only as talk turns that way:");
-                foreach (var ask in asks)
+                sb.AppendLine($"What weighs on my heart about a life wed to {playerName} — set down by my own hand, in my own words. I may speak of these openly when the talk turns to marriage; and only when life itself has truly answered one do I lay it to rest — never for a warm word alone:");
+                foreach (var m in misgivings!)
                 {
-                    if (ask == null || string.IsNullOrWhiteSpace(ask.Text)) continue;
-                    var mark = ask.Met == true ? " (and this, I sense, they have)"
-                        : ask.Met == false ? " (and here my heart is not yet sure of them)"
-                        : " (this, only my own heart can judge)";
-                    sb.AppendLine("- " + ask.Text.Trim().TrimEnd('.') + "." + mark);
+                    if (m == null || string.IsNullOrWhiteSpace(m.Text)) continue;
+                    var mark = m.Settled
+                        ? " (laid to rest" + (string.IsNullOrWhiteSpace(m.Note) ? string.Empty : ": " + m.Note.Trim().TrimEnd('.')) + ")"
+                        : " (this still stands in me)";
+                    sb.AppendLine("- " + m.Text.Trim().TrimEnd('.') + "." + mark);
                 }
+            }
+            else if (misgivingsWeighed)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"I have sat with myself over what a life wed to {playerName} would ask of me, and found no misgiving standing — my heart is clear on it.");
+            }
+            else if (stage < CourtshipStage.Betrothed)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"I have not yet sat with myself over what a life wed to {playerName} would truly ask of me. When marriage truly enters the talk between us, I pause and weigh it honestly: if misgivings stand in me I set them down in my own words — a few, five at the very most — and if none do, I say so plainly and set down none. They are mine to speak of openly, and mine alone to lay to rest.");
             }
             return sb.ToString().TrimEnd();
         }
@@ -127,8 +143,10 @@ namespace ImmersiveAI.Core.Courtship
                     return "In honesty, my heart is not there yet — warmth of words is not depth of heart, and I will not pretend a depth I do not feel. I stay true to where I truly stand, and let time and real talks do their work.";
                 case CourtshipRoad.StepVerdict.StationTooFar:
                     return $"The distance between {playerName}'s house and my station weighs on me — my kin, my name, the world's eyes. I do not speak of ranks or numbers; I only know the gap is more than my heart alone can bridge today. Were their name to rise in the world, the road would open.";
-                case CourtshipRoad.StepVerdict.AsksUnmet:
-                    return "Something I quietly ask of the one I would wed is not yet answered in them. I do not recite my asks like a clerk — but I may let the talk turn toward what my heart still looks for, and see what surfaces.";
+                case CourtshipRoad.StepVerdict.MisgivingsUnweighed:
+                    return "Before my heart can say no questions remain, I owe myself an honest hour: I have not yet truly weighed what a life together would ask of me. I sit with it now — I set down what misgivings I hold, in my own words, or find plainly that I hold none — and only then does the road go on.";
+                case CourtshipRoad.StepVerdict.MisgivingsRemain:
+                    return "Something I set down with my own hand still weighs on me unanswered. I do not pretend it away and I do not sell it for a warm word — I may speak of it openly, and let the living talks answer it first; when life truly answers it, I will lay it to rest myself.";
                 case CourtshipRoad.StepVerdict.TrothTooFresh:
                     return "Our troth is young still; the world asks a promise to season a little before the wedding day. The waiting is not a wall — it is part of the road, and I may say so warmly.";
                 default:

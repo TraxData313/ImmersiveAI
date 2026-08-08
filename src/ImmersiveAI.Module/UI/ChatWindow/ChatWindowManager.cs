@@ -238,15 +238,18 @@ namespace ImmersiveAI.UI.ChatWindow
             {
                 if (input.IsKeyReleased(InputKey.Escape))
                 {
-                    // Escape folds the prompt editor first (discarding), then the info overlay;
-                    // only a press with neither up closes the window.
+                    // Escape folds the prompt editor first (discarding), then the dev panel, the
+                    // misgivings view, and the info overlay; only a bare press closes the window.
                     if (_vm != null && _vm.IsPromptEditShown) _vm.ExecutePromptCancel();
+                    else if (_vm != null && _vm.IsDevShown) _vm.IsDevShown = false;
+                    else if (_vm != null && _vm.IsMisgivingsShown) _vm.IsMisgivingsShown = false;
                     else if (_vm != null && _vm.IsInfoShown) _vm.IsInfoShown = false;
                     else Close();
                     return;
                 }
                 if ((input.IsKeyReleased(InputKey.Enter) || input.IsKeyReleased(InputKey.NumpadEnter))
-                    && _vm?.IsInfoShown != true && _vm?.IsPromptEditShown != true)
+                    && _vm?.IsInfoShown != true && _vm?.IsPromptEditShown != true
+                    && _vm?.IsDevShown != true && _vm?.IsMisgivingsShown != true)
                     _vm?.ExecuteSend();
             }
 

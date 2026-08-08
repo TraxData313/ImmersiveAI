@@ -33,7 +33,7 @@ You usually only need to open:
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 - **The battle chronicle** → Core `Battles\` (`BattleRecord` data, `BattleLedger` JSON-per-battle + loose find-by-name, `BattleText` — titles/tales/beats/accounts, all unit-tested) + the `ImmersiveChatBehavior.Battles.cs` partial (capture at `OnPlayerBattleEnd` BEFORE the game commits gains, enrich one dispatcher tick later, per-hero downs via `OnHeroCombatHitEvent`) + `Tools\ChronicleTool` (`recall_battle`).
 - **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
-- **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipAsk DSL, MatchmakerLedger, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
+- **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
 installs as **"Immersive AI (dev)"** (`Modules\ImmersiveAI.Dev`), its own identity beside the Steam
@@ -470,8 +470,18 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   (Core `CourtshipStage` in `NpcMemory` → snapshots rewind it) via `tend_courtship`
   (`Tools\TrothTool`), railed by Core `CourtshipRoad` — relation floors, one step/day, the STATION
   GATE (her station tier minus the charm slack, binding only from Ready — the heart is free, the
-  HAND has rails) — and her own generated quiet asks (Core `MatchmakerLedger`, spark-sibling, tiny
-  checkable DSL, live met-marks in her sheet; refusals NEVER name a number — Core-tested). Souls
+  HAND has rails) — and her OWN MISGIVINGS (2026.08.08, replacing the matchmaker's checkable-ask
+  DSL the day after it shipped — Anton: the auto-judged gold/skill/trait stoppers read as "robotic
+  bargains"; `MatchmakerLedger`/`CourtshipAsk` are DELETED, the old CourtshipAsks JSON field is
+  ignored on load): when marriage truly enters the talk she writes her own doubts via the
+  `weigh_misgivings` tool (`Tools\MisgivingTool`, rides beside tend_courtship on the same tally —
+  set_down one-per-line or honest "none" / settle-with-a-light-word / revise / reopen; Core
+  `CourtshipMisgiving`+`CourtshipMisgivings`, NpcGoals' fuzzy-match mold, cap 5 TOTAL, unit-tested),
+  and the road's only misgiving-rails are HERS: Ready + the betrothal wait for a weighed heart
+  (`MisgivingsWeighed` — even "none" counts) with zero standing (`MisgivingsUnweighed`/
+  `MisgivingsRemain` verdicts, numberless refusals; the wedding lay re-checks neither). The player
+  SEES them: bond line "misgivings 2/4", a "Misgivings n/m" button in the chat window opens the
+  list (settled ones with her note), rose notices on every set-down/settle/reopen. Souls
   with real history are SEEDED once from their lived story (Core `CourtshipSeed`, capped at
   Betrothed). Betrothal + wedding lay only; popups seal; both re-run everything
   (`TrothBlockReason`). The wedding is REAL: nobles `MarriageAction.Apply`; a companion bride is
@@ -486,7 +496,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   LETTERS: the letter-answer flow carries bargain/troth/bless hands (`byLetter`), the laid offer
   persists ON the `Letter` (LaidKind/Price/Word/BrideId) and is presented at delivery; the
   wedding day alone refuses paper. Road stage shows in both windows' bond line + the odds view;
-  DevMode levers "[test — courtship & quiet asks]" + "[test — reroll their quiet asks]". Lives in
+  DevMode levers "[test — courtship & quiet asks]" (now the road + her misgivings) + "[test —
+  clear their marriage misgivings]". Lives in
   the `ImmersiveChatBehavior.Courtship.cs` partial; decision record docs/marriage-courtship-design.md),
   BOTH windows also carry the prompt-editing doors (2026.08.07): "Their prompt" (the selected NPC's
   custom_instructions.txt) and "World prompt" (global_prompt.txt) open an IN-GAME editor overlay
@@ -851,7 +862,17 @@ in `module\GUI\Prefabs\` using only Native/SandBox brushes+sprites, ticked from
 via `ScrollablePanel.VerticalScrollbar.ValueFloat` when open). Everything degrades gracefully: a
 prefab/layer failure toasts and closes; with `EnableChatWindow` off (or `SendInitiationsToChatWindow`
 off) the old offer flow stands untouched. Config: `EnableChatWindow`, `ChatWindowHotkey`,
-`SendInitiationsToChatWindow`.
+`SendInitiationsToChatWindow`. **The window carries a DEV PANEL since 2026.08.08** (Anton's ask —
+the face-to-face devmode menu grew crowded): a "Dev" button in the window bar (DevMode only) opens
+an overlay with every test lever acting on the selected soul — reveal mind, courtship road, clear
+misgivings, reroll spark, force reach-out/letter, forge battle, rename, the odds view — wired
+through `ImmersiveChatBehavior.Dev*` static bridges to `*For(Hero)` refactors of the dialog levers
+(popups ride the global inquiry layer, safely above the window). Beside it the **"Misgivings n/m"
+button** (players too) opens the selected soul's written marriage misgivings. Escape folds: prompt
+editor → dev panel → misgivings → info → close; Enter never sends under any overlay. The
+face-to-face menu itself was re-ordered the same day: "Speak freely with me." rides priority 120
+(top of the vanilla hub), "Farewell." dropped to 85 so it sits BELOW all the devmode levers
+(95..88) instead of stranded mid-list.
 
 **Tidings & the talk of the town.** Every NPC's situation now carries what has lately happened in the
 world as far as it would have reached their ears, plus what the common folk are whispering where they

@@ -15,7 +15,8 @@ public class CourtshipTests
         int playerTier = 6,
         int herTier = 1,
         int slack = 2,
-        bool asksMet = true,
+        bool weighed = true,
+        int openMisgivings = 0,
         double daysBetrothed = -1,
         int minBetrothalDays = 3) => new()
         {
@@ -25,7 +26,8 @@ public class CourtshipTests
             PlayerClanTier = playerTier,
             HerStationTier = herTier,
             CharmSlack = slack,
-            AllCheckableAsksMet = asksMet,
+            MisgivingsWeighed = weighed,
+            OpenMisgivings = openMisgivings,
             DaysBetrothed = daysBetrothed,
             MinBetrothalDays = minBetrothalDays,
         };
@@ -87,12 +89,18 @@ public class CourtshipTests
     }
 
     [Fact]
-    public void HerQuietAsks_GateReadinessAndTheBetrothal_ButNotTheWedding()
+    public void HerMisgivings_GateReadinessAndTheBetrothal_ButNotTheWedding()
     {
-        Assert.Equal(CourtshipRoad.StepVerdict.AsksUnmet, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion, asksMet: false)));
-        Assert.Equal(CourtshipRoad.StepVerdict.AsksUnmet, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Ready, asksMet: false)));
-        // The promise was proven when it was given — gold spent on the wedding feast unmakes nothing.
-        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Betrothed, asksMet: false, daysBetrothed: 10)));
+        // A heart that never weighed itself cannot say "no questions remain"…
+        Assert.Equal(CourtshipRoad.StepVerdict.MisgivingsUnweighed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion, weighed: false)));
+        Assert.Equal(CourtshipRoad.StepVerdict.MisgivingsUnweighed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Ready, weighed: false)));
+        // …and one that set something down waits until SHE lays it to rest.
+        Assert.Equal(CourtshipRoad.StepVerdict.MisgivingsRemain, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion, openMisgivings: 2)));
+        Assert.Equal(CourtshipRoad.StepVerdict.MisgivingsRemain, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Ready, openMisgivings: 1)));
+        // A weighed-and-clear heart walks on.
+        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion)));
+        // The promise was proven when it was given — the wedding lay re-checks neither.
+        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Betrothed, weighed: false, openMisgivings: 3, daysBetrothed: 10)));
     }
 
     [Fact]
@@ -104,102 +112,77 @@ public class CourtshipTests
         Assert.Equal(CourtshipRoad.StepVerdict.NoRoadFurther, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Wed)));
     }
 
-    // ------------------------- her quiet asks: the check language -------------------------
+    // ------------------------- her misgivings: her own hand's operations -------------------------
 
     [Fact]
-    public void Checks_ParseTheClosedLanguage_AndDegradeToHeart()
+    public void SetDown_TakesLines_ShedsBullets_DedupesAndCaps()
     {
-        Assert.Equal(AskCheckKind.Gold, CourtshipChecks.Parse("gold >= 20000").Kind);
-        Assert.Equal(20000, CourtshipChecks.Parse("gold >= 20,000").Threshold);
-        Assert.Equal(AskCheckKind.Renown, CourtshipChecks.Parse("renown > 150").Kind);
-        Assert.Equal(AskCheckKind.Relation, CourtshipChecks.Parse("relation >= 40").Kind);
-        Assert.Equal(AskCheckKind.ClanTier, CourtshipChecks.Parse("tier >= 4").Kind);
+        var list = new List<CourtshipMisgiving>();
+        int added = CourtshipMisgivings.SetDown(list,
+            "- I fear the road would own him more than I would.\n" +
+            "2) His purse is lighter than his promises.\n" +
+            "I fear the road would own him more than I would.\n" +   // duplicate
+            "“What of my Da, left alone?”");
+        Assert.Equal(3, added);
+        Assert.Equal(3, CourtshipMisgivings.TotalCount(list));
+        Assert.Equal("I fear the road would own him more than I would.", list[0].Text);
+        Assert.Equal("What of my Da, left alone?", list[2].Text);
 
-        var skill = CourtshipChecks.Parse("skill Bow >= 100");
-        Assert.Equal(AskCheckKind.Skill, skill.Kind);
-        Assert.Equal("Bow", skill.Name);
-        Assert.Equal(100, skill.Threshold);
-
-        var trait = CourtshipChecks.Parse("trait Honor >= 1");
-        Assert.Equal(AskCheckKind.Trait, trait.Kind);
-        Assert.Equal("Honor", trait.Name);
-
-        Assert.Equal(AskCheckKind.Heart, CourtshipChecks.Parse("heart").Kind);
-        Assert.Equal(AskCheckKind.Heart, CourtshipChecks.Parse("he must love the road as I do").Kind);
-        Assert.Equal(AskCheckKind.Heart, CourtshipChecks.Parse("").Kind);
-        Assert.Equal(AskCheckKind.Heart, CourtshipChecks.Parse("skill >= 100").Kind); // nameless skill → heart
+        // The cap holds across later set-downs: five in all, standing and settled together.
+        CourtshipMisgivings.SetDown(list, "A fourth worry; A fifth worry; A sixth that must not land");
+        Assert.Equal(CourtshipMisgivings.MaxMisgivings, CourtshipMisgivings.TotalCount(list));
     }
 
     [Fact]
-    public void Checks_JudgeFromLiveFacts_AndLeaveTheUnknownToTheHeart()
+    public void None_IsAnHonestAnswer_NotAMisgiving()
     {
-        var facts = new SuitorFacts
-        {
-            Gold = 5000,
-            Renown = 100,
-            Relation = 45,
-            ClanTier = 2,
-            SkillOf = name => name == "Bow" ? 120 : (int?)null,
-            TraitOf = name => name == "Honor" ? 1 : (int?)null,
-        };
+        Assert.True(CourtshipMisgivings.IsNone(null));
+        Assert.True(CourtshipMisgivings.IsNone("none"));
+        Assert.True(CourtshipMisgivings.IsNone(" None. "));
+        Assert.True(CourtshipMisgivings.IsNone("my heart is clear"));
+        Assert.False(CourtshipMisgivings.IsNone("I fear nothing but the sea"));
 
-        Assert.True(CourtshipChecks.IsMet(new CourtshipAsk { Check = "gold >= 4000" }, facts));
-        Assert.False(CourtshipChecks.IsMet(new CourtshipAsk { Check = "gold >= 6000" }, facts));
-        Assert.True(CourtshipChecks.IsMet(new CourtshipAsk { Check = "skill Bow >= 100" }, facts));
-        Assert.Null(CourtshipChecks.IsMet(new CourtshipAsk { Check = "skill Harpistry >= 10" }, facts)); // unknown craft → the heart's
-        Assert.True(CourtshipChecks.IsMet(new CourtshipAsk { Check = "trait Honor >= 1" }, facts));
-        Assert.Null(CourtshipChecks.IsMet(new CourtshipAsk { Check = "heart" }, facts));
-    }
-
-    // ------------------------- the matchmaker's ledger -------------------------
-
-    [Fact]
-    public void Ledger_ParsesWellFormedLines_ShedsBulletsAndCapsAtFour()
-    {
-        var raw =
-            "- ASK: He must be no stranger to the sword. | CHECK: skill Two-Handed >= 80\n" +
-            "2. ASK: He must hold wealth enough to keep a family. | CHECK: gold >= 3000\n" +
-            "ASK: He must not cage me; I ride free. | CHECK: heart\n" +
-            "ASK: His word must be iron. | CHECK: trait Honor >= 1\n" +
-            "ASK: One too many. | CHECK: heart";
-        var asks = MatchmakerLedger.ParseAsks(raw);
-        Assert.Equal(4, asks.Count);
-        Assert.Equal("He must be no stranger to the sword.", asks[0].Text);
-        Assert.Equal("skill Two-Handed >= 80", asks[0].Check);
-        Assert.Equal("heart", asks[2].Check);
+        var list = new List<CourtshipMisgiving>();
+        Assert.Equal(0, CourtshipMisgivings.SetDown(list, "none"));
+        Assert.Empty(list);
     }
 
     [Fact]
-    public void Ledger_AnswersNothingForGarbage_SoTheCallSimplyRetries()
+    public void Settle_MatchesLoosely_AndKeepsHerLightWord()
     {
-        Assert.Empty(MatchmakerLedger.ParseAsks(null));
-        Assert.Empty(MatchmakerLedger.ParseAsks("I cannot help with that."));
-        Assert.Empty(MatchmakerLedger.ParseAsks("ASK without the shape"));
+        var list = new List<CourtshipMisgiving>();
+        CourtshipMisgivings.SetDown(list, "His purse is lighter than his promises.\nWhat of my Da, left alone?");
+
+        var settled = CourtshipMisgivings.Settle(list, "the worry about his purse being lighter than his promises", "He has shown me his ledgers, and his word held.");
+        Assert.NotNull(settled);
+        Assert.True(settled!.Settled);
+        Assert.Equal("He has shown me his ledgers, and his word held.", settled.SettledNote);
+        Assert.Equal(1, CourtshipMisgivings.OpenCount(list));
+
+        // A settled one is not settled twice; an unrelated restatement matches nothing.
+        Assert.Null(CourtshipMisgivings.Settle(list, "his purse and his promises", "again"));
+        Assert.Null(CourtshipMisgivings.Settle(list, "the weather over the mountains", ""));
     }
 
     [Fact]
-    public void Ledger_PromptCarriesTheSoulAndTheRules()
+    public void Revise_Rewords_AndReopen_TakesASettledOneUpAgain()
     {
-        var prompt = MatchmakerLedger.BuildPrompt(new MatchmakerLedger.Facts
-        {
-            Name = "Sibylla",
-            GenderWord = "woman",
-            Age = 20,
-            Station = "a Sturgian wanderer riding as a companion",
-            StationTier = 1,
-            Traits = "honest, daring",
-            SelfText = "I love him in secret.",
-            PartnerName = "Mizam",
-            SharedStory = "He taught me of the Word.",
-            WorldText = "A biblical, feudal world.",
-        });
+        var list = new List<CourtshipMisgiving>();
+        CourtshipMisgivings.SetDown(list, "What of my Da, left alone?");
 
-        Assert.Contains("Sibylla", prompt);
-        Assert.Contains("CHECK: heart", prompt);
-        Assert.Contains("ASK:", prompt);
-        Assert.Contains("Mizam", prompt);
-        Assert.Contains("between 500 and 5000 denars", prompt);
-        Assert.DoesNotContain("switch_unused", prompt);
+        var revised = CourtshipMisgivings.Revise(list, "my Da left alone", "What of my Da — who will buy him his farm?");
+        Assert.NotNull(revised);
+        Assert.Equal("What of my Da — who will buy him his farm?", list[0].Text);
+        Assert.Null(CourtshipMisgivings.Revise(list, "my Da", "")); // a revise never blanks
+
+        CourtshipMisgivings.Settle(list, "who will buy him his farm", "The farm is bought.");
+        Assert.Equal(0, CourtshipMisgivings.OpenCount(list));
+
+        var reopened = CourtshipMisgivings.Reopen(list, "who will buy my Da his farm");
+        Assert.NotNull(reopened);
+        Assert.False(reopened!.Settled);
+        Assert.Equal(string.Empty, reopened.SettledNote);
+        Assert.Equal(1, CourtshipMisgivings.OpenCount(list));
     }
 
     // ------------------------- the seeding of an already-lived road -------------------------
@@ -241,38 +224,55 @@ public class CourtshipTests
     // ------------------------- the words she reads -------------------------
 
     [Fact]
-    public void RoadSection_SpeaksTheStage_AndMarksTheAsks()
+    public void RoadSection_SpeaksTheStage_AndHerMisgivingsOpenly()
     {
-        var asks = new[]
+        var misgivings = new[]
         {
-            new CourtshipText.AskView { Text = "He must be no stranger to the sword", Met = true },
-            new CourtshipText.AskView { Text = "He must hold wealth enough", Met = false },
-            new CourtshipText.AskView { Text = "He must not cage me", Met = null },
+            new CourtshipText.MisgivingView { Text = "I fear the road would own him more than I would" },
+            new CourtshipText.MisgivingView { Text = "His purse is lighter than his promises", Settled = true, Note = "His word held" },
         };
-        var section = CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, asks, false, false, "");
+        var section = CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, misgivings, true, false, false, "");
 
         Assert.Contains("my heart is truly given", section);
-        Assert.Contains("never recite them as a list", section);
-        Assert.Contains("and this, I sense, they have", section);
-        Assert.Contains("my heart is not yet sure", section);
-        Assert.Contains("only my own heart can judge", section);
+        Assert.Contains("set down by my own hand", section);
+        Assert.Contains("speak of these openly", section);
+        Assert.Contains("this still stands in me", section);
+        Assert.Contains("laid to rest: His word held", section);
+        // The old ledger's voice is gone for good.
+        Assert.DoesNotContain("never recite them as a list", section);
+    }
+
+    [Fact]
+    public void RoadSection_InvitesTheWeighing_UntilSheHasDoneIt()
+    {
+        var unweighed = CourtshipText.RoadSection("Mizam", CourtshipStage.Warmth, null, false, false, false, "");
+        Assert.Contains("I have not yet sat with myself", unweighed);
+        Assert.Contains("five at the very most", unweighed);
+        Assert.Contains("set down none", unweighed);
+
+        var clear = CourtshipText.RoadSection("Mizam", CourtshipStage.Ready, null, true, false, false, "");
+        Assert.Contains("found no misgiving standing", clear);
+
+        // Betrothed already: the promise is given; no invitation to re-open the weighing.
+        var betrothed = CourtshipText.RoadSection("Mizam", CourtshipStage.Betrothed, null, false, false, false, "");
+        Assert.DoesNotContain("I have not yet sat with myself", betrothed);
     }
 
     [Fact]
     public void RoadSection_IsSilentAtNoneAndAtWed()
     {
-        Assert.Equal(string.Empty, CourtshipText.RoadSection("Mizam", CourtshipStage.None, null, false, false, ""));
-        Assert.Equal(string.Empty, CourtshipText.RoadSection("Mizam", CourtshipStage.Wed, null, false, false, ""));
+        Assert.Equal(string.Empty, CourtshipText.RoadSection("Mizam", CourtshipStage.None, null, false, false, false, ""));
+        Assert.Equal(string.Empty, CourtshipText.RoadSection("Mizam", CourtshipStage.Wed, null, true, false, false, ""));
     }
 
     [Fact]
     public void RoadSection_Betrothed_NamesTheMissingBlessing()
     {
-        var barred = CourtshipText.RoadSection("Mizam", CourtshipStage.Betrothed, null, true, false, "Lucon");
+        var barred = CourtshipText.RoadSection("Mizam", CourtshipStage.Betrothed, null, true, true, false, "Lucon");
         Assert.Contains("the blessing of Lucon", barred);
         Assert.Contains("cannot be given without it", barred);
 
-        var blessed = CourtshipText.RoadSection("Mizam", CourtshipStage.Betrothed, null, true, true, "Lucon");
+        var blessed = CourtshipText.RoadSection("Mizam", CourtshipStage.Betrothed, null, true, true, true, "Lucon");
         Assert.Contains("my kin have blessed the match", blessed);
     }
 
@@ -310,27 +310,40 @@ public class CourtshipTests
         var path = Path.Combine(dir, "memories.json");
         try
         {
-            // A file written before the courtship road existed: no courtship fields at all.
-            File.WriteAllText(path, "{\"NpcId\":\"npc_1\",\"NpcName\":\"Sibylla\",\"Summary\":\"old story\"}");
+            // A file written before the courtship road existed — and one from the short era of the
+            // matchmaker's CourtshipAsks (2026.08.07–08): the retired field is simply ignored, so
+            // such a soul begins with an unweighed heart and writes her own misgivings in the talk.
+            File.WriteAllText(path,
+                "{\"NpcId\":\"npc_1\",\"NpcName\":\"Sibylla\",\"Summary\":\"old story\"," +
+                "\"CourtshipAsks\":[{\"Text\":\"He must be true\",\"Check\":\"trait Honor >= 1\"}]}");
             var old = store.LoadFrom(path, "npc_1");
             Assert.Equal(CourtshipStage.None, old.CourtshipStage);
             Assert.False(old.CourtshipSeeded);
-            Assert.Empty(old.CourtshipAsks);
+            Assert.Empty(old.CourtshipMisgivings);
+            Assert.False(old.MisgivingsWeighed);
             Assert.Equal(-1, old.BetrothedGameDay);
             Assert.Equal(-1, old.FamilyBlessingDay);
 
             old.CourtshipStage = CourtshipStage.Betrothed;
             old.CourtshipSeeded = true;
             old.BetrothedGameDay = 91100.5;
-            old.CourtshipAsks.Add(new CourtshipAsk { Text = "He must be true", Check = "trait Honor >= 1" });
+            old.MisgivingsWeighed = true;
+            old.CourtshipMisgivings.Add(new CourtshipMisgiving
+            {
+                Text = "What of my Da, left alone?",
+                Settled = true,
+                SettledNote = "The farm is bought.",
+            });
             store.SaveTo(path, old);
 
             var reloaded = store.LoadFrom(path, "npc_1");
             Assert.Equal(CourtshipStage.Betrothed, reloaded.CourtshipStage);
             Assert.True(reloaded.CourtshipSeeded);
             Assert.Equal(91100.5, reloaded.BetrothedGameDay);
-            Assert.Single(reloaded.CourtshipAsks);
-            Assert.Equal("trait Honor >= 1", reloaded.CourtshipAsks[0].Check);
+            Assert.True(reloaded.MisgivingsWeighed);
+            Assert.Single(reloaded.CourtshipMisgivings);
+            Assert.True(reloaded.CourtshipMisgivings[0].Settled);
+            Assert.Equal("The farm is bought.", reloaded.CourtshipMisgivings[0].SettledNote);
         }
         finally
         {
@@ -348,7 +361,7 @@ public class CourtshipTests
     };
 
     [Fact]
-    public void Sheet_OffersTheTrothWhisper_OnlyWhenTheTrothsHandRidesAlong()
+    public void Sheet_OffersTheTrothAndMisgivingsWhispers_OnlyWhenTheHandRidesAlong()
     {
         var withTool = Persona();
         withTool.CanTendTroth = true;
@@ -356,9 +369,12 @@ public class CourtshipTests
         Assert.Contains("My troth is my own to tend", on);
         Assert.Contains("the seal is wholly theirs", on);
         Assert.Contains("I never speak of steps, stages, or rules", on);
+        Assert.Contains("My misgivings about a life together are my own", on);
+        Assert.Contains("never pretend one away", on);
 
         var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Mizam", "Hello")[0].Content;
         Assert.DoesNotContain("My troth is my own to tend", off);
+        Assert.DoesNotContain("My misgivings about a life together", off);
     }
 
     [Fact]
@@ -378,7 +394,7 @@ public class CourtshipTests
     public void Sheet_PlacesTheRoad_BesideTheDeepMemoryOfThePlayer()
     {
         var persona = Persona();
-        persona.CourtshipTerms = CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, null, false, false, "");
+        persona.CourtshipTerms = CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, null, true, false, false, "");
         var memory = new NpcMemory { Summary = "He taught me of the Word." };
 
         var system = new PromptBuilder().Build(persona, memory, "In the tavern." + PromptBuilder.MeetingSeparator + "And now Mizam comes to me.", "Mizam", "Hello")[0].Content;

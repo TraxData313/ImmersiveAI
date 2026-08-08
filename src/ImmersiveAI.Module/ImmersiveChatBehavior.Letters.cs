@@ -883,6 +883,12 @@ namespace ImmersiveAI
         private void OnDebugForceLetter()
         {
             var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+            ForceLetterFor(npc);
+        }
+
+        internal void ForceLetterFor(Hero npc)
+        {
             if (npc == null || _letterWorkInFlight || _letterBag == null) return;
             if (_letterBag.HasInFlightWith(npc.StringId)) return;
 

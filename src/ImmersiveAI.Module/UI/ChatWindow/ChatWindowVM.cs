@@ -52,6 +52,11 @@ namespace ImmersiveAI.UI.ChatWindow
         private string _promptEditTitle = string.Empty;
         private string _promptEditText = string.Empty;
         private bool _isWaiting;
+        private bool _isMisgivingsShown;
+        private string _misgivingsButtonText = string.Empty;
+        private string _misgivingsTitleText = string.Empty;
+        private string _misgivingsBodyText = string.Empty;
+        private bool _isDevShown;
 
         public ChatWindowVM(ModConfig config)
         {
@@ -363,6 +368,7 @@ namespace ImmersiveAI.UI.ChatWindow
         {
             SelectedName = _selected?.Hero?.Name?.ToString() ?? string.Empty;
             OnPropertyChanged("HasSelection");
+            OnPropertyChanged("DevTitleText");
             OnPropertyChanged("HasOverview");
             OnOverviewLayoutChanged();
             IsWaiting = _selected != null && ImmersiveChatBehavior.IsQuickChatBusy(_selected.Hero);
@@ -377,6 +383,24 @@ namespace ImmersiveAI.UI.ChatWindow
             OnPropertyChanged("RelationColor");
 
             BondStatsText = _selected == null ? string.Empty : ImmersiveChatBehavior.BondStatsLabel(_selected.Hero);
+
+            // Her written misgivings before marriage, worn openly as a little button (Anton's ask,
+            // 2026.08.08): visible only while a courtship road is walked (or something was written).
+            string mLabel = string.Empty, mTitle = string.Empty, mBody = string.Empty;
+            bool hasMisgivings = _selected != null
+                && ImmersiveChatBehavior.TryGetMisgivingsView(_selected.Hero, out mLabel, out mTitle, out mBody);
+            if (hasMisgivings)
+            {
+                MisgivingsButtonText = mLabel;
+                MisgivingsTitleText = mTitle;
+                MisgivingsBodyText = mBody;
+            }
+            else
+            {
+                MisgivingsButtonText = string.Empty;
+                IsMisgivingsShown = false;
+            }
+            OnPropertyChanged("HasMisgivings");
         }
 
         // Warm green when they hold you dear, cool red when they do not, plain parchment at neutral.
@@ -458,6 +482,43 @@ namespace ImmersiveAI.UI.ChatWindow
         }
 
         public void ExecutePromptCancel() => IsPromptEditShown = false;
+
+        // ------------------------------ the misgivings overlay ------------------------------
+
+        public void ExecuteToggleMisgivings() => IsMisgivingsShown = !IsMisgivingsShown;
+
+        // ------------------------------ the dev panel ------------------------------
+        // The DevMode levers, launched from where Anton already stands (his ask, 2026.08.08):
+        // each closes the panel first so the popup it opens is not buried under the overlay.
+
+        public void ExecuteToggleDev() => IsDevShown = !IsDevShown;
+
+        private void RunDev(Action<Hero> lever)
+        {
+            var npc = _selected?.Hero;
+            if (npc == null) return;
+            IsDevShown = false;
+            lever(npc);
+        }
+
+        public void ExecuteDevRevealMind() => RunDev(ImmersiveChatBehavior.DevRevealMind);
+        public void ExecuteDevRevealRoad() => RunDev(ImmersiveChatBehavior.DevRevealCourtship);
+        public void ExecuteDevClearMisgivings() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevClearMisgivings(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevRerollSpark() => RunDev(ImmersiveChatBehavior.DevRerollSpark);
+        public void ExecuteDevReachOut() => RunDev(ImmersiveChatBehavior.DevForceReachOut);
+        public void ExecuteDevLetter() => RunDev(ImmersiveChatBehavior.DevForceLetter);
+        public void ExecuteDevBattle() => RunDev(ImmersiveChatBehavior.DevForgeBattle);
+        public void ExecuteDevRename() => RunDev(ImmersiveChatBehavior.DevRenameNpc);
+
+        public void ExecuteDevOdds()
+        {
+            IsDevShown = false;
+            ImmersiveChatBehavior.DevShowOdds();
+        }
 
         // ------------------------------ bound properties ------------------------------
 
@@ -700,6 +761,69 @@ namespace ImmersiveAI.UI.ChatWindow
             get => _isInfoShown;
             set { if (value != _isInfoShown) { _isInfoShown = value; OnPropertyChangedWithValue(value, "IsInfoShown"); } }
         }
+
+        // ------------------------------ the misgivings overlay ------------------------------
+
+        /// <summary>Whether the chosen one has a misgivings view to show at all (a courtship road
+        /// is walked, or something was once written) — keys the little button's visibility.</summary>
+        [DataSourceProperty]
+        public bool HasMisgivings => HasSelection && !string.IsNullOrEmpty(_misgivingsButtonText);
+
+        [DataSourceProperty]
+        public string MisgivingsButtonText
+        {
+            get => _misgivingsButtonText;
+            set { if (value != _misgivingsButtonText) { _misgivingsButtonText = value; OnPropertyChangedWithValue(value, "MisgivingsButtonText"); } }
+        }
+
+        [DataSourceProperty]
+        public string MisgivingsTitleText
+        {
+            get => _misgivingsTitleText;
+            set { if (value != _misgivingsTitleText) { _misgivingsTitleText = value; OnPropertyChangedWithValue(value, "MisgivingsTitleText"); } }
+        }
+
+        [DataSourceProperty]
+        public string MisgivingsBodyText
+        {
+            get => _misgivingsBodyText;
+            set { if (value != _misgivingsBodyText) { _misgivingsBodyText = value; OnPropertyChangedWithValue(value, "MisgivingsBodyText"); } }
+        }
+
+        /// <summary>The misgivings overlay — folded by Escape before the info overlay (manager).</summary>
+        [DataSourceProperty]
+        public bool IsMisgivingsShown
+        {
+            get => _isMisgivingsShown;
+            set { if (value != _isMisgivingsShown) { _isMisgivingsShown = value; OnPropertyChangedWithValue(value, "IsMisgivingsShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string MisgivingsHintText =>
+            "These are their own words, written by their own hand mid-talk — never a checklist. Talk with them about what stands; they lay one to rest only when life truly answers it.";
+
+        // ------------------------------ the dev panel ------------------------------
+
+        /// <summary>Whether the Dev button shows at all — DevMode players only.</summary>
+        [DataSourceProperty]
+        public bool IsDevMode => _config.DevMode;
+
+        /// <summary>The dev panel overlay — folded by Escape first of the informational overlays.</summary>
+        [DataSourceProperty]
+        public bool IsDevShown
+        {
+            get => _isDevShown;
+            set { if (value != _isDevShown) { _isDevShown = value; OnPropertyChangedWithValue(value, "IsDevShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string DevTitleText => string.IsNullOrEmpty(SelectedName)
+            ? "Immersive AI — developer levers (choose someone first for the per-soul ones)"
+            : $"Immersive AI — developer levers, acting on {SelectedName}";
+
+        [DataSourceProperty]
+        public string DevHintText =>
+            "The same test levers as the face-to-face menu, without the walk over. Popups open above this window; levers that start something async (reach-out, letter, spark) show their result as it lands.";
 
         // ------------------------------ the prompt editor overlay ------------------------------
 

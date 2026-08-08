@@ -73,9 +73,16 @@ namespace ImmersiveAI.Core.Memory
         /// lived story honored the first time the road touches her.</summary>
         public bool CourtshipSeeded { get; set; }
 
-        /// <summary>Her quiet asks of the one she would wed — written once by the matchmaker's
-        /// ledger, private to her sheet, each carrying its checkable predicate (or "heart").</summary>
-        public List<CourtshipAsk> CourtshipAsks { get; set; } = new List<CourtshipAsk>();
+        /// <summary>Her own written misgivings about a life wed to the player — set down by her own
+        /// hand mid-talk (the weigh_misgivings tool), each laid to rest only by her own judgment.
+        /// Replaced the matchmaker's checkable quiet asks on 2026.08.08; the old CourtshipAsks JSON
+        /// field is simply ignored on load, so an old file begins with an unweighed heart.</summary>
+        public List<CourtshipMisgiving> CourtshipMisgivings { get; set; } = new List<CourtshipMisgiving>();
+
+        /// <summary>True once she has truly sat with the question of what might weigh on her about
+        /// this marriage — set by her first set_down, INCLUDING the honest "none". Readiness and the
+        /// betrothal ask this of her; a heart that never looked cannot say no questions remain.</summary>
+        public bool MisgivingsWeighed { get; set; }
 
         /// <summary>Campaign day her house's head blessed the match; -1 = not given. Only asked
         /// for at all when the world requires family consent and she has kin above her.</summary>

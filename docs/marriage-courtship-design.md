@@ -8,10 +8,12 @@ Player-facing docs live elsewhere; this is why the road is shaped the way it is.
 The `strike_bargain` mold applied to the biggest thing a bond can become: **words move the
 heart, but only the player's sealed click betroths — and only a second sealed click weds.**
 An NPC walks her own courtship road toward the player, step by step, by her own hand (a native
-tool); she carries private, generated "quiet asks" of a husband that surface in talk like a
-real person's do; her noble kin may demand a bride-price the player can haggle over with the
-clan's own head; and the wedding itself is the real game's `MarriageAction`, so the whole world
-— kin lines, encyclopedia, tidings — knows it truly happened.
+tool); she writes her OWN misgivings about the marriage when the talk truly turns that way, and
+lays each to rest by her own judgment (v2, 2026.08.08 — see below; the generated, auto-checked
+"quiet asks" of v1 were retired the day after they shipped); her noble kin may demand a
+bride-price the player can haggle over with the clan's own head; and the wedding itself is the
+real game's `MarriageAction`, so the whole world — kin lines, encyclopedia, tidings — knows it
+truly happened.
 
 Anton's original asks, all honored here:
 - The hiring-bargain shape, applied to marriage (tool lays, popup seals, rules re-run at both).
@@ -20,8 +22,10 @@ Anton's original asks, all honored here:
   station rails with a small hard-earned slack ("трябва да е някакъв Дон Жуан").
 - Waypoints ("стълбове"): likes him → really likes him → no questions left, ready → betrothed →
   wed.
-- Generated, personality-grounded requirements she KNOWS but never recites as a list — they
-  surface as the talk turns, each checkable against live game data where possible.
+- ~~Generated, personality-grounded requirements she KNOWS but never recites as a list — they
+  surface as the talk turns, each checkable against live game data where possible.~~ (v1;
+  replaced 2026.08.08 by her OWN written misgivings — Anton found the auto-checked
+  requirements "robotic bargains with hammered-in rules".)
 - **Wanderer/companion brides are first-class** (vanilla forbids them; here they are the POINT —
   the first real bonds are with companions). MCM toggle, default ON.
 - The father's permission is itself a bargain: the game names its reckoning, the player can
@@ -46,8 +50,9 @@ station (ruling clan's kin 6 · great house 5 · middling 4 · lesser 3 · notab
 wanderer 1), minus `CourtshipCharmSlack` (default 2, MCM 0..4) — the Don-Juan discount,
 earned only once her heart is fully won (full slack from Devotion→Ready onward, none
 before). So love without marriage is a possible, honest tragedy; and the emperor's daughter
-at slack −2 still requires a tier-4 clan. Ready additionally requires relation ≥ 40 and every
-*checkable* quiet ask met.
+at slack −2 still requires a tier-4 clan. Ready additionally requires relation ≥ 40, a heart
+that has WEIGHED its own misgivings at least once (even to find none), and no misgiving of
+her own still standing.
 
 **Refusals never name a threshold** (the Sibuga floor lesson — any number a rail speaks
 becomes her next sentence). The tool answers her in her own mind's voice: "my heart is not
@@ -76,28 +81,38 @@ stream): a soft line for warmth/devotion/ready ("Sibylla's heart draws a step cl
 a solemn one for betrothal and wedding, an honest grey one for a step back. The player
 always sees the road move — the feedback loop that makes the courtship feel alive.
 
-## Her quiet asks — the matchmaker's ledger
+## Her misgivings — written by her own hand (v2, 2026.08.08)
 
-At her first step onto the road (first `tend_courtship` success, retried lazily if the call
-fails), a one-time plain utility LLM call — the persona-spark's sibling — writes **2–4
-private requirements** grounded in her story, traits, spark, station, and the player's world
-text. Each is tied where possible to a predicate the resolver can answer from live data:
+**The v1 matchmaker's ledger is retired.** It generated 2–4 "quiet asks" per soul, each tied
+to a checkable predicate (`gold >= 2000`, `skill Riding >= 50`, `trait Mercy >= 1`, `heart`),
+auto-judged against live game data with met-marks in her sheet. One day of play showed the
+problem (Sibylla's ledger was the exhibit): the checkable stoppers turned every courtship
+into a robotic bargain with hammered-in rules — the player farms a number instead of talking
+to a person, and her "requirements" were never really hers. `MatchmakerLedger` and the
+`CourtshipAsk` DSL were deleted whole; old `CourtshipAsks` JSON fields are ignored on load,
+so such souls simply begin with an unweighed heart. The one hard worldly rail that remains is
+the station gate — deliberately kept, per Anton.
 
-```
-ASK: <her want, first person, her voice> | CHECK: <predicate>
-```
+**In their place: misgivings, hers alone.** When marriage truly enters the talk and she has
+not yet weighed her heart, the sheet invites her to pause and do it honestly — via the
+`weigh_misgivings` tool (rides beside `tend_courtship`):
 
-Predicates (tiny, closed DSL, Core-parsed): `gold >= N`, `renown >= N`, `skill <Name> >= N`,
-`trait <Honor|Valor|Mercy|Generosity|Calculating> >= N`, `relation >= N`, and `heart` —
-the unfalsifiable kind only she can judge from the talks ("he must not cage me; I ride
-free"). At least one `heart` ask is invited; unknown predicates degrade to `heart` (her
-phrasing is never lost). Numbers are scaled by station guidance in the prompt, never by the
-player's actual purse (asks must not auto-tailor to pass or fail).
+- `set_down` — her doubts in her OWN words, one per line, **five at the very most** across
+  her whole story (standing + settled) — or the single word `none` if her heart is clear.
+  Either way `MisgivingsWeighed` is set: a clear heart is weighed too.
+- `settle` — lays one to rest, with a light word on what answered it, kept beside it forever
+  ("He has shown me his ledgers, and his word held"). Only SHE judges when life answered it.
+- `revise` — rewords one that changed; `reopen` — a settled one returned to her.
 
-They fold into her sheet PRIVATELY — "What I quietly ask of the one I would wed — I know
-these in my bones; I never recite them as a list" — each with a live met-mark the sheet
-computes fresh every build ("and this, I sense, he has" / "and here my heart is not yet
-sure"). No separate weigh tool: the sheet IS the ledger, the way she simply knows her mood.
+Core `CourtshipMisgivings` (NpcGoals' fuzzy-match mold, unit-tested) owns the ops; nothing is
+generated, nothing is auto-checked. The rails only COUNT: Ready and the betrothal wait for
+`MisgivingsWeighed && OpenMisgivings == 0` (verdicts `MisgivingsUnweighed` /
+`MisgivingsRemain`, refusals numberless as ever); the wedding lay re-checks neither (the
+promise was proven when it was given). Unlike the v1 asks, these are **discussable openly** —
+the sheet says so — and **player-visible**: the bond line carries "misgivings 2/4", and a
+"Misgivings n/m" button in the chat window opens the full list with her settling notes.
+Every set-down/settle/reopen fires a rose road-notice, so the heart's bookkeeping is part of
+the story.
 
 ## The two seals
 
@@ -169,9 +184,11 @@ blesses the match. The blessing is won in conversation WITH HIM — the bargain 
 | `CourtshipCharmSlack` | 2 | slider 0..4 |
 | `MinBetrothalDays` | 3 | slider 0..30 (0 = may wed the same day) |
 
-All live (no restart). DevMode levers: "[test — reveal her quiet asks]" (asks + met marks +
-stage + gate verdict), "[test — reroll her quiet asks]"; the odds view and BondStatsLabel
-carry a road tag ("on the road: devotion" / "betrothed").
+All live (no restart). DevMode levers: "[test — courtship & quiet asks]" (the road + her
+misgivings + gate verdict), "[test — clear their marriage misgivings]" (she weighs her heart
+afresh); the same levers live in the chat window's Dev panel. The odds view and
+BondStatsLabel carry a road tag ("on the road: devotion" / "betrothed") and the misgivings
+count ("misgivings 2/4").
 
 ## Eligibility (the hard floor under everything)
 

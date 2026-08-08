@@ -7,6 +7,11 @@ NEXT UPDATE:
       scout post), the blessing bargain with a noble bride's clan head (face to face AND by
       letter), offers riding letters (hiring / betrothal / blessing popup on arrival), the
       windows' fixed corner buttons, and "g" typed in chat no longer opening Training Battles.
+      PLUS the misgivings rework (2026.08.08 evening): Sibylla was reset — when marriage enters
+      the talk she should WRITE her own misgivings (weigh_misgivings; watch for the rose notices),
+      the "Misgivings n/m" button + bond-line count in the chat window, settling with her note,
+      Ready refusing while one stands; and the new Dev panel in the chat window + the reordered
+      face-to-face menu (chat on top, Farewell at the bottom).
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)

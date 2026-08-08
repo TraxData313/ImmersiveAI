@@ -24,8 +24,10 @@ namespace ImmersiveAI
     /// player (Warmth → Devotion → Ready → Betrothed → Wed, persisted in memories.json so the
     /// save-scoped snapshots rewind a courtship for free), moved by her own hand (tend_courtship)
     /// under hard rails — relation floors, one step a day, the STATION GATE (required player clan
-    /// tier from her station, minus the charm slack a fully-won heart earns), and her own generated
-    /// quiet asks (the matchmaker's ledger). A soul with a real lived story is SEEDED once from that
+    /// tier from her station, minus the charm slack a fully-won heart earns), and her OWN written
+    /// misgivings (weigh_misgivings — set down by her hand when marriage truly enters the talk,
+    /// laid to rest only by her own judgment; the matchmaker's checkable asks were retired
+    /// 2026.08.08, "no robotic bargains"). A soul with a real lived story is SEEDED once from that
     /// story, so the feature's arrival never erases a love already spoken. Noble kin demand a
     /// bride-price (bless_marriage on the clan's head — the second bargain, ±MarriageDowryHagglePercent
     /// around the world's own reckoning, which is her clan's renown as vanilla's own barter prices
@@ -318,69 +320,6 @@ namespace ImmersiveAI
             catch { return 1; }
         }
 
-        // The suitor's plain facts for her quiet asks — live game data behind the Core judgment.
-        private static SuitorFacts SuitorFactsOf(Hero npc)
-        {
-            var player = Hero.MainHero;
-            return new SuitorFacts
-            {
-                Gold = player?.Gold ?? 0,
-                Renown = (int)(Clan.PlayerClan?.Renown ?? 0f),
-                Relation = GetStanding(npc),
-                ClanTier = Clan.PlayerClan?.Tier ?? 0,
-                SkillOf = name => SkillValueOf(player, name),
-                TraitOf = name => TraitValueOf(player, name),
-            };
-        }
-
-        private static int? SkillValueOf(Hero? hero, string name)
-        {
-            try
-            {
-                if (hero == null || string.IsNullOrWhiteSpace(name)) return null;
-                foreach (var skill in TaleWorlds.CampaignSystem.Extensions.Skills.All)
-                {
-                    if (skill == null) continue;
-                    if (string.Equals(skill.Name?.ToString(), name, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(skill.StringId, name.Replace(" ", ""), StringComparison.OrdinalIgnoreCase))
-                        return hero.GetSkillValue(skill);
-                }
-            }
-            catch { }
-            return null;
-        }
-
-        private static int? TraitValueOf(Hero? hero, string name)
-        {
-            try
-            {
-                if (hero == null || string.IsNullOrWhiteSpace(name)) return null;
-                switch (name.Trim().ToLowerInvariant())
-                {
-                    case "honor": return hero.GetTraitLevel(DefaultTraits.Honor);
-                    case "valor": return hero.GetTraitLevel(DefaultTraits.Valor);
-                    case "mercy": return hero.GetTraitLevel(DefaultTraits.Mercy);
-                    case "generosity": return hero.GetTraitLevel(DefaultTraits.Generosity);
-                    case "calculating": return hero.GetTraitLevel(DefaultTraits.Calculating);
-                    default: return null;
-                }
-            }
-            catch { return null; }
-        }
-
-        private bool AsksAllMet(Hero npc, NpcMemory memory)
-        {
-            try
-            {
-                if (memory.CourtshipAsks.Count == 0) return true;
-                var facts = SuitorFactsOf(npc);
-                foreach (var ask in memory.CourtshipAsks)
-                    if (CourtshipChecks.IsMet(ask, facts) == false) return false;
-                return true;
-            }
-            catch { return true; }
-        }
-
         private CourtshipRoad.StepFacts RoadFactsOf(Hero npc, NpcMemory memory)
         {
             var now = CampaignTime.Now.ToDays;
@@ -392,7 +331,8 @@ namespace ImmersiveAI
                 PlayerClanTier = Clan.PlayerClan?.Tier ?? 0,
                 HerStationTier = StationTierOf(npc),
                 CharmSlack = _config.CourtshipCharmSlack,
-                AllCheckableAsksMet = AsksAllMet(npc, memory),
+                MisgivingsWeighed = memory.MisgivingsWeighed,
+                OpenMisgivings = CourtshipMisgivings.OpenCount(memory.CourtshipMisgivings),
                 DaysBetrothed = memory.BetrothedGameDay < 0 ? -1 : now - memory.BetrothedGameDay,
                 MinBetrothalDays = _config.MinBetrothalDays,
             };
@@ -400,8 +340,8 @@ namespace ImmersiveAI
 
         // ------------------------- the sheet's courtship sections -------------------------
 
-        // Her private road-and-asks section — rides EVERY sheet while a road is walked (a betrothed
-        // woman writing a letter knows she is betrothed), not only when the tool rides.
+        // Her private road-and-misgivings section — rides EVERY sheet while a road is walked (a
+        // betrothed woman writing a letter knows she is betrothed), not only when the tool rides.
         private string BuildRoadTerms(Hero npc, NpcMemory memory)
         {
             try
@@ -413,16 +353,16 @@ namespace ImmersiveAI
                 // turnings) wears no courtship section: the kin lines carry the marriage.
                 if (npc?.Spouse != null) return string.Empty;
 
-                var facts = SuitorFactsOf(npc);
-                var asks = memory.CourtshipAsks
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.Text))
-                    .Select(a => new CourtshipText.AskView { Text = a.Text, Met = CourtshipChecks.IsMet(a, facts) })
+                var misgivings = memory.CourtshipMisgivings
+                    .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text))
+                    .Select(m => new CourtshipText.MisgivingView { Text = m.Text, Settled = m.Settled, Note = m.SettledNote })
                     .ToList();
 
                 return CourtshipText.RoadSection(
                     Hero.MainHero?.Name?.ToString() ?? "the traveler",
                     memory.CourtshipStage,
-                    asks,
+                    misgivings,
+                    memory.MisgivingsWeighed,
                     BlessingRequired(npc),
                     memory.FamilyBlessingDay >= 0,
                     npc?.Clan?.Leader?.Name?.ToString() ?? string.Empty);
@@ -569,6 +509,111 @@ namespace ImmersiveAI
             catch { return "The moment does not allow it; I let the matter rest."; }
         }
 
+        // The misgivings' hand: her own writing upon what weighs on her heart before marriage.
+        // Rides on the troth tally (same gate as tend_courtship); mutates the LIVE memory the turn
+        // speaks from (the hold_truth discipline) and saves at once, so the end-of-turn save can
+        // never clobber it. Notices stay quiet for letters (the courier's seal law).
+        private string ResolveWeighMisgivings(Core.Llm.ToolCall call, Hero npc, Tools.TrothTool.Tally? troth, NpcMemory? liveMemory)
+        {
+            try
+            {
+                if (troth == null)
+                    return "This is not the moment for the weighing of my heart — I stay in the talk.";
+
+                var memory = liveMemory ?? LoadMemory(npc);
+                var list = memory.CourtshipMisgivings;
+                var action = Tools.MisgivingTool.ParseAction(call);
+                var text = Tools.MisgivingTool.ParseText(call);
+                var note = Tools.MisgivingTool.ParseNote(call);
+                bool quiet = troth.ByLetter;
+
+                int Open() => CourtshipMisgivings.OpenCount(list);
+                int Total() => CourtshipMisgivings.TotalCount(list);
+
+                switch (action)
+                {
+                    case Tools.MisgivingTool.ActSetDown:
+                        if (CourtshipMisgivings.IsNone(text))
+                        {
+                            if (Total() > 0)
+                                return "What I set down before still stands written — a clear heart is not declared, it is earned: I lay each to rest as life answers it, or take it up and say so.";
+                            memory.MisgivingsWeighed = true;
+                            SaveMemory(npc, memory);
+                            if (!quiet) NotifyMisgivings(npc, "weighs their heart about a life together — and finds it clear.");
+                            return "It is weighed and set down: I hold no misgivings — my heart is clear on this. I speak on from that truth.";
+                        }
+                        else
+                        {
+                            int added = CourtshipMisgivings.SetDown(list, text);
+                            if (added == 0)
+                                return Total() >= Core.Courtship.CourtshipMisgivings.MaxMisgivings
+                                    ? "I already carry as many as a heart can honestly hold at once — before I set down another, I first lay one to rest or reword one."
+                                    : "Nothing new was set down — what I named, I carry already.";
+                            memory.MisgivingsWeighed = true;
+                            SaveMemory(npc, memory);
+                            if (!quiet) NotifyMisgivings(npc,
+                                $"sets down what weighs on their heart about a life together ({Open()} of {Total()} standing).");
+                            return $"It is set down, in my own words — {Open()} now stand{(Open() == 1 ? "s" : string.Empty)} in me. They are mine to speak of openly, and mine alone to lay to rest when life truly answers them.";
+                        }
+
+                    case Tools.MisgivingTool.ActSettle:
+                    {
+                        var settled = CourtshipMisgivings.Settle(list, text, note);
+                        if (settled == null)
+                            return "No misgiving of mine matches those words — I lay nothing to rest that I did not set down.";
+                        SaveMemory(npc, memory);
+                        if (!quiet)
+                        {
+                            var tail = string.IsNullOrWhiteSpace(settled.SettledNote) ? string.Empty : $" — “{settled.SettledNote}”";
+                            NotifyMisgivings(npc, Open() == 0
+                                ? $"lays their last misgiving to rest{tail} — their heart is clear."
+                                : $"lays a misgiving to rest{tail} ({Open()} of {Total()} still stand).");
+                        }
+                        return Open() == 0
+                            ? "It is laid to rest — and with it, nothing stands in me any longer. My heart is clear, and I may say so."
+                            : $"It is laid to rest, with my word on what answered it. {Open()} still stand{(Open() == 1 ? "s" : string.Empty)} in me.";
+                    }
+
+                    case Tools.MisgivingTool.ActRevise:
+                    {
+                        var revised = CourtshipMisgivings.Revise(list, text, note);
+                        if (revised == null)
+                            return "No misgiving of mine matches those words, so nothing was reworded.";
+                        SaveMemory(npc, memory);
+                        if (!quiet) NotifyMisgivings(npc, "turns a misgiving over, and words it anew.");
+                        return "It is reworded — the same weight, seen truer. I speak on.";
+                    }
+
+                    case Tools.MisgivingTool.ActReopen:
+                    {
+                        var reopened = CourtshipMisgivings.Reopen(list, text);
+                        if (reopened == null)
+                            return "Nothing I had laid to rest matches those words — nothing returned.";
+                        SaveMemory(npc, memory);
+                        if (!quiet) NotifyMisgivings(npc,
+                            $"takes an old misgiving up again ({Open()} of {Total()} standing).");
+                        return "It stands in me again, and I own it honestly — better a doubt spoken than a peace pretended.";
+                    }
+
+                    default:
+                        return "My heart did not move over its misgivings just now — I stay in the talk.";
+                }
+            }
+            catch { return "The moment does not allow it; I let the matter rest."; }
+        }
+
+        // The misgivings' own notice — the road's rose, so the heart's bookkeeping reads as one story.
+        private void NotifyMisgivings(Hero npc, string doing)
+        {
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage($"{name} {doing}", RoadColor)));
+            }
+            catch { /* the notice is a nicety */ }
+        }
+
         private string ResolveBlessLay(Core.Llm.ToolCall call, Hero npc, Tools.TrothTool.BlessTally? bless)
         {
             try
@@ -713,10 +758,7 @@ namespace ImmersiveAI
                 }
 
                 bool needsSeed = !memory.CourtshipSeeded;
-                bool needsAsks = memory.CourtshipStage > CourtshipStage.None
-                    && memory.CourtshipStage < CourtshipStage.Wed
-                    && memory.CourtshipAsks.Count == 0;
-                if (!needsSeed && !needsAsks)
+                if (!needsSeed)
                 {
                     // The betrothal's shield, re-asserted (Anton's ask: no one takes her while we
                     // are still arranging): vanilla can demote a mirrored romance state when its own
@@ -778,25 +820,8 @@ namespace ImmersiveAI
                         }
                     }
 
-                    if (memory.CourtshipStage > CourtshipStage.None
-                        && memory.CourtshipStage < CourtshipStage.Wed
-                        && memory.CourtshipAsks.Count == 0)
-                    {
-                        var facts = GatherMatchmakerFacts(npc, memory, playerName, npcName, genderWord);
-                        var prompt = MatchmakerLedger.BuildPrompt(facts);
-                        var raw = await _client.CompleteAsync(
-                            new List<ChatMessage> { ChatMessage.User(prompt) }).ConfigureAwait(false);
-                        var asks = MatchmakerLedger.ParseAsks(raw);
-                        if (asks.Count > 0)
-                        {
-                            memory.CourtshipAsks = asks;
-                            SaveMemory(npc, memory);
-                            NotifyRoadActivity(npc, "quietly knows what their heart would ask of a marriage…");
-                            ModLog.Info($"the matchmaker's ledger for {npcName}: " +
-                                string.Join(" | ", asks.Select(a => $"{a.Text} [{a.Check}]")));
-                        }
-                        // else: retried on a later exchange, exactly like the spark.
-                    }
+                    // (No matchmaker follows the seeding anymore — since 2026.08.08 her misgivings
+                    // are HER OWN to set down mid-talk via weigh_misgivings, never generated.)
                 }
                 finally { EndCourtshipWork(npc.StringId); }
             }
@@ -804,37 +829,6 @@ namespace ImmersiveAI
             {
                 ModLog.Error("readying the courtship road for " + (npc?.Name?.ToString() ?? "?"), ex);
             }
-        }
-
-        private MatchmakerLedger.Facts GatherMatchmakerFacts(Hero npc, NpcMemory memory, string playerName, string npcName, string genderWord)
-        {
-            var facts = new MatchmakerLedger.Facts
-            {
-                Name = npcName,
-                GenderWord = genderWord,
-                PartnerName = playerName,
-                StationTier = StationTierOf(npc),
-            };
-            try { facts.Age = (int)npc.Age; } catch { }
-            try
-            {
-                var spark = GatherSparkFacts(npc);
-                facts.Station = spark.Station;
-                facts.Traits = spark.Traits;
-                facts.Backstory = spark.Backstory;
-                facts.WorldText = spark.WorldText;
-            }
-            catch { }
-            try { facts.SelfText = PromptFiles.LoadNpcPrompt(NpcPaths.CustomInstructionsFile(npc), npcName); } catch { }
-            try
-            {
-                var shared = (memory.Summary ?? string.Empty).Trim();
-                if (memory.KnownFacts.Count > 0)
-                    shared = (shared + " " + string.Join(" ", memory.KnownFacts)).Trim();
-                facts.SharedStory = shared.Length > 900 ? shared.Substring(0, 900) : shared;
-            }
-            catch { }
-            return facts;
         }
 
         // The last few remembered exchanges, condensed for the seeding call's eyes.
@@ -1228,12 +1222,19 @@ namespace ImmersiveAI
         // ------------------------- DevMode levers -------------------------
 
         // The plain developer's view: the road, the gate's arithmetic (plain here — the PLAYER'S
-        // debug eyes, not hers), her asks with their live verdicts, and the blessing's state.
+        // debug eyes, not hers), her misgivings as they stand, and the blessing's state.
         private void OnDebugRevealCourtship()
+        {
+            var npc = Hero.OneToOneConversationHero ?? _currentNpc;
+            if (npc == null) return;
+            RevealCourtshipFor(npc);
+            MBTextManager.SetTextVariable(InfoVar, "(You read the road of their heart.)", false);
+        }
+
+        internal void RevealCourtshipFor(Hero npc)
         {
             try
             {
-                var npc = Hero.OneToOneConversationHero ?? _currentNpc;
                 if (npc == null) return;
                 var memory = LoadMemory(npc);
                 var facts = RoadFactsOf(npc, memory);
@@ -1245,38 +1246,105 @@ namespace ImmersiveAI
                 sb.AppendLine($"Blessing: {(BlessingRequired(npc) ? (memory.FamilyBlessingDay >= 0 ? $"given ({memory.FamilyBlessingPrice} denars)" : "required, not given") : "not required")}");
                 sb.AppendLine($"Next step verdict: {CourtshipRoad.JudgeForward(facts)}");
                 sb.AppendLine();
-                if (memory.CourtshipAsks.Count == 0) sb.AppendLine("Quiet asks: none written yet.");
+                if (!memory.MisgivingsWeighed && memory.CourtshipMisgivings.Count == 0)
+                    sb.AppendLine("Misgivings: not yet weighed — they write their own when marriage truly enters the talk.");
+                else if (memory.CourtshipMisgivings.Count == 0)
+                    sb.AppendLine("Misgivings: weighed — none; their heart is clear.");
                 else
                 {
-                    sb.AppendLine("Quiet asks:");
-                    var suitor = SuitorFactsOf(npc);
-                    foreach (var ask in memory.CourtshipAsks)
+                    sb.AppendLine($"Misgivings ({facts.OpenMisgivings} of {CourtshipMisgivings.TotalCount(memory.CourtshipMisgivings)} standing):");
+                    foreach (var m in memory.CourtshipMisgivings)
                     {
-                        var met = CourtshipChecks.IsMet(ask, suitor);
-                        var verdict = met == true ? "MET" : met == false ? "not met" : "heart-judged";
-                        sb.AppendLine($"• {ask.Text}  [{ask.Check}] — {verdict}");
+                        if (m == null || string.IsNullOrWhiteSpace(m.Text)) continue;
+                        sb.AppendLine(m.Settled
+                            ? $"✓ {m.Text}{(string.IsNullOrWhiteSpace(m.SettledNote) ? string.Empty : $" — laid to rest: {m.SettledNote}")}"
+                            : $"• {m.Text}");
                     }
                 }
                 ShowScrollPopup($"The road of {npc.Name}'s heart", sb.ToString().Trim());
-                MBTextManager.SetTextVariable(InfoVar, "(You read the road of their heart.)", false);
             }
             catch (Exception ex) { ModLog.Error("revealing the courtship road", ex); }
         }
 
-        private void OnDebugRerollAsks()
+        private void OnDebugClearMisgivings()
+        {
+            var npc = Hero.OneToOneConversationHero ?? _currentNpc;
+            if (npc == null) return;
+            ClearMisgivingsFor(npc);
+        }
+
+        // Releases the written misgivings AND the weighed mark, so the soul sits with the question
+        // afresh the next time marriage truly enters the talk — nothing is generated in their place.
+        internal void ClearMisgivingsFor(Hero npc)
         {
             try
             {
-                var npc = Hero.OneToOneConversationHero ?? _currentNpc;
                 if (npc == null) return;
                 var memory = LoadMemory(npc);
-                memory.CourtshipAsks.Clear();
+                memory.CourtshipMisgivings.Clear();
+                memory.MisgivingsWeighed = false;
                 SaveMemory(npc, memory);
                 InformationManager.DisplayMessage(new InformationMessage(
-                    $"{npc.Name}'s quiet asks are released — the matchmaker will write them anew at the next exchange.", ActivityColor));
-                _ = EnsureCourtshipReadyAsync(npc);
+                    $"{npc.Name}'s misgivings are released — they will weigh their heart anew when marriage next enters the talk.", ActivityColor));
             }
-            catch (Exception ex) { ModLog.Error("rerolling the quiet asks", ex); }
+            catch (Exception ex) { ModLog.Error("clearing the misgivings", ex); }
+        }
+
+        // ------------------------- the misgivings, shown to the player -------------------------
+
+        /// <summary>The chat window's misgivings view for one soul (Anton's ask, 2026.08.08 — a
+        /// little button, so what she set down is readable, not hidden bookkeeping). Returns false
+        /// when there is nothing to show (no road walked and nothing written).</summary>
+        internal static bool TryGetMisgivingsView(Hero npc, out string buttonLabel, out string title, out string body)
+        {
+            buttonLabel = title = body = string.Empty;
+            try
+            {
+                var self = Current;
+                if (self == null || npc == null || !self._config.EnableConversationMarriage) return false;
+                var memory = self.LoadMemory(npc);
+                var stage = memory.CourtshipStage;
+                bool onRoad = stage > CourtshipStage.None && stage < CourtshipStage.Wed && npc.Spouse == null;
+                int total = CourtshipMisgivings.TotalCount(memory.CourtshipMisgivings);
+                if (!onRoad && total == 0) return false;
+
+                int open = CourtshipMisgivings.OpenCount(memory.CourtshipMisgivings);
+                buttonLabel = total > 0 ? $"Misgivings {open}/{total}"
+                    : memory.MisgivingsWeighed ? "Misgivings: none"
+                    : "Misgivings: unweighed";
+
+                var name = npc.Name?.ToString() ?? "Their";
+                title = $"What weighs on {name}'s heart before marriage";
+
+                var sb = new StringBuilder();
+                if (total == 0)
+                {
+                    sb.AppendLine(memory.MisgivingsWeighed
+                        ? "They searched their heart and found nothing standing against a life together — it is clear."
+                        : "They have not yet sat with the question. When marriage truly enters your talks, they will weigh their heart and set down what troubles them — in their own words, a few at the most, or none at all.");
+                }
+                else
+                {
+                    foreach (var m in memory.CourtshipMisgivings)
+                    {
+                        if (m == null || string.IsNullOrWhiteSpace(m.Text)) continue;
+                        if (m.Settled)
+                        {
+                            sb.AppendLine($"✓ {m.Text}");
+                            if (!string.IsNullOrWhiteSpace(m.SettledNote))
+                                sb.AppendLine($"      — laid to rest: {m.SettledNote}");
+                        }
+                        else sb.AppendLine($"• {m.Text}");
+                        sb.AppendLine();
+                    }
+                    sb.AppendLine(open > 0
+                        ? $"{open} of {total} still stand. These are theirs alone to lay to rest — talk with them, and let life answer what they wrote."
+                        : $"All {total} are laid to rest — nothing they wrote still stands between you.");
+                }
+                body = sb.ToString().TrimEnd();
+                return true;
+            }
+            catch { return false; }
         }
     }
 }
