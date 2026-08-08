@@ -244,23 +244,77 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool RevertMemoriesWithSaves { get; set; } = true;
 
+        // ── Memory ──────────────────────────────────────────────────────────────────
+        // When an NPC's word-for-word memory of the player is folded into their rolling summary, and
+        // what is left standing afterwards. Three ceilings, whichever is reached first: the share of
+        // the model's context window, the number of exchanges, the age of the oldest one. Every value
+        // here is read at the moment a turn is recorded, so an edit takes hold on the very next
+        // exchange — no restart. The chat window shows the live weight against these thresholds.
+
+        [SettingPropertyInteger(MemorySettingsMetadata.MaxMemoryPercentDisplayName,
+            MemorySettingsMetadata.MinMemoryPercent, MemorySettingsMetadata.MaxMemoryPercent, "0",
+            Order = 0, RequireRestart = false, HintText = MemorySettingsMetadata.MaxMemoryPercentHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int MaxRecentMemoryPercent { get; set; } = 10;
+
+        [SettingPropertyInteger(MemorySettingsMetadata.MinMemoryPercentDisplayName,
+            MemorySettingsMetadata.MinMemoryPercent, MemorySettingsMetadata.MaxMemoryPercent, "0",
+            Order = 1, RequireRestart = false, HintText = MemorySettingsMetadata.MinMemoryPercentHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int MinRecentMemoryPercentAfterCompression { get; set; } = 5;
+
+        [SettingPropertyInteger(MemorySettingsMetadata.MaxRecentTurnsDisplayName,
+            MemorySettingsMetadata.MinRecentTurns, MemorySettingsMetadata.MaxRecentTurnsCeiling, "0",
+            Order = 2, RequireRestart = false, HintText = MemorySettingsMetadata.MaxRecentTurnsHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int MaxRecentTurns { get; set; } = 30;
+
+        [SettingPropertyInteger(MemorySettingsMetadata.KeepRecentTurnsDisplayName,
+            1, MemorySettingsMetadata.MaxRecentTurnsCeiling, "0",
+            Order = 3, RequireRestart = false, HintText = MemorySettingsMetadata.KeepRecentTurnsHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int KeepRecentTurnsAfterCompression { get; set; } = 15;
+
+        [SettingPropertyInteger(MemorySettingsMetadata.MaxRecentDaysDisplayName,
+            MemorySettingsMetadata.MinRecentDays, MemorySettingsMetadata.MaxRecentDaysCeiling, "0",
+            Order = 4, RequireRestart = false, HintText = MemorySettingsMetadata.MaxRecentDaysHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int MaxRecentDays { get; set; } = 30;
+
+        [SettingPropertyInteger(MemorySettingsMetadata.KeepRecentDaysDisplayName,
+            1, MemorySettingsMetadata.MaxRecentDaysCeiling, "0",
+            Order = 5, RequireRestart = false, HintText = MemorySettingsMetadata.KeepRecentDaysHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int KeepRecentDaysAfterCompression { get; set; } = 15;
+
+        [SettingPropertyInteger(MemorySettingsMetadata.MemoryWriteTokensDisplayName,
+            MemorySettingsMetadata.MinMemoryWriteTokens, MemorySettingsMetadata.MaxMemoryWriteTokensCeiling, "0",
+            Order = 6, RequireRestart = false, HintText = MemorySettingsMetadata.MemoryWriteTokensHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public int MaxMemoryWriteTokens { get; set; } = 1500;
+
+        [SettingPropertyBool(MemorySettingsMetadata.NotifyOnMemoryRefactorDisplayName, Order = 7, RequireRestart = false,
+            HintText = MemorySettingsMetadata.NotifyOnMemoryRefactorHint)]
+        [SettingPropertyGroup("Memory", GroupOrder = 3)]
+        public bool NotifyOnMemoryRefactor { get; set; } = true;
+
         // ── Costs ───────────────────────────────────────────────────────────────────
 
         [SettingPropertyBool("Show cost notices", Order = 0, RequireRestart = false,
             HintText = "After each exchange, a soft gray line shows what it took: tokens in/out, number of calls, and the price when the model's rates are known. The same lines also go to log.txt, and daily totals persist in usage.json.")]
-        [SettingPropertyGroup("Costs", GroupOrder = 3)]
+        [SettingPropertyGroup("Costs", GroupOrder = 4)]
         public bool ShowCostNotices { get; set; } = true;
 
         [SettingPropertyInteger("Daily request cap (0 = none)", 0, 2000, "0", Order = 1, RequireRestart = false,
             HintText = "A safety valve: at most this many AI requests per real day, across all sessions. When reached, the world goes quiet until the day turns or the cap is raised. 0 means no cap.")]
-        [SettingPropertyGroup("Costs", GroupOrder = 3)]
+        [SettingPropertyGroup("Costs", GroupOrder = 4)]
         public int MaxDailyRequests { get; set; } = 0;
 
         // ── Advanced ────────────────────────────────────────────────────────────────
 
         [SettingPropertyBool("Developer mode", Order = 0, RequireRestart = false,
             HintText = "Shows the mod's test levers and the 'reveal the whole of your mind' prompt inspector. Leave OFF for normal play.")]
-        [SettingPropertyGroup("Advanced", GroupOrder = 4)]
+        [SettingPropertyGroup("Advanced", GroupOrder = 5)]
         public bool DevMode { get; set; } = false;
 
         /// <summary>A curated set of map-safe keys for the window hotkeys, with <paramref name="preferred"/>

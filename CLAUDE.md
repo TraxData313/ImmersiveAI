@@ -506,6 +506,20 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   default 1500, never below `MaxTokens`),
   `NotifyOnMemoryRefactor` (a soft activity-style notice the moment an NPC's automatic compression
   reworks her deep memory — "…turns over old memories of you, and settles them deeper"; default on),
+  **the consolidation dials, all live and all in MCM's own "Memory" group since 2026.08.08** (Anton's
+  ask — `MaxRecentMemoryPercent` / `MinRecentMemoryPercentAfterCompression`, `MaxRecentTurns` /
+  `KeepRecentTurnsAfterCompression`, `MaxRecentDays` / `KeepRecentDaysAfterCompression`,
+  `MaxMemoryWriteTokens`, `NotifyOnMemoryRefactor`): three ceilings, whichever is hit first at the
+  moment a turn is recorded, so an edit bites on the very next exchange. Their rails, menu names and
+  hints all live as consts in `MemorySettingsMetadata` — MCM attributes take compile-time constants,
+  so the menu and `Normalize`'s clamps share the same literals. `Normalize` also halves a keep window
+  that stands at or above its own ceiling (it would fire a compression folding nothing away), and the
+  bridge mirrors ONLY those numbers back to the menu after a pull (`PushMemoryToMenu`) so a correction
+  is visible — a full push there would mangle a text field mid-typing. `MaxRecentMemoryTokens` /
+  `MinRecentMemoryTokensAfterCompression` in config.json are DERIVED from the percents and rewritten
+  on every load: they are there to be read, not set. The chat window shows the live weight against
+  all of it under the bond line (`MemoryTokenProfile.MemoryLoadLabel` — "memory 5.2% / 10% · 21k / 40k
+  tokens · turns 12/30 · oldest 4d/30d · trims back to 5%"),
   `ModelContextWindows` (user-editable model → context-window dict — gpt-4o 128k, gpt-4.1 1M,
   gpt-5.x 400k, gpt-5.6 1M, claude 200k/1M — that the `MaxRecentMemoryPercent` family scales against;
   longest key contained in the model id wins, unknown models fall back to 128k, missing built-ins are

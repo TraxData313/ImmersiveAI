@@ -173,6 +173,10 @@ namespace ImmersiveAI.Mcm
             var before = CfgSignature(live);
             PullMenuToConfig(s, live);
             live.Normalize();
+            // Only the memory numbers are mirrored back after Normalize — they are the fields it can
+            // silently CORRECT (a keep window halved under its ceiling), and a slider cannot be
+            // mangled mid-edit the way a text field being typed into would be by a full push.
+            PushMemoryToMenu(s, live);
             if (!string.Equals(CfgSignature(live), before, StringComparison.Ordinal))
             {
                 live.Save();
@@ -241,7 +245,12 @@ namespace ImmersiveAI.Mcm
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 SelectedOf(s.PersonaSparkMode),
-                s.RevertMemoriesWithSaves, s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
+                s.RevertMemoriesWithSaves,
+                s.MaxRecentMemoryPercent, s.MinRecentMemoryPercentAfterCompression,
+                s.MaxRecentTurns, s.KeepRecentTurnsAfterCompression,
+                s.MaxRecentDays, s.KeepRecentDaysAfterCompression,
+                s.MaxMemoryWriteTokens, s.NotifyOnMemoryRefactor,
+                s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
         }
 
         /// <summary>The config side of the same fields — raw values; any change means "push to menu".</summary>
@@ -261,7 +270,12 @@ namespace ImmersiveAI.Mcm
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.PersonaSparkMode,
-                c.RevertMemoriesWithSaves, c.ShowCostNotices, c.MaxDailyRequests, c.DevMode);
+                c.RevertMemoriesWithSaves,
+                c.MaxRecentMemoryPercent, c.MinRecentMemoryPercentAfterCompression,
+                c.MaxRecentTurns, c.KeepRecentTurnsAfterCompression,
+                c.MaxRecentDays, c.KeepRecentDaysAfterCompression,
+                c.MaxMemoryWriteTokens, c.NotifyOnMemoryRefactor,
+                c.ShowCostNotices, c.MaxDailyRequests, c.DevMode);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -314,10 +328,35 @@ namespace ImmersiveAI.Mcm
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
 
+            PushMemoryToMenu(s, c);
+
             s.ShowCostNotices = c.ShowCostNotices;
             s.MaxDailyRequests = Clamp(c.MaxDailyRequests, 0, 2000);
 
             s.DevMode = c.DevMode;
+        }
+
+        /// <summary>The consolidation dials, config → menu. Split out of the full push so it can also
+        /// run right after <see cref="ModConfig.Normalize"/> on a pull: these are the values Normalize
+        /// may correct, and a menu still showing the uncorrected number would be a quiet lie.</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void PushMemoryToMenu(ImmersiveAiMcmSettings s, ModConfig c)
+        {
+            s.MaxRecentMemoryPercent = Clamp(c.MaxRecentMemoryPercent,
+                MemorySettingsMetadata.MinMemoryPercent, MemorySettingsMetadata.MaxMemoryPercent);
+            s.MinRecentMemoryPercentAfterCompression = Clamp(c.MinRecentMemoryPercentAfterCompression,
+                MemorySettingsMetadata.MinMemoryPercent, MemorySettingsMetadata.MaxMemoryPercent);
+            s.MaxRecentTurns = Clamp(c.MaxRecentTurns,
+                MemorySettingsMetadata.MinRecentTurns, MemorySettingsMetadata.MaxRecentTurnsCeiling);
+            s.KeepRecentTurnsAfterCompression = Clamp(c.KeepRecentTurnsAfterCompression,
+                1, MemorySettingsMetadata.MaxRecentTurnsCeiling);
+            s.MaxRecentDays = Clamp(c.MaxRecentDays,
+                MemorySettingsMetadata.MinRecentDays, MemorySettingsMetadata.MaxRecentDaysCeiling);
+            s.KeepRecentDaysAfterCompression = Clamp(c.KeepRecentDaysAfterCompression,
+                1, MemorySettingsMetadata.MaxRecentDaysCeiling);
+            s.MaxMemoryWriteTokens = Clamp(c.MaxMemoryWriteTokens,
+                MemorySettingsMetadata.MinMemoryWriteTokens, MemorySettingsMetadata.MaxMemoryWriteTokensCeiling);
+            s.NotifyOnMemoryRefactor = c.NotifyOnMemoryRefactor;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -375,6 +414,19 @@ namespace ImmersiveAI.Mcm
             c.MinBetrothalDays = s.MinBetrothalDays;
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;
+
+            // The consolidation dials: the menu's ranges are the config's own rails, so these ride
+            // straight across. Normalize (run by the caller) then enforces the pairs' order — a keep
+            // window at or above its ceiling is halved — and PushMemoryToMenu mirrors that correction
+            // back, so the menu never shows a number the mod is not actually using.
+            c.MaxRecentMemoryPercent = s.MaxRecentMemoryPercent;
+            c.MinRecentMemoryPercentAfterCompression = s.MinRecentMemoryPercentAfterCompression;
+            c.MaxRecentTurns = s.MaxRecentTurns;
+            c.KeepRecentTurnsAfterCompression = s.KeepRecentTurnsAfterCompression;
+            c.MaxRecentDays = s.MaxRecentDays;
+            c.KeepRecentDaysAfterCompression = s.KeepRecentDaysAfterCompression;
+            c.MaxMemoryWriteTokens = s.MaxMemoryWriteTokens;
+            c.NotifyOnMemoryRefactor = s.NotifyOnMemoryRefactor;
 
             c.ShowCostNotices = s.ShowCostNotices;
             if (s.MaxDailyRequests != Clamp(c.MaxDailyRequests, 0, 2000))

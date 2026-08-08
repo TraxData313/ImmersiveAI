@@ -43,6 +43,7 @@ namespace ImmersiveAI.UI.ChatWindow
         private string _selectedName = string.Empty;
         private string _relationText = string.Empty;
         private string _bondStatsText = string.Empty;
+        private string _memoryLoadText = string.Empty;
         private Color _relationColor = Colors.White;
         private string _overviewText = string.Empty;
         private bool _isOverviewShown = true;
@@ -169,10 +170,17 @@ namespace ImmersiveAI.UI.ChatWindow
         {
             var messages = new MBBindingList<ChatMessageVM>();
             var npc = _selected?.Hero;
-            if (npc == null) { Messages = messages; OverviewText = string.Empty; return; }
+            if (npc == null) { Messages = messages; OverviewText = string.Empty; MemoryLoadText = string.Empty; return; }
 
             var memory = ImmersiveChatBehavior.PeekMemoryFor(npc);
             var npcName = npc.Name?.ToString() ?? "They";
+
+            // How heavy their verbatim memory of you has grown against the thresholds that fold it
+            // into the summary — built here, where the memory is already in hand (no second read).
+            MemoryLoadText = memory == null
+                ? string.Empty
+                : MemoryTokenProfile.MemoryLoadLabel(_config, memory, CampaignTime.Now.ToDays);
+
             var playerName = Hero.MainHero?.Name?.ToString() ?? "You";
             var voice = string.IsNullOrWhiteSpace(_config.SystemVoiceName) ? "Angel" : _config.SystemVoiceName.Trim();
 
@@ -512,6 +520,27 @@ namespace ImmersiveAI.UI.ChatWindow
         [DataSourceProperty]
         public bool HasBondStats => !string.IsNullOrEmpty(_bondStatsText);
 
+        /// <summary>The weight of what they keep verbatim of you, against the thresholds where it is
+        /// folded into the rolling summary: the share of the model's context window, the tokens, the
+        /// turns, the age of the oldest one — every number a live compression trigger.</summary>
+        [DataSourceProperty]
+        public string MemoryLoadText
+        {
+            get => _memoryLoadText;
+            set
+            {
+                if (value != _memoryLoadText)
+                {
+                    _memoryLoadText = value;
+                    OnPropertyChangedWithValue(value, "MemoryLoadText");
+                    OnPropertyChanged("HasMemoryLoad");
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool HasMemoryLoad => !string.IsNullOrEmpty(_memoryLoadText);
+
         /// <summary>The search line above the list — typing refilters the names at once.</summary>
         [DataSourceProperty]
         public string SearchText
@@ -587,12 +616,13 @@ namespace ImmersiveAI.UI.ChatWindow
         [DataSourceProperty]
         public bool ShowOverviewBlock => HasOverview && _isOverviewShown;
 
-        /// <summary>Where the thread begins vertically: under the header and its bond line, or under
-        /// the unfolded overview block. Bound as the thread's top margin so the layout reflows.
-        /// (Shifted +36 on 2026.08.08 with the header's own move below the window bar — the corner
-        /// buttons once stacked over each other and the name; Anton's screenshots.)</summary>
+        /// <summary>Where the thread begins vertically: under the header and its two grey lines (the
+        /// bond's mechanics and the memory's weight), or under the unfolded overview block. Bound as
+        /// the thread's top margin so the layout reflows. (Shifted +36 on 2026.08.08 with the header's
+        /// own move below the window bar — the corner buttons once stacked over each other and the
+        /// name; Anton's screenshots — then +20 for the memory-load line the same day.)</summary>
         [DataSourceProperty]
-        public float MessagesTopMargin => ShowOverviewBlock ? 288f : 104f;
+        public float MessagesTopMargin => ShowOverviewBlock ? 308f : 124f;
 
         private void OnOverviewLayoutChanged()
         {

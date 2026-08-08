@@ -594,10 +594,14 @@ namespace ImmersiveAI
         /// <summary>Percent of the selected model's context window kept verbatim after compression.</summary>
         public int MinRecentMemoryPercentAfterCompression { get; set; } = 5;
 
-        /// <summary>Estimated recent-memory token ceiling, derived from MaxRecentMemoryPercent and the selected model.</summary>
+        /// <summary>DERIVED, not a dial: the recent-memory token ceiling that MaxRecentMemoryPercent works
+        /// out to on the selected model. Rewritten by <see cref="Normalize"/> on every load and every menu
+        /// edit, so a hand-set value here does not survive — move the percent instead. It is written to the
+        /// file because seeing the real number is the whole point.</summary>
         public int MaxRecentMemoryTokens { get; set; } = 0;
 
-        /// <summary>Estimated recent-memory token target after compression, derived from MinRecentMemoryPercentAfterCompression and the selected model.</summary>
+        /// <summary>DERIVED like the ceiling above: what MinRecentMemoryPercentAfterCompression works out
+        /// to on the selected model. Edit the percent, not this.</summary>
         public int MinRecentMemoryTokensAfterCompression { get; set; } = 0;
 
         /// <summary>The built-in model → context-window table. Longest key contained in the model id
@@ -890,6 +894,18 @@ namespace ImmersiveAI
             if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 15;
             if (MaxRecentDays <= 0) MaxRecentDays = 30;
             if (KeepRecentDaysAfterCompression <= 0) KeepRecentDaysAfterCompression = 15;
+
+            MaxRecentTurns = Clamp(MaxRecentTurns,
+                MemorySettingsMetadata.MinRecentTurns, MemorySettingsMetadata.MaxRecentTurnsCeiling);
+            MaxRecentDays = Clamp(MaxRecentDays,
+                MemorySettingsMetadata.MinRecentDays, MemorySettingsMetadata.MaxRecentDaysCeiling);
+
+            // A keep window at or above its own ceiling would fire a compression that folds nothing
+            // away — the same rail the percents ride, applied to the turn count and the days.
+            if (KeepRecentTurnsAfterCompression >= MaxRecentTurns)
+                KeepRecentTurnsAfterCompression = Math.Max(1, MaxRecentTurns / 2);
+            if (KeepRecentDaysAfterCompression >= MaxRecentDays)
+                KeepRecentDaysAfterCompression = Math.Max(1, MaxRecentDays / 2);
 
             var profile = MemoryTokenProfile.Resolve(this);
             if (MaxRecentMemoryPercent <= 0) MaxRecentMemoryPercent = profile.DefaultMaxRecentMemoryPercent;

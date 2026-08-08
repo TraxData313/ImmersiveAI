@@ -12,6 +12,18 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **You can see how full an NPC's memory is.** Under their name in the chat window a grey line now
+  shows the weight of what they keep of you word for word — the share of the AI's memory it fills
+  against the point where it is condensed, the tokens against the same ceiling, the exchanges, and
+  the age of the oldest one ("memory 5.2% / 10% · 21k / 40k tokens · turns 12/30 · oldest 4d/30d ·
+  trims back to 5%"). Every number there is a real trigger, so the moment before an NPC turns her
+  memories over is never a surprise.
+- **All the memory-condensing dials are in the mod options menu now**, in their own "Memory"
+  section, each with an explanation and the default named in it: when memory is condensed (by share
+  of the AI's memory, by number of exchanges, or by age), what is kept afterwards, how much room the
+  memory-writing itself gets, and the notice when it happens. Every one takes hold on the very next
+  exchange — no restart — and a value that cannot work (keeping more than the ceiling allows) is
+  corrected in front of you instead of quietly ignored.
 - Battle tallies tell the truth again: in battles you fight yourself, the count of who struck
   down whom was inflated — a heavy blow that didn't kill was still counted as a kill, so four
   bandits could leave you "credited" with six. Every hand's work is now counted as men actually

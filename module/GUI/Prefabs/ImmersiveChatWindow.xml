@@ -124,8 +124,12 @@
                          (full width — the buttons live on the row above now) -->
                     <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="72" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
 
+                    <!-- the memory's own weight: how full the verbatim window is against the
+                         thresholds where it is folded into the summary -->
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="92" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#7C8A86FF" Brush.TextHorizontalAlignment="Left" Text="@MemoryLoadText" IsVisible="@HasMemoryLoad" />
+
                     <!-- the deep-memory overview: what lingers of you beyond the thread -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="100" IsVisible="@ShowOverviewBlock">
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="120" IsVisible="@ShowOverviewBlock">
                       <Children>
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.05" />
                         <ScrollablePanel Id="OverviewScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="10" MarginRight="18" MarginTop="8" MarginBottom="8" ClipRect="OverviewClip" InnerPanel="OverviewClip\OverviewBody" VerticalScrollbar="..\OverviewScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">

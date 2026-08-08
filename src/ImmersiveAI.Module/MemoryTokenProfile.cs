@@ -1,4 +1,7 @@
 using System;
+using System.Globalization;
+using System.Linq;
+using ImmersiveAI.Core.Memory;
 
 namespace ImmersiveAI
 {
@@ -81,6 +84,49 @@ namespace ImmersiveAI
             }
 
             return new MemoryTokenProfile(best > 0 ? best : FallbackContextTokens);
+        }
+
+        /// <summary>How heavy one bond's verbatim memory has grown, in the model's own coin — shown in
+        /// the chat window so the moment before a compression is never a surprise (Anton's ask,
+        /// 2026.08.08). Every number here is a live compression trigger: the share of the context
+        /// window, the turn count, and the age of the oldest kept turn, each against its own ceiling,
+        /// closing with where a compression would leave things. Best-effort by nature — the token
+        /// figure is the same estimate the trigger itself uses, not the API's own count.</summary>
+        public static string MemoryLoadLabel(ModConfig config, NpcMemory memory, double currentGameDay)
+        {
+            if (config == null) return string.Empty;
+            var turns = memory?.RecentTurns;
+            var tokens = turns == null ? 0 : MemoryTokenEstimator.EstimateRecentTurnsTokens(turns);
+            var profile = Resolve(config);
+            var maxTokens = config.MaxRecentMemoryTokens > 0
+                ? config.MaxRecentMemoryTokens
+                : profile.GetMaxRecentMemoryTokens(config.MaxRecentMemoryPercent);
+            var percent = profile.ContextTokens > 0 ? tokens * 100.0 / profile.ContextTokens : 0.0;
+
+            var text = string.Format(CultureInfo.InvariantCulture,
+                "memory {0:0.#}% / {1}% · {2} / {3} tokens · turns {4}/{5}",
+                percent, config.MaxRecentMemoryPercent,
+                Amount(tokens), Amount(maxTokens),
+                turns?.Count ?? 0, config.MaxRecentTurns);
+
+            // The oldest kept turn's age is the third trigger. Turns recorded before the day was
+            // stamped (very old saves) carry day 0 — their "age" would be the whole campaign, so
+            // the segment simply stays off rather than lying.
+            var oldest = turns != null && turns.Count > 0 ? turns.Min(t => t.GameDay) : 0.0;
+            if (oldest > 0.0 && currentGameDay > 0.0 && config.MaxRecentDays > 0)
+                text += string.Format(CultureInfo.InvariantCulture, " · oldest {0:0.#}d/{1}d",
+                    Math.Max(0.0, currentGameDay - oldest), config.MaxRecentDays);
+
+            return text + string.Format(CultureInfo.InvariantCulture, " · trims back to {0}%",
+                config.MinRecentMemoryPercentAfterCompression);
+        }
+
+        /// <summary>A token count in a glanceable hand: 21.4k, 1.2M, 840.</summary>
+        private static string Amount(int value)
+        {
+            if (value >= 1000000) return (value / 1000000.0).ToString("0.#", CultureInfo.InvariantCulture) + "M";
+            if (value >= 1000) return (value / 1000.0).ToString("0.#", CultureInfo.InvariantCulture) + "k";
+            return value.ToString(CultureInfo.InvariantCulture);
         }
     }
 }
