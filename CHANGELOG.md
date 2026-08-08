@@ -12,6 +12,21 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **Tidier window headers.** The grey lines under a character's name (their bond with you, the
+  weight of what they remember) no longer print over each other when one runs long — they stack,
+  and everything below them moves down to make room. Same fix in the letter window.
+- The deep-memory panel in the chat window now starts folded; press "Deep memory" when you want
+  to look inside.
+- **"World prompt" is a proper button now**, beside "Their prompt" in both windows — it used to be
+  plain text in the corner, which did not look clickable at all.
+- **Long names are no longer swallowed by the buttons.** The two prompt buttons keep a row of their
+  own at the top, and the name runs full width beneath them.
+- **The deep memory opens as its own page** — the same shape as the marriage-misgivings view —
+  instead of a cramped strip above the conversation.
+- **Every one of these pages now has a "← Back" button**, so it is clear how to step back without
+  closing the whole window (Escape still does the same). On the two prompt editors it says
+  "← Back (discards)" — Save is still the door that keeps your writing.
+
 - **One deeper memory instead of three lists.** NPCs no longer keep a separate roster of
   "lasting truths" about you or a list of "personal goals" beside what they remember. Those
   lists mostly restated what their memory already held, and made souls repeat themselves.

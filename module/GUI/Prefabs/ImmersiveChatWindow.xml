@@ -96,67 +96,50 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@HasSelection">
                   <Children>
 
-                    <!-- header: their name and how their heart stands toward you. Sits 28px down so
-                         it clears the window bar's own right-side row (World prompt / ? / X, window
-                         y 8–42): the two rows once shared the corner and stacked over each other
-                         (Anton's screenshots, 2026.08.07). MarginRight clears this row's own two
-                         buttons (Their prompt's left edge sits at inner-right 366). -->
-                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="28" MarginRight="380" StackLayout.LayoutMethod="HorizontalLeftToRight">
-                      <Children>
-                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
-                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="16" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@RelationColor" Brush.TextHorizontalAlignment="Left" Text="@RelationText" IsVisible="@HasRelation" />
-                      </Children>
-                    </ListPanel>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleOverview" IsVisible="@HasOverview">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Center" Text="@OverviewToggleText" />
-                      </Children>
-                    </ButtonWidget>
-
-                    <!-- the editing door to this one's custom_instructions.txt (in-game editor; edits ride the next reply) -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="216" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@HasSelection">
+                    <!-- the editing door to this one's custom_instructions.txt (in-game editor; edits
+                         ride the next reply). The prompt buttons keep a ROW OF THEIR OWN at the top of
+                         the pane (window y 46–86, clear of the bar's own row at y 8–42) — sharing the
+                         line with the name, a long name ran underneath them (Anton's screenshot of
+                         Patrys the Velvet Weaver, 2026.08.08). The name sits below them now, free to
+                         run as wide as it likes. -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="180" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="196" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@HasSelection">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="Their prompt" />
                       </Children>
                     </ButtonWidget>
 
-                    <!-- the bond's own mechanics: shared story, freshness, the hour's chance they come
-                         (right margin clears the misgivings button riding beside these two lines) -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="72" MarginRight="210" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
+                    <!-- header: their name and how their heart stands toward you, under the buttons.
+                         MarginRight only clears the misgivings button riding at its right. -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="76" MarginRight="210" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                      <Children>
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="16" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@RelationColor" Brush.TextHorizontalAlignment="Left" Text="@RelationText" IsVisible="@HasRelation" />
+                      </Children>
+                    </ListPanel>
 
-                    <!-- the memory's own weight: how full the verbatim window is against the
-                         thresholds where it is folded into the summary -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="92" MarginRight="210" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#7C8A86FF" Brush.TextHorizontalAlignment="Left" Text="@MemoryLoadText" IsVisible="@HasMemoryLoad" />
+                    <!-- the two grey lines under the name: the bond's own mechanics (shared story,
+                         freshness, the hour's chance they come) and the memory's weight (how full the
+                         verbatim window is against the thresholds where it folds into the summary).
+                         They STACK in a list panel, never at fixed margins: a long bond line wraps,
+                         and at fixed margins the wrap landed on top of the memory line (Anton's
+                         screenshot, 2026.08.08). The thread below rides @MessagesTopMargin,
+                         which counts the wrapping. They run the pane's full width:
+                         the misgivings button rides beside the NAME now, above them. -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="118" MarginRight="44" StackLayout.LayoutMethod="VerticalTopToBottom">
+                      <Children>
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#7C8A86FF" Brush.TextHorizontalAlignment="Left" Text="@MemoryLoadText" IsVisible="@HasMemoryLoad" />
+                      </Children>
+                    </ListPanel>
 
                     <!-- her misgivings before marriage, worn openly: "Misgivings 3/5" opens the list
-                         (only while a courtship road is walked, or something was once written) -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="66" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleMisgivings" IsVisible="@HasMisgivings">
+                         (only while a courtship road is walked, or something was once written) —
+                         it rides beside the name, in the row the prompt buttons left behind -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="78" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleMisgivings" IsVisible="@HasMisgivings">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@MisgivingsButtonText" />
                       </Children>
                     </ButtonWidget>
-
-                    <!-- the deep-memory overview: what lingers of you beyond the thread -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="176" VerticalAlignment="Top" MarginTop="120" IsVisible="@ShowOverviewBlock">
-                      <Children>
-                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.05" />
-                        <ScrollablePanel Id="OverviewScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="10" MarginRight="18" MarginTop="8" MarginBottom="8" ClipRect="OverviewClip" InnerPanel="OverviewClip\OverviewBody" VerticalScrollbar="..\OverviewScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
-                          <Children>
-                            <Widget Id="OverviewClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
-                              <Children>
-                                <RichTextWidget Id="OverviewBody" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" Brush="Popup.Description.Text" Brush.FontSize="18" Brush.FontColor="#C9BFA8FF" Text="@OverviewText" />
-                              </Children>
-                            </Widget>
-                          </Children>
-                        </ScrollablePanel>
-                        <ScrollbarWidget Id="OverviewScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" MarginTop="8" MarginBottom="8" MarginRight="4" AlignmentAxis="Vertical" Handle="OverviewScrollbarHandle" MinValue="0" MaxValue="100">
-                          <Children>
-                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
-                            <BrushWidget Id="OverviewScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="40" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
-                          </Children>
-                        </ScrollbarWidget>
-                      </Children>
-                    </Widget>
 
                     <!-- the thread -->
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="@MessagesTopMargin" MarginBottom="@MessagesBottomMargin">
@@ -222,6 +205,17 @@
                   </Children>
                 </Widget>
 
+                <!-- the world's global_prompt.txt, edited in place (in-game editor; edits ride the next
+                     reply). It wears a real button here beside "Their prompt" — as plain text up in the
+                     window bar it read as a label, not a door (Anton, 2026.08.08). Deliberately OUTSIDE
+                     the HasSelection block (the world's prompt is editable with no one chosen) and
+                     declared AFTER it, so that full-pane widget cannot swallow its clicks. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditGlobalPrompt">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Center" Text="World prompt" />
+                  </Children>
+                </ButtonWidget>
+
               </Children>
             </Widget>
 
@@ -231,7 +225,12 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
                   <Children>
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@InfoTitleText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="180" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@InfoTitleText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                      </Children>
+                    </ButtonWidget>
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="54">
                       <Children>
                         <ScrollablePanel Id="InfoScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="InfoClip" InnerPanel="InfoClip\InfoBody" VerticalScrollbar="..\InfoScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
@@ -263,8 +262,14 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
                   <Children>
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@PromptEditTitle" />
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@PromptEditHint" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="220" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@PromptEditTitle" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" MarginRight="220" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@PromptEditHint" />
+                    <!-- the same corner door as the other pages; here it discards, exactly as Escape does -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackDiscardText" />
+                      </Children>
+                    </ButtonWidget>
 
                     <!-- the whole text, wrapped and scrollable — the writing line below shows only its tail -->
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="90" MarginBottom="150">
@@ -317,8 +322,13 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
                   <Children>
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@MisgivingsTitleText" />
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@MisgivingsHintText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="180" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@MisgivingsTitleText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" MarginRight="180" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@MisgivingsHintText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                      </Children>
+                    </ButtonWidget>
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="94">
                       <Children>
                         <ScrollablePanel Id="MisgivingsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="MisgivingsClip" InnerPanel="MisgivingsClip\MisgivingsBody" VerticalScrollbar="..\MisgivingsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
@@ -343,14 +353,58 @@
               </Children>
             </Widget>
 
+            <!-- the deep-memory overlay: their whole rolling memory of the player, read on its own
+                 page instead of a cramped strip above the thread (Anton, 2026.08.08 — "as a window,
+                 like the one for the marriage questions"). DevMode only: HasOverview is built then. -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@ShowOverviewBlock">
+              <Children>
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
+                  <Children>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="180" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@OverviewTitleText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" MarginRight="180" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@OverviewHintText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                      </Children>
+                    </ButtonWidget>
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="94">
+                      <Children>
+                        <ScrollablePanel Id="OverviewScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="OverviewClip" InnerPanel="OverviewClip\OverviewBody" VerticalScrollbar="..\OverviewScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                          <Children>
+                            <Widget Id="OverviewClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                              <Children>
+                                <RichTextWidget Id="OverviewBody" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="19" Brush.FontColor="#C9BFA8FF" Text="@OverviewText" />
+                              </Children>
+                            </Widget>
+                          </Children>
+                        </ScrollablePanel>
+                        <ScrollbarWidget Id="OverviewScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="OverviewScrollbarHandle" MinValue="0" MaxValue="100">
+                          <Children>
+                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                            <BrushWidget Id="OverviewScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                          </Children>
+                        </ScrollbarWidget>
+                      </Children>
+                    </Widget>
+                  </Children>
+                </Widget>
+              </Children>
+            </Widget>
+
             <!-- the dev panel: the DevMode test levers, acting on the chosen soul -->
             <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsDevShown">
               <Children>
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
                   <Children>
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@DevTitleText" />
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@DevHintText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="180" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@DevTitleText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" MarginRight="180" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@DevHintText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                      </Children>
+                    </ButtonWidget>
                     <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="470" HorizontalAlignment="Left" VerticalAlignment="Top" MarginTop="94" StackLayout.LayoutMethod="VerticalTopToBottom">
                       <Children>
                         <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevRevealMind" IsEnabled="@HasSelection">
@@ -405,14 +459,16 @@
               </Children>
             </Widget>
 
-            <!-- the world's global_prompt.txt, edited in place (in-game editor; edits ride the next reply) -->
-            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="88" Command.Click="ExecuteEditGlobalPrompt">
+            <!-- the deep-memory fold, DevMode only (HasOverview is built only then) — it lives up here
+                 with the other developer's marks (Dev / ? / X) rather than among the pane's own buttons,
+                 so that row does not go gap-toothed the moment DevMode is off (Anton, 2026.08.08) -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="88" Command.Click="ExecuteToggleOverview" IsVisible="@HasOverview">
               <Children>
-                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="World prompt" />
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@OverviewToggleText" />
               </Children>
             </ButtonWidget>
 
-            <!-- the dev levers, DevMode only — sits left of "World prompt" in the window bar -->
+            <!-- the dev levers, DevMode only — sits left of the deep-memory fold in the window bar -->
             <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="70" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="226" Command.Click="ExecuteToggleDev" IsVisible="@IsDevMode">
               <Children>
                 <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="Dev" />

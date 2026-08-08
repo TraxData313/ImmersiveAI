@@ -46,7 +46,11 @@ namespace ImmersiveAI.UI.ChatWindow
         private string _memoryLoadText = string.Empty;
         private Color _relationColor = Colors.White;
         private string _overviewText = string.Empty;
-        private bool _isOverviewShown = true;
+        private string _overviewTitle = string.Empty;
+        // Folded until asked for (Anton's call, 2026.08.08): the deep-memory block only exists in
+        // DevMode, and unfolded by default it ate the top of the thread on every open. Deliberately
+        // NOT remembered between openings — every window starts folded.
+        private bool _isOverviewShown;
         private bool _isInfoShown;
         private bool _isPromptEditShown;
         private string _promptEditTitle = string.Empty;
@@ -191,8 +195,10 @@ namespace ImmersiveAI.UI.ChatWindow
 
             // Her deep memory laid bare is a developer's view (DevMode); players meet what she
             // remembers the way people do — through what she says. No overview text means the
-            // whole block and its toggle stay off stage (HasOverview keys off this).
-            OverviewText = _config.DevMode ? BuildOverview(memory, npcName) : string.Empty;
+            // whole page and its toggle stay off stage (HasOverview keys off this). The heading
+            // rides apart from the body: the overlay wears it as its own title.
+            OverviewTitleText = _config.DevMode ? OverviewHeading(memory, npcName) : string.Empty;
+            OverviewText = _config.DevMode ? BuildOverview(memory) : string.Empty;
 
             if (memory != null)
             {
@@ -342,16 +348,14 @@ namespace ImmersiveAI.UI.ChatWindow
         // The deep-memory overview: what she carries of the player beyond the verbatim thread — the
         // rolling memory she rewrites whole at every reflection — so a long story is readable at a
         // glance. (A second block of distilled "truths" stood here until 2026.08.08.)
-        private static string BuildOverview(NpcMemory? memory, string npcName)
-        {
-            if (memory == null || string.IsNullOrWhiteSpace(memory.Summary))
-                return string.Empty;
+        private static string BuildOverview(NpcMemory? memory)
+            => memory == null || string.IsNullOrWhiteSpace(memory.Summary) ? string.Empty : memory.Summary.Trim();
 
+        private static string OverviewHeading(NpcMemory? memory, string npcName)
+        {
+            if (memory == null || string.IsNullOrWhiteSpace(memory.Summary)) return string.Empty;
             var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf) ? string.Empty : $" (as of {memory.SummaryAsOf.Trim()})";
-            var sb = new StringBuilder();
-            sb.AppendLine($"What lingers in {npcName}'s memory of you{asOf}:");
-            sb.AppendLine(memory.Summary.Trim());
-            return sb.ToString().TrimEnd();
+            return $"What lingers in {npcName}'s memory of you{asOf}";
         }
 
         private void RefreshSelectionState()
@@ -422,6 +426,18 @@ namespace ImmersiveAI.UI.ChatWindow
         public void ExecuteToggleOverview() => IsOverviewShown = !IsOverviewShown;
 
         public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
+
+        /// <summary>The way back out of whichever page is up — the same order Escape folds them in.
+        /// Every overlay wears it as a button, because "X" closes the whole window and nothing else
+        /// said how to step back (Anton, 2026.08.08).</summary>
+        public void ExecuteBack()
+        {
+            if (IsPromptEditShown) ExecutePromptCancel();
+            else if (IsDevShown) IsDevShown = false;
+            else if (IsMisgivingsShown) IsMisgivingsShown = false;
+            else if (IsOverviewShown) IsOverviewShown = false;
+            else if (IsInfoShown) IsInfoShown = false;
+        }
 
         // ------------------------------ the in-game prompt editor ------------------------------
         // The editing doors, IN the game now (Anton's ask — no Notepad, no alt-tab): an overlay
@@ -564,6 +580,7 @@ namespace ImmersiveAI.UI.ChatWindow
                     _bondStatsText = value;
                     OnPropertyChangedWithValue(value, "BondStatsText");
                     OnPropertyChanged("HasBondStats");
+                    OnOverviewLayoutChanged();
                 }
             }
         }
@@ -585,6 +602,7 @@ namespace ImmersiveAI.UI.ChatWindow
                     _memoryLoadText = value;
                     OnPropertyChangedWithValue(value, "MemoryLoadText");
                     OnPropertyChanged("HasMemoryLoad");
+                    OnOverviewLayoutChanged();
                 }
             }
         }
@@ -646,6 +664,26 @@ namespace ImmersiveAI.UI.ChatWindow
         }
 
         [DataSourceProperty]
+        public string OverviewTitleText
+        {
+            get => _overviewTitle;
+            set { if (value != _overviewTitle) { _overviewTitle = value; OnPropertyChangedWithValue(value, "OverviewTitleText"); } }
+        }
+
+        [DataSourceProperty]
+        public string OverviewHintText =>
+            "The one rolling memory they carry of you — rewritten whole whenever they gather their thoughts, and read back to them at every exchange. A developer's view; the words themselves are theirs.";
+
+        /// <summary>The way out of every overlay, worn as a button on each of them.</summary>
+        [DataSourceProperty]
+        public string BackText => "← Back  (Esc)";
+
+        /// <summary>The same corner button on the prompt editors — named honestly, because stepping
+        /// back from a half-written prompt throws the edit away (Save is the door that keeps it).</summary>
+        [DataSourceProperty]
+        public string BackDiscardText => "← Back  (discards)";
+
+        [DataSourceProperty]
         public bool HasOverview => HasSelection && !string.IsNullOrWhiteSpace(_overviewText);
 
         [DataSourceProperty]
@@ -663,17 +701,27 @@ namespace ImmersiveAI.UI.ChatWindow
             }
         }
 
-        /// <summary>Whether the overview block occupies its place right now (it exists AND is unfolded).</summary>
+        /// <summary>Whether the deep-memory page is up right now (it exists AND was asked for).</summary>
         [DataSourceProperty]
         public bool ShowOverviewBlock => HasOverview && _isOverviewShown;
 
-        /// <summary>Where the thread begins vertically: under the header and its two grey lines (the
-        /// bond's mechanics and the memory's weight), or under the unfolded overview block. Bound as
-        /// the thread's top margin so the layout reflows. (Shifted +36 on 2026.08.08 with the header's
-        /// own move below the window bar — the corner buttons once stacked over each other and the
-        /// name; Anton's screenshots — then +20 for the memory-load line the same day.)</summary>
+        // The two grey lines under the name (the bond's mechanics, the memory's weight) stack in a
+        // ListPanel, so they can never land on each other — but everything BELOW them is placed by
+        // margin, and Gauntlet will not tell us how tall a wrapped line came out. So we estimate it
+        // from the strings themselves and always round UP: a little air costs nothing, an overlap is
+        // the bug (Anton's screenshot, 2026.08.08 — a wrapped bond line sat on the memory line).
+        private const float GreyBlockTop = 118f;   // where the grey block starts: buttons row, then name
+        private const float GreyLineHeight = 20f;  // one rendered line of the 14pt grey text
+        private const int GreyLineChars = 135;     // roughly what fits across the pane at that size
+
+        private static int WrappedLines(string text)
+            => string.IsNullOrEmpty(text) ? 0 : Math.Max(1, (text.Length + GreyLineChars - 1) / GreyLineChars);
+
+        /// <summary>Where the thread begins vertically — right under the header's grey lines, their
+        /// wrapping counted. (The deep memory is its own page now, so nothing else pushes it down.)</summary>
         [DataSourceProperty]
-        public float MessagesTopMargin => ShowOverviewBlock ? 308f : 124f;
+        public float MessagesTopMargin =>
+            GreyBlockTop + GreyLineHeight * (WrappedLines(_bondStatsText) + WrappedLines(_memoryLoadText)) + 12f;
 
         private void OnOverviewLayoutChanged()
         {

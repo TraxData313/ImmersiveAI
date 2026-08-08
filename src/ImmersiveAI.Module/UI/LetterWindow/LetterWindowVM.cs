@@ -213,6 +213,14 @@ namespace ImmersiveAI.UI.LetterWindow
 
         public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
 
+        /// <summary>The way back out of whichever page is up — the same order Escape folds them in.
+        /// Worn as a button by every overlay, because "X" closes the whole window (Anton, 2026.08.08).</summary>
+        public void ExecuteBack()
+        {
+            if (IsPromptEditShown) ExecutePromptCancel();
+            else if (IsInfoShown) IsInfoShown = false;
+        }
+
         // The editing doors, same in-game overlay as the chat window's: a wrapped mirror + a
         // writing line, Save/Discard. Prompts are re-read on every reply, so no restart.
         private Hero? _promptEditNpc;   // null while editing the world's global prompt
@@ -310,6 +318,7 @@ namespace ImmersiveAI.UI.LetterWindow
                     _bondStatsText = value;
                     OnPropertyChangedWithValue(value, "BondStatsText");
                     OnPropertyChanged("HasBondStats");
+                    OnPropertyChanged("EntriesTopMargin");
                 }
             }
         }
@@ -360,8 +369,35 @@ namespace ImmersiveAI.UI.LetterWindow
         public string StatusText
         {
             get => _statusText;
-            set { if (value != _statusText) { _statusText = value; OnPropertyChangedWithValue(value, "StatusText"); } }
+            set
+            {
+                if (value != _statusText)
+                {
+                    _statusText = value;
+                    OnPropertyChangedWithValue(value, "StatusText");
+                    OnPropertyChanged("EntriesTopMargin");
+                }
+            }
         }
+
+        // The two grey lines under the name stack in a list panel, so they can never land on each
+        // other — but the correspondence below is placed by margin, and Gauntlet will not tell us how
+        // tall a wrapped line came out. Estimated from the strings and always rounded UP: a little air
+        // costs nothing, an overlap is the bug (the chat window's twin, 2026.08.08).
+        private const float GreyBlockTop = 70f;
+        private const float GreyLineHeight = 21f;
+        private const int StatusLineChars = 95;    // the 15pt status line, its own right margin counted
+        private const int BondLineChars = 130;     // the 14pt bond line, running the full pane
+
+        private static int WrappedLines(string text, int perLine)
+            => string.IsNullOrEmpty(text) ? 0 : Math.Max(1, (text.Length + perLine - 1) / perLine);
+
+        /// <summary>Where the correspondence begins vertically — under the header's grey lines,
+        /// wrapping counted.</summary>
+        [DataSourceProperty]
+        public float EntriesTopMargin =>
+            GreyBlockTop + GreyLineHeight * (WrappedLines(_statusText, StatusLineChars)
+                                             + WrappedLines(_bondStatsText, BondLineChars)) + 8f;
 
         [DataSourceProperty]
         public bool CanWrite => _canWrite;
@@ -439,6 +475,15 @@ namespace ImmersiveAI.UI.LetterWindow
 
         [DataSourceProperty]
         public string InfoButtonText => "?";
+
+        /// <summary>The way out of every overlay, worn as a button on each of them.</summary>
+        [DataSourceProperty]
+        public string BackText => "← Back  (Esc)";
+
+        /// <summary>The same corner button on the prompt editors — named honestly, because stepping
+        /// back from a half-written prompt throws the edit away (Save is the door that keeps it).</summary>
+        [DataSourceProperty]
+        public string BackDiscardText => "← Back  (discards)";
 
         [DataSourceProperty]
         public string InfoTitleText => "Letters — how they work";
