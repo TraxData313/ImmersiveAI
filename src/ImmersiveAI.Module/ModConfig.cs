@@ -465,12 +465,14 @@ namespace ImmersiveAI
         /// to keep only the daily humor for everyone.</summary>
         public bool EnableWomensCycle { get; set; } = true;
 
-        /// <summary>When true, an NPC whose self file has not yet been written begins with the story the
-        /// world already tells of them instead of a blank page: a wanderer carries the tale they tell in
-        /// taverns when first met (hand-written, in their own voice), a noble the account the encyclopedia
-        /// keeps of their house and repute. From there it is theirs — every reflection lets them keep,
-        /// refine, or release it. Deleting an NPC's self.txt re-seeds them afresh. Set false for everyone
-        /// to begin unwritten.</summary>
+        /// <summary>When true, an NPC's DEEP MEMORY opens with the story the world already tells of them
+        /// instead of a blank page (2026.08.08 — moved from self.txt seeding, so the backstory is a
+        /// memory they rewrite and weigh at every compression rather than a page standing forever at a
+        /// fixed place and weight): a wanderer carries the tale they tell in taverns when first met
+        /// (hand-written, in their own voice), a noble the account the encyclopedia keeps of their house
+        /// and repute. From there it is theirs — kept, reshaped, or released whenever they settle their
+        /// memory. Souls already seeded the old way (a non-empty self.txt) are left as they are. Set
+        /// false for everyone to begin unwritten. (Key name kept for config compatibility.)</summary>
         public bool SeedSelfFromWorldStory { get; set; } = true;
 
         /// <summary>The director's spark: at an NPC's FIRST interaction, one small LLM call writes them

@@ -133,7 +133,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableChatWindow` + `ChatWindowHotkey` + `SendInitiationsToChatWindow` (the map chat window:
   write first to anyone co-located, no greeting ceremony; NPC reach-outs land there as waiting
   messages instead of accept/decline popups),
-  `SeedSelfFromWorldStory` (first self.txt page seeded from the story the world tells of them),
+  `SeedSelfFromWorldStory` (a never-spoken-with NPC's deep memory opens with the story the world
+  tells of them — since 2026.08.08 a rewritable memory, not a self.txt page),
   `EnableActingOut` (the acting-out grammar: a small acted gesture between single *asterisks* apart
   from the spoken words — the one exception to the plain-speech rule, sparing by its own wording,
   cutting both ways; the chat window draws gestures as soft narration via Core `EmoteText` +
@@ -171,9 +172,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
     into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
-    First seeded from the story the world tells of them: a wanderer's tavern tale or a noble's
-    encyclopedia account (`BackstoryBuilder` Module + `SelfSeedFormatter` Core, hooked in
-    `LoadOrSeedSelf`); deleting the file re-seeds. Toggle: `SeedSelfFromWorldStory`.
+    Begins unwritten since 2026.08.08 — the backstory seeds the DEEP MEMORY instead: an empty
+    `NpcMemory.Summary` opens with a wanderer's tavern tale or a noble's encyclopedia account
+    (`BackstoryBuilder.BuildStorySeed` Module + `StorySeedFormatter` Core, hooked in
+    `SeedMemoryFromStory`), closed by the rumor of a renowned player (`FromPlayerFame`,
+    silent under 150 renown), theirs to rewrite or let fade at every compression;
+    `NpcMemory.SeededFromStory` keeps it from counting as knowing the player, and the sheet
+    heads it as their own road until real history exists. Toggle: `SeedSelfFromWorldStory`.
   - `goals.txt` — RETIRED 2026.08.08; nothing reads or writes it. Existing files are left where
     they lie, so a long-played campaign's folders may still show one.
   - `letters.txt` — human-readable log of all letters carried between the player and this NPC.

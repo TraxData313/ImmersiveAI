@@ -170,6 +170,10 @@ public class MemoryCompressorTests
         Assert.Contains("fades from me", prompt);
         Assert.Contains("the names that matter", prompt);
         Assert.Contains("as much room as the story truly asks", prompt);
+        // The deep memory opens seeded with her own backstory (2026.08.08): without this clause the
+        // "all I carry of them" framing would erode her past by shape, not by her choice.
+        Assert.Contains("my own road", prompt);
+        Assert.Contains("as I choose", prompt);
     }
 
     [Fact]

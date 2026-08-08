@@ -705,7 +705,49 @@ namespace ImmersiveAI
         private NpcMemory LoadMemory(Hero npc)
         {
             NpcPaths.EnsureMigrated(npc);
-            return _memoryStore.LoadFrom(NpcPaths.MemoryFile(npc), npc.StringId);
+            var memory = _memoryStore.LoadFrom(NpcPaths.MemoryFile(npc), npc.StringId);
+            SeedMemoryFromStory(npc, memory);
+            return memory;
+        }
+
+        // No one begins as a blank page — but the story is MEMORY now, not scripture (2026.08.08,
+        // Anton's ask; until then it seeded self.txt, where it stood forever at a fixed place and
+        // weight in the sheet): a soul whose deep memory has never held anything opens it already
+        // carrying the story the world tells of them (a wanderer's tavern tale, a noble's repute —
+        // see BackstoryBuilder). From there it rides the rolling summary's own rules — rewritten
+        // whole at every compression, theirs to keep, reshape, or let fade. In-memory only: it is
+        // persisted when the first real interaction saves, so peeking (odds view, bond stats) never
+        // writes files. Souls whose self.txt already carries the old-style seed (or their own words)
+        // are left as they are — never hand anyone the same story twice.
+        private void SeedMemoryFromStory(Hero npc, NpcMemory memory)
+        {
+            try
+            {
+                if (!_config.SeedSelfFromWorldStory || memory.SeededFromStory) return;
+                if (memory.StoryRichness > 0 || !string.IsNullOrWhiteSpace(memory.Summary)) return;
+                if (!string.IsNullOrEmpty(LoadSelf(npc))) return;
+
+                var seed = BackstoryBuilder.BuildStorySeed(npc);
+
+                // A famed player enters the story already carried: what the world had told this
+                // soul of them before they ever spoke closes the seed as remembered hearsay
+                // (renown-tiered, silent under 150 — the "no word of their deeds" threshold).
+                // Its own try so a hiccup here never costs the backstory itself.
+                try
+                {
+                    var hearsay = StorySeedFormatter.FromPlayerFame(
+                        Hero.MainHero?.Name?.ToString(), Clan.PlayerClan?.Renown ?? 0f);
+                    if (!string.IsNullOrEmpty(hearsay))
+                        seed = string.IsNullOrWhiteSpace(seed) ? hearsay : seed + "\n\n" + hearsay;
+                }
+                catch { /* hearsay is a garnish on the seed, never its cost */ }
+
+                if (string.IsNullOrWhiteSpace(seed)) return;
+
+                memory.Summary = seed;
+                memory.SeededFromStory = true;
+            }
+            catch { /* best-effort: an unseeded memory just begins blank, as everyone did before */ }
         }
 
         // Persists this NPC's memory into its own folder. Every write first folds in any blessing
@@ -742,21 +784,6 @@ namespace ImmersiveAI
                 File.WriteAllText(NpcPaths.SelfFile(npc), (text ?? string.Empty).Trim());
             }
             catch { /* best-effort; never block a conversation on saving the self */ }
-        }
-
-        // No one begins as a blank page: when their self has never been written, the story the world
-        // already tells of them (a wanderer's tavern tale, a noble's repute — see BackstoryBuilder) is
-        // set down as its first page, theirs to keep, refine, or release at every reflection after.
-        private string LoadOrSeedSelf(Hero npc)
-        {
-            var text = LoadSelf(npc);
-            if (!string.IsNullOrEmpty(text) || !_config.SeedSelfFromWorldStory) return text;
-
-            var seed = BackstoryBuilder.BuildInitialSelf(npc);
-            if (string.IsNullOrWhiteSpace(seed)) return text;
-
-            SaveSelf(npc, seed);
-            return seed;
         }
 
         public override void RegisterEvents()
@@ -1281,7 +1308,7 @@ namespace ImmersiveAI
 
                 // Reflection is also the moment the NPC looks inward and may revise who they feel
                 // themselves to be. We hand in their current self and let them rewrite it (or leave it).
-                var self = new NpcSelf { Text = LoadOrSeedSelf(npc) };
+                var self = new NpcSelf { Text = LoadSelf(npc) };
                 var selfBefore = self.Text;
 
                 // Always reflect (rewrite the rolling memory whole), even when nothing is old enough to
@@ -3169,9 +3196,9 @@ namespace ImmersiveAI
             persona.WorldInstructions = PromptFiles.LoadGlobalPrompt();
             persona.CustomInstructions = PromptFiles.LoadNpcPrompt(
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
-            // The NPC's own evolving self-concept (authored by them during reflection; first seeded from
-            // the story the world tells of them), from its own file.
-            persona.SelfConcept = LoadOrSeedSelf(npc);
+            // The NPC's own evolving self-concept (authored by them during reflection — it begins
+            // unwritten; their backstory seeds the deep memory instead, see SeedMemoryFromStory).
+            persona.SelfConcept = LoadSelf(npc);
             // The player-configurable atmosphere line and roleplay guidance (tokens resolved here), and the
             // NPC's kin and house — all folded into the prompt so the world's feel and their family carry.
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
@@ -3321,7 +3348,7 @@ namespace ImmersiveAI
             var place = string.Empty;
             try { place = SituationBuilder.Place(npc) ?? string.Empty; } catch { }
             var backstory = string.Empty;
-            try { backstory = Personas.BackstoryBuilder.BuildInitialSelf(npc) ?? string.Empty; } catch { }
+            try { backstory = Personas.BackstoryBuilder.BuildStorySeed(npc) ?? string.Empty; } catch { }
 
             var world = PromptFiles.LoadGlobalPrompt();
             var guidance = ApplyTokens(_config.RoleplayGuidance, persona.Name);

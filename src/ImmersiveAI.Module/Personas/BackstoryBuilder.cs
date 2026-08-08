@@ -7,18 +7,19 @@ using TaleWorlds.Core;
 namespace ImmersiveAI.Personas
 {
     /// <summary>
-    /// The story the world already tells of an NPC, gathered as the first page of their self file
-    /// (see SelfSeedFormatter in Core for the shaping; the seeding hook lives in the behavior's
-    /// LoadOrSeedSelf). A wanderer has a real, hand-written tale — the one they tell in taverns
-    /// when first met, already in their own first-person voice. Anyone else gets the account the
-    /// world keeps of them: a hand-authored biography when one exists (story characters, mods set
-    /// Hero.EncyclopediaText), else the same reputational story the encyclopedia page composes —
-    /// title, house, repute. Best-effort throughout: any failure means they simply begin unwritten,
-    /// as everyone did before this existed.
+    /// The story the world already tells of an NPC, gathered as the first page of their deep memory
+    /// (see StorySeedFormatter in Core for the shaping; the seeding hook lives in the behavior's
+    /// SeedMemoryFromStory — until 2026.08.08 it seeded self.txt instead). A wanderer has a real,
+    /// hand-written tale — the one they tell in taverns when first met, already in their own
+    /// first-person voice. Anyone else gets the account the world keeps of them: a hand-authored
+    /// biography when one exists (story characters, mods set Hero.EncyclopediaText), else the same
+    /// reputational story the encyclopedia page composes — title, house, repute. Best-effort
+    /// throughout: any failure means they simply begin unwritten, as everyone did before this
+    /// existed. (The director's spark also reads this as "their real story".)
     /// </summary>
     public static class BackstoryBuilder
     {
-        public static string BuildInitialSelf(Hero npc)
+        public static string BuildStorySeed(Hero npc)
         {
             try
             {
@@ -30,11 +31,11 @@ namespace ImmersiveAI.Personas
                 // A hand-authored biography rides first (vanilla lords have none; story NPCs and
                 // mod-added heroes may). It is third person, so it is framed as the world's telling.
                 var bio = npc.EncyclopediaText?.ToString();
-                if (!string.IsNullOrWhiteSpace(bio)) return SelfSeedFormatter.FromWorldStory(bio);
+                if (!string.IsNullOrWhiteSpace(bio)) return StorySeedFormatter.FromWorldStory(bio);
 
                 // The generated encyclopedia account needs a house and a banner to speak of.
                 if (npc.Clan != null && npc.MapFaction != null)
-                    return SelfSeedFormatter.FromWorldStory(Hero.SetHeroEncyclopediaTextAndLinks(npc)?.ToString());
+                    return StorySeedFormatter.FromWorldStory(Hero.SetHeroEncyclopediaTextAndLinks(npc)?.ToString());
 
                 return string.Empty;
             }
@@ -61,10 +62,10 @@ namespace ImmersiveAI.Personas
                 FindLine("backstory_c", templateId),
                 FindLine("backstory_d", templateId),
             };
-            var tale = SelfSeedFormatter.FromOwnStory(parts);
+            var tale = StorySeedFormatter.FromOwnStory(parts);
             if (tale.Length > 0) return tale;
 
-            return SelfSeedFormatter.FromOwnStory(new[] { FindLine("generic_backstory", templateId) });
+            return StorySeedFormatter.FromOwnStory(new[] { FindLine("generic_backstory", templateId) });
         }
 
         // A living wanderer usually IS their template character; a spawned copy points back to it

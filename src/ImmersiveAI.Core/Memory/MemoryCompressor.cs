@@ -165,18 +165,21 @@ namespace ImmersiveAI.Core.Memory
 
         // The SUMMARY: reply contract shared by compression and reflection — the single lever on how
         // good the deep memory is, since 2026.08.08 the ONLY durable thing she carries of a person
-        // (the distilled FACTS list is retired). Two things it must keep doing, both inherited from
-        // that retired contract: invite the particulars a bare précis would smooth away, and warn her
-        // plainly that the summary is rewritten WHOLE — without that line each pass quietly erodes
-        // what the truths used to nail down. No length ceiling on purpose; MaxMemoryWriteTokens is
-        // the only real bound, and it no longer shares its room with FACTS and GOALS.
+        // (the distilled FACTS list is retired). Three things it must keep doing: invite the
+        // particulars a bare précis would smooth away, warn her plainly that the summary is rewritten
+        // WHOLE — without that line each pass quietly erodes what the truths used to nail down — and
+        // invite her OWN road from before (the deep memory opens seeded with her backstory since
+        // 2026.08.08; without that clause the "all I carry of them" framing would erode her past by
+        // shape, not by her choice). No length ceiling on purpose; MaxMemoryWriteTokens is the only
+        // real bound, and it no longer shares its room with FACTS and GOALS.
         private static void AppendReplyFormat(StringBuilder sb)
         {
             sb.AppendLine();
             sb.AppendLine("I set it down in exactly this shape:");
             sb.AppendLine("SUMMARY:");
             sb.AppendLine("<all I carry of them, in my own first-person voice — who they are to me and how that came to be, "
-                + "and the particular things I would not lose: what was said and promised between us, what was given and done, the names that matter.>");
+                + "and the particular things I would not lose: what was said and promised between us, what was given and done, the names that matter. "
+                + "What I carry of my own road from before also lives here — mine to keep, reshape, or let fade, as I choose.>");
             sb.AppendLine("I write it whole each time, for what I do not set down here fades from me. "
                 + "I take as much room as the story truly asks — a few paragraphs, and more where there is more to hold.");
         }

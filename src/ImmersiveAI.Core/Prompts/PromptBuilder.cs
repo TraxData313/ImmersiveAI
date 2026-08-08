@@ -292,10 +292,13 @@ namespace ImmersiveAI.Core.Prompts
         }
 
         /// <summary>True when this NPC carries any memory of the player at all — used to choose between
-        /// the first-meeting and the familiar <see cref="ArrivalLine"/>.</summary>
+        /// the first-meeting and the familiar <see cref="ArrivalLine"/>. A summary that holds only the
+        /// seeded story of their own road (<see cref="NpcMemory.SeededFromStory"/>) is THEIR story, not
+        /// history with the player — such a soul still meets the player as a stranger.</summary>
         public static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
-            || !string.IsNullOrWhiteSpace(memory.Summary);
+            || memory.TotalTurns > 0
+            || (!string.IsNullOrWhiteSpace(memory.Summary) && !memory.SeededFromStory);
 
         /// <summary>The NPC's own awareness of the player coming to them, closing on the greeting
         /// being theirs to speak. Spoken through <see cref="BuildInnerPrompt"/> and recorded — with
@@ -510,10 +513,20 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
-                    ? string.Empty
-                    : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
-                sb.AppendLine($"What {playerName} is to me{asOf}:");
+                if (memory.SeededFromStory && memory.StoryRichness == 0)
+                {
+                    // Nothing lived with this person yet — the deep memory holds only the seeded
+                    // story of the road that made me. Headed honestly as my own; the player enters
+                    // it only once something is truly lived between us.
+                    sb.AppendLine("The road of my life so far, as I carry it in memory:");
+                }
+                else
+                {
+                    var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
+                        ? string.Empty
+                        : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
+                    sb.AppendLine($"What {playerName} is to me{asOf}:");
+                }
                 sb.AppendLine(memory.Summary.Trim());
             }
 

@@ -354,6 +354,10 @@ namespace ImmersiveAI.UI.ChatWindow
         private static string OverviewHeading(NpcMemory? memory, string npcName)
         {
             if (memory == null || string.IsNullOrWhiteSpace(memory.Summary)) return string.Empty;
+            // A memory holding only the seeded story of their own road is not yet a memory OF the
+            // player — head it as the story they carry, not as what lingers of you.
+            if (memory.SeededFromStory && memory.StoryRichness == 0)
+                return $"The story {npcName} carries of their own road";
             var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf) ? string.Empty : $" (as of {memory.SummaryAsOf.Trim()})";
             return $"What lingers in {npcName}'s memory of you{asOf}";
         }

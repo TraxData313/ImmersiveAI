@@ -430,8 +430,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable;
   the click opens the face-to-face conversation, the chat window, or the accept/decline offer per the
   two toggles above),
-  `SeedSelfFromWorldStory` (a never-written self.txt begins with the story the world tells of them —
-  a wanderer's tavern tale, a noble's encyclopedia repute — instead of a blank page; default on),
+  `SeedSelfFromWorldStory` (a never-spoken-with NPC's DEEP MEMORY opens with the story the world
+  tells of them — a wanderer's tavern tale, a noble's encyclopedia repute — instead of an empty
+  Summary; since 2026.08.08 a memory they rewrite at every compression, not a self.txt page; key
+  name kept for compat; default on),
   `PersonaSparkMode` (2026.08.07 — THE DIRECTOR'S SPARK: at a soul's FIRST interaction, before their
   first words, one plain LLM call — the "casting director", a refiner-class utility call — writes 1–3
   first-person sentences of private starting truth into their custom_instructions.txt under a
@@ -608,13 +610,32 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     person during reflection (not by the player). Kept separate from `memories.json` because
     the self is general to the NPC while memory is branching toward per-person files. Folded
     into the prompt as "Who you have become". Updated by `MemoryCompressor.ReflectAsync`.
-    **First seeded from the story the world tells of them** (2026.07.10): a never-written self
-    begins as a wanderer's hand-written tavern tale (first person, from the game's
+    **THE BACKSTORY SEEDS THE DEEP MEMORY NOW, NOT THE SELF** (2026.08.08, Anton's call — the
+    self-seed of 2026.07.10 stood forever at a fixed place and weight; as memory it is theirs to
+    rewrite, keep, or let fade at every compression, and the empty starting Summary is put to
+    work): a soul whose memory has never held anything opens `NpcMemory.Summary` with a
+    wanderer's hand-written tavern tale (first person, from the game's
     `backstory_a..d`/`generic_backstory` strings keyed by character template) or a noble's
     encyclopedia account (`Hero.EncyclopediaText` if hand-authored, else the generated
     `Hero.SetHeroEncyclopediaTextAndLinks` paragraph, framed "So runs my story, as the world
-    tells it:") — gathered by `BackstoryBuilder` (Module), shaped by `SelfSeedFormatter` (Core),
-    seeded via `LoadOrSeedSelf`. Deleting `self.txt` re-seeds. Toggle: `SeedSelfFromWorldStory`.
+    tells it:") — gathered by `BackstoryBuilder.BuildStorySeed` (Module), shaped by
+    `StorySeedFormatter` (Core, was SelfSeedFormatter), hooked in the behavior's
+    `SeedMemoryFromStory` (rides `LoadMemory`; in-memory until the first real interaction saves).
+    A RENOWNED PLAYER'S RUMOR CLOSES THE SEED (same day, Anton's ask): what the world had told
+    this soul of the player before they ever spoke — `StorySeedFormatter.FromPlayerFame`
+    (Clan.PlayerClan.Renown, tiers aligned with the live lines: silent under 150 = the beholder's
+    "no word of their deeds", 300 = carried far, 900 = "famed across all Calradia" like the clan
+    recall), appended after the backstory (or standing alone for souls with none, e.g. notables);
+    it too is memory — hers to keep or let fade — while the situation line keeps telling how far
+    the name travels TODAY.
+    The rails: `NpcMemory.SeededFromStory` keeps a seeded-only summary from counting as knowing
+    the player (`HasRememberedHistory` — she still meets them as a stranger), the sheet heads it
+    "The road of my life so far…" instead of "What X is to me" until something is truly lived
+    (`StoryRichness == 0`), and the SUMMARY: contract's "my own road from before" clause invites
+    her past to survive each whole-rewrite BY HER CHOICE — all three are load-bearing, tested.
+    `self.txt` begins unwritten now (first reflection invites them to author it); souls seeded
+    the old way (non-empty self.txt) are never seeded again. Toggle: `SeedSelfFromWorldStory`
+    (key name kept for config compat).
   - `goals.txt` — RETIRED 2026.08.08. Held the NPC's own aims until then; nothing reads or writes
     it any more. Existing files are deliberately left where they lie (never deleted, never migrated),
     so the folder of a long-played campaign may still show one.

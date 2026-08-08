@@ -613,6 +613,20 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void HasRememberedHistory_ASeededBackstoryIsTheirStoryNotHistoryWithThePlayer()
+    {
+        // The deep memory opens seeded with the story of their own road (2026.08.08). That story is
+        // THEIRS — a soul carrying only it has never met the player and is greeted as a stranger.
+        var seededOnly = new NpcMemory { Summary = "So runs my story, as the world tells it: …", SeededFromStory = true };
+        Assert.False(PromptBuilder.HasRememberedHistory(seededOnly));
+
+        // Once anything is truly lived between them, the acquaintance is real — even after every
+        // verbatim turn has been folded away, the lifetime count carries it.
+        var seededThenLived = new NpcMemory { Summary = "Their road, and now the player in it.", SeededFromStory = true, TotalTurns = 3 };
+        Assert.True(PromptBuilder.HasRememberedHistory(seededThenLived));
+    }
+
+    [Fact]
     public void SystemPrompt_PlacesDeepMemoryBeforeTheScene_SoTheMomentLandsLast()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
@@ -645,5 +659,26 @@ public class PromptBuilderTests
         Assert.True(system.IndexOf("my husband") < system.IndexOf("How should I speak:"));
         // The memory header carries when the thoughts were last gathered.
         Assert.Contains("as I last gathered my thoughts on 1087.01.18", system);
+    }
+
+    [Fact]
+    public void SystemPrompt_ASeededOnlyMemoryIsHeadedAsTheirOwnRoad_NotAsThePlayer()
+    {
+        // Before anything is lived with this person, the deep memory holds only the seeded story of
+        // the NPC's own road — heading it "What X is to me" would put a stranger inside it.
+        var seeded = new NpcMemory { Summary = "So runs my story, as the world tells it: a lady of the Throsniring.", SeededFromStory = true };
+
+        var system = new PromptBuilder()
+            .Build(Persona(), seeded, "And now Vulgrim comes to me.", "Vulgrim", "Hello")[0].Content;
+
+        Assert.Contains("The road of my life so far, as I carry it in memory:", system);
+        Assert.DoesNotContain("What Vulgrim is to me", system);
+
+        // The first lived turn makes it memory of a person again, under the usual heading.
+        seeded.AddTurn(new ConversationTurn { PlayerLine = "p", NpcLine = "n" });
+        var after = new PromptBuilder()
+            .Build(Persona(), seeded, "And now Vulgrim comes to me.", "Vulgrim", "Hello")[0].Content;
+        Assert.Contains("What Vulgrim is to me", after);
+        Assert.DoesNotContain("The road of my life so far", after);
     }
 }

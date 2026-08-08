@@ -40,6 +40,15 @@ namespace ImmersiveAI.Core.Memory
         /// the player see that deep memories reflect a past moment and may be out of date.</summary>
         public string SummaryAsOf { get; set; } = string.Empty;
 
+        /// <summary>True when the Summary began as the seeded story of the NPC's own road — the tale
+        /// the world tells of them, set down as the first page of an otherwise empty deep memory
+        /// (2026.08.08, replacing the old self.txt seeding) so it lives under the rolling summary's
+        /// own rules: rewritten whole at every compression, theirs to keep or let fade. Distinguishes
+        /// "carries only their own backstory" from "remembers the player" — a seeded-only memory still
+        /// meets the player as a stranger. Never cleared; once real history arrives,
+        /// <see cref="TotalTurns"/> carries the acquaintance.</summary>
+        public bool SeededFromStory { get; set; }
+
         public double LastConversationGameDay { get; set; } = -1;
 
         /// <summary>Campaign day this NPC last reached toward the player of their OWN will — spoke first,

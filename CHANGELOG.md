@@ -15,6 +15,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- An NPC's backstory now begins as their earliest deep memory instead of a fixed page — over time they decide what of their old life to keep, reshape, or let fade.
+- If your name is renowned, a soul you meet for the first time already carries the rumor of you as an early memory — faint word, tales traveling far, or fame across all Calradia.
+
 ## v2.0.0 — 2026.08.08
 
 The biggest release since the mod was born. Playtested and shipped.
