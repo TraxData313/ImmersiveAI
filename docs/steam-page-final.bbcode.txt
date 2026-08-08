@@ -12,11 +12,11 @@ If one of these searches brought you here — yes, this is that mod:
 [h1]The NPCs are alive:[/h1]
 [list]
 [*]Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
-[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — beside their own sense of self and their opinion of you.
+[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — beside their own sense of self.
 [*]Every soul begins as somebody: at your first meeting a private starting truth is written for them — an old wound, an odd habit, a vanity — grown from their real story. Yours to read or rewrite.
 [*]They see the moment — time, place, who stands near, what lately happened in the world — and they have moods, down to the women keeping a personal monthly cycle, gently simulated.
 [*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won — the last in detail, older ones by name ("what happened at the storming of Varcheg?"), from a real chronicle of every fight, sea included.
-[*]Your companions witness the everyday road too — the towns you called at, the trade you struck, the men you hired, the tasks you carry and how each ended — and they know their own wounds, and see yours.
+[*]Your companions witness the everyday road too — the towns you called at, the trade you struck, the men you hired, the tasks you carry and how each ended.
 [*]They are free: told who they are and what the world is, never forced into anything. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
@@ -25,7 +25,7 @@ If one of these searches brought you here — yes, this is that mod:
 [list]
 [*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road — liking, love, readiness, betrothal, wedding — moved by their judgment of your talks, not by a menu.
 [*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words. Talk them over; only they decide when life has answered one.
-[*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing — and her family's blessing costs a bride-price, haggled in talk or letter.
+[*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing — and her family's blessing costs a bride-price.
 [*][b]Companion brides and grooms[/b] — vanilla forbids them; here they are the point. Wed the wanderer riding at your side and she keeps her place and duties.
 [*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself. They open at their worth and never volunteer their lowest price.
 [*]Nothing is sealed by words alone — every bargain, betrothal and wedding takes your confirming click, and the wedding is the real game marriage.
@@ -33,7 +33,7 @@ If one of these searches brought you here — yes, this is that mod:
 
 [h1]And useful — stop googling stuff:[/h1]
 
-Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, your chronicle.
+Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger.
 
 [h1]Your ways to reach them:[/h1]
 [list]
@@ -51,18 +51,18 @@ You bring [b]your own API key[/b]. Pick a row:
 [*][b]Just works[/b] — OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
 [*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Two catches: Google trains on free-tier traffic, and it's slow.
 [*][b]Cheapest paid[/b] — DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
-[*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model if you like to tinker.
+[*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model.
 [/list]
 
 [b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default — $10 covers many thousands of messages, shown as you play, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b] or the NPCs go duller.
 
 [b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
-[b]Setup, five minutes:[/b] get your key, enable the mod, start the game once — it writes a config file and tells you where to paste the key. Paste it (or use Mod Options with MCM), pick your backend, restart. On campaign load the mod tests the connection and says plainly whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the pinned FAQ[/b].
+[b]Setup, five minutes:[/b] get your key, enable the mod, start the game once — it writes a config file and tells you where to paste the key. Paste it, pick your backend, restart. The mod tests the connection at campaign load and says plainly whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the pinned FAQ[/b].
 
 [h1]Privacy[/h1]
 [list]
-[*]Your conversations and the world around them go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms — nowhere else. Their policy is theirs: notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
+[*]Your conversations and the world around them go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms — nowhere else. Notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
 [*]With web search on (default), look-ups go to DuckDuckGo — turn it off to keep everything with your provider.
 [*][b]No telemetry whatsoever.[/b] Memories are plain files on your own disk, yours to read, edit, or delete.
 [*][b]AI content disclosure:[/b] all character dialogue is generated at play time by the AI model you configure.
@@ -70,10 +70,10 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [h1]Compatibility & shaping[/h1]
 [list]
-[*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled); no vanilla behavior is altered. MCM optional for in-game settings; without it, everything is in config.json.
+[*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional; without it, everything is in config.json.
 [*]Safe to remove mid-campaign — saves load fine without it, and memories live outside them, so reinstall later and everyone still remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod (free, and a good taste of the idea) — no code copied, fully original source.
-[*]Under Documents\...\Configs\ImmersiveAI\ everything is plain text: the world prompt, and each character's own prompt, memories, self-image, battles and letters.
+[*]Under Documents\...\Configs\ImmersiveAI\ everything is plain text: prompts, memories, battles, letters.
 [/list]
 
 [h1]Final thoughts[/h1]

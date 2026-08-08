@@ -148,7 +148,13 @@ tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip fo
 docs/steam-page-draft.md  SUPERSEDED draft; the LIVE pages are the .bbcode.txt files beside it —
                           steam-page-final.bbcode.txt, steam-faq.bbcode.txt (pinned), nexus-page.bbcode.txt.
                           All three are AT their length limit: any addition must be paid for by a cut
-                          elsewhere in the same file (deep material goes to docs/ and is LINKED instead)
+                          elsewhere in the same file (deep material goes to docs/ and is LINKED instead).
+                          MEASURE IN BYTES, NOT CHARACTERS (learned 2026.08.08): the Steam description
+                          caps at 8000 UTF-8 BYTES and fails with a bare "There was a problem trying to
+                          save the title and description" — an em dash is 3 bytes and the page carries
+                          ~42, so len(s) understates by ~90. Use len(s.encode('utf-8')) and leave 200+
+                          bytes spare. Nexus's description is ASCII (bytes == chars); its per-version
+                          CHANGELOG field is a separate hard 255-character cap — see CHANGELOG.md's header
 docs/choosing-a-model.md  PLAYER-FACING "Which AI should I use?" — the one place the model/backend/local
                           detail lives, written in layers (pick-a-row table → costs → each provider's
                           one catch → local setup → why: tool calling, thinking-off, context). Linked
