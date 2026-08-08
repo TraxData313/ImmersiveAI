@@ -1,6 +1,15 @@
 BUGS:
 
 NEXT UPDATE:
+- [ ] SHIP v2.0.0 — everything is staged and waiting on the playtest below. Already done
+      (2026.08.08): version bumped in SubModule.xml, CHANGELOG's v2.0.0 section written in
+      reading order, WorkshopUpdate.xml ChangeNotes filled, all four pages rewritten and
+      measured (steam 7884/8000, nexus 9385, faq 13584), git pushed + tagged v2.0.0, branches
+      pruned, dist\ImmersiveAI + dist\ImmersiveAI_v2.0.0.zip packaged. THE REMAINING STEPS are
+      Anton's: run the Workshop uploader (tools/WORKSHOP-UPLOAD.md step 3), paste the page text
+      into the Steam item + Nexus description + the pinned FAQ thread, and upload the zip to
+      Nexus with the CHANGELOG section as its changelog. RE-PACKAGE FIRST if anything changes
+      after the playtest.
 - [ ] PLAYTEST the marriage-by-courtship wave (built 2026.08.08, all green, none of it playtested):
       Sibylla's seeding (expect devotion/ready from her lived story), the road's steps + notices,
       the betrothal + wedding seals, a companion wedding (graduation, cutscene, she keeps her
@@ -80,12 +89,18 @@ POST V1 or NOT FULLY DECIDED:
     trouble to carry: <quest title>" — closes it fully and makes the memory itself carry the moment,
     not just the situation sheet. Same pattern as MeetingLine (CampaignEvents quest-started hook, no
     LLM call, one per quest, dedupe like IsMeetingLine).
-- [ ] Steam page: FAQ + cost plain-talk + local-model note (from ChatAi comment mining, 2026.07.17)
-    ChatAi's comments are dominated by (a) "is this free/safe? API = virus?" fear, (b) "does it work
-    with X mod / War Sails / Linux?" questions, (c) local-model setup confusion. Add to our page:
-    a short FAQ (compat: Diplomacy/Dramalord/Marry Anyone/overhauls; War Sails yes; Steam Deck/Proton
-    note after one test); one plain sentence of what a typical hour costs in cents on the default
-    models and that the key goes ONLY to the provider you chose; and a "local models: what to expect"
+- [ ] Steam page: FAQ + cost plain-talk + local-model note — MOSTLY DONE, two gaps left
+    (from ChatAi comment mining, 2026.07.17). DONE: the pinned FAQ thread exists and carries the
+    cost plain-talk, the local-models rules, the privacy answer, and (2026.08.08) the compat line
+    for War Sails / Marry Anyone / Training Battles. STILL OPEN, both needing a real test before
+    they can be written honestly: (a) Diplomacy and Dramalord compatibility — never actually
+    verified, only assumed from "we replace no vanilla behavior"; (b) the Steam Deck / Proton
+    note, which needs one run on Linux.
+    Original note kept for context — ChatAi's comments are dominated by (a) "is this free/safe?
+    API = virus?" fear, (b) "does it work with X mod / War Sails / Linux?" questions, (c) local-model
+    setup confusion. The remaining shape: one plain sentence of what a typical hour costs in cents
+    on the default models and that the key goes ONLY to the provider you chose; a "local models:
+    what to expect"
     note (the Local backend → LM Studio/Ollama works, but small models are shaky with our eleven tools —
     point at RelationshipChangesViaTool:false as the fallback). Cheap words, preempts the loudest
     complaint threads on the competitor's page.
