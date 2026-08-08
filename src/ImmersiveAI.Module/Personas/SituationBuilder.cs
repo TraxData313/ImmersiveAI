@@ -172,6 +172,15 @@ namespace ImmersiveAI.Personas
                 sb.AppendLine(self);
             }
 
+            // The body's honest state — wounds felt are part of how I stand this moment, and seeing
+            // the number day to day is seeing myself mend. A whole body says nothing.
+            var body = BuildBody(speaker);
+            if (body.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(body);
+            }
+
             // The passing weather of the heart: the day's humor and, for the women, the body's own
             // season — part of who they are this day, so it follows the self (see MoodTides).
             if (config == null || config.EnableMoodSwings)
@@ -204,6 +213,30 @@ namespace ImmersiveAI.Personas
                     sb.AppendLine();
                     sb.AppendLine(tidings);
                 }
+            }
+
+            // The war we have shared: the chronicle's roll of battles fought at this partner's side,
+            // the freshest told whole — so the last battle is discussable in detail unprompted, and
+            // the older ones by name (empty for souls who never shared a field; see the behavior's
+            // Battles partial).
+            string battles;
+            try { battles = ImmersiveChatBehavior.Current?.BattleChronicleBlock(speaker, partner) ?? string.Empty; }
+            catch { battles = string.Empty; }
+            if (battles.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(battles);
+            }
+
+            // The everyday road, witnessed: the last few stops, the trade, the men, the tasks —
+            // only for souls truly riding WITH the player (see the behavior's Journey partial).
+            string journey;
+            try { journey = ImmersiveChatBehavior.Current?.JourneyBlock(speaker, partner) ?? string.Empty; }
+            catch { journey = string.Empty; }
+            if (journey.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(journey);
             }
 
             // And past the separator, the person: who stands before me (or writes from afar), named
@@ -251,6 +284,14 @@ namespace ImmersiveAI.Personas
             if (themDesc.Length > 0)
                 sb.AppendLine(themDesc);
 
+            // Wounds are seen: the state of their body is part of what stands before me (never for
+            // a letter — no eyes reach across the map).
+            if (moment != Moment.Apart)
+            {
+                var theirBody = TheirBody(partner);
+                if (theirBody.Length > 0) sb.AppendLine(theirBody);
+            }
+
             // The beholder's eye: when a great lord is met by someone far beneath their station whom
             // they barely know, what the eyes see IS the introduction — garb, arms, banner, following,
             // smashed down to one sentence, so a king receives an unknown as a king would, without a
@@ -264,6 +305,48 @@ namespace ImmersiveAI.Personas
             }
 
             return sb.ToString().TrimEnd();
+        }
+
+        // The speaker's own body, honestly: hale bodies say nothing; a mending one gives its plain
+        // strength in 100 (so recovery is visible from day to day), and past the game's own wounded
+        // threshold — the same rail that keeps a hero out of the battle line — they know they are in
+        // no state to fight (Anton's ask, 2026.08.08).
+        private static string BuildBody(Hero h)
+        {
+            try
+            {
+                if (h == null) return string.Empty;
+                int max = Math.Max(1, h.MaxHitPoints);
+                int percent = (int)Math.Round(100.0 * h.HitPoints / max);
+                if (h.IsWounded)
+                    return $"My body is sorely hurt — my strength stands near {percent} in 100, beneath the mark where one can hold a battle line. Until these wounds mend I am in no state to fight, and I know it.";
+                if (percent >= 95) return string.Empty;
+                if (percent >= 70)
+                    return $"My body carries hurts nearly healed — my strength stands near {percent} in 100, and the rest returns with the days.";
+                return $"My body is still mending — my strength stands near {percent} in 100. I can keep my feet and fight at need, but I am not yet whole.";
+            }
+            catch { return string.Empty; }
+        }
+
+        // What the speaker's eyes see of the partner's body — fresh wounds are plain to any eye,
+        // and an ally's mending is worth a word. A hale partner draws no comment.
+        private static string TheirBody(Hero partner)
+        {
+            try
+            {
+                if (partner == null) return string.Empty;
+                int max = Math.Max(1, partner.MaxHitPoints);
+                int percent = (int)Math.Round(100.0 * partner.HitPoints / max);
+                var them = Name(partner);
+                if (partner.IsWounded)
+                    return $"My eyes see plainly that {them} is sorely wounded — in no state to fight until those wounds mend.";
+                if (percent < 70)
+                    return $"I see that {them} carries wounds still mending — at perhaps {percent} parts in 100 of their strength.";
+                if (percent < 95)
+                    return $"I mark that {them} bears some small healing hurts — near whole again.";
+                return string.Empty;
+            }
+            catch { return string.Empty; }
         }
 
         // One sentence of what a high lord's eyes take in of an unknown caller. Only spoken when the

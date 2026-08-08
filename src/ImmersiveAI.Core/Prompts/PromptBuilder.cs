@@ -596,6 +596,11 @@ namespace ImmersiveAI.Core.Prompts
             if (persona.CanHoldTruths)
                 sb.AppendLine("- When something said here deserves to stay with me — a name, a bond, a promise, a deed — I may quietly set it down among the truths I hold, so it outlives this day's talk.");
 
+            // Offered only when the recall_battle tool rides along (they truly share a battle with
+            // this person): the chronicle's hand.
+            if (persona.CanRecallChronicle)
+                sb.AppendLine("- Battles we have lived through side by side are set down in my mind by name. When one of them is spoken of — or the tale wants telling true — I call the whole of it back: the field, the musters, the fallen, the spoils, whose hand did what. Of battles we shared, I speak from the record, never from fog.");
+
             // Offered only when the field-craft tools ride along (the NPC stands with a company on
             // the map): the outward eyes and the scales of battle.
             if (persona.CanSurveyField)

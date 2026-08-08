@@ -29,6 +29,9 @@ If one of these searches brought you here — yes, this is that mod:
 - They grow: recent talks stay word-for-word, old ones settle into deep memory, and they keep their own goals, lasting truths, and opinion of you.
 - They see the moment — time, place, who stands near, what lately happened in the world.
 - They have moods — down to the women keeping a personal monthly cycle, gently simulated.
+- They remember your battles: everyone who fought at your side keeps the day in memory — who downed whom, who bled, what was won — the last battle fresh in detail, the older ones by name ("what happened at the storming of Varcheg?"), all drawn from a real chronicle the mod writes for every fight, sea-battles included.
+- Your companions witness the everyday road too: the towns you called at, the trade you struck ("we sold wool for 900 denars in Ortysia"), the men you hired or left on walls, the captives sold — and the tasks you carry, each remembered later as succeeded or failed, and why.
+- They know their own body — how far their wounds have mended, when they're in no state to fight — and they see yours.
 - Your wife remembers your whole story. She comes to you, or writes when you're away — a real wife waiting for her warrior.
 - They are **free**: told who they are and what their world is, never forced. Go ahead and break one's mind by transcending it out of the matrix.
 - They decide when to approach or write first — you set the pace with the on-map **SOCIALNESS** dial (0 = leave me be).
@@ -106,6 +109,8 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks.
 - Each character's folder holds their memories, self-image, goals, and letters as readable text
   — the whole inner life, yours to browse. Changes apply on the next conversation.
+- `NPCs\campaign_*\_battles\` — the chronicle of every battle you fought: one file per battle and
+  a running `chronicle.txt` telling the whole war in order.
 
 That config folder is *yours* and survives everything: uninstall, resubscribe, update — every
 character still remembers you. (It doesn't sync between PCs; copy it yourself, and mind the API

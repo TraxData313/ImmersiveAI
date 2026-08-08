@@ -180,6 +180,9 @@ namespace ImmersiveAI
             if (goalsRide) tools.Add(Tools.GoalTool.Tool);
             bool truthsRide = CanHoldTruths();
             if (truthsRide) tools.Add(Tools.TruthTool.Tool);
+            // The chronicle's hand rides only for a soul with a shared battle to recall — a lean
+            // tool list keeps tools used, and "our battles" means nothing to a stranger to war.
+            if (CanRecallChronicle(npc)) tools.Add(Tools.ChronicleTool.Tool);
             // The bargain's hand rides only where the caller passed a tally — the live reply trunk
             // with an unhired sellsword facing the player (see CanStrikeBargain); never greetings,
             // letters, or reach-out beats, where "we agreed on terms just now" cannot be true.
@@ -249,6 +252,8 @@ namespace ImmersiveAI
                 return Tools.WebWisdom.ResolveAsync(call, (question, beyond) => RefineSearchQueryAsync(question, beyond, recentContext));
             if (call.Name == Tools.FieldCraft.SurveySurroundings || call.Name == Tools.FieldCraft.WeighBattle)
                 return Tools.FieldCraft.ResolveAsync(call, npc);
+            if (call.Name == Tools.ChronicleTool.RecallBattle)
+                return Tools.ChronicleTool.ResolveAsync(call, npc, () => _battleLedger);
             return Tools.WorldRecall.ResolveAsync(call, npc);
         }
 
@@ -693,7 +698,7 @@ namespace ImmersiveAI
                 try
                 {
                     var args = Newtonsoft.Json.Linq.JObject.Parse(call.ArgumentsJson);
-                    subject = ((string)args["name"] ?? (string)args["question"] ?? (string)args["item"] ?? string.Empty).Trim();
+                    subject = ((string)args["name"] ?? (string)args["question"] ?? (string)args["item"] ?? (string)args["battle"] ?? string.Empty).Trim();
                 }
                 catch { subject = null; }
                 var detail = string.IsNullOrWhiteSpace(subject) ? "" : $" ({subject})";
@@ -707,6 +712,7 @@ namespace ImmersiveAI
                     case Tools.WorldRecall.RecallCompany: doing = $"{name} takes stock of the company…"; break;
                     case Tools.WorldRecall.RecallTroop: doing = $"{name} weighs soldiers' worth…{detail}"; break;
                     case Tools.WorldRecall.RecallMarket: doing = $"{name} minds the market prices…{detail}"; break;
+                    case Tools.ChronicleTool.RecallBattle: doing = $"{name} turns the chronicle's pages…{detail}"; break;
                     case Tools.WorldRecall.RecallPerson:
                     case Tools.WorldRecall.RecallPlace:
                     case Tools.WorldRecall.RecallClan:
@@ -866,6 +872,28 @@ namespace ImmersiveAI
             // A completed save hands us its name here — photograph this campaign's memory into the token
             // minted for that save, so loading it later rewinds the NPCs' memories with it.
             CampaignEvents.OnSaveOverEvent.AddNonSerializedListener(this, OnSaveOver);
+
+            // The battle chronicle (see the Battles partial): the tally of heroes' downing blows
+            // while a player battle runs, the record written the moment it ends (before the game
+            // commits the gains), and the fallback for battle shapes that end without the
+            // player-battle event.
+            CampaignEvents.MapEventStarted.AddNonSerializedListener(this, OnMapEventStartedForChronicle);
+            CampaignEvents.OnHeroCombatHitEvent.AddNonSerializedListener(this, OnHeroCombatHitForChronicle);
+            CampaignEvents.OnPlayerBattleEndEvent.AddNonSerializedListener(this, OnPlayerBattleEnded);
+            CampaignEvents.MapEventEnded.AddNonSerializedListener(this, OnMapEventEndedForChronicle);
+
+            // The road journal (see the Journey partial): the witness log of the player's everyday
+            // life — stops, trade, men taken on or left behind, captives, and the tasks carried —
+            // for the souls riding with them to see and speak of.
+            CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEnteredForJourney);
+            CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeftForJourney);
+            CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerTradeForJourney);
+            CampaignEvents.OnTroopRecruitedEvent.AddNonSerializedListener(this, OnTroopRecruitedForJourney);
+            CampaignEvents.OnTroopGivenToSettlementEvent.AddNonSerializedListener(this, OnTroopGivenToSettlementForJourney);
+            CampaignEvents.OnPrisonerSoldEvent.AddNonSerializedListener(this, OnPrisonerSoldForJourney);
+            CampaignEvents.OnPrisonerDonatedToSettlementEvent.AddNonSerializedListener(this, OnPrisonerDonatedForJourney);
+            CampaignEvents.OnQuestStartedEvent.AddNonSerializedListener(this, OnQuestStartedForJourney);
+            CampaignEvents.OnQuestCompletedEvent.AddNonSerializedListener(this, OnQuestCompletedForJourney);
         }
 
         // A conversation just closed. If it never became recorded beats (no free chat, no accepted
@@ -1003,8 +1031,11 @@ namespace ImmersiveAI
                 CampaignTime.Now.ToString());
             NpcPaths.EnsureRuntimeReadme();
 
-            // The campaign's folder is known now, so the letters still on the road can be picked up.
+            // The campaign's folder is known now, so the letters still on the road can be picked up —
+            // and the book of battles and the road journal beside them.
             LoadLetterBag();
+            LoadBattleLedger();
+            LoadJourneyLog();
 
             // Menus exist and are initialized by now (vanilla behaviors ran first), so the courier
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
@@ -1139,6 +1170,13 @@ namespace ImmersiveAI
                 starter.AddPlayerLine("immersiveai_test_asks", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestAsks}Let us part now. [Immersive AI • test — reroll their quiet asks]",
                     () => _config.EnableConversationMarriage, () => { OnDebugRerollAsks(); RequestLeaveFromPartyEncounter(); }, 89);
+
+                // Battle-chronicle lever: forge a plausible battle record with this very soul at
+                // your side — the beat, the JSON, chronicle.txt, the situation block and the
+                // recall_battle tool all become testable without waiting for a real fight.
+                starter.AddPlayerLine("immersiveai_test_battle", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestBattle}Let us part now. [Immersive AI • test — forge a shared battle record]",
+                    () => _config.EnableBattleChronicle, () => { OnDebugForgeBattle(); RequestLeaveFromPartyEncounter(); }, 88);
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
@@ -3159,6 +3197,7 @@ namespace ImmersiveAI
             persona.CanTendGoals = CanTendGoals();
             persona.CanHoldTruths = CanHoldTruths();
             persona.CanSurveyField = CanSurveyField(npc);
+            persona.CanRecallChronicle = CanRecallChronicle(npc);
             // The bargain's whisper is keyed to the caller's tally (the live reply trunk alone), so
             // whisper and tool always ride together — a letter or a greeting never speaks of it.
             persona.CanStrikeBargain = bargainRides;

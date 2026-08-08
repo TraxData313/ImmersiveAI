@@ -101,6 +101,12 @@ namespace ImmersiveAI.Core.Prompts
         /// pace, pursuit, escape, or odds aloud.</summary>
         public bool CanSurveyField { get; set; }
 
+        /// <summary>True when this NPC has stood in at least one battle beside the player and the
+        /// recall_battle tool rides along (see the game layer's ChronicleTool). Adds a whisper that
+        /// their shared battles are set down by name and can be called back whole — spoken from the
+        /// record, never from fog.</summary>
+        public bool CanRecallChronicle { get; set; }
+
         /// <summary>True when this NPC is an unhired sellsword speaking with the one who could take
         /// them on, and the strike_bargain tool rides along (see the game layer's BargainTool). Adds
         /// a whisper that the bargain is theirs to strike — but only once service and price were

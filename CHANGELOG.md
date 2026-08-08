@@ -12,6 +12,41 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **New: the battle chronicle — your battles become their memories.** Every battle you fight is
+  set down the moment it ends: where and when it was fought, attack or defense, field, siege,
+  hideout or sea-fight (War Sails included), both armies by size and kind — foot, bows, horse,
+  horse-archers, with their seasoning — the fallen and the wounded on both sides, prisoners
+  taken, captives freed from the defeated's chains, the spoils (total worth, kinds, the richest
+  and most numerous pieces), plunder gold, renown and influence won. Battles earn names by their
+  deeds: "The Grand Victory near Ortysia, over Thrice Our Number", "The Storming of Varcheg",
+  "The Dear-Bought Victory", "The Fall of the Walls".
+- Everyone who fought at your side remembers it: companions and allied lords each keep a short
+  first-person note of the battle in their own memory — what their own hand did ("By my own hand
+  I struck down 4; you felled 11"), whether they came out unhurt, wounded, or captive, and the
+  name the chronicle keeps. The game's own blow-scoring feeds the tallies, in fought and
+  auto-resolved battles alike — so there is always something true to talk about afterward.
+- The freshest battle you share is fresh in their mind in full detail, unprompted; older ones
+  they know by name and can call back whole in conversation (the new recall_battle ability) —
+  ask "what happened at the storming of Varcheg?" and they answer from the record, not from fog.
+- The chronicle is yours to read too: every battle is a file in the campaign's _battles folder,
+  with a running chronicle.txt telling the whole war in order. Reloading an older save rewinds
+  the chronicle with everything else. Toggle: EnableBattleChronicle (on by default).
+- Characters now know their own body: a wounded soul sees plainly how much strength they have
+  back ("my strength stands near 40 in 100") and knows, past the game's own threshold, that they
+  are in no state to fight until they mend — and they see your wounds too, and may ask after
+  them.
+- Plays clean with the Training Battles mod: drills, phantom-enemy fights and siege musters are
+  never mistaken for real battles — nothing enters the chronicle, and no one "remembers" a war
+  against their own comrades.
+- **New: the road journal — your companions witness your everyday life.** Characters riding with
+  you now see the last few stops of the road: where you called and for how long, what you traded
+  there (with its worth and the chief goods), the men you hired or left in a garrison, the
+  captives you sold or gave to a dungeon — the freshest stop in detail, the older ones in one
+  line each, never a bloated ledger.
+- They see the tasks you carry too: each quest you take stands in their awareness with its giver
+  and its deadline ("14 days given, about 9 remain"), and when it ends they know how — succeeded,
+  failed, the time ran out, or set aside — so "how did the caravan job end?" is a real
+  conversation. Toggle: EnableJourneyLog (on by default).
 - **New: marriage by courtship — win a heart, walk its road, wed for real.** Characters can now
   truly be courted through conversation: their heart walks its own road — liking, love,
   readiness, betrothal, wedding — moved by their own judgment of your talks, one honest step at

@@ -181,6 +181,15 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   - future per-NPC files go here too.
 - `NPCs\campaign_<id>\_letters.json` — letters currently on the road (Core `LetterBag`); they
   travel real in-game days by distance and must survive save/load.
+- `NPCs\campaign_<id>\_battles\` — the battle chronicle (Core `BattleLedger`): one JSON per battle
+  the player fought (both musters, cost, prisoners/freed, spoils, per-hero downs and fates) plus a
+  running `chronicle.txt`. Allied heroes get first-person battle beats in their memories and can
+  recall any shared battle by name (`recall_battle`); the freshest one rides their situation in
+  full. Toggle: `EnableBattleChronicle`.
+- `NPCs\campaign_<id>\_journey.json` — the road journal (Core `JourneyLog`): the light witness log
+  of everyday life — recent stops with trade/recruits/garrison-drops/captives, and carried tasks
+  with their outcomes — seen in the situation only by souls riding in the player's party.
+  Toggle: `EnableJourneyLog`.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 
 The folder layout, path resolution, and the one-time migration from the old flat

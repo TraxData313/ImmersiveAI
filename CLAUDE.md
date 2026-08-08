@@ -31,6 +31,8 @@ You usually only need to open:
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
+- **The battle chronicle** → Core `Battles\` (`BattleRecord` data, `BattleLedger` JSON-per-battle + loose find-by-name, `BattleText` — titles/tales/beats/accounts, all unit-tested) + the `ImmersiveChatBehavior.Battles.cs` partial (capture at `OnPlayerBattleEnd` BEFORE the game commits gains, enrich one dispatcher tick later, per-hero downs via `OnHeroCombatHitEvent`) + `Tools\ChronicleTool` (`recall_battle`).
+- **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipAsk DSL, MatchmakerLedger, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
@@ -65,6 +67,10 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
   Llm/                    IChatClient/IToolChatClient + ChatMessage/ChatResult, ToolDefinition/
                           ToolCall, ToolLoopRunner (the recall loop; no HTTP, no game deps)
   Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
+  Battles/                BattleRecord (+side stats/participants/loot summary), BattleLedger (JSON
+                          per battle + loose find-by-name), BattleText (titles/tales/beats/accounts)
+  Journey/                JourneyLog (visits + quests, pruning, JSON) and JourneyText (the road
+                          journal in words) — the witness log of the player's everyday life
   Memory/                 NpcMemory (3-layer per-person), NpcSelf (general self-concept),
                           NpcGoals (general personal aims + fuzzy add/drop/revise/replace),
                           ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self + goals)
@@ -353,6 +359,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   game's own `LogEntryHistory` and folded into every NPC's situation; default on, 6 tidings + 3 rumors),
   `EnableWorldRecall` + `MaxRecallsPerReply` (the gift of recall — NPCs fetching live campaign truth
   about people/places/clans/realms/troops/own company mid-reply via native tool calls; default on, 3 rounds),
+  `EnableBattleChronicle` (2026.08.08 — THE BATTLE CHRONICLE, see its own section below: every player
+  battle recorded as JSON + chronicle.txt in `_battles`, first-person beats in every allied hero's
+  memory, the freshest shared battle whole in their situation, `recall_battle` by name; default on),
+  `EnableJourneyLog` (2026.08.08 — THE ROAD JOURNAL, see its own section below: the witness log of
+  stops/trade/men/captives/tasks in `_journey.json`, seen only by souls riding in the player's
+  party; default on),
   `EnableWebSearch` (NPCs searching the internet mid-reply, framed as "all I have read and heard" —
   DuckDuckGo; the immersed question is first sharpened into a real query by a small refining LLM call
   (`RefineSearchQueryAsync` in the behavior, seeing the last incoming words for intent — the fix for
@@ -572,6 +584,17 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
 - `NPCs\campaign_<id>\_letters.json` — the letters currently ON THE ROAD for that campaign
   (Core `LetterBag`; letters travel real in-game days and must survive save/load). Delivered
   letters leave this file — they live on in NPC memory and `letters.txt`.
+- `NPCs\campaign_<id>\_battles\` — the BATTLE CHRONICLE (Core `BattleLedger`, 2026.08.08): one JSON
+  per battle the player fought (`d0123-2_<title-slug>.json` — sides by the four fighter kinds +
+  seasoning, cost, prisoners taken/captives freed, spoils with top-5s, plunder/renown/influence,
+  every allied hero's downs and fate) plus an append-only `chronicle.txt` of the full accounts.
+  Lives inside the campaign folder ON PURPOSE: the save-scoped memory snapshots photograph it, so
+  reloading rewinds the war together with the memories of it. Toggle `EnableBattleChronicle`.
+- `NPCs\campaign_<id>\_journey.json` — the ROAD JOURNAL (Core `JourneyLog`, 2026.08.08): the light
+  witness log of the player's everyday life — the last ~12 stops kept (place/kind/stay + trade
+  values with chief pieces + recruits + garrison drops + captives sold/donated) and the tasks
+  carried (taken → outcome with the game's own reason). Same snapshot-rewind ride. Toggle
+  `EnableJourneyLog`.
 - `NPCs\campaign_<id>\_snapshots\<token>\` — save-scoped memory photographs (Module `MemorySnapshotStore`):
   a copy of the whole campaign folder taken at each save, so loading that save rewinds the NPCs' memories
   with it. Tied to the save by a GUID token minted into the save via `SyncData` (`OnSaveOverEvent` writes the
@@ -993,6 +1016,65 @@ first-person templates and the retired Angel's legacy fragments — and render t
 cards between the spoken messages. Each marker must remain a word-for-word fragment of its template
 (recorded memories carry the phrasing they were born with forever), so change a live template and its
 "Own" marker together, never one — and never touch the legacy marker constants.
+
+**The battle chronicle (2026.08.08) — the mod's heart meets the game's.** Every battle the player
+fights becomes a `BattleRecord` (Core `Battles\`) in `NPCs\campaign_<id>\_battles\` — one JSON per
+battle + an append-only `chronicle.txt` — and a short first-person SILENT beat (the MeetingLine
+pattern: empty NpcLine, `OutreachMark.PlayerEngaged`) in the memory of EVERY living allied hero who
+stood in it: the odds, their own hand's work beside the player's, how they came out, and the forged
+name ("The Grand Victory near Ortysia, over Thrice Our Number" — epithet thresholds live in
+`BattleText.ForgeTitle`; `BattleText.BeatMark` opens every beat and must NEVER be reworded, recorded
+memories keep their phrasing forever). CAPTURE ORDER IS THE LOAD-BEARING FIND (probed from the real
+DLLs): `OnPlayerBattleEndEvent` fires inside `PlayerEncounter.DoApplyMapEventResults` BEFORE
+`CalculateAndCommitMapEventResults` — so at that moment `MapEventParty.PlunderedGold` /
+`GainedRenown` / `GainedInfluence` are calculated but not yet zeroed-by-commit, and the defeated
+side's `PrisonRoster`s are still countable as captives-to-free; one dispatcher tick later
+`PlayerEncounter.RosterToReceiveLoot*` stand filled (spoils, prisoners taken) and hero fates are
+settled (capture runs after the event) — `FinalizeBattleRecord` enriches, re-saves, appends the
+chronicle line, records the beats, and shows the one soft notice. `MapEventEnded` is only the
+dedupe'd fallback. PER-HERO DOWNS need NO mission behavior: `CampaignEvents.OnHeroCombatHitEvent`
+(from `MapEventParty.OnTroopScoreHit`) fires for fought AND simulated battles with `isFatal` = the
+downing blow, team-kills pre-filtered — tallied by StringId while the player's event runs; an empty
+tally beside ≥20 enemy casualties records honest `Downs = -1` ("no tally was kept"). Naval is
+first-class on this game version: `MapEvent.IsNavalMapEvent` (`!Position.IsOnLand`), per-side
+`ShipCasualties`, `party.Ships` — kind "sea" with its own titles. Casualties come from the per-party
+`DiedInBattle`/`WoundedInBattle`/`RoutedInBattle` rosters (NEVER from roster wounded-states — those
+include pre-battle wounds). The freshest shared battle rides the SITUATION whole
+(`BattleChronicleBlock` → `BattleText.SituationBlock`: older ones as titled roll-lines, the deep
+past folded into a count) and `recall_battle` (`Tools\ChronicleTool`) answers any shared battle by
+loose name ("the storming of Varcheg", "ortysia", "last"), scoped to what the asker lived — the tool
+rides only for souls with ≥1 shared battle. Beside it the situation gained THE BODY's honest state
+(`SituationBuilder.BuildBody`/`TheirBody`, Anton's same-day ask): a mending soul knows its strength
+in 100 and, past the game's own `IsWounded` threshold, that it is in no state to fight — and sees
+the partner's wounds too (never through letters). `_battles` lives inside the campaign folder ON
+PURPOSE so the save-scoped snapshots rewind the war with the memories. Config
+`EnableBattleChronicle` (default on); DevMode lever "[test — forge a shared battle record]".
+TRAINING BATTLES COMPAT (same day): the sibling mod's drills are REAL map events (split-army,
+phantom enemy, siege/sea drills) — `IsTrainingBattle` skips them whole (no record, no beats, tally
+cleared) by the party-id prefixes `training_opponents` / `training_mock_enemy`, a bare StringId
+test with no reference and no reflection. CONTRACT: those prefixes in TrainingBattlesMod's
+`TrainingBattleBehavior` must never be renamed without updating this check (noted in BOTH repos'
+CLAUDE.md). Anton's rule for drills: NPCs must never mistake one for a real battle — so nothing at
+all is written; a "we drilled today" note is a possible future garnish, deliberately not built.
+
+**The road journal (2026.08.08, same day) — the everyday life, witnessed.** Beside the chronicle's
+thunder, the small weather: souls riding IN the player's party (only them — the party is the
+witness, a tavern-keeper never saw the road; `JourneyBlock` gates on `PartyBelongedTo == MainParty`)
+carry in their situation the company's recent doings. Core `Journey\` (`JourneyLog` + `JourneyText`,
+unit-tested): VISITS — the last ~12 stops kept, ~5 told, the freshest as a short detailed paragraph
+and the older ones one line each ("In the village of Odrimir (Spring 3, we stayed half a day):
+bought for 250 denars."), each stop carrying trade values + chief pieces ("Wool ×24"), recruits,
+garrison drops, captives sold/donated; a "road" bucket catches caravan trades between stops (empty
+road buckets are noise and never told). TASKS — taken quests stand with giver, taken-date and "N
+days given, about M remain", and settle into "Lately settled" with the game's OWN reason
+(`QuestCompleteDetails`: Success/Fail/Timeout/Cancel/FailWithBetrayal → "failed — the time ran out
+on us", "failed — and by our own broken word at that", "set aside"). Module
+`ImmersiveChatBehavior.Journey.cs`: nine campaign events (SettlementEntered/OnSettlementLeft,
+PlayerInventoryExchange — the tuple's int IS the denars that changed hands, and `isTrading:false`
+exchanges are battle loot/discards, never journaled — OnTroopRecruited, OnTroopGivenToSettlement,
+OnPrisonerSold/OnPrisonerDonatedToSettlement, OnQuestStarted/Completed), persisted per mutation to
+`_journey.json` (atomic, campaign-scoped → snapshots rewind the road). Config `EnableJourneyLog`
+(default on). No LLM calls anywhere — the journal is free.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

@@ -405,6 +405,25 @@ namespace ImmersiveAI
         /// with only what their prompt carries.</summary>
         public bool EnableWorldRecall { get; set; } = true;
 
+        /// <summary>When true, the souls riding WITH the player also witness the everyday road — a
+        /// light journal of the last few stops (where we called and for how long, what we traded
+        /// there with its worth and chief pieces, whom we hired or left on walls, captives sold or
+        /// given to dungeons) and of the tasks the company carries, each later settled with its
+        /// honest outcome and reason (succeeded / failed / the time ran out). The freshest stop is
+        /// told in detail, older ones one line each — never a great ledger. Set false for
+        /// companions blind to everything but battles and talk.</summary>
+        public bool EnableJourneyLog { get; set; } = true;
+
+        /// <summary>When true, every battle the player fights is set down in the campaign's chronicle
+        /// (a JSON per battle plus a running chronicle.txt in NPCs\campaign\_battles) — the field and
+        /// the hour, both musters, the cost, prisoners taken and captives freed, spoils, plunder,
+        /// renown — and every allied hero who stood in it keeps a short first-person note of it in
+        /// their own memory: their hand's work beside the player's, and how they came out. The
+        /// freshest shared battle rides that soul's situation in full; older ones stay recallable
+        /// whole by name through the recall_battle tool (tool-capable backends). Set false for no
+        /// records, no notes, no recall.</summary>
+        public bool EnableBattleChronicle { get; set; } = true;
+
         /// <summary>At most how many recall rounds one reply may spend before it must simply speak
         /// (each round can carry several lookups). Keeps a curious NPC from wandering the archives
         /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>

@@ -171,6 +171,16 @@ namespace ImmersiveAI
         /// real in-game days and must survive save/load, so they persist beside the NPC folders.</summary>
         public static string LettersFile => Path.Combine(CampaignRoot, LettersFileName);
 
+        /// <summary>The campaign's book of battles (see Core's BattleLedger): one JSON per battle the
+        /// player fought plus a running chronicle.txt. Lives inside the campaign folder so the
+        /// save-scoped memory snapshots rewind the war together with the memories of it.</summary>
+        public static string BattlesFolder => Path.Combine(CampaignRoot, Core.Battles.BattleLedger.FolderName);
+
+        /// <summary>The campaign's road journal (see Core's JourneyLog): the light witness log of
+        /// stops, trade, men and tasks that the souls riding with the player see. Same campaign
+        /// scoping, same snapshot-rewind ride as everything else here.</summary>
+        public static string JourneyFile => Path.Combine(CampaignRoot, "_journey.json");
+
         /// <summary>The NPC's first name only (second names excluded), for the folder label. Falls back
         /// to the first token of the full name, then to the raw id.</summary>
         public static string FirstNameOf(Hero npc)
@@ -394,6 +404,17 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
 A _letters.json in the campaign folder holds the letters currently ON THE ROAD (sent but
 not yet arrived). Deleting it loses those letters mid-journey; the ones already delivered
 are safe in each NPC's memory and letters.txt.
+
+A _battles folder in the campaign folder is the chronicle of every battle you fought: one
+JSON per battle (who, where, the cost, the spoils, each hero's deeds) plus a readable
+chronicle.txt of the full accounts. Companions and lords who stood with you remember these
+battles and can recall any of them by name in conversation. Delete a battle's JSON to
+un-write it from the chronicle (their memory notes of it remain).
+
+A _journey.json in the campaign folder is the road journal: the last few stops (where you
+called, how long, what was traded, men hired or left in garrisons, captives sold) and the
+tasks you carry with their outcomes. The people riding WITH you see it and can talk about
+it. It stays deliberately small; delete it to start the road afresh.
 
 A _snapshots folder holds a photograph of this campaign's memories taken at each of your
 saves, so that loading a save also rewinds the NPCs' memories to that moment (a reload can
