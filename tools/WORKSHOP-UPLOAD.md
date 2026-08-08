@@ -22,6 +22,12 @@ Item: **3764210301** (already created via `WorkshopCreate.xml` — never run tha
    new version + date in the same commit, and start a fresh empty [Unreleased] above it.
    Bump the game-version `<Tag>` if the supported game version moved.
 
+   **Three tiers, all written at once** (see the CHANGELOG's own header):
+   - **Nexus: 255 characters, hard cap.** Each version section opens with a fenced ~6-bullet
+     block sized for it — copy that verbatim into Nexus's changelog field.
+   - **Steam:** this `ChangeNotes` field — group headlines plus one-line pills.
+   - **CHANGELOG.md:** the full grouped record, one pill per line, never paragraphs.
+
 3. **Run the uploader** (Steam open and logged in):
    ```powershell
    & "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord\bin\Win64_Shipping_Client\TaleWorlds.MountAndBlade.SteamWorkshop.exe" "C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\tools\WorkshopUpdate.xml"

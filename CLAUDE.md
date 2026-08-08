@@ -134,8 +134,13 @@ module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)
 module/GUI/               Gauntlet prefab overrides (MapNotificationItem.xml — the portrait notice)
 lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin via deploy.ps1
 CHANGELOG.md              the PLAYER-FACING running list: every player-visible change lands under
-                          [Unreleased] the day it ships; at release the section becomes the version's
-                          Workshop/Nexus change notes verbatim (dev history stays in TASKS_DONE.md)
+                          [Unreleased] the day it ships, as a ONE-LINE PILL — never a paragraph
+                          (Anton, 2026.08.08: "на хубави хапчици а не голям чаршаф"). At release the
+                          section feeds THREE tiers, all written at once: (1) NEXUS — a 255-CHARACTER
+                          HARD CAP, so each version carries a fenced ~6-bullet block at the top of its
+                          section, copied verbatim; (2) STEAM — tools\WorkshopUpdate.xml ChangeNotes,
+                          room for group headlines + pills; (3) this file, the full grouped record.
+                          Dev history stays in TASKS_DONE.md
 tools/deploy.ps1          build + install into the game as Modules\ImmersiveAI.Dev — "Immersive AI (dev)",
                           its own Id so it coexists with the Workshop copy (enable only ONE); keep the
                           script ASCII-only (BOM-less .ps1 + em-dash bytes = smart quote = PS 5.1 parse error)

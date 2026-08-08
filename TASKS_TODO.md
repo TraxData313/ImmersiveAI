@@ -1,26 +1,18 @@
 BUGS:
 
 NEXT UPDATE:
-- [ ] SHIP v2.0.0 — everything is staged and waiting on the playtest below. Already done
-      (2026.08.08): version bumped in SubModule.xml, CHANGELOG's v2.0.0 section written in
-      reading order, WorkshopUpdate.xml ChangeNotes filled, all four pages rewritten and
-      measured (steam 7884/8000, nexus 9385, faq 13584), git pushed + tagged v2.0.0, branches
-      pruned, dist\ImmersiveAI + dist\ImmersiveAI_v2.0.0.zip packaged. THE REMAINING STEPS are
-      Anton's: run the Workshop uploader (tools/WORKSHOP-UPLOAD.md step 3), paste the page text
-      into the Steam item + Nexus description + the pinned FAQ thread, and upload the zip to
-      Nexus with the CHANGELOG section as its changelog. RE-PACKAGE FIRST if anything changes
-      after the playtest.
-- [ ] PLAYTEST the marriage-by-courtship wave (built 2026.08.08, all green, none of it playtested):
-      Sibylla's seeding (expect devotion/ready from her lived story), the road's steps + notices,
-      the betrothal + wedding seals, a companion wedding (graduation, cutscene, she keeps her
-      scout post), the blessing bargain with a noble bride's clan head (face to face AND by
-      letter), offers riding letters (hiring / betrothal / blessing popup on arrival), the
-      windows' fixed corner buttons, and "g" typed in chat no longer opening Training Battles.
-      PLUS the misgivings rework (2026.08.08 evening): Sibylla was reset — when marriage enters
-      the talk she should WRITE her own misgivings (weigh_misgivings; watch for the rose notices),
-      the "Misgivings n/m" button + bond-line count in the chat window, settling with her note,
-      Ready refusing while one stands; and the new Dev panel in the chat window + the reordered
-      face-to-face menu (chat on top, Farewell at the bottom).
+- [ ] SHIP v2.0.0 — everything is ready, playtest passed. Done 2026.08.08: version bumped,
+      CHANGELOG rewritten as one-line pills with the 255-char Nexus block at the top of the
+      section, WorkshopUpdate.xml ChangeNotes on group-headlines-plus-pills, all four pages
+      rewritten and measured (steam 7954/8000, nexus 9385, faq 13584), git pushed + tagged
+      v2.0.0, branches pruned, dist\ImmersiveAI + dist\ImmersiveAI_v2.0.0.zip packaged.
+      THE REMAINING STEPS are Anton's, all three tiers already written for him:
+      (1) run the Workshop uploader — tools/WORKSHOP-UPLOAD.md step 3;
+      (2) paste docs/steam-page-final.bbcode.txt into the Steam item description, and
+          docs/steam-faq.bbcode.txt into the two pinned discussion threads;
+      (3) upload dist\ImmersiveAI_v2.0.0.zip to Nexus with docs/nexus-page.bbcode.txt as the
+          description and the CHANGELOG's fenced 255-char block as the changelog field.
+      RE-PACKAGE (tools\package.ps1) first if any code changes after this point.
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)

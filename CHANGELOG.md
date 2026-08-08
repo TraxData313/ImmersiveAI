@@ -4,206 +4,158 @@ The player-facing history of Immersive AI — short lines written for players, n
 internals (the developer's full record is `TASKS_DONE.md`).
 
 **The running list:** every player-visible change lands under **[Unreleased]** the day it is
-made. At release time: bump the version in `module\SubModule.xml` (`package.ps1` stamps the zip
-from it), retitle the [Unreleased] section to the new version + date, start a fresh empty
-[Unreleased] above it, and copy the section's text into `tools\WorkshopUpdate.xml`
-(`ChangeNotes`) for the Workshop and into the Nexus changelog field when uploading — so the
-change notes are already written when it is time to ship (see `tools/WORKSHOP-UPLOAD.md`).
+made, as a **one-line pill** — never a paragraph. At release time: bump the version in
+`module\SubModule.xml` (`package.ps1` stamps the zip from it), retitle the [Unreleased] section
+to the new version + date, start a fresh empty [Unreleased] above it, and fill the three change-note
+tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
+
+1. **Nexus — 255 characters, hard.** The short block at the top of each version below. Copy it verbatim.
+2. **Steam Workshop** — `tools\WorkshopUpdate.xml` (`ChangeNotes`), room for the group headlines.
+3. **This file** — the full readable record, grouped under headers, one pill per line.
 
 ## [Unreleased]
 
 ## v2.0.0 — 2026.08.08
 
-The biggest release since the mod was born. Characters can now be **courted and married**, they
-**remember the battles you fought together** and the **road you walked**, they can be **hired by
-handshake**, and every one of them **begins as somebody** — with a private truth of their own.
-Underneath, the unseen narrator is gone: everything a character lives now passes through their
-own first-person mind.
+The biggest release since the mod was born. Playtested and shipped.
 
-### Marriage by courtship — win a heart, walk its road, wed for real
+**The Nexus changelog (255 max — copy this verbatim):**
 
-- **Characters can now truly be courted through conversation.** Their heart walks its own road —
-  liking, love, readiness, betrothal, wedding — moved by their own judgment of your talks, one
-  honest step at a time. Nothing is sealed by words alone: the betrothal and the wedding each
-  take your confirming click, and the wedding is the real game marriage — cutscene, clan,
-  children, the world's gossip and all.
-- **They write their own misgivings.** When marriage truly enters your talks, a character pauses
-  and sets down what honestly worries them about a life together — in their own words, up to five
-  things, or none at all if their heart is clear. You can talk those worries over openly, and only
-  they decide when life has answered one, laying it to rest with a little note on what settled it.
-  Their readiness to wed simply waits until nothing they wrote still stands. You see it all: the
-  bond line counts them ("misgivings 2/4"), a button in the chat window opens the full list with
-  their settling notes, and a soft rose line marks every worry written down or laid to rest.
-- **Station guards the hand, not the heart.** A great house's daughter may come to love anyone,
-  but her hand asks a suitor of standing — softened by up to a few ranks once her heart is fully
-  won (the "charm slack"). An emperor's daughter is a campaign-long prize, exactly as it should be.
-- **Noble kin must bless the match.** Before a noble bride can wed, the head of her house asks a
-  bride-price — haggled in real talk (or by letter) around the world's own reckoning, sealed only
-  by your click. Once betrothed, the head of her house appears in your letter window even if you
-  have never met — no more combing the map for a father.
-- **Companion brides and grooms are first-class** (vanilla forbids them; here they are the point):
-  wed the wanderer who rides at your side — at the wedding they are raised to lordship the game's
-  own way, keeping their place and duties in your party.
-- A love already lived is honored: a character with real history (love spoken across many talks)
-  starts the road where their own remembered story says their heart already stands — not at zero
-  just because the feature is new.
-- The road is visible: every step fires its own soft notice ("Her heart is truly given."), both
-  windows show the stand beside the bond line ("betrothed to you"), and a betrothed character is
-  shielded from the game marrying them off to someone else while you arrange the rest.
-- Plays well with polygamy mods (Marry Anyone): with one installed, an existing marriage no longer
-  bars a new courtship — the game's (patched) marriage rules stay the judge.
-- New mod options under "Life of the NPCs": Marriage by courtship (on/off), Companion brides &
-  grooms, Family consent for noble brides, Bride-price haggling range, Courtship charm slack, and
-  Days of betrothal before the wedding.
+```
+* Court and marry anyone through the chat
+* Hire wanderers by handshake
+* Battles, roads and deeds live in companions' memories
+* Every soul starts with a private truth of its own
+* One deeper memory instead of three lists
+* Prompts editable in-game
+```
 
-### The battle chronicle — your battles become their memories
+### New — marriage by courtship
 
-- **Every battle you fight is set down the moment it ends:** where and when it was fought, attack
-  or defense, field, siege, hideout or sea-fight (War Sails included), both armies by size and
-  kind — foot, bows, horse, horse-archers, with their seasoning — the fallen and the wounded on
-  both sides, prisoners taken, captives freed from the defeated's chains, the spoils (total worth,
-  kinds, the richest and most numerous pieces), plunder gold, renown and influence won. Battles
-  earn names by their deeds: "The Grand Victory near Ortysia, over Thrice Our Number", "The
-  Storming of Varcheg", "The Dear-Bought Victory", "The Fall of the Walls".
-- **Everyone who fought at your side remembers it:** companions and allied lords each keep a short
-  first-person note of the battle in their own memory — what their own hand did ("By my own hand I
-  struck down 4; you felled 11"), whether they came out unhurt, wounded, or captive, and the name
-  the chronicle keeps. So there is always something true to talk about afterward.
-- The freshest battle you share is fresh in their mind in full detail, unprompted; older ones they
-  know by name and can call back whole in conversation — ask "what happened at the storming of
-  Varcheg?" and they answer from the record, not from fog.
-- The chronicle is yours to read too: every battle is a file in the campaign's `_battles` folder,
-  with a running `chronicle.txt` telling the whole war in order. Reloading an older save rewinds
-  the chronicle with everything else. Toggle: EnableBattleChronicle (on by default).
-- Characters now know their own body: a wounded soul sees plainly how much strength they have back
-  ("my strength stands near 40 in 100") and knows, past the game's own threshold, that they are in
-  no state to fight until they mend — and they see your wounds too, and may ask after them.
-- Plays clean with the Training Battles mod: drills, phantom-enemy fights and siege musters are
-  never mistaken for real battles — nothing enters the chronicle, and no one "remembers" a war
-  against their own comrades.
+- Court anyone in conversation: their heart walks its own road — liking, love, readiness, betrothal, wedding.
+- One honest step at a time, moved by their own judgment of your talks, not by a menu.
+- They write their own misgivings about a life together, in their own words — up to five, or none at all.
+- Talk those worries over openly; only they decide when life has answered one.
+- A settled worry is laid to rest with their own little note on what settled it.
+- Their readiness to wed waits until nothing they wrote still stands.
+- You see it all: the bond line counts them ("misgivings 2/4"), a button opens the full list.
+- A soft rose line marks every worry written down or laid to rest.
+- Station guards the hand, not the heart: a great house's daughter may love anyone.
+- But her hand asks a suitor of standing — softened by a few ranks once her heart is fully won.
+- An emperor's daughter is a campaign-long prize, exactly as it should be.
+- Noble kin must bless: the head of her house asks a bride-price, haggled in talk or by letter.
+- Once betrothed, her house's head appears in your letter window even if you never met him.
+- Companion brides and grooms — vanilla forbids them; here they are the point.
+- At the wedding a companion is raised to lordship, keeping her place and duties in your party.
+- A love already lived is honored: real history starts the road where their heart already stands.
+- Nothing is sealed by words alone: betrothal and wedding each take your confirming click.
+- The wedding is the real game marriage — cutscene, clan, children, the world's gossip and all.
+- Every step fires its own soft notice ("Her heart is truly given.").
+- Both windows show the stand beside the bond line ("betrothed to you").
+- A betrothed character is shielded from the game marrying them off to someone else.
+- Offers ride letters too — hiring terms, a betrothal, a blessing — sealed when the courier arrives.
+- The wedding day alone is never laid on paper; that is done face to face.
+- Plays well with polygamy mods (Marry Anyone): an existing marriage no longer bars a new courtship.
+- New options under "Life of the NPCs": on/off, companion brides, family consent, bride-price haggling, charm slack, betrothal days.
 
-### The road journal — your companions witness your everyday life
+### New — the battle chronicle
 
-- **Characters riding with you now see the last few stops of the road:** where you called and for
-  how long, what you traded there (with its worth and the chief goods), the men you hired or left
-  in a garrison, the captives you sold or gave to a dungeon — the freshest stop in detail, the
-  older ones in one line each, never a bloated ledger.
-- They see the tasks you carry too: each quest you take stands in their awareness with its giver
-  and its deadline ("14 days given, about 9 remain"), and when it ends they know how — succeeded,
-  failed, the time ran out, or set aside — so "how did the caravan job end?" is a real
-  conversation. Toggle: EnableJourneyLog (on by default).
-- The road is visible in the chat too, like the battles: when the company rides on from a stop
-  where something was done, and when a task is taken or settled, each companion quietly sets it
-  down in their memory — so those moments appear in their chat history as soft narration lines you
-  can scroll back to.
+- Every battle you fight is set down the moment it ends.
+- Where and when, attack or defense, field, siege, hideout or sea-fight (War Sails included).
+- Both armies by size and kind — foot, bows, horse, horse-archers — with their seasoning.
+- The fallen and the wounded on both sides, prisoners taken, captives freed from the defeated's chains.
+- The spoils: total worth, kinds, the richest and most numerous pieces. Plunder, renown, influence.
+- Battles earn names by their deeds: "The Grand Victory near Ortysia, over Thrice Our Number".
+- Everyone who fought at your side keeps a short first-person note of the day in their own memory.
+- What their own hand did ("By my own hand I struck down 4; you felled 11").
+- Whether they came out unhurt, wounded, or captive — and the name the chronicle keeps.
+- The freshest shared battle is fresh in their mind, in full detail, unprompted.
+- Older ones they know by name and can call back whole: "what happened at the storming of Varcheg?"
+- Yours to read too: one file per battle plus a running `chronicle.txt` telling the whole war in order.
+- Reloading an older save rewinds the chronicle with everything else.
+- Characters know their own body: how much strength is back, when they are in no state to fight.
+- And they see your wounds too, and may ask after them.
+- Plays clean with Training Battles: drills never enter the chronicle.
+- Toggle: EnableBattleChronicle (on by default).
 
-### Hiring by handshake
+### New — the road journal
 
-- **Agree on service and price with an unhired wanderer in conversation itself**, and she can
-  strike the bargain — a confirmation popup names the exact price (and the fair reckoning beside
-  it), and only your click pays and hires. All the usual rules hold: enough gold, room in your
-  company, and the daily wage is never negotiable.
-- Haggling, within honest bounds: the hiring price can be talked up or down, but never beyond a
-  hard limit around the game's own reckoning. New settings in the mod options — "Hiring by
-  handshake" on/off and "Haggling range" (0–90%, 0 = fixed price).
-- Sellswords now bargain like people who live by it: they open at their worth, concede only what
-  your words have earned, and never volunteer their lowest price. They quote their true hiring
-  cost and their real daily wage — the same numbers the game charges — instead of inventing
-  figures.
-- Characters also know their own gear now. Ask a wanderer what she carries and she answers from
-  her real equipment — no more promised bows she never owned.
+- Characters riding with you see the last few stops of the road.
+- Where you called and for how long, what you traded there — its worth and the chief goods.
+- The men you hired or left in a garrison, the captives you sold or gave to a dungeon.
+- The freshest stop in detail, the older ones in one line each. Never a bloated ledger.
+- Each quest you take stands in their awareness with its giver and deadline ("about 9 remain").
+- When it ends they know how — succeeded, failed, the time ran out, or set aside.
+- So "how did the caravan job end?" is a real conversation.
+- The road shows in the chat too: stops, tasks taken and tasks settled appear as soft narration.
+- Toggle: EnableJourneyLog (on by default).
 
-### The director's spark — every soul begins as somebody
+### New — hiring by handshake
 
-- **The first time you interact with a character, one small AI call writes them a private starting
-  truth** (1–3 sentences in their own voice — an old wound, an odd habit, a vanity, sometimes
-  something wilder), grown from their real story, traits, way of speaking and your world prompt.
-  It lands in their editable prompt file, so you can read, rewrite or erase it anytime ("Their
-  prompt" in the windows); delete the file to have them re-shaped. While it happens, a soft notice
-  marks the moment: "Something takes shape in them — they are becoming somebody all their own…".
-- New mod option "Starting personality": Generate (default), Ask first (a popup per new face —
-  their first reply waits for your choice, so a granted spark speaks from their very first words),
-  or Off.
+- Agree service and price with an unhired wanderer in the conversation itself.
+- A confirmation popup names the exact price (and the fair reckoning beside it).
+- Only your click pays and hires. Enough gold, room in your company — all the usual rules hold.
+- The daily wage is never negotiable.
+- Haggling within honest bounds: talked up or down, never beyond a hard limit.
+- Sellswords bargain like people who live by it: they open at their worth.
+- They concede only what your words have earned, and never volunteer their lowest price.
+- They quote their true hiring cost and real daily wage — the game's own numbers, not invented ones.
+- Characters know their own gear now: ask what she carries and she answers from her real equipment.
+- New options: "Hiring by handshake" on/off, "Haggling range" (0–90%, 0 = fixed price).
 
-### The narrator is gone — everything is first person now
+### New — the director's spark
 
-- **Characters no longer hear an unseen "Angel" voice narrating their lives:** arriving visitors,
-  letters written and received, the urge to seek you out, a hiring struck, even the quiet settling
-  of old memories — all of it now passes through their own mind, in their own first-person voice
-  ("A courier has found me…", "They hired me; I ride with them"). Old saves keep their recorded
-  moments exactly as they were.
-- Your prompts speak from inside their heads too: the world prompt enters every mind as "Of this
-  world, this I know:", and each character's personal prompt as "Of myself, this I hold true:" —
-  write the personal one in the character's own voice ("I stutter when I am nervous"), as the file
-  templates and the in-game editors now hint.
-- Characters' inner tools (recall, the survey, the scales of battle, web-wisdom, the heart) now
-  answer them in their own voice as well — "Ilya comes back to me…", "I take stock of my
-  company…" — instead of a voice talking at them.
+- The first time you meet a character, one small AI call writes them a private starting truth.
+- 1–3 sentences in their own voice: an old wound, an odd habit, a vanity, sometimes something wilder.
+- Grown from their real story, traits, way of speaking and your world prompt.
+- It lands in their editable prompt file — read it, rewrite it, erase it, or delete it to re-shape them.
+- A soft notice marks the moment: "Something takes shape in them…".
+- New option "Starting personality": Generate (default), Ask first, or Off.
+- In Ask mode their first reply waits for your choice, so a granted spark speaks from their first words.
+
+### The narrator is gone — everything is first person
+
+- Characters no longer hear an unseen "Angel" voice narrating their lives.
+- Arrivals, letters written and received, the urge to seek you out, a hiring struck — all first person.
+- Even the quiet settling of old memories now passes through their own mind ("A courier has found me…").
+- Old saves keep their recorded moments exactly as they were.
+- Your world prompt enters every mind as "Of this world, this I know:".
+- Each character's own prompt enters as "Of myself, this I hold true:" — write it in their voice.
+- Their inner tools answer them in their own voice too: "Ilya comes back to me…".
 
 ### One deeper memory instead of three lists
 
-- **NPCs no longer keep a separate roster of "lasting truths" about you or a list of "personal
-  goals" beside what they remember.** Those lists mostly restated what their memory already held,
-  and made souls repeat themselves. Everything now lives in the one memory they rewrite when they
-  gather their thoughts — and that memory is invited to be far richer, holding the names, promises,
-  debts and particulars the truths used to keep.
-- **NPCs remember more of what you actually said.** They now hold 40 exchanges word for word
-  before folding the older ones into their deeper memory (was 30), and keep 20 after (was 15).
-- Whatever truths and goals your characters already wrote are left exactly where they are —
-  nothing is deleted, they are simply no longer used. (The two related settings are gone from the
-  mod options.)
-- **You can see how full an NPC's memory is.** Under their name in the chat window a grey line now
-  shows the weight of what they keep of you word for word — the share of the AI's memory it fills
-  against the point where it is condensed, the tokens against the same ceiling, the exchanges, and
-  the age of the oldest one ("memory 5.2% / 10% · 21k / 40k tokens · turns 12/30 · oldest 4d/30d ·
-  trims back to 5%"). Every number there is a real trigger, so the moment before an NPC turns her
-  memories over is never a surprise.
-- **All the memory-condensing dials are in the mod options menu now**, in their own "Memory"
-  section, each with an explanation and the default named in it: when memory is condensed (by
-  share of the AI's memory, by number of exchanges, or by age), what is kept afterwards, how much
-  room the memory-writing itself gets, and the notice when it happens. Every one takes hold on the
-  very next exchange — no restart — and a value that cannot work (keeping more than the ceiling
-  allows) is corrected in front of you instead of quietly ignored.
+- The separate rosters of "lasting truths" and "personal goals" are retired.
+- They restated what memory already held and made souls repeat themselves.
+- Everything now lives in the one memory they rewrite when they gather their thoughts.
+- That memory is invited to be far richer — the names, promises, debts and particulars.
+- NPCs hold 40 exchanges word for word before folding older ones away (was 30), and keep 20 (was 15).
+- Whatever truths and goals your characters already wrote are left where they are. Nothing is deleted.
+- You can see how full a memory is: a live gauge under their name in the chat window.
+- The share of the AI's memory, the tokens, the exchanges, the age of the oldest — every number a real trigger.
+- All the memory dials are in the mod options now, in their own "Memory" section.
+- Each names its default, takes hold on the very next exchange, and corrects an impossible value in front of you.
 
 ### The windows
 
-- **Edit prompts without leaving the game.** The chat and letter windows gained editing doors:
-  "Their prompt" (the selected character's personal instructions) and "World prompt" (the whole
-  world's) open an editor right inside the game — edit, Save, and the change speaks from the very
-  next reply. No restart, no alt-tab; your `#` comment notes in the files are kept.
-- **Tidier headers.** The grey lines under a character's name (their bond with you, the weight of
-  what they remember) no longer print over each other when one runs long — they stack, and
-  everything below them moves down to make room. The two prompt buttons keep a row of their own at
-  the top, so a long name is no longer swallowed by them. Same fixes in the letter window.
-- **The deep memory opens as its own page** — the same shape as the marriage-misgivings view —
-  instead of a cramped strip above the conversation, and it starts folded.
-- **Every one of these pages now has a "← Back" button**, so it is clear how to step back without
-  closing the whole window (Escape still does the same). On the two prompt editors it says
-  "← Back (discards)" — Save is still the door that keeps your writing.
-- **The talk menu is tidied:** "Speak freely with me." now sits at the very top of the conversation
-  options, and "Farewell." at the very bottom — no more hunting for either between the test
-  entries.
-- For tinkerers with DevMode on: all the test levers now also live in a **Dev panel inside the chat
-  window** (a "Dev" button in its top bar) — reveal a soul's whole mind, their courtship road,
-  force a reach-out or a letter, forge a battle record, rename them, or read the reach-out odds,
-  all without walking over for a face-to-face talk.
+- Edit prompts without leaving the game: "Their prompt" and "World prompt" open an editor inside both windows.
+- Save, and the change speaks from the very next reply. No restart, no alt-tab.
+- Your `#` comment notes in the prompt files are kept.
+- Tidier headers: the grey lines under a name stack instead of printing over each other.
+- The two prompt buttons keep a row of their own, so a long name is no longer swallowed.
+- The deep memory opens as its own page instead of a cramped strip, and starts folded.
+- Every page has a "← Back" button — "← Back (discards)" on the prompt editors.
+- The talk menu is tidied: "Speak freely with me." at the top, "Farewell." at the bottom.
+- DevMode: every test lever now also lives in a Dev panel inside the chat window.
 
 ### Fixes
 
-- Battle tallies tell the truth again: in battles you fight yourself, the count of who struck down
-  whom was inflated — a heavy blow that didn't kill was still counted as a kill, so four bandits
-  could leave you "credited" with six. Every hand's work is now counted as men actually fall, and a
-  tally that somehow outruns the enemy's real losses is honestly reported as no tally kept rather
-  than a flattering number.
-- Scouts no longer mistrust the peaceable: when surveying the country about, a band whose realm is
-  at peace with yours is now named plainly as no threat — by the law of the land it cannot raise
-  arms against you — and a strong neutral warband is even pointed out as a shadow brigands keep
-  well clear of, so your scout may counsel sheltering near it instead of fleeing it.
-- The player is no longer mis-gendered in gendered languages (the NPC is told who you are in a way
-  the model can't miss).
-- The model guide now names `gpt-5.6-terra` the recommended step-up for those who don't pinch
-  denars — live play found it noticeably sharper than the default at holding character and long
-  threads (the cheap default stays the default).
+- Battle tallies tell the truth: a heavy blow that didn't kill was counted as a kill (4 bandits, "6 felled").
+- A tally that outruns the enemy's real losses is now reported as no tally kept, not a flattering number.
+- Scouts no longer mistrust the peaceable: a band at peace with you is named plainly as no threat.
+- A strong neutral warband is even pointed out as a shadow brigands keep clear of — shelter, not danger.
+- The player is no longer mis-gendered in gendered languages.
+- The model guide now names `gpt-5.6-terra` the recommended step-up for those who don't pinch denars.
 
 ## v1.5.0 — 2026.08.02
 
