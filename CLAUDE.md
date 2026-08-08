@@ -31,6 +31,7 @@ You usually only need to open:
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self). NOTE two subsystems were RETIRED 2026.08.08 — the distilled `KnownFacts` (the `hold_truth` tool + the reflection `FACTS:` section) and `NpcGoals`/`goals.txt` (the `tend_goals` tool + the `GOALS:` section): both cramped what the rolling memory already held and read it back to her twice, and each cost a tool slot in every reply. Do not reintroduce either; the deep memory carries it all now.
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
+- **The wedding chronicle** → Core `Weddings\` (`WeddingRecord`/`WeddingLedger` JSON-per-wedding + `weddings.txt`, `WeddingText` — the two chronicler prompts, the permanent beat marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Weddings.cs` partial (hooks `BeforeHeroesMarried`, captures the day BEFORE the clan change scatters it, two story calls off-thread, beats to the spouse + every witness) + `Tools\NuptialTool` (`recall_wedding`; the night is refused to anyone but the spouse).
 - **The battle chronicle** → Core `Battles\` (`BattleRecord` data, `BattleLedger` JSON-per-battle + loose find-by-name, `BattleText` — titles/tales/beats/accounts, all unit-tested) + the `ImmersiveChatBehavior.Battles.cs` partial (capture at `OnPlayerBattleEnd` BEFORE the game commits gains, enrich one dispatcher tick later, per-hero downs via `OnHeroCombatHitEvent`) + `Tools\ChronicleTool` (`recall_battle`).
 - **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
@@ -69,6 +70,10 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
   Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
   Battles/                BattleRecord (+side stats/participants/loot summary), BattleLedger (JSON
                           per battle + loose find-by-name), BattleText (titles/tales/beats/accounts)
+  Weddings/               WeddingRecord (the day's facts + the two written accounts), WeddingLedger
+                          (JSON per wedding + weddings.txt, loose find), WeddingText (the chronicler's
+                          two prompts — Scripture for the day, the Song of Songs for the night — the
+                          permanent beat marks, the recall accounts, the answer-taming)
   Journey/                JourneyLog (visits + quests, pruning, JSON) and JourneyText (the road
                           journal in words) — the witness log of the player's everyday life
   Memory/                 NpcMemory (2-layer per-person: verbatim turns + the rolling memory),
@@ -390,6 +395,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableJourneyLog` (2026.08.08 — THE ROAD JOURNAL, see its own section below: the witness log of
   stops/trade/men/captives/tasks in `_journey.json`, seen only by souls riding in the player's
   party; default on),
+  `EnableWeddingChronicle` (2026.08.09 — THE WEDDING CHRONICLE, see its own section below: the
+  player's wedding written in two parts by the chronicler — the public day and the couple's own
+  night — kept forever in `_weddings`, beat into the spouse and every witness, recallable by
+  `recall_wedding`; two writing calls, once per wedding; default on),
   `EnableWebSearch` (NPCs searching the internet mid-reply, framed as "all I have read and heard" —
   DuckDuckGo; the immersed question is first sharpened into a real query by a small refining LLM call
   (`RefineSearchQueryAsync` in the behavior, seeing the last incoming words for intent — the fix for
@@ -496,13 +505,20 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   bargains"; `MatchmakerLedger`/`CourtshipAsk` are DELETED, the old CourtshipAsks JSON field is
   ignored on load): when marriage truly enters the talk she writes her own doubts via the
   `weigh_misgivings` tool (`Tools\MisgivingTool`, rides beside tend_courtship on the same tally —
-  set_down one-per-line or honest "none" / settle-with-a-light-word / revise / reopen; Core
-  `CourtshipMisgiving`+`CourtshipMisgivings`, its own lenient fuzzy matching, cap 5 TOTAL, unit-tested),
+  set_down one-per-line or honest "none" / settle-with-a-light-word / release (strike out, no note)
+  / revise / reopen; Core `CourtshipMisgiving`+`CourtshipMisgivings`, its own lenient fuzzy
+  matching, unit-tested. THE LIST LIVES — 2026.08.08 evening, Anton: "не искам да остават статични":
+  the cap of 5 binds only what STANDS OPEN at once (settled never block a new mid-talk doubt), past
+  10 carried the oldest SETTLED fade, and the sheet tells her the list is hers to grow/strike/rework),
   and the road's only misgiving-rails are HERS: Ready + the betrothal wait for a weighed heart
   (`MisgivingsWeighed` — even "none" counts) with zero standing (`MisgivingsUnweighed`/
-  `MisgivingsRemain` verdicts, numberless refusals; the wedding lay re-checks neither). The player
+  `MisgivingsRemain` verdicts, numberless refusals; the wedding lay re-checks neither) — and she
+  KNOWS it (the sheet says plainly: while any stands her hand waits, when none stands no doubt of
+  hers bars the road — the anti-exploit anchor). The player
   SEES them: bond line "misgivings 2/4", a "Misgivings n/m" button in the chat window opens the
-  list (settled ones with her note), rose notices on every set-down/settle/reopen. Souls
+  list (settled ones with her note), and EVERY movement leaves a log line in Anton's color language
+  — ROSE when the heart clears (settle/release/clear heart), FROST-BLUE when something freezes
+  (set_down/reopen, and the road's own step-back; a broken troth alone stays red). Souls
   with real history are SEEDED once from their lived story (Core `CourtshipSeed`, capped at
   Betrothed). Betrothal + wedding lay only; popups seal; both re-run everything
   (`TrothBlockReason`). The wedding is REAL: nobles `MarriageAction.Apply`; a companion bride is
@@ -665,6 +681,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   values with chief pieces + recruits + garrison drops + captives sold/donated) and the tasks
   carried (taken → outcome with the game's own reason). Same snapshot-rewind ride. Toggle
   `EnableJourneyLog`.
+- `NPCs\campaign_<id>\_weddings\` — the WEDDING CHRONICLE (Core `WeddingLedger`, 2026.08.09): one JSON
+  per wedding of the player's (`d91123_sibylla.json` — the day's facts, the witnesses, and BOTH written
+  accounts) plus an append-only `weddings.txt`. The night part lives in the file but is handed only to
+  the spouse — never to a witness, in memory or by tool. Same snapshot-rewind ride. Toggle
+  `EnableWeddingChronicle`.
 - `NPCs\campaign_<id>\_snapshots\<token>\` — save-scoped memory photographs (Module `MemorySnapshotStore`):
   a copy of the whole campaign folder taken at each save, so loading that save rewinds the NPCs' memories
   with it. Tied to the save by a GUID token minted into the save via `SyncData` (`OnSaveOverEvent` writes the
@@ -1176,6 +1197,42 @@ one beat per stay even across resumes; scan-based, so pre-feature stops backfill
 stop beat is DETAILED on purpose (Anton: the freshest stop must offer a conversation-opening
 detail — goods by name, men by kind — without a dig through deeper memory); only the situation
 roll of OLDER stops compresses to one-liners — time, not compression, moves a beat into the past.
+
+**The wedding chronicle (2026.08.09) — the cherry on the cake.** The day the courtship road was
+built for. When the player weds ANYONE, the chronicler writes it in TWO PARTS, in the register of
+Scripture and in the tongue the couple actually speak. **THE DAY** — a third-person account in the
+manner of the old wedding narratives (Isaac and Rebekah, Ruth, Cana): the place, the hour and season,
+the witnesses BY NAME with what each did, the road that led here (the promise, the waiting, the kin's
+blessing and its price, and the misgivings she once wrote and how each came to rest). **THE NIGHT** —
+the Song of Songs' own register, in the wedded soul's FIRST PERSON: reverent, image-laden, and
+holding both halves of one rule, which is the whole ask (Anton: "не вулгарно, но не и да не казва
+детайли") — *nothing coarse, nothing clinical* AND *nothing coy, no closing of the door*; Scripture
+neither leers nor looks away, it says plainly that he knew her and says the rest in images. Both
+prompt bodies are guarded by tests; change them only with fresh live samples.
+THE HOOK is `CampaignEvents.BeforeHeroesMarried` (decompile-verified 2026.08.09), NOT our own seal —
+so a wedding arranged through vanilla's barter is chronicled too. It fires inside
+`MarriageAction.ApplyInternal` with the spouses already set but BEFORE the clan change, and that
+order is load-bearing: one heartbeat later `HandleClanChangeAfterMarriageForHero` →
+`MakeHeroFugitiveAction` has swept a noble bride out of her settlement and her party, so the place
+and the witnesses are captured INSIDE the handler, synchronously. TWO CALLS, not one (each register
+is its own prompt, and two shorter answers sit safely inside the clients' 90s wall), on a third
+client shell `_storyClient` at `MaxMemoryWriteTokens` — the spoken 400-token cap would sever a
+wedding mid-sentence, sooner still in Cyrillic. THE PRIVACY RULE IS CODE, not prompt wording: the day
+is beat into the spouse (`PlayerEngaged`) AND every witness (`OutreachMark.None` — witnessing is not
+the player engaging them), the night into the spouse ALONE, and `NuptialTool` refuses it to any other
+asker (`WeddingText.FullAccount(record, includeNight:)`). Witnesses are the player's own company
+first, then the souls of the settlement who are not behind the keep's closed doors, capped at 12.
+Both parts ride her verbatim memory as silent beats (so she keeps the day in full until she folds it
+into her summary HER way — three consecutive silent beats all survive: `AppendRememberedTurns`
+accumulates `pending`), while `_weddings` keeps them whole forever and `recall_wedding` calls the day
+back by any loose name ("our wedding", "that day in Onira"). The chat window draws both as ❦ cards in
+the road's rose. A day whose call FAILED (429, timeout, a refusal) is saved account-less and retried
+on the hourly tick up to 3× a session — the guard is CONTENT-aware (`IsUnwritten`), never
+existence-aware, or one bad minute would blank the wedding forever; beats for a soul whose own
+exchange is in flight are parked and folded by `SaveMemory` (the `_pendingBlessingFolds` discipline).
+Config `EnableWeddingChronicle` (default on); DevMode lever in the chat window's Dev panel ("Write
+your wedding day anew"). Decision record + the review round's eight fixes:
+docs/wedding-chronicle-design.md.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

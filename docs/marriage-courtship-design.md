@@ -93,26 +93,40 @@ to a person, and her "requirements" were never really hers. `MatchmakerLedger` a
 so such souls simply begin with an unweighed heart. The one hard worldly rail that remains is
 the station gate — deliberately kept, per Anton.
 
-**In their place: misgivings, hers alone.** When marriage truly enters the talk and she has
-not yet weighed her heart, the sheet invites her to pause and do it honestly — via the
-`weigh_misgivings` tool (rides beside `tend_courtship`):
+**In their place: misgivings, hers alone — and the list LIVES** (Anton, same evening: "не
+искам да остават Х статични… да може да си променя мнението или в разговора да видя друго,
+което ме притеснява"). When marriage truly enters the talk and she has not yet weighed her
+heart, the sheet invites her to pause and do it honestly — via the `weigh_misgivings` tool
+(rides beside `tend_courtship`, open from the first word of romance — even at stage None):
 
-- `set_down` — her doubts in her OWN words, one per line, **five at the very most** across
-  her whole story (standing + settled) — or the single word `none` if her heart is clear.
-  Either way `MisgivingsWeighed` is set: a clear heart is weighed too.
-- `settle` — lays one to rest, with a light word on what answered it, kept beside it forever
+- `set_down` — her doubts in her OWN words, one per line — or the single word `none` if her
+  heart is clear. Either way `MisgivingsWeighed` is set: a clear heart is weighed too. The
+  cap (**five**) binds only what STANDS OPEN at once — settled ones never block a new doubt,
+  so a worry born mid-conversation always has room. Past ten carried in all, the oldest
+  SETTLED quietly fade (history, not an endless ledger; nothing standing ever fades).
+- `settle` — lays one to rest, with a light word on what answered it, kept beside it
   ("He has shown me his ledgers, and his word held"). Only SHE judges when life answered it.
+- `release` — strikes one out entirely: not answered, simply no longer truly hers (it proved
+  empty, or she changed her mind). Distinct from settle on purpose — struck-out ones leave
+  no note and free their room.
 - `revise` — rewords one that changed; `reopen` — a settled one returned to her.
 
-Core `CourtshipMisgivings` (NpcGoals' fuzzy-match mold, unit-tested) owns the ops; nothing is
+She KNOWS what the list means — the sheet says it plainly: while any of them stands she will
+not give her hand, and when none stands no doubt of hers bars the road. That knowledge is the
+anti-exploit anchor: the road to marriage runs THROUGH the list, by her own bookkeeping.
+
+Core `CourtshipMisgivings` (lenient fuzzy matching, unit-tested) owns the ops; nothing is
 generated, nothing is auto-checked. The rails only COUNT: Ready and the betrothal wait for
 `MisgivingsWeighed && OpenMisgivings == 0` (verdicts `MisgivingsUnweighed` /
 `MisgivingsRemain`, refusals numberless as ever); the wedding lay re-checks neither (the
 promise was proven when it was given). Unlike the v1 asks, these are **discussable openly** —
 the sheet says so — and **player-visible**: the bond line carries "misgivings 2/4", and a
 "Misgivings n/m" button in the chat window opens the full list with her settling notes.
-Every set-down/settle/reopen fires a rose road-notice, so the heart's bookkeeping is part of
-the story.
+Every movement leaves a line in the message log, in Anton's color language (2026.08.08
+evening): **rose when the heart clears** (settle, release, a clear heart), **frost-blue when
+something freezes** (a new worry set down, a settled one reopened — and the road's own
+step-back wears the same frost now; only a broken troth stays red). Revise rides the neutral
+activity sea-glass.
 
 ## The two seals
 

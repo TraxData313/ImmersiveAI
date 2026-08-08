@@ -13,6 +13,22 @@ NEXT UPDATE:
       (3) upload dist\ImmersiveAI_v2.0.0.zip to Nexus with docs/nexus-page.bbcode.txt as the
           description and the CHANGELOG's fenced 255-char block as the changelog field.
       RE-PACKAGE (tools\package.ps1) first if any code changes after this point.
+      NOTE: code HAS changed since the package — the wedding chronicle and the living misgivings
+      list landed after it (see [Unreleased] in the CHANGELOG). Re-package before uploading.
+- [ ] PLAYTEST THE WEDDING CHRONICLE (built 2026.08.09, 322 tests green, unplaytested) — the
+      centerpiece. Wed someone and watch for: the rose "the chronicler takes up the pen…" notice,
+      then "❦ the day and the night are written"; TWO ❦ cards in the bride's chat thread and ONE
+      (the day only) in each witness's; both in YOUR language, in a biblical register, roughly a
+      paragraph each — not two lines, not a bedsheet; and the night tender and unmistakable
+      without ever turning coarse. That last balance is the whole ask: if it reads coy OR crude,
+      tell me exactly how and I will re-tune the prompt against live samples. Then ask her
+      "разкажи ми за онзи ден" (recall_wedding should give it back whole) and ask a WITNESS the
+      same — they must get the day only, never the night. Files land in NPCs\campaign_*\_weddings\
+      (JSON + weddings.txt). The chat window's Dev panel has "Write your wedding day anew" for
+      re-rolling it while tuning.
+- [ ] PLAYTEST the living misgivings list (built 2026.08.08 evening): a new worry set down mid-talk,
+      one struck out as empty (release), the rose/frost-blue log lines, and the "Misgivings n/m"
+      button's count keeping step.
 
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)

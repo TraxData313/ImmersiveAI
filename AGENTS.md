@@ -194,6 +194,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   of everyday life — recent stops with trade/recruits/garrison-drops/captives, and carried tasks
   with their outcomes — seen in the situation only by souls riding in the player's party.
   Toggle: `EnableJourneyLog`.
+- `NPCs\campaign_<id>\_weddings\` — the wedding chronicle (Core `WeddingLedger`): one JSON per
+  wedding of the player's plus a readable `weddings.txt`. Each holds the day's facts and TWO written
+  accounts — the public day (beat into the spouse and every witness, recallable by `recall_wedding`)
+  and the night, which belongs to the couple alone and is never handed to a witness in memory or by
+  tool. Toggle: `EnableWeddingChronicle`.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 
 The folder layout, path resolution, and the one-time migration from the old flat

@@ -86,8 +86,12 @@ namespace ImmersiveAI
             catch { /* the direct write already landed once; the fold is the safety net */ }
         }
 
-        // The road's own notice color — a warm rose beside the sea-glass of the activity notices.
+        // The road's own notice colors — Anton's color language (2026.08.08 evening): warm rose
+        // when the heart moves WELL (steps forward, misgivings answered, a clear heart), frost
+        // blue when something freezes or a doubt appears/returns — so the left-side log reads the
+        // courtship's weather at a glance, and every movement leaves a line in it.
         private static readonly Color RoadColor = new Color(0.93f, 0.62f, 0.72f, 1f);
+        private static readonly Color FrostColor = new Color(0.58f, 0.76f, 0.95f, 1f);
         private static readonly Color SealGreen = new Color(0.45f, 0.85f, 0.45f, 1f);
         private static readonly Color SealGrey = new Color(0.65f, 0.65f, 0.65f, 1f);
 
@@ -536,25 +540,27 @@ namespace ImmersiveAI
                     case Tools.MisgivingTool.ActSetDown:
                         if (CourtshipMisgivings.IsNone(text))
                         {
-                            if (Total() > 0)
-                                return "What I set down before still stands written — a clear heart is not declared, it is earned: I lay each to rest as life answers it, or take it up and say so.";
+                            if (Open() > 0)
+                                return "What I set down before still stands written — a clear heart is not declared, it is earned: I lay each to rest as life answers it, or strike out one that proved empty.";
                             memory.MisgivingsWeighed = true;
                             SaveMemory(npc, memory);
-                            if (!quiet) NotifyMisgivings(npc, "weighs their heart about a life together — and finds it clear.");
-                            return "It is weighed and set down: I hold no misgivings — my heart is clear on this. I speak on from that truth.";
+                            if (!quiet && Total() == 0)
+                                NotifyMisgivings(npc, "weighs their heart about a life together — and finds it clear.", RoadColor);
+                            return "It is weighed and set down: nothing stands in me — my heart is clear on this. I speak on from that truth.";
                         }
                         else
                         {
                             int added = CourtshipMisgivings.SetDown(list, text);
                             if (added == 0)
-                                return Total() >= Core.Courtship.CourtshipMisgivings.MaxMisgivings
-                                    ? "I already carry as many as a heart can honestly hold at once — before I set down another, I first lay one to rest or reword one."
+                                return Open() >= Core.Courtship.CourtshipMisgivings.MaxMisgivings
+                                    ? "I already carry as many open as a heart can honestly hold at once — before I set down another, I first lay one to rest or strike out one that proved empty."
                                     : "Nothing new was set down — what I named, I carry already.";
                             memory.MisgivingsWeighed = true;
                             SaveMemory(npc, memory);
                             if (!quiet) NotifyMisgivings(npc,
-                                $"sets down what weighs on their heart about a life together ({Open()} of {Total()} standing).");
-                            return $"It is set down, in my own words — {Open()} now stand{(Open() == 1 ? "s" : string.Empty)} in me. They are mine to speak of openly, and mine alone to lay to rest when life truly answers them.";
+                                $"sets down what weighs on their heart about a life together ({Open()} of {Total()} standing).",
+                                FrostColor);
+                            return $"It is set down, in my own words — {Open()} now stand{(Open() == 1 ? "s" : string.Empty)} in me. The list lives with me: I speak of them openly, and while any stands, my hand waits.";
                         }
 
                     case Tools.MisgivingTool.ActSettle:
@@ -568,11 +574,25 @@ namespace ImmersiveAI
                             var tail = string.IsNullOrWhiteSpace(settled.SettledNote) ? string.Empty : $" — “{settled.SettledNote}”";
                             NotifyMisgivings(npc, Open() == 0
                                 ? $"lays their last misgiving to rest{tail} — their heart is clear."
-                                : $"lays a misgiving to rest{tail} ({Open()} of {Total()} still stand).");
+                                : $"lays a misgiving to rest{tail} ({Open()} of {Total()} still stand).",
+                                RoadColor);
                         }
                         return Open() == 0
                             ? "It is laid to rest — and with it, nothing stands in me any longer. My heart is clear, and I may say so."
                             : $"It is laid to rest, with my word on what answered it. {Open()} still stand{(Open() == 1 ? "s" : string.Empty)} in me.";
+                    }
+
+                    case Tools.MisgivingTool.ActRelease:
+                    {
+                        var released = CourtshipMisgivings.Release(list, text);
+                        if (released == null)
+                            return "No misgiving of mine matches those words, so nothing was struck out.";
+                        SaveMemory(npc, memory);
+                        if (!quiet) NotifyMisgivings(npc, Open() == 0
+                            ? "strikes a misgiving out — it was never truly theirs; nothing stands in their heart now."
+                            : $"strikes a misgiving out — it was never truly theirs ({Open()} of {Total()} still stand).",
+                            RoadColor);
+                        return "It is struck out — not answered, simply no longer mine. My list holds only what my heart truly asks.";
                     }
 
                     case Tools.MisgivingTool.ActRevise:
@@ -581,7 +601,7 @@ namespace ImmersiveAI
                         if (revised == null)
                             return "No misgiving of mine matches those words, so nothing was reworded.";
                         SaveMemory(npc, memory);
-                        if (!quiet) NotifyMisgivings(npc, "turns a misgiving over, and words it anew.");
+                        if (!quiet) NotifyMisgivings(npc, "turns a misgiving over, and words it anew.", ActivityColor);
                         return "It is reworded — the same weight, seen truer. I speak on.";
                     }
 
@@ -592,7 +612,8 @@ namespace ImmersiveAI
                             return "Nothing I had laid to rest matches those words — nothing returned.";
                         SaveMemory(npc, memory);
                         if (!quiet) NotifyMisgivings(npc,
-                            $"takes an old misgiving up again ({Open()} of {Total()} standing).");
+                            $"takes an old misgiving up again ({Open()} of {Total()} standing).",
+                            FrostColor);
                         return "It stands in me again, and I own it honestly — better a doubt spoken than a peace pretended.";
                     }
 
@@ -603,14 +624,16 @@ namespace ImmersiveAI
             catch { return "The moment does not allow it; I let the matter rest."; }
         }
 
-        // The misgivings' own notice — the road's rose, so the heart's bookkeeping reads as one story.
-        private void NotifyMisgivings(Hero npc, string doing)
+        // The misgivings' own notices — rose when the heart clears (settled, struck out, clear),
+        // frost blue when a doubt appears or returns. DisplayMessage lines live on in the message
+        // log, so the whole weather of the courtship stays readable after the fact.
+        private void NotifyMisgivings(Hero npc, string doing, Color color)
         {
             try
             {
                 var name = npc?.Name?.ToString() ?? "They";
                 MainThreadDispatcher.Enqueue(() =>
-                    InformationManager.DisplayMessage(new InformationMessage($"{name} {doing}", RoadColor)));
+                    InformationManager.DisplayMessage(new InformationMessage($"{name} {doing}", color)));
             }
             catch { /* the notice is a nicety */ }
         }
@@ -698,7 +721,8 @@ namespace ImmersiveAI
                     line = $"{name}'s heart owns where it already stands: {CourtshipRoad.StageName(stage)}.";
                 else if (!forward)
                 {
-                    color = brokeTroth ? new Color(0.85f, 0.45f, 0.45f, 1f) : SealGrey;
+                    // Frost blue for the freeze, red only for a broken troth (Anton's color language).
+                    color = brokeTroth ? new Color(0.85f, 0.45f, 0.45f, 1f) : FrostColor;
                     line = brokeTroth
                         ? $"{name} has taken back their promise — the troth is broken."
                         : $"{name}'s heart draws back a step.";
@@ -1320,7 +1344,7 @@ namespace ImmersiveAI
                 if (total == 0)
                 {
                     sb.AppendLine(memory.MisgivingsWeighed
-                        ? "They searched their heart and found nothing standing against a life together — it is clear."
+                        ? "They searched their heart and found nothing standing against a life together — it is clear. A true doubt born in a later talk may still be written down."
                         : "They have not yet sat with the question. When marriage truly enters your talks, they will weigh their heart and set down what troubles them — in their own words, a few at the most, or none at all.");
                 }
                 else
@@ -1340,6 +1364,8 @@ namespace ImmersiveAI
                     sb.AppendLine(open > 0
                         ? $"{open} of {total} still stand. These are theirs alone to lay to rest — talk with them, and let life answer what they wrote."
                         : $"All {total} are laid to rest — nothing they wrote still stands between you.");
+                    sb.AppendLine();
+                    sb.AppendLine("The list lives: new worries may join it mid-talk (rose and frost-blue lines in the log mark every change), ones that prove empty they strike out — and only when nothing stands is their hand free to be given.");
                 }
                 body = sb.ToString().TrimEnd();
                 return true;

@@ -423,6 +423,16 @@ namespace ImmersiveAI
         /// records, no notes, no recall.</summary>
         public bool EnableBattleChronicle { get; set; } = true;
 
+        /// <summary>When true, a wedding of your own is written down as a story in two parts, in the
+        /// manner of the old Scriptures and in whatever tongue you and they speak: THE DAY — the
+        /// account of the wedding itself, which the one you wed and every soul who stood there
+        /// remembers ever after — and THE NIGHT that followed, written in your beloved's own voice
+        /// and belonging to the two of you alone (no witness ever carries it, and no one else can
+        /// ever ask them for it). Both are kept whole and forever in NPCs\campaign\_weddings, so
+        /// that day can be called back and told in full long after the memory of it has softened.
+        /// Costs two writing calls, once per wedding. Set false and a wedding passes unwritten.</summary>
+        public bool EnableWeddingChronicle { get; set; } = true;
+
         /// <summary>At most how many recall rounds one reply may spend before it must simply speak
         /// (each round can carry several lookups). Keeps a curious NPC from wandering the archives
         /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>

@@ -64,6 +64,12 @@ If one of these searches brought you here — yes, this is that mod:
 - **Nothing is sealed by words alone.** Every bargain, betrothal and wedding takes your confirming
   click, and the wedding is the real game marriage — cutscene, clan, children and all. Offers can
   even ride letters and be sealed when the courier arrives.
+- **And the wedding day is written down.** Not a line in a log — a story, told in the manner of the
+  old Scriptures and in whatever tongue you speak together: the hall, the hour, who stood there,
+  the road that brought you both. The one you wed remembers it, and so does everyone who was there.
+  A second part — the night that followed, in your beloved's own voice — belongs to the two of you
+  alone and reaches no one else, ever. Years later, ask them about that day and they will tell it
+  back to you whole.
 
 
 ## Useful — stop googling stuff
@@ -141,6 +147,8 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - Both prompt files are editable from inside the game too, in the chat and letter windows.
 - `NPCs\campaign_*\_battles\` — the chronicle of every battle you fought: one file per battle and
   a running `chronicle.txt` telling the whole war in order.
+- `NPCs\campaign_*\_weddings\` — your wedding days, kept whole: the account of the day itself and,
+  with it, the night that is yours and theirs alone.
 
 That config folder is *yours* and survives everything: uninstall, resubscribe, update — every
 character still remembers you. (It doesn't sync between PCs; copy it yourself, and mind the API

@@ -15,6 +15,13 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- **New: your wedding day is written down — in two parts.** When you wed, the day itself is set down as a story in the manner of the old Scriptures, in whatever tongue you and they speak: the place, the hour, who stood there and what they did, the road that brought you both here, the doubts they once wrote and how each came to rest.
+- The one you wed remembers it — and so does everyone who stood there. It appears in their chat as the wedding day's own card, and they will speak of it as people speak of a day like that.
+- And a second part, the night that followed, written in your beloved's own voice — theirs and yours alone. It never reaches a guest's memory, and no one else can ever be told it, however they ask.
+- Both are kept whole forever. Long after the memory has softened into "we were wed in Onira", ask them to tell you about that day and they will call it back word for word.
+- Toggle: EnableWeddingChronicle (on by default). Costs two writing calls, once per wedding.
+- Marriage misgivings are a living list now: a new worry can be born in any later talk, one that proves empty they strike out entirely, and only what still STANDS is capped — a heart may change its mind the way a person does, and old settled worries never block a new true doubt.
+- The courtship's weather is color-coded in the message log, and every movement leaves a line there: rose when the heart clears (a worry answered or struck out, a clear heart), frost-blue when something freezes (a new worry written, a settled one returning, the heart's road drawing back a step).
 - An NPC's backstory now begins as their earliest deep memory instead of a fixed page — over time they decide what of their old life to keep, reshape, or let fade.
 - If your name is renowned, a soul you meet for the first time already carries the rumor of you as an early memory — faint word, tales traveling far, or fame across all Calradia.
 - Fixed: a long memory could be saved cut off in mid-word. Characters now get a much larger budget for writing their memory (existing setups are raised too), and a memory cut short falls back to its last finished sentence instead of being kept half-written.

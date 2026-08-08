@@ -176,6 +176,12 @@ namespace ImmersiveAI
         /// scoping, same snapshot-rewind ride as everything else here.</summary>
         public static string JourneyFile => Path.Combine(CampaignRoot, "_journey.json");
 
+        /// <summary>The campaign's book of weddings (see Core's WeddingLedger): one JSON per wedding
+        /// of the player's — the day's written account and, kept with it, the night that belongs to
+        /// the two of them alone — plus a readable weddings.txt. Same campaign scoping, so a save
+        /// loaded from before the wedding un-writes it along with the memories of it.</summary>
+        public static string WeddingsFolder => Path.Combine(CampaignRoot, Core.Weddings.WeddingLedger.FolderName);
+
         /// <summary>The NPC's first name only (second names excluded), for the folder label. Falls back
         /// to the first token of the full name, then to the raw id.</summary>
         public static string FirstNameOf(Hero npc)
@@ -407,6 +413,13 @@ A _journey.json in the campaign folder is the road journal: the last few stops (
 called, how long, what was traded, men hired or left in garrisons, captives sold) and the
 tasks you carry with their outcomes. The people riding WITH you see it and can talk about
 it. It stays deliberately small; delete it to start the road afresh.
+
+A _weddings folder in the campaign folder keeps your own wedding days, one file each, and a
+readable weddings.txt beside them. Each is written in two parts: THE DAY, which the one you
+wed and everyone who stood there remembers ever after, and THE NIGHT that followed, written
+in your beloved's own voice — that part is theirs and yours alone, and no one else can ever
+be told it, not even a guest who asks. Both are kept whole here forever, so either of you
+can call that day back and tell it in full long after the memory of it has softened.
 
 A _snapshots folder holds a photograph of this campaign's memories taken at each of your
 saves, so that loading a save also rewinds the NPCs' memories to that moment (a reload can

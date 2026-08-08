@@ -26,14 +26,20 @@ namespace ImmersiveAI.Core.Courtship
 
     /// <summary>
     /// The operations of her own hand over the misgivings list — pure and unit-tested: fuzzy
-    /// matching so a restatement lands on the misgiving it means, a hard cap so the heart never
-    /// files a ledger, and "none" honored as a real answer (a clear heart is weighed too). The
-    /// game layer owns when the tool rides and where the list lives (NpcMemory).
+    /// matching so a restatement lands on the misgiving it means, a cap on what may STAND OPEN at
+    /// once (never on a lifetime — the list LIVES: a new true doubt may be set down whenever it
+    /// arises, one that proved empty struck out, so a heart can change its mind mid-talk, Anton's
+    /// ask 2026.08.08 evening), and "none" honored as a real answer (a clear heart is weighed
+    /// too). The game layer owns when the tool rides and where the list lives (NpcMemory).
     /// </summary>
     public static class CourtshipMisgivings
     {
-        /// <summary>The most a heart sets down in all — standing and settled together.</summary>
+        /// <summary>The most a heart holds OPEN at once — settled ones never block a new doubt.</summary>
         public const int MaxMisgivings = 5;
+
+        /// <summary>The most the list carries in ALL (standing + settled): past this, the oldest
+        /// settled ones quietly fade — kept history, not an endless ledger in every sheet.</summary>
+        public const int MaxCarried = 10;
 
         public static int OpenCount(IEnumerable<CourtshipMisgiving>? list) =>
             list?.Count(m => m != null && !m.Settled && !string.IsNullOrWhiteSpace(m.Text)) ?? 0;
@@ -55,8 +61,10 @@ namespace ImmersiveAI.Core.Courtship
 
         /// <summary>
         /// Sets down what she wrote — one misgiving per line (a semicolon-run is honored too),
-        /// dressed bullets shed, duplicates and blanks dropped, capped so standing + settled never
-        /// pass <paramref name="max"/>. Returns how many were truly added.
+        /// dressed bullets shed, duplicates and blanks dropped, capped so no more than
+        /// <paramref name="max"/> STAND OPEN at once (settled ones never block a new doubt — the
+        /// list lives). Past <see cref="MaxCarried"/> in all, the oldest settled quietly fade.
+        /// Returns how many were truly added.
         /// </summary>
         public static int SetDown(List<CourtshipMisgiving> list, string? text, int max = MaxMisgivings)
         {
@@ -71,12 +79,32 @@ namespace ImmersiveAI.Core.Courtship
             int added = 0;
             foreach (var piece in pieces)
             {
-                if (TotalCount(list) >= max) break;
+                if (OpenCount(list) >= max) break;
                 if (list.Any(m => m != null && Normalize(m.Text) == Normalize(piece))) continue;
                 list.Add(new CourtshipMisgiving { Text = piece });
                 added++;
             }
+
+            // History, not a ledger: the oldest settled fade once the whole list outgrows its room.
+            while (TotalCount(list) > MaxCarried)
+            {
+                var oldest = list.FirstOrDefault(m => m != null && m.Settled);
+                if (oldest == null) break; // open ≤ max < MaxCarried, so this cannot happen — belt only
+                list.Remove(oldest);
+            }
             return added;
+        }
+
+        /// <summary>Strikes the misgiving best matching <paramref name="which"/> out entirely —
+        /// not answered, simply no longer truly hers (standing ones first). Returns the removed
+        /// one, or null when none matched.</summary>
+        public static CourtshipMisgiving? Release(List<CourtshipMisgiving> list, string which)
+        {
+            if (list == null) return null;
+            var hit = FindBestMatch(list, which, m => !m.Settled) ?? FindBestMatch(list, which, m => m.Settled);
+            if (hit == null) return null;
+            list.Remove(hit);
+            return hit;
         }
 
         /// <summary>Lays the standing misgiving best matching <paramref name="which"/> to rest,

@@ -41,6 +41,10 @@ namespace ImmersiveAI
         private readonly IChatClient _client;
         private readonly JsonMemoryStore _memoryStore;
         private readonly MemoryCompressor _compressor;
+        // The chronicler's own client: long written pieces that no one speaks aloud (the wedding
+        // day and its night). Same roomy budget as memory writing — a spoken 400-token cap would
+        // sever a wedding in mid-sentence, and non-ASCII play would sever it far sooner still.
+        private readonly IChatClient _storyClient;
         private readonly PromptBuilder _promptBuilder = new PromptBuilder();
 
         private Hero? _currentNpc;
@@ -159,6 +163,7 @@ namespace ImmersiveAI
             // plus a full list of truths plus a sense of self cannot breathe inside a spoken-reply cap.
             // The budget is read live so a settings change reaches this client too, restart-free.
             _compressor = new MemoryCompressor(ChatClientFactory.Create(config, () => config.MaxMemoryWriteTokens));
+            _storyClient = ChatClientFactory.Create(config, () => config.MaxMemoryWriteTokens);
         }
 
         // One spoken completion that may reach for the world's memory along the way (the recall
@@ -179,6 +184,8 @@ namespace ImmersiveAI
             // The chronicle's hand rides only for a soul with a shared battle to recall — a lean
             // tool list keeps tools used, and "our battles" means nothing to a stranger to war.
             if (CanRecallChronicle(npc)) tools.Add(Tools.ChronicleTool.Tool);
+            // The wedding's hand, on the same rule: only for a soul who truly stood at one.
+            if (CanRecallWedding(npc)) tools.Add(Tools.NuptialTool.Tool);
             // The bargain's hand rides only where the caller passed a tally — the live reply trunk
             // with an unhired sellsword facing the player (see CanStrikeBargain); never greetings,
             // letters, or reach-out beats, where "we agreed on terms just now" cannot be true.
@@ -249,6 +256,8 @@ namespace ImmersiveAI
                 return Tools.FieldCraft.ResolveAsync(call, npc);
             if (call.Name == Tools.ChronicleTool.RecallBattle)
                 return Tools.ChronicleTool.ResolveAsync(call, npc, () => _battleLedger);
+            if (call.Name == Tools.NuptialTool.RecallWedding)
+                return Tools.NuptialTool.ResolveAsync(call, npc, () => _weddingLedger);
             return Tools.WorldRecall.ResolveAsync(call, npc);
         }
 
@@ -638,7 +647,8 @@ namespace ImmersiveAI
                 try
                 {
                     var args = Newtonsoft.Json.Linq.JObject.Parse(call.ArgumentsJson);
-                    subject = ((string)args["name"] ?? (string)args["question"] ?? (string)args["item"] ?? (string)args["battle"] ?? string.Empty).Trim();
+                    subject = ((string)args["name"] ?? (string)args["question"] ?? (string)args["item"]
+                        ?? (string)args["battle"] ?? (string)args["wedding"] ?? string.Empty).Trim();
                 }
                 catch { subject = null; }
                 var detail = string.IsNullOrWhiteSpace(subject) ? "" : $" ({subject})";
@@ -653,6 +663,7 @@ namespace ImmersiveAI
                     case Tools.WorldRecall.RecallTroop: doing = $"{name} weighs soldiers' worth…{detail}"; break;
                     case Tools.WorldRecall.RecallMarket: doing = $"{name} minds the market prices…{detail}"; break;
                     case Tools.ChronicleTool.RecallBattle: doing = $"{name} turns the chronicle's pages…{detail}"; break;
+                    case Tools.NuptialTool.RecallWedding: doing = $"{name} remembers the wedding day…{detail}"; break;
                     case Tools.WorldRecall.RecallPerson:
                     case Tools.WorldRecall.RecallPlace:
                     case Tools.WorldRecall.RecallClan:
@@ -756,6 +767,7 @@ namespace ImmersiveAI
         private void SaveMemory(Hero npc, NpcMemory memory)
         {
             FoldPendingBlessing(npc, memory);
+            FoldPendingWeddingBeats(npc, memory);
             _memoryStore.SaveTo(NpcPaths.MemoryFile(npc), memory);
         }
 
@@ -812,6 +824,13 @@ namespace ImmersiveAI
             CampaignEvents.OnHeroCombatHitEvent.AddNonSerializedListener(this, OnHeroCombatHitForChronicle);
             CampaignEvents.OnPlayerBattleEndEvent.AddNonSerializedListener(this, OnPlayerBattleEnded);
             CampaignEvents.MapEventEnded.AddNonSerializedListener(this, OnMapEventEndedForChronicle);
+
+            // The wedding chronicle (see the Weddings partial). BeforeHeroesMarried fires from
+            // inside MarriageAction with the spouses already set but BEFORE the clan change that
+            // sweeps a noble bride out of her settlement — so the day's facts are captured there,
+            // synchronously. Hooking the game's own event also chronicles a wedding arranged
+            // through vanilla's barter, not only one sealed through our own road.
+            CampaignEvents.BeforeHeroesMarried.AddNonSerializedListener(this, OnHeroesMarriedForChronicle);
 
             // The road journal (see the Journey partial): the witness log of the player's everyday
             // life — stops, trade, men taken on or left behind, captives, and the tasks carried —
@@ -967,6 +986,7 @@ namespace ImmersiveAI
             LoadLetterBag();
             LoadBattleLedger();
             LoadJourneyLog();
+            LoadWeddingLedger();
 
             // Menus exist and are initialized by now (vanilla behaviors ran first), so the courier
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
@@ -1849,6 +1869,11 @@ namespace ImmersiveAI
             // Letters tick on their own leg, independent of face-to-face initiations.
             try { OnLettersHourlyTick(); }
             catch { /* the post must never take down the hour */ }
+
+            // A wedding day saved but never written (a refused or timed-out call at the very hour
+            // of the vow) gets a few more honest attempts — the record keeps every fact of it.
+            try { RetryUnwrittenWeddings(); }
+            catch { /* the chronicle must never take down the hour */ }
 
             // Self-heal a wedged PlayerEncounter: a half-real encounter left behind (e.g. by a talk
             // once hung on a distant settlement's party — the Brunda wedge) makes that settlement

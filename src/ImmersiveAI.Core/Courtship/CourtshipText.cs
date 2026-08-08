@@ -79,16 +79,17 @@ namespace ImmersiveAI.Core.Courtship
                         : " (this still stands in me)";
                     sb.AppendLine("- " + m.Text.Trim().TrimEnd('.') + "." + mark);
                 }
+                sb.AppendLine("This list lives with me: a new true doubt born in our talks I set down when it arises, one that proves empty I strike out, one that changed I reword — and while any of them still stands, I will not give my hand; when none stands, no doubt of mine bars the road. I am not shy of them: this is the one life I am given, and I would know the soul I am to spend it beside — so I bring them into our talks myself, and give each its honest hearing.");
             }
             else if (misgivingsWeighed)
             {
                 sb.AppendLine();
-                sb.AppendLine($"I have sat with myself over what a life wed to {playerName} would ask of me, and found no misgiving standing — my heart is clear on it.");
+                sb.AppendLine($"I have sat with myself over what a life wed to {playerName} would ask of me, and found no misgiving standing — my heart is clear on it. Should a true doubt yet arise in our talks, I will set it down by my own hand.");
             }
             else if (stage < CourtshipStage.Betrothed)
             {
                 sb.AppendLine();
-                sb.AppendLine($"I have not yet sat with myself over what a life wed to {playerName} would truly ask of me. When marriage truly enters the talk between us, I pause and weigh it honestly: if misgivings stand in me I set them down in my own words — a few, five at the very most — and if none do, I say so plainly and set down none. They are mine to speak of openly, and mine alone to lay to rest.");
+                sb.AppendLine($"I have not yet sat with myself over what a life wed to {playerName} would truly ask of me. When marriage truly enters the talk between us, I pause and weigh it honestly — this is the one life I am given, and I would know the soul I am to spend it beside: if misgivings stand in me I set them down in my own words — a few, five at the very most — and if none do, I say so plainly and set down none. The list then lives with me: mine to raise openly in our talks, mine to add to when a true doubt arises, and mine alone to lay to rest.");
             }
             return sb.ToString().TrimEnd();
         }

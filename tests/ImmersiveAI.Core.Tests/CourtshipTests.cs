@@ -128,9 +128,61 @@ public class CourtshipTests
         Assert.Equal("I fear the road would own him more than I would.", list[0].Text);
         Assert.Equal("What of my Da, left alone?", list[2].Text);
 
-        // The cap holds across later set-downs: five in all, standing and settled together.
+        // The cap binds what stands OPEN at once — five, never more.
         CourtshipMisgivings.SetDown(list, "A fourth worry; A fifth worry; A sixth that must not land");
-        Assert.Equal(CourtshipMisgivings.MaxMisgivings, CourtshipMisgivings.TotalCount(list));
+        Assert.Equal(CourtshipMisgivings.MaxMisgivings, CourtshipMisgivings.OpenCount(list));
+    }
+
+    [Fact]
+    public void TheListLives_SettledOnesNeverBlockANewDoubt()
+    {
+        // Five open = full…
+        var list = new List<CourtshipMisgiving>();
+        CourtshipMisgivings.SetDown(list, "one; two; three; four; five");
+        Assert.Equal(0, CourtshipMisgivings.SetDown(list, "a sixth, refused"));
+
+        // …but a settled one frees the room: a new true doubt may be born mid-talk.
+        CourtshipMisgivings.Settle(list, "three", "answered");
+        Assert.Equal(1, CourtshipMisgivings.SetDown(list, "a sixth, now welcome"));
+        Assert.Equal(5, CourtshipMisgivings.OpenCount(list));
+        Assert.Equal(6, CourtshipMisgivings.TotalCount(list));
+    }
+
+    [Fact]
+    public void Release_StrikesOneOutEntirely_StandingFirst()
+    {
+        var list = new List<CourtshipMisgiving>();
+        CourtshipMisgivings.SetDown(list, "His purse is lighter than his promises.\nWhat of my Da, left alone?");
+        CourtshipMisgivings.Settle(list, "his purse is lighter than his promises", "his word held");
+
+        // A standing one struck out is simply gone — not settled, not remembered.
+        var released = CourtshipMisgivings.Release(list, "what of my Da left alone");
+        Assert.NotNull(released);
+        Assert.Equal(1, CourtshipMisgivings.TotalCount(list));
+        Assert.Equal(0, CourtshipMisgivings.OpenCount(list));
+
+        // A settled one can be struck out too; a stranger's words strike nothing.
+        Assert.Null(CourtshipMisgivings.Release(list, "the weather over the mountains"));
+        Assert.NotNull(CourtshipMisgivings.Release(list, "his purse is lighter than his promises"));
+        Assert.Empty(list);
+    }
+
+    [Fact]
+    public void History_NeverOutgrowsItsRoom_TheOldestSettledFade()
+    {
+        // Eight settled already carried, two standing…
+        var list = new List<CourtshipMisgiving>();
+        for (int i = 0; i < 8; i++)
+            list.Add(new CourtshipMisgiving { Text = $"an old settled worry number {i}", Settled = true });
+        CourtshipMisgivings.SetDown(list, "a standing worry; another standing worry");
+        Assert.Equal(10, CourtshipMisgivings.TotalCount(list));
+
+        // …a new doubt still lands, and the OLDEST settled one fades to make room.
+        Assert.Equal(1, CourtshipMisgivings.SetDown(list, "a fresh doubt, mid-talk"));
+        Assert.Equal(CourtshipMisgivings.MaxCarried, CourtshipMisgivings.TotalCount(list));
+        Assert.DoesNotContain(list, m => m.Text == "an old settled worry number 0");
+        Assert.Contains(list, m => m.Text == "a fresh doubt, mid-talk");
+        Assert.Equal(3, CourtshipMisgivings.OpenCount(list)); // nothing standing ever fades
     }
 
     [Fact]
@@ -238,6 +290,9 @@ public class CourtshipTests
         Assert.Contains("speak of these openly", section);
         Assert.Contains("this still stands in me", section);
         Assert.Contains("laid to rest: His word held", section);
+        // The list is a living thing, and she knows what settling it opens.
+        Assert.Contains("This list lives with me", section);
+        Assert.Contains("no doubt of mine bars the road", section);
         // The old ledger's voice is gone for good.
         Assert.DoesNotContain("never recite them as a list", section);
     }

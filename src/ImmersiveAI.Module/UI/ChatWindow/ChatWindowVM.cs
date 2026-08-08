@@ -22,6 +22,9 @@ namespace ImmersiveAI.UI.ChatWindow
         // sea-glass as the activity notices — read at a glance without bubbles.
         private static readonly Color PlayerHeaderColor = new Color(0.85f, 0.75f, 0.55f, 1f);
         private static readonly Color NpcHeaderColor = new Color(0.74f, 0.90f, 0.86f, 1f);
+        // The wedding accounts wear the courtship road's own rose, so the day reads as the end of
+        // that story rather than as one more exchange.
+        private static readonly Color WeddingHeaderColor = new Color(0.93f, 0.62f, 0.72f, 1f);
 
         private readonly ModConfig _config;
         private readonly string _letterHotkey;
@@ -242,6 +245,27 @@ namespace ImmersiveAI.UI.ChatWindow
                                 messages.Add(new ChatMessageVM(string.Empty,
                                     $"({npcName}, on whether to answer: {turn.NpcLine})",
                                     isNarration: true, Colors.White));
+                            continue;
+                        }
+
+                        // The wedding day, and the night that followed it, wear their own cards
+                        // (2026.08.09): the written account is a thing to be READ, not a stage
+                        // direction — so the framing line stays soft narration and the account
+                        // itself is drawn as its own block. The night's card says whose it is.
+                        if (Core.Weddings.WeddingText.TrySplitBeat(turn.PlayerLine, out var weddingFrame, out var weddingAccount))
+                        {
+                            bool isNight = Core.Weddings.WeddingText.IsNightBeat(turn.PlayerLine);
+                            if (!string.IsNullOrWhiteSpace(weddingFrame))
+                                messages.Add(new ChatMessageVM(string.Empty, WithStamp(stamp, "❦ " + weddingFrame),
+                                    isNarration: true, Colors.White));
+                            else
+                                messages.Add(new ChatMessageVM(string.Empty,
+                                    WithStamp(stamp, $"❦ {npcName} remembers the night that followed — theirs alone."),
+                                    isNarration: true, Colors.White));
+                            if (!string.IsNullOrWhiteSpace(weddingAccount))
+                                messages.Add(new ChatMessageVM(
+                                    isNight ? $"❦ {npcName} — that night" : "❦ The wedding day",
+                                    weddingAccount, isNarration: false, WeddingHeaderColor));
                             continue;
                         }
 
@@ -522,6 +546,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public void ExecuteDevReachOut() => RunDev(ImmersiveChatBehavior.DevForceReachOut);
         public void ExecuteDevLetter() => RunDev(ImmersiveChatBehavior.DevForceLetter);
         public void ExecuteDevBattle() => RunDev(ImmersiveChatBehavior.DevForgeBattle);
+        public void ExecuteDevWedding() => RunDev(ImmersiveChatBehavior.DevForgeWedding);
         public void ExecuteDevRename() => RunDev(ImmersiveChatBehavior.DevRenameNpc);
 
         public void ExecuteDevOdds()
@@ -842,7 +867,7 @@ namespace ImmersiveAI.UI.ChatWindow
 
         [DataSourceProperty]
         public string MisgivingsHintText =>
-            "These are their own words, written by their own hand mid-talk — never a checklist. Talk with them about what stands; they lay one to rest only when life truly answers it.";
+            "Their own words, written by their own hand mid-talk — a living list, never a checklist: new doubts may join it, empty ones get struck out, settled ones may return. They lay one to rest only when life truly answers it; while any stands, their hand waits.";
 
         // ------------------------------ the dev panel ------------------------------
 
