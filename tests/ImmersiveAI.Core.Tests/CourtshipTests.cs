@@ -215,7 +215,7 @@ public class CourtshipTests
     public void Seed_PromptHonorsBothLoveSpoken_AndPromiseWithheld()
     {
         var prompt = CourtshipSeed.BuildPrompt("Sibylla", "woman", "Mizam",
-            "He taught me of the Word.", "I love him.", "I love him in secret.", "…");
+            "He taught me of the Word.", "I love him in secret.", "…");
         Assert.Contains("betrothed — we have already promised ourselves", prompt);
         Assert.Contains("where a promise was deliberately not yet given, honor that too", prompt);
         Assert.Contains("STAGE:", prompt);

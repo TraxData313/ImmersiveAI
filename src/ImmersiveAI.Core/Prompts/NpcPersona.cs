@@ -48,12 +48,6 @@ namespace ImmersiveAI.Core.Prompts
         /// <see cref="ImmersiveAI.Core.Memory.NpcSelf"/>.</summary>
         public string SelfConcept { get; set; } = string.Empty;
 
-        /// <summary>The personal aims this NPC carries, of their own will — held apart from the self
-        /// because they are what the NPC strives *toward*, not who they are. Authored by them (the
-        /// tend_goals tool mid-conversation, wholesale in reflection), kept in their own file. Folded
-        /// into the prompt as "What you strive for". See <see cref="ImmersiveAI.Core.Memory.NpcGoals"/>.</summary>
-        public System.Collections.Generic.List<string> Goals { get; set; } = new System.Collections.Generic.List<string>();
-
         /// <summary>Optional world-wide, user-authored instructions shared by every NPC
         /// (the global prompt file). Shown near the top as "Of this world, this I know:".</summary>
         public string WorldInstructions { get; set; } = string.Empty;
@@ -77,17 +71,6 @@ namespace ImmersiveAI.Core.Prompts
         /// whisper that their heart is theirs to move — and that most words leave it where it
         /// stood. When false the game layer asks the feeling in a separate call instead.</summary>
         public bool CanMoveHeart { get; set; }
-
-        /// <summary>True when this NPC may tend their own aims mid-conversation (the tend_goals tool
-        /// rides along — see the game layer's GoalTool). Adds a whisper that their aims are theirs to
-        /// keep, take up, or let go — sparingly, only when something truly shifts what they strive for.
-        /// Even when false, reflection still lets them rework their aims.</summary>
-        public bool CanTendGoals { get; set; }
-
-        /// <summary>True when this NPC may set down a lasting truth mid-conversation (the hold_truth
-        /// tool rides along — see the game layer's TruthTool). Adds a whisper that what deserves to
-        /// stay may be quietly kept. Even when false, reflection still rewrites their truths whole.</summary>
-        public bool CanHoldTruths { get; set; }
 
         /// <summary>True when this NPC is invited to act out small gestures between *asterisks* —
         /// *I smile and meet their eyes* — as the one exception to the plain-speech rule (see

@@ -122,79 +122,29 @@ public class NpcMemoryTests
     }
 
     [Fact]
-    public void ApplyCompression_ReplacesSummaryRemovesConsumedTurnsAndMergesFacts()
+    public void ApplyCompression_ReplacesSummaryAndRemovesConsumedTurns()
     {
         var memory = new NpcMemory { Summary = "old summary" };
-        memory.KnownFacts.Add("The player is a Vlandian vassal");
         for (int i = 0; i < 5; i++) memory.AddTurn(Turn($"p{i}", $"n{i}"));
 
-        memory.ApplyCompression(
-            "new summary",
-            consumedTurnCount: 3,
-            newFacts: new[] { "The player saved my caravan", "the player is a vlandian vassal", "  ", "The player saved my caravan" });
+        memory.ApplyCompression("new summary", consumedTurnCount: 3);
 
         Assert.Equal("new summary", memory.Summary);
         Assert.Equal(2, memory.RecentTurns.Count);
         Assert.Equal("p3", memory.RecentTurns[0].PlayerLine);
-        // duplicate (case-insensitive) and blank facts are not added
-        Assert.Equal(2, memory.KnownFacts.Count);
-        Assert.Contains("The player saved my caravan", memory.KnownFacts);
     }
 
     [Fact]
-    public void ApplyCompression_WithReplaceFacts_TheNewListBecomesTheWholeTruth()
+    public void ApplyCompression_LeavesTheRetiredTruthsUntouched()
     {
-        // She is shown all her truths and asked to write them anew — so rewordings and released
-        // truths fall away instead of piling up beside their older phrasings.
+        // The distilled truths were retired 2026.08.08. Whatever an older save still carries in the
+        // field stays exactly where it lies — nothing reads it, and nothing may quietly destroy it.
         var memory = new NpcMemory();
-        memory.KnownFacts.Add("The warmth of Vulgrim's castle creates a sense of home");
-        memory.KnownFacts.Add("Vulgrim's castle is warm and welcoming");
+        memory.KnownFacts.Add("a truth she held under the old shape");
 
-        memory.ApplyCompression(
-            "s", consumedTurnCount: 0,
-            newFacts: new[] { "Vulgrim's castle in Ostican feels like home", "My sister is wed to Vulgrim" },
-            replaceFacts: true);
+        memory.ApplyCompression("the whole of what I now remember", consumedTurnCount: 0);
 
-        Assert.Equal(
-            new[] { "Vulgrim's castle in Ostican feels like home", "My sister is wed to Vulgrim" },
-            memory.KnownFacts);
-    }
-
-    [Fact]
-    public void ApplyCompression_WithReplaceFacts_AnEmptyListReleasesThemAll()
-    {
-        var memory = new NpcMemory();
-        memory.KnownFacts.Add("a truth she no longer holds");
-
-        memory.ApplyCompression("s", consumedTurnCount: 0, newFacts: Array.Empty<string>(), replaceFacts: true);
-
-        Assert.Empty(memory.KnownFacts);
-    }
-
-    [Fact]
-    public void ApplyCompression_NullFacts_NeverTouchesTheList_EvenWithReplace()
-    {
-        // A reply that carried no FACTS section at all must never cost her memory.
-        var memory = new NpcMemory();
-        memory.KnownFacts.Add("a truth");
-
-        memory.ApplyCompression("s", consumedTurnCount: 0, newFacts: null, replaceFacts: true);
-
-        Assert.Equal(new[] { "a truth" }, memory.KnownFacts);
-    }
-
-    [Fact]
-    public void ApplyCompression_WithReplaceFacts_StillDeduplicatesWithinTheNewList()
-    {
-        var memory = new NpcMemory();
-        memory.KnownFacts.Add("old truth");
-
-        memory.ApplyCompression(
-            "s", consumedTurnCount: 0,
-            newFacts: new[] { "A truth", "a truth", " ", "Another" },
-            replaceFacts: true);
-
-        Assert.Equal(new[] { "A truth", "Another" }, memory.KnownFacts);
+        Assert.Equal(new[] { "a truth she held under the old shape" }, memory.KnownFacts);
     }
 
     [Fact]
@@ -204,41 +154,6 @@ public class NpcMemoryTests
         memory.AddTurn(Turn("p", "n"));
 
         Assert.Throws<ArgumentOutOfRangeException>(() => memory.ApplyCompression("s", consumedTurnCount: 2));
-    }
-
-    [Fact]
-    public void AddKnownFact_Trims_Dedupes_AndHonorsTheCap()
-    {
-        var memory = new NpcMemory();
-
-        Assert.True(memory.AddKnownFact("  They saved my caravan at Omor  ", maxFacts: 2));
-        Assert.Equal("They saved my caravan at Omor", memory.KnownFacts[0]);
-
-        // A restatement differing only in case is the same truth, not a second one.
-        Assert.False(memory.AddKnownFact("they saved my caravan at omor", maxFacts: 2));
-
-        Assert.True(memory.AddKnownFact("They rule Sargot", maxFacts: 2));
-        // The mind is full: reflection is where the list resettles, not a silent overflow.
-        Assert.False(memory.AddKnownFact("A third truth", maxFacts: 2));
-        Assert.Equal(2, memory.KnownFacts.Count);
-
-        Assert.False(memory.AddKnownFact("   ", maxFacts: 2));
-    }
-
-    [Fact]
-    public void DropKnownFact_MatchesExactlyFirst_ThenByContainment_AndMissesSafely()
-    {
-        var memory = new NpcMemory();
-        memory.KnownFacts.Add("They saved my caravan at Omor");
-        memory.KnownFacts.Add("They rule Sargot");
-
-        // A close restatement releases the held truth (the NPC sees the exact list in the prompt).
-        Assert.Equal("They rule Sargot", memory.DropKnownFact("rule Sargot"));
-        Assert.Single(memory.KnownFacts);
-
-        // A miss releases nothing — safer than a wrong release.
-        Assert.Null(memory.DropKnownFact("something never held"));
-        Assert.Single(memory.KnownFacts);
     }
 
     [Fact]

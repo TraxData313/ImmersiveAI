@@ -3,7 +3,7 @@
 **Every character in Calradia, a living mind.**
 
 A roleplaying and relationship mod for *Mount & Blade II: Bannerlord*. Characters speak through
-the AI you configure — each with their own voice, memory, moods and goals. They remember every
+the AI you configure — each with their own voice, memory, moods and sense of self. They remember every
 meeting, seek you out, write letters from across the map, and know their world: their family,
 their company, their trade, the war, the road.
 
@@ -26,7 +26,7 @@ If one of these searches brought you here — yes, this is that mod:
 ## Alive
 
 - Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
-- They grow: recent talks stay word-for-word, old ones settle into deep memory, and they keep their own goals, lasting truths, and opinion of you.
+- They grow: recent talks stay word-for-word, old ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — alongside their own sense of self and their opinion of you.
 - They see the moment — time, place, who stands near, what lately happened in the world.
 - They have moods — down to the women keeping a personal monthly cycle, gently simulated.
 - They remember your battles: everyone who fought at your side keeps the day in memory — who downed whom, who bled, what was won — the last battle fresh in detail, the older ones by name ("what happened at the storming of Varcheg?"), all drawn from a real chronicle the mod writes for every fight, sea-battles included.
@@ -44,7 +44,7 @@ If one of these searches brought you here — yes, this is that mod:
 
 - Ask your scout how to make the party faster; ask your quartermaster about the stocks.
 - Ask anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki.
-- They reach for tools instead of one mega info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, their own truths and goals — deciding for themselves what the moment calls for.
+- They reach for tools instead of one mega info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, the chronicle of your battles — deciding for themselves what the moment calls for.
 
 ![Scout searching the web](Screenshots/2_scout_web_search.jpg)
 
@@ -107,7 +107,7 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 
 - `global_prompt.txt` — a few sentences that color every mind in the world.
 - `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks.
-- Each character's folder holds their memories, self-image, goals, and letters as readable text
+- Each character's folder holds their memories, self-image, and letters as readable text
   — the whole inner life, yours to browse. Changes apply on the next conversation.
 - `NPCs\campaign_*\_battles\` — the chronicle of every battle you fought: one file per battle and
   a running `chronicle.txt` telling the whole war in order.

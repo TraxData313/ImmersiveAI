@@ -21,7 +21,6 @@ namespace ImmersiveAI.Core.Courtship
             string genderWord,
             string partnerName,
             string summary,
-            string knownFacts,
             string selfText,
             string recentExcerpt)
         {
@@ -33,8 +32,6 @@ namespace ImmersiveAI.Core.Courtship
             sb.AppendLine();
             if (!string.IsNullOrWhiteSpace(summary))
                 sb.AppendLine($"What {she} remembers: \"{summary.Trim()}\"");
-            if (!string.IsNullOrWhiteSpace(knownFacts))
-                sb.AppendLine($"Truths {she} holds: \"{knownFacts.Trim()}\"");
             if (!string.IsNullOrWhiteSpace(selfText))
                 sb.AppendLine($"What {she} holds true of {her} own self: \"{selfText.Trim()}\"");
             if (!string.IsNullOrWhiteSpace(recentExcerpt))

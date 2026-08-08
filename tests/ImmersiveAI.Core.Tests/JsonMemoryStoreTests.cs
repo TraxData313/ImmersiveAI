@@ -27,7 +27,6 @@ public class JsonMemoryStoreTests : IDisposable
     {
         var store = new JsonMemoryStore(_tempDir);
         var memory = new NpcMemory { NpcId = "lord_1", NpcName = "Gafnir", Summary = "old friends" };
-        memory.KnownFacts.Add("fact one");
         memory.AddTurn(new ConversationTurn { PlayerLine = "hi", NpcLine = "ho", GameDay = 42 });
 
         store.Save(memory);
@@ -35,10 +34,25 @@ public class JsonMemoryStoreTests : IDisposable
 
         Assert.Equal("Gafnir", loaded.NpcName);
         Assert.Equal("old friends", loaded.Summary);
-        Assert.Single(loaded.KnownFacts);
         Assert.Single(loaded.RecentTurns);
         Assert.Equal(42, loaded.RecentTurns[0].GameDay);
         Assert.Equal(42, loaded.LastConversationGameDay);
+    }
+
+    [Fact]
+    public void SaveThenLoad_CarriesTheRetiredTruthsThroughUntouched()
+    {
+        // The distilled truths were retired 2026.08.08 and are read by nothing. They must still
+        // SURVIVE a round trip: a player who has played for weeks keeps whatever their souls set
+        // down, rather than having it quietly erased by the first save after the update.
+        var store = new JsonMemoryStore(_tempDir);
+        var memory = new NpcMemory { NpcId = "lord_2", NpcName = "Ilya" };
+        memory.KnownFacts.Add("They saved my caravan at Omor");
+
+        store.Save(memory);
+        var loaded = store.Load("lord_2");
+
+        Assert.Equal(new[] { "They saved my caravan at Omor" }, loaded.KnownFacts);
     }
 
     [Fact]

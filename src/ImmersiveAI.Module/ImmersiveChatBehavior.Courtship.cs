@@ -412,7 +412,8 @@ namespace ImmersiveAI
         // ------------------------- the resolvers (the tools' hands) -------------------------
 
         // A silent inner beat added to the LIVE memory the turn speaks from — so the end-of-turn
-        // save carries it and can never clobber it (the hold_truth discipline).
+        // save carries it and can never clobber it (the live-instance discipline every mid-reply
+        // hand on memory follows).
         private static void AddSilentInnerBeat(NpcMemory memory, Hero npc, string line)
         {
             memory.AddTurn(new ConversationTurn
@@ -511,7 +512,7 @@ namespace ImmersiveAI
 
         // The misgivings' hand: her own writing upon what weighs on her heart before marriage.
         // Rides on the troth tally (same gate as tend_courtship); mutates the LIVE memory the turn
-        // speaks from (the hold_truth discipline) and saves at once, so the end-of-turn save can
+        // speaks from (the live-instance discipline) and saves at once, so the end-of-turn save can
         // never clobber it. Notices stay quiet for letters (the courier's seal law).
         private string ResolveWeighMisgivings(Core.Llm.ToolCall call, Hero npc, Tools.TrothTool.Tally? troth, NpcMemory? liveMemory)
         {
@@ -792,7 +793,6 @@ namespace ImmersiveAI
                             var prompt = CourtshipSeed.BuildPrompt(
                                 npcName, genderWord, playerName,
                                 memory.Summary,
-                                string.Join(" ", memory.KnownFacts),
                                 selfText,
                                 RecentExcerpt(memory, playerName));
                             var raw = await _client.CompleteAsync(

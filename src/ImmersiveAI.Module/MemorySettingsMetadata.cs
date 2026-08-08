@@ -31,10 +31,10 @@ namespace ImmersiveAI
         public const string KeepRecentTurnsDisplayName = "Keep after compression (exchanges)";
 
         public const string MaxRecentTurnsHint =
-            "The other ceiling: how many exchanges an NPC keeps word for word before older ones are folded into the summary. Whichever ceiling is reached first — this, the percent, or the days — starts the compression. Default 30.";
+            "The other ceiling: how many exchanges an NPC keeps word for word before older ones are folded into their deeper memory. Whichever ceiling is reached first — this, the percent, or the days — starts the compression. Default 40.";
 
         public const string KeepRecentTurnsHint =
-            "How many of the newest exchanges stay word for word after a compression. Must stay below the ceiling above. Default 15.";
+            "How many of the newest exchanges stay word for word after a compression. Must stay below the ceiling above. Default 20.";
 
         // ── the age of what is kept ──
         public const int MinRecentDays = 1;

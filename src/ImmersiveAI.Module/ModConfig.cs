@@ -192,16 +192,12 @@ namespace ImmersiveAI
         public int MaxDailyRequests { get; set; } = 0;
 
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
-        /// compression: the rolling summary, her lasting truths, her sense of self). Kept apart from
+        /// compression: the rolling memory of a person, and her sense of self). Kept apart from
         /// <see cref="MaxTokens"/> — which paces spoken replies — so deep memory has room to be rich:
-        /// a summary of a long shared story plus a full list of truths does not fit in a reply budget.</summary>
+        /// the whole of a long shared story does not fit in a reply budget. Since the distilled
+        /// truths and aims were retired (2026.08.08) this budget is the ONLY bound on how much of a
+        /// person an NPC may carry, so it is deliberately generous.</summary>
         public int MaxMemoryWriteTokens { get; set; } = 1500;
-
-        /// <summary>At most how many lasting truths ("known facts") an NPC may carry about the player.
-        /// At every compression or reflection she is shown all of them and writes the list anew —
-        /// keeping, refining, merging, or releasing as she sees fit — so the list stays hers and never
-        /// silts up with near-duplicates.</summary>
-        public int MaxKnownFacts { get; set; } = 10;
 
         /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
@@ -486,18 +482,6 @@ namespace ImmersiveAI
         /// "Off" (no spark; souls begin plain).</summary>
         public string PersonaSparkMode { get; set; } = "Generate";
 
-        /// <summary>When true, NPCs carry their own personal aims — what they strive for of their own will
-        /// (win back a lost hall, see a child wed well, be free of a lord's leash) — held in a goals.txt
-        /// beside their self. They shape these two ways: one aim at a time mid-conversation, through the
-        /// tend_goals tool (needs a tool-capable backend), and wholesale when they gather their thoughts in
-        /// reflection (works on any backend). The aims are folded into their prompt as "What you strive
-        /// for". Set false to leave NPCs without aims of their own.</summary>
-        public bool EnableNpcGoals { get; set; } = true;
-
-        /// <summary>How many personal aims one NPC may carry at once (the tend_goals tool and reflection
-        /// both honor it). Kept small so the prompt stays lean and their striving stays focused.</summary>
-        public int MaxNpcGoals { get; set; } = 6;
-
         /// <summary>When true, an unhired wanderer the player speaks with may strike the hiring bargain
         /// inside the conversation itself (the strike_bargain tool — needs a tool-capable backend).
         /// NOTHING is settled by talk alone: the tool only lays the terms, a confirm popup names the
@@ -558,7 +542,7 @@ namespace ImmersiveAI
 
         /// <summary>
         /// Reverting a bad turn: when on, each save quietly photographs this campaign's whole memory folder
-        /// (every NPC's memories/self/goals/letters + the letters still on the road) and loading that save
+        /// (every NPC's memories/self/letters + the letters still on the road) and loading that save
         /// restores the photograph — so reloading to before an NPC's angry moment truly un-remembers it, the
         /// same way the game already reverts the relation number that lives inside the save. Off = the old
         /// behavior, where a reload leaves "memories from the future" in place. Snapshots live in _snapshots\
@@ -576,11 +560,14 @@ namespace ImmersiveAI
         /// configurable atmosphere/roleplay lines. No new beats speak in it.</summary>
         public string SystemVoiceName { get; set; } = "Angel";
 
-        /// <summary>How many verbatim turns an NPC keeps before old ones are compressed into the summary.</summary>
-        public int MaxRecentTurns { get; set; } = 30;
+        /// <summary>How many verbatim turns an NPC keeps before old ones are compressed into the rolling
+        /// memory. Widened 30 → 40 on 2026.08.08, when the distilled truths and aims were retired and
+        /// their room came back to the ordinary deep memory.</summary>
+        public int MaxRecentTurns { get; set; } = 40;
 
-        /// <summary>How many of the newest turns stay verbatim after a compression pass.</summary>
-        public int KeepRecentTurnsAfterCompression { get; set; } = 15;
+        /// <summary>How many of the newest turns stay verbatim after a compression pass (15 → 20 with
+        /// the same 2026.08.08 widening).</summary>
+        public int KeepRecentTurnsAfterCompression { get; set; } = 20;
 
         /// <summary>How many in-game days of verbatim turns an NPC keeps before old ones are compressed.</summary>
         public int MaxRecentDays { get; set; } = 30;
@@ -861,14 +848,6 @@ namespace ImmersiveAI
             if (MaxMemoryWriteTokens < MaxTokens) MaxMemoryWriteTokens = MaxTokens;
             if (MaxMemoryWriteTokens > 8000) MaxMemoryWriteTokens = 8000;
 
-            // Truths budget: at least one, and a bound that keeps the prompt from silting up.
-            if (MaxKnownFacts <= 0) MaxKnownFacts = 10;
-            if (MaxKnownFacts > 30) MaxKnownFacts = 30;
-
-            // Aims budget: at least one aim when goals are on, and a small ceiling so striving stays focused.
-            if (MaxNpcGoals <= 0) MaxNpcGoals = 6;
-            if (MaxNpcGoals > 20) MaxNpcGoals = 20;
-
             if (ConversationHiringHagglePercent < 0) ConversationHiringHagglePercent = 0;
             if (ConversationHiringHagglePercent > 90) ConversationHiringHagglePercent = 90;
 
@@ -890,8 +869,8 @@ namespace ImmersiveAI
             if (MaxLocalRumors < 0) MaxLocalRumors = 0;
             if (MaxLocalRumors > 10) MaxLocalRumors = 10;
 
-            if (MaxRecentTurns <= 0) MaxRecentTurns = 30;
-            if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 15;
+            if (MaxRecentTurns <= 0) MaxRecentTurns = 40;
+            if (KeepRecentTurnsAfterCompression <= 0) KeepRecentTurnsAfterCompression = 20;
             if (MaxRecentDays <= 0) MaxRecentDays = 30;
             if (KeepRecentDaysAfterCompression <= 0) KeepRecentDaysAfterCompression = 15;
 

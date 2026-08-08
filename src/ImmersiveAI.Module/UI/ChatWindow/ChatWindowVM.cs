@@ -340,27 +340,17 @@ namespace ImmersiveAI.UI.ChatWindow
         }
 
         // The deep-memory overview: what she carries of the player beyond the verbatim thread — the
-        // rolling summary and the truths she chose to hold — so a long story is readable at a glance.
+        // rolling memory she rewrites whole at every reflection — so a long story is readable at a
+        // glance. (A second block of distilled "truths" stood here until 2026.08.08.)
         private static string BuildOverview(NpcMemory? memory, string npcName)
         {
-            if (memory == null ||
-                (string.IsNullOrWhiteSpace(memory.Summary) && memory.KnownFacts.Count == 0))
+            if (memory == null || string.IsNullOrWhiteSpace(memory.Summary))
                 return string.Empty;
 
+            var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf) ? string.Empty : $" (as of {memory.SummaryAsOf.Trim()})";
             var sb = new StringBuilder();
-            if (!string.IsNullOrWhiteSpace(memory.Summary))
-            {
-                var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf) ? string.Empty : $" (as of {memory.SummaryAsOf.Trim()})";
-                sb.AppendLine($"What lingers in {npcName}'s memory of you{asOf}:");
-                sb.AppendLine(memory.Summary.Trim());
-            }
-            if (memory.KnownFacts.Count > 0)
-            {
-                if (sb.Length > 0) sb.AppendLine();
-                sb.AppendLine("The truths they hold about you:");
-                foreach (var fact in memory.KnownFacts)
-                    sb.AppendLine("• " + fact);
-            }
+            sb.AppendLine($"What lingers in {npcName}'s memory of you{asOf}:");
+            sb.AppendLine(memory.Summary.Trim());
             return sb.ToString().TrimEnd();
         }
 

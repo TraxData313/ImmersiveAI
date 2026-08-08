@@ -33,40 +33,21 @@ public class PromptBuilderTests
     }
 
     [Fact]
-    public void Build_FoldsInTheNpcsAims_AsMyGoals()
+    public void Build_NeverSpeaksOfTheRetiredAimsAndTruths()
     {
-        var persona = Persona();
-        persona.Goals = new() { "Win back my father's hall", "See my sister safely wed" };
+        // The aims list and the distilled truths were retired 2026.08.08 — neither the blocks nor
+        // the two whispers that offered their tools may ever reappear on a sheet.
+        var memory = new NpcMemory { Summary = "We have ridden together a long while." };
+        memory.KnownFacts.Add("a truth she held under the old shape");
 
-        var system = new PromptBuilder().Build(persona, new NpcMemory(), "In the tavern.", "Vulgrim", "Hello")[0].Content;
+        var system = new PromptBuilder().Build(Persona(), memory, "In the tavern.", "Vulgrim", "Hello")[0].Content;
 
-        Assert.Contains("My goals are:", system);
-        Assert.Contains("Win back my father's hall", system);
-        Assert.Contains("See my sister safely wed", system);
-    }
-
-    [Fact]
-    public void Build_OffersTheTendGoalsWhisper_OnlyWhenTheAimsHandRidesAlong()
-    {
-        var withTool = Persona();
-        withTool.CanTendGoals = true;
-        var on = new PromptBuilder().Build(withTool, new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
-        Assert.Contains("My aims are mine", on);
-
-        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
-        Assert.DoesNotContain("My aims are mine", off);
-    }
-
-    [Fact]
-    public void Build_OffersTheHoldTruthWhisper_OnlyWhenTheTruthsHandRidesAlong()
-    {
-        var withTool = Persona();
-        withTool.CanHoldTruths = true;
-        var on = new PromptBuilder().Build(withTool, new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
-        Assert.Contains("among the truths I hold", on);
-
-        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Hello")[0].Content;
-        Assert.DoesNotContain("among the truths I hold", off);
+        Assert.Contains("We have ridden together a long while.", system);
+        Assert.DoesNotContain("My goals are:", system);
+        Assert.DoesNotContain("Truths I decided to hold:", system);
+        Assert.DoesNotContain("a truth she held under the old shape", system);
+        Assert.DoesNotContain("My aims are mine", system);
+        Assert.DoesNotContain("among the truths I hold", system);
     }
 
     [Fact]
@@ -321,7 +302,6 @@ public class PromptBuilderTests
     public void SystemPrompt_ContainsPersonaMemoryAndScene()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
-        memory.KnownFacts.Add("Vulgrim rules Sargot");
 
         var system = new PromptBuilder()
             .Build(Persona(), memory, "On the road near Balgard.", "Vulgrim", "Hello")[0].Content;
@@ -330,7 +310,6 @@ public class PromptBuilderTests
         Assert.Contains("Terse northern speech", system);
         Assert.Contains("On the road near Balgard.", system);
         Assert.Contains("You fought beside Vulgrim at Omor.", system);
-        Assert.Contains("Vulgrim rules Sargot", system);
         Assert.Contains("I distrust Imperial nobility.", system);
         Assert.Contains("How should I speak:", system);
     }
@@ -622,9 +601,11 @@ public class PromptBuilderTests
         Assert.False(PromptBuilder.HasRememberedHistory(new NpcMemory()));
         Assert.True(PromptBuilder.HasRememberedHistory(new NpcMemory { Summary = "s" }));
 
-        var withFact = new NpcMemory();
-        withFact.KnownFacts.Add("f");
-        Assert.True(PromptBuilder.HasRememberedHistory(withFact));
+        // The retired truths field is no longer a layer of memory: a save carrying nothing but old
+        // facts is a soul with no remembered history, and is greeted as a first meeting.
+        var factsOnly = new NpcMemory();
+        factsOnly.KnownFacts.Add("f");
+        Assert.False(PromptBuilder.HasRememberedHistory(factsOnly));
 
         var withTurn = new NpcMemory();
         withTurn.AddTurn(new ConversationTurn { PlayerLine = "p", NpcLine = "n" });
@@ -635,15 +616,13 @@ public class PromptBuilderTests
     public void SystemPrompt_PlacesDeepMemoryBeforeTheScene_SoTheMomentLandsLast()
     {
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor." };
-        memory.KnownFacts.Add("Vulgrim rules Sargot");
 
         var system = new PromptBuilder()
             .Build(Persona(), memory, "And now Vulgrim comes to me.", "Vulgrim", "Hello")[0].Content;
 
-        // The sheet wakes toward the moment: memory → truths → the present scene → the closing whisper,
+        // The sheet wakes toward the moment: deep memory → the present scene → the closing whisper,
         // so "they come to me now" is the last thing held before the conversation itself.
-        Assert.True(system.IndexOf("What Vulgrim is to me") < system.IndexOf("Vulgrim rules Sargot"));
-        Assert.True(system.IndexOf("Vulgrim rules Sargot") < system.IndexOf("And now Vulgrim comes to me."));
+        Assert.True(system.IndexOf("What Vulgrim is to me") < system.IndexOf("And now Vulgrim comes to me."));
         Assert.True(system.IndexOf("And now Vulgrim comes to me.") < system.IndexOf("How should I speak:"));
     }
 
@@ -654,7 +633,6 @@ public class PromptBuilderTests
         // between them, so what I remember of the person sits right beside their arrival — and the
         // separator itself is plumbing that must never reach the LLM.
         var memory = new NpcMemory { Summary = "You fought beside Vulgrim at Omor.", SummaryAsOf = "1087.01.18" };
-        memory.KnownFacts.Add("Vulgrim rules Sargot");
 
         var scene = "It is evening, and I am in Sargot."
             + "\n\n" + PromptBuilder.MeetingSeparator + "\n"
@@ -663,8 +641,7 @@ public class PromptBuilderTests
 
         Assert.DoesNotContain(PromptBuilder.MeetingSeparator, system);
         Assert.True(system.IndexOf("It is evening") < system.IndexOf("What Vulgrim is to me"));
-        Assert.True(system.IndexOf("What Vulgrim is to me") < system.IndexOf("Vulgrim rules Sargot"));
-        Assert.True(system.IndexOf("Vulgrim rules Sargot") < system.IndexOf("And now Vulgrim, my husband, comes to me."));
+        Assert.True(system.IndexOf("What Vulgrim is to me") < system.IndexOf("And now Vulgrim, my husband, comes to me."));
         Assert.True(system.IndexOf("my husband") < system.IndexOf("How should I speak:"));
         // The memory header carries when the thoughts were last gathered.
         Assert.Contains("as I last gathered my thoughts on 1087.01.18", system);

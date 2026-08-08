@@ -12,6 +12,18 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- **One deeper memory instead of three lists.** NPCs no longer keep a separate roster of
+  "lasting truths" about you or a list of "personal goals" beside what they remember. Those
+  lists mostly restated what their memory already held, and made souls repeat themselves.
+  Everything now lives in the one memory they rewrite when they gather their thoughts — and
+  that memory is invited to be far richer, holding the names, promises, debts and particulars
+  the truths used to keep.
+- **NPCs remember more of what you actually said.** They now hold 40 exchanges word for word
+  before folding the older ones into their deeper memory (was 30), and keep 20 after (was 15).
+- Whatever truths and goals your characters already wrote are left exactly where they are —
+  nothing is deleted, they are simply no longer used. (The two related settings are gone from
+  the mod options.)
+
 - **Marriage misgivings are now truly theirs — the robotic checklist is gone.** A soul on the
   road to marrying you no longer carries auto-generated requirements checked against your gold
   or skills. Instead, when marriage truly enters your talks they pause and write down what

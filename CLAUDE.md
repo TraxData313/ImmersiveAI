@@ -12,8 +12,8 @@ decompilation only — no code was copied, so this is freely publishable).
 The two problems it exists to fix, in priority order:
 1. **Repetitive NPCs.** ChatAi stuffs a huge static context into one prompt with a single
    generic system message shared by every NPC. Immersive AI instead gives each NPC a real
-   multi-turn conversation, a rolling summary of older exchanges, durable "known facts",
-   and a distinct speech style.
+   multi-turn conversation, one deep rolling memory of everything older that they rewrite whole
+   when they gather their thoughts, and a distinct speech style.
 2. **Poor chat UI.** ChatAi reuses the vanilla text popup. A custom Gauntlet window is
    planned (Milestone 2); today the reply is shown in the native conversation panel.
 
@@ -28,8 +28,8 @@ You usually only need to open:
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
-- **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self) + `NpcGoals` (`goals.txt`, their own aims — the `tend_goals` tool + the reflection `GOALS:` section).
-- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `TruthTool` (`hold_truth`, the mid-talk hand on KnownFacts) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
+- **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self). NOTE two subsystems were RETIRED 2026.08.08 — the distilled `KnownFacts` (the `hold_truth` tool + the reflection `FACTS:` section) and `NpcGoals`/`goals.txt` (the `tend_goals` tool + the `GOALS:` section): both cramped what the rolling memory already held and read it back to her twice, and each cost a tool slot in every reply. Do not reintroduce either; the deep memory carries it all now.
+- **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
 - **The battle chronicle** → Core `Battles\` (`BattleRecord` data, `BattleLedger` JSON-per-battle + loose find-by-name, `BattleText` — titles/tales/beats/accounts, all unit-tested) + the `ImmersiveChatBehavior.Battles.cs` partial (capture at `OnPlayerBattleEnd` BEFORE the game commits gains, enrich one dispatcher tick later, per-hero downs via `OnHeroCombatHitEvent`) + `Tools\ChronicleTool` (`recall_battle`).
 - **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
@@ -71,9 +71,9 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
                           per battle + loose find-by-name), BattleText (titles/tales/beats/accounts)
   Journey/                JourneyLog (visits + quests, pruning, JSON) and JourneyText (the road
                           journal in words) — the witness log of the player's everyday life
-  Memory/                 NpcMemory (3-layer per-person), NpcSelf (general self-concept),
-                          NpcGoals (general personal aims + fuzzy add/drop/revise/replace),
-                          ConversationTurn, JsonMemoryStore, MemoryCompressor (reflection + self + goals)
+  Memory/                 NpcMemory (2-layer per-person: verbatim turns + the rolling memory),
+                          NpcSelf (general self-concept), ConversationTurn, JsonMemoryStore,
+                          MemoryCompressor (the SUMMARY: contract + the reflection's SELF:)
   Prompts/                PromptBuilder (multi-turn message assembly + first-person beat/letter lines
                           + legacy Angel replay), NpcPersona
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
@@ -84,7 +84,7 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   Tools/FieldCraft.cs     the field-craft (2026.07.12): survey_surroundings + weigh_battle — the country
                           about and the scales of battle, only for souls with a party on the map
-  Tools/HeartTool.cs, Tools/GoalTool.cs  the heart's hand (move_heart) and the aims' hand (tend_goals)
+  Tools/HeartTool.cs      the heart's own hand (move_heart), weighed every reply
   UI/                     MapNoticePatch (the one Harmony patch), ImmersiveChatMapNotification (+ save
                           definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
                           Portraits (shared dark-backdrop portrait codes), ChatWindow\ (the chat window:
@@ -162,14 +162,28 @@ TaleWorlds API usage patterns, never copy from it.
 - **Core stays pure.** No `TaleWorlds.*`, no `System.Net.Http`, no game or HTTP dependencies
   in `ImmersiveAI.Core`. That is what keeps it unit-testable. LLM backends and game glue
   live in `ImmersiveAI.Module` behind the `IChatClient` interface.
-- **Memory is three layers** (`NpcMemory`): `RecentTurns` (verbatim, sent as real
-  user/assistant messages), `Summary` (rolling, LLM-compressed when turns exceed
-  `MaxRecentTurns`), and `KnownFacts` (distilled one-liners). This is the anti-repetition core.
-  **KnownFacts are REPLACE, not append** (2026.07.10): each compression/reflection shows her the
-  whole list and asks her to write it anew — the returned FACTS section becomes the whole truth
-  (so she can merge rewordings and release stale ones, up to `MaxKnownFacts`); a reply with no
-  FACTS section leaves the list untouched, and `FACTS: none` is her honored choice to drop all.
-  Memory-writing calls run on a separate client with `MaxMemoryWriteTokens` breathing room.
+- **Memory is TWO layers** (`NpcMemory`, since 2026.08.08): `RecentTurns` (verbatim, sent as real
+  user/assistant messages) and `Summary` — one rolling deep memory of everything older, rewritten
+  WHOLE at each compression/reflection (`ApplyCompression` just takes it; a reply with no usable
+  `SUMMARY:` leaves the old one standing). This is the anti-repetition core. Memory-writing calls
+  run on a separate client with `MaxMemoryWriteTokens` breathing room — which, with FACTS and GOALS
+  gone, is now the ONLY bound on how much of a person a soul may carry.
+  **THE TRUTHS AND THE AIMS ARE RETIRED (2026.08.08, Anton's call).** A third layer of distilled
+  one-line `KnownFacts` (the `hold_truth` tool + the reflection's `FACTS:` replace-all contract) and
+  a parallel `NpcGoals`/`goals.txt` system (the `tend_goals` tool + `GOALS:`) rode here until then.
+  They were cut for two reasons: the lists cramped the same material the rolling memory already held
+  and then read it back to her a second time in her own sheet, and each cost a tool slot in every
+  spoken reply (tools compete for attention — see the gpt-4o `move_heart` shyness). Their room went
+  to the deep memory: a much richer `SUMMARY:` ask plus `MaxRecentTurns` 30→40 / keep 15→20.
+  **Do not reintroduce either.** Compat rails, keep forever: `NpcMemory.KnownFacts` survives as a
+  DEAD field so an old `memories.json` keeps what it already holds (read by nothing, written by
+  nothing, never folded into a prompt); old `goals.txt` files are simply never read again; and
+  `ParseResponse` still bounds its sections on stray `FACTS:`/`GOALS:` labels so an old-habit model
+  can never silt a bullet list into the memory or the self.
+  The one load-bearing piece of prose is `MemoryCompressor.AppendReplyFormat` — it must keep both
+  inviting the particulars (names, promises, debts) and warning her the memory is written whole
+  ("what I do not set down here fades from me"), or each pass quietly erodes what the truths used
+  to nail down. It is guarded by tests; change it deliberately, never in passing.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
@@ -442,12 +456,6 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   calendar, narrated gently so she can weigh it in her own choices; two days of three the season biases
   the humor pick toward its cluster. ALL of it deterministic — FNV-1a over (StringId, campaign day), no
   state, no persistence — so a reload rerolls no one's weather; both default on),
-  `EnableNpcGoals` + `MaxNpcGoals` (personal goals — each NPC carries their own aims, what they strive
-  for of their own will, in a `goals.txt` beside `self.txt`; shaped one aim at a time mid-conversation
-  via the `tend_goals` native tool — `Tools\GoalTool`, add/drop/revise, tool-capable backends only, used
-  sparingly unlike the every-reply heart — and reworked wholesale in reflection (a `GOALS:` section with
-  the same replace/none contract as `FACTS:`, works on any backend); folded into the prompt as "What you
-  strive for" right after "Who you have become"; default on, cap 6, clamp 1..20),
   `EnableConversationHiring` + `ConversationHiringHagglePercent` (2026.08.07 — HIRING BY HANDSHAKE:
   an unhired wanderer facing the player may strike the hiring bargain in the talk itself via the
   `strike_bargain` tool (`Tools\BargainTool`), riding ONLY the live reply trunk. The one law: words
@@ -476,7 +484,7 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   ignored on load): when marriage truly enters the talk she writes her own doubts via the
   `weigh_misgivings` tool (`Tools\MisgivingTool`, rides beside tend_courtship on the same tally —
   set_down one-per-line or honest "none" / settle-with-a-light-word / revise / reopen; Core
-  `CourtshipMisgiving`+`CourtshipMisgivings`, NpcGoals' fuzzy-match mold, cap 5 TOTAL, unit-tested),
+  `CourtshipMisgiving`+`CourtshipMisgivings`, its own lenient fuzzy matching, cap 5 TOTAL, unit-tested),
   and the road's only misgiving-rails are HERS: Ready + the betrothal wait for a weighed heart
   (`MisgivingsWeighed` — even "none" counts) with zero standing (`MisgivingsUnweighed`/
   `MisgivingsRemain` verdicts, numberless refusals; the wedding lay re-checks neither). The player
@@ -507,7 +515,6 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   closing), Enter never sends while it is up; saving keeps the file's #-comment lines gathered at
   the top (PromptFiles.LoadNpcPromptForEdit/SaveNpcPromptFromGame + the global pair) — no restart,
   prompts are re-read at every context build,
-  `MaxKnownFacts` (how many lasting truths an NPC may carry; default 10, clamp 1..30) +
   `RevertMemoriesWithSaves` (save-scoped memory — each save photographs the whole campaign memory folder
   and loading it restores the photo, so a reload truly un-remembers a bad turn, the way the game already
   rewinds the relation inside the save; the fix for the reload-divergence "memories from the future" bug;
@@ -597,12 +604,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     `Hero.SetHeroEncyclopediaTextAndLinks` paragraph, framed "So runs my story, as the world
     tells it:") — gathered by `BackstoryBuilder` (Module), shaped by `SelfSeedFormatter` (Core),
     seeded via `LoadOrSeedSelf`. Deleting `self.txt` re-seeds. Toggle: `SeedSelfFromWorldStory`.
-  - `goals.txt` — the NPC's OWN personal aims (`NpcGoals`), one per line — what they strive for of
-    their own will (win back a lost hall, see a child wed, be free of a lord). General to the NPC (like
-    the self), authored by them: one aim at a time mid-conversation via the `tend_goals` tool
-    (`GoalTool`), and reworked wholesale in reflection (the `GOALS:` section, replace-all like `FACTS:`).
-    Folded into the prompt as "What you strive for". Comment lines `#`/`//` ignored; deleting it clears
-    their aims. Toggle: `EnableNpcGoals` (cap `MaxNpcGoals`).
+  - `goals.txt` — RETIRED 2026.08.08. Held the NPC's own aims until then; nothing reads or writes
+    it any more. Existing files are deliberately left where they lie (never deleted, never migrated),
+    so the folder of a long-played campaign may still show one.
   - `letters.txt` — human-readable log of every letter carried between the player and this NPC,
     both directions, including "(read and let lie unanswered)" notes. Append-only record.
   - future per-NPC files go here too.
@@ -915,15 +919,13 @@ behavior — plain-call, sees the last incoming words, returns one "Mount and Bl
 failure falls back to game-name-prepended raw question) and the result closes by telling her to speak the
 substance in her own world's words and let no meta terms pass her lips — that closing framing is the whole
 fourth-wall defense, keep it. It runs off-thread (no game state) and shares the recall round budget.
-Config: `EnableWebSearch`. Beside the aims' hand rides **`hold_truth` (`Tools\TruthTool`, 2026.07.11) — the
-truths' hand:** mid-reply the NPC may set down (or release) ONE lasting truth into her `KnownFacts`
-(Core `NpcMemory.AddKnownFact`/`DropKnownFact`, dedupe + `MaxKnownFacts` cap honored, honest "mind is full"
-answer at the cap); applied to the LIVE memory instance the turn speaks from when one rides along
-(`CompleteSpokenAsync`'s `liveMemory`) so the end-of-turn save can never clobber it, saved at once either
-way, with a soft "sets down a truth to keep…" activity notice like the goals' hand. No config — rides
-whenever the backend can carry tools; reflection still rewrites the whole list. Every tool call also fires
+Config: `EnableWebSearch`. (Two personal hands rode beside these until 2026.08.08 and are now RETIRED:
+`hold_truth`/`Tools\TruthTool`, the mid-talk hand on `KnownFacts`, and `tend_goals`/`Tools\GoalTool`,
+the hand on `goals.txt`. The live-instance discipline they established survives in the courtship
+resolvers — mutate `CompleteSpokenAsync`'s `liveMemory` and save at once, so the end-of-turn save can
+never clobber a mid-reply write.) Every tool call also fires
 a soft **activity notice** ("X is remembering… (name)", "X takes stock of the company…", "X is researching…
-(question)", "X sets an aim in order…", "X sets down a truth to keep…") via `NotifyActivity`/the resolvers
+(question)") via `NotifyActivity`/the resolvers
 in the behavior — marshaled to the game thread, `ShowNpcActivity`. `recall_company` (2026.07.10, "Yngvald doesn't know his own
 men") is the inward one — no name argument: the asker's OWN warband, known exactly (a captain reads his
 muster roll): head-count, hale/wounded, companions by name, ranks by troop kind, prisoners in the train,

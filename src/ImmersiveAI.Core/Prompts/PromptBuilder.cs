@@ -295,8 +295,7 @@ namespace ImmersiveAI.Core.Prompts
         /// the first-meeting and the familiar <see cref="ArrivalLine"/>.</summary>
         public static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
-            || !string.IsNullOrWhiteSpace(memory.Summary)
-            || memory.KnownFacts.Count > 0;
+            || !string.IsNullOrWhiteSpace(memory.Summary);
 
         /// <summary>The NPC's own awareness of the player coming to them, closing on the greeting
         /// being theirs to speak. Spoken through <see cref="BuildInnerPrompt"/> and recorded — with
@@ -470,16 +469,6 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.SelfConcept.Trim());
             }
 
-            // What they strive toward — a soul's longings colour everything they say and do.
-            if (persona.Goals != null && persona.Goals.Count > 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine("My goals are:");
-                foreach (var goal in persona.Goals)
-                    if (!string.IsNullOrWhiteSpace(goal))
-                        sb.AppendLine("- " + goal.Trim());
-            }
-
             // The player-authored guidance rides high, right after who they are: the world they live in
             // (the global prompt) and words meant for them alone (the per-NPC prompt). Both are folded
             // in as the NPC's OWN knowledge, first person — no narrator hands them anything.
@@ -526,14 +515,6 @@ namespace ImmersiveAI.Core.Prompts
                     : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
                 sb.AppendLine($"What {playerName} is to me{asOf}:");
                 sb.AppendLine(memory.Summary.Trim());
-            }
-
-            if (memory.KnownFacts.Count > 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine("Truths I decided to hold:");
-                foreach (var fact in memory.KnownFacts)
-                    sb.AppendLine("- " + fact);
             }
 
             // The courtship road rides beside the deep memory of this person — where the heart
@@ -586,15 +567,6 @@ namespace ImmersiveAI.Core.Prompts
             // asked in a separate breath after the reply, and this whisper would only confuse.
             if (persona.CanMoveHeart)
                 sb.AppendLine("- My heart is my own, a living thing. Each time, before I answer, I set down honestly how the moment moved my regard for them — every reply, 0 when it truly held. A kindness or a slight moves it a little (one to three); only what shakes the soul moves it greatly, and a heart already given wholly can still be warmed. My measure agrees with my words — warmth spoken and a heart unmoved cannot both be true. I never speak the measure aloud.");
-
-            // Offered only when the tend_goals tool truly rides along. Unlike the heart, this is not
-            // touched every reply — only when the aims themselves genuinely shift.
-            if (persona.CanTendGoals)
-                sb.AppendLine("- My aims are mine — to hold, take up, or lay down as my life moves. When what I strive for truly shifts, I quietly set them in order; sparingly, for most talk changes nothing.");
-
-            // Offered only when the hold_truth tool rides along: the mid-talk hand on the lasting truths.
-            if (persona.CanHoldTruths)
-                sb.AppendLine("- When something said here deserves to stay with me — a name, a bond, a promise, a deed — I may quietly set it down among the truths I hold, so it outlives this day's talk.");
 
             // Offered only when the recall_battle tool rides along (they truly share a battle with
             // this person): the chronicle's hand.

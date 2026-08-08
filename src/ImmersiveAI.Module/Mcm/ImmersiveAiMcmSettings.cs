@@ -184,15 +184,9 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableWebSearch { get; set; } = true;
 
-        [SettingPropertyInteger("Lasting truths per NPC", 1, 30, "0", Order = 6, RequireRestart = false,
-            HintText = "How many distilled 'known facts' about you an NPC may carry at once. Higher means a longer memory but a larger, pricier prompt.")]
-        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
-        public int MaxKnownFacts { get; set; } = 10;
-
-        [SettingPropertyInteger("Personal aims per NPC", 1, 20, "0", Order = 7, RequireRestart = false,
-            HintText = "How many personal goals an NPC may hold at once — what they strive for of their own will. Kept small so their striving stays focused.")]
-        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
-        public int MaxNpcGoals { get; set; } = 6;
+        // Orders 6 and 7 stood here until 2026.08.08: "Lasting truths per NPC" and "Personal aims
+        // per NPC", both retired with the lists they capped. The gap is deliberate — the remaining
+        // orders keep their places rather than shuffling under a returning player's eye.
 
         [SettingPropertyBool("Hiring by handshake", Order = 8, RequireRestart = false,
             HintText = "An unhired wanderer you talk terms with may strike the hiring bargain in the conversation itself. Nothing is settled by talk alone: a popup names the exact price, and only your click pays and hires — the same rules as the tavern dialog (enough gold, room in your company).")]

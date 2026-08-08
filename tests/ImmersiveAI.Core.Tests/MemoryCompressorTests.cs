@@ -26,11 +26,11 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public async Task CompressAsync_FoldsOldTurnsIntoSummaryAndFacts()
+    public async Task CompressAsync_FoldsOldTurnsIntoTheRollingMemory()
     {
         var client = new FakeChatClient
         {
-            Response = "SUMMARY:\nWe fought together at Omor and grew to trust one another.\nFACTS:\n- Vulgrim saved my life at Omor\n- none of importance"
+            Response = "SUMMARY:\nWe fought together at Omor and grew to trust one another. He saved my life there."
         };
         var memory = MemoryWithTurns(10);
 
@@ -40,7 +40,7 @@ public class MemoryCompressorTests
         Assert.Equal(4, memory.RecentTurns.Count);
         Assert.Equal("p6", memory.RecentTurns[0].PlayerLine);
         Assert.Contains("Omor", memory.Summary);
-        Assert.Contains("Vulgrim saved my life at Omor", memory.KnownFacts);
+        Assert.Contains("saved my life", memory.Summary);
     }
 
     [Fact]
@@ -62,14 +62,12 @@ public class MemoryCompressorTests
         var client = new FakeChatClient { Response = "SUMMARY:\nok" };
         var memory = MemoryWithTurns(6);
         memory.Summary = "Old friends from the north.";
-        memory.KnownFacts.Add("Vulgrim rules Sargot");
 
         await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
 
         var prompt = client.LastRequest![0].Content;
         // Whole deep memory is visible so they can update it with full context.
         Assert.Contains("Old friends from the north.", prompt);
-        Assert.Contains("Vulgrim rules Sargot", prompt);
         // Oldest turns are the ones being folded in.
         Assert.Contains("The moments now fading", prompt);
         Assert.Contains("p0", prompt);
@@ -85,7 +83,7 @@ public class MemoryCompressorTests
     {
         var client = new FakeChatClient
         {
-            Response = "SUMMARY:\nOn reflection, we are not yet wed, but I hope for it.\nFACTS:\n- We are betrothed, not married"
+            Response = "SUMMARY:\nOn reflection, we are not yet wed, but I hope for it. We are betrothed, no more."
         };
         var memory = MemoryWithTurns(3);
         memory.Summary = "An old, stale summary.";
@@ -96,8 +94,8 @@ public class MemoryCompressorTests
         Assert.True(reflected);
         Assert.NotNull(client.LastRequest); // she actually re-thinks (an LLM call happened)
         Assert.Equal(3, memory.RecentTurns.Count); // no turns dropped
-        Assert.Contains("not yet wed", memory.Summary); // summary rewritten
-        Assert.Contains("We are betrothed, not married", memory.KnownFacts);
+        Assert.Contains("not yet wed", memory.Summary); // memory rewritten whole
+        Assert.DoesNotContain("stale", memory.Summary);
     }
 
     [Fact]
@@ -143,7 +141,35 @@ public class MemoryCompressorTests
         Assert.Contains("I set it down in exactly this shape:", prompt);
         // Kept the machine-readable contract the parser depends on.
         Assert.Contains("SUMMARY:", prompt);
-        Assert.Contains("FACTS:", prompt);
+    }
+
+    [Fact]
+    public void BuildCompressionRequest_AsksForNeitherTruthsNorAims()
+    {
+        // Both lists were retired 2026.08.08; the rolling memory carries the whole of it now. Asking
+        // for them again would resurrect exactly the cramped, repeated shape we removed.
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
+
+        Assert.DoesNotContain("FACTS:", prompt);
+        Assert.DoesNotContain("GOALS:", prompt);
+    }
+
+    [Fact]
+    public void BuildCompressionRequest_WarnsHerTheMemoryIsWrittenWhole_AndInvitesTheParticulars()
+    {
+        // The load-bearing half of the ask. Without the "what I do not set down fades" warning every
+        // pass quietly erodes what the retired truths used to nail down; without the invitation to
+        // the particulars she writes a bare précis. Change this wording deliberately, never in passing.
+        var memory = MemoryWithTurns(2);
+
+        var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
+
+        Assert.Contains("I write it whole each time", prompt);
+        Assert.Contains("fades from me", prompt);
+        Assert.Contains("the names that matter", prompt);
+        Assert.Contains("as much room as the story truly asks", prompt);
     }
 
     [Fact]
@@ -167,76 +193,19 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public async Task CompressAsync_RepliedFactsReplaceTheOldList_SoSheCanRefactorThem()
+    public async Task CompressAsync_NeverTouchesTheRetiredTruthsField()
     {
-        // The old merge-only behavior piled rewordings up forever; now the FACTS she returns
-        // ARE her truths (she is shown the whole list and asked to write it anew).
-        var client = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS:\n- Vulgrim's castle feels like home" };
-        var memory = MemoryWithTurns(6);
-        memory.KnownFacts.Add("The warmth and hospitality of Vulgrim's castle create a sense of home");
-        memory.KnownFacts.Add("Vulgrim's castle is warm and hospitable");
-
-        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
-
-        var fact = Assert.Single(memory.KnownFacts);
-        Assert.Equal("Vulgrim's castle feels like home", fact);
-    }
-
-    [Fact]
-    public async Task CompressAsync_FactsNone_IsHerChoiceToReleaseThemAll()
-    {
-        var client = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS: none" };
-        var memory = MemoryWithTurns(6);
-        memory.KnownFacts.Add("a truth she has let go");
-
-        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
-
-        Assert.Empty(memory.KnownFacts);
-    }
-
-    [Fact]
-    public async Task CompressAsync_ReplyWithoutFactsSection_LeavesHerTruthsUntouched()
-    {
-        // A malformed reply (no FACTS section at all) must never wipe her memory.
+        // Whatever an older save still carries there stays exactly as it lies: unread, unwritten,
+        // and above all not destroyed by the first compression after the update.
         var client = new FakeChatClient { Response = "SUMMARY:\nok" };
         var memory = MemoryWithTurns(6);
-        memory.KnownFacts.Add("a truth that must survive");
+        memory.KnownFacts.Add("a truth she held under the old shape");
 
         await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2);
 
-        Assert.Equal(new[] { "a truth that must survive" }, memory.KnownFacts);
-    }
-
-    [Fact]
-    public async Task CompressAsync_TrimsRepliedFactsToTheBudget()
-    {
-        var client = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS:\n- f1\n- f2\n- f3" };
-        var memory = MemoryWithTurns(6);
-
-        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, maxFacts: 2);
-
-        Assert.Equal(new[] { "f1", "f2" }, memory.KnownFacts);
-    }
-
-    [Fact]
-    public void BuildCompressionRequest_AsksHerToWriteTruthsAnew_WithTheBudget()
-    {
-        var memory = MemoryWithTurns(2);
-
-        var prompt = MemoryCompressor.BuildCompressionRequest(
-            memory, memory.RecentTurns, systemVoiceName: null, maxFacts: 7)[0].Content;
-
-        Assert.Contains("I write my truths anew", prompt);
-        Assert.Contains("at most 7", prompt);
-        Assert.Contains("falls away from me", prompt);
-    }
-
-    [Fact]
-    public void ParseResponse_ReportsWhetherAFactsSectionWasPresent()
-    {
-        Assert.True(MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS: none").HasFactsSection);
-        Assert.True(MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS:\n- f").HasFactsSection);
-        Assert.False(MemoryCompressor.ParseResponse("SUMMARY:\ns").HasFactsSection);
+        Assert.Equal(new[] { "a truth she held under the old shape" }, memory.KnownFacts);
+        // ...and it is not read back to her either.
+        Assert.DoesNotContain("a truth she held under the old shape", client.LastRequest![0].Content);
     }
 
     [Fact]
@@ -259,12 +228,12 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public void ParseResponse_HandlesMissingFactsSection()
+    public void ParseResponse_HandlesASummaryAlone()
     {
         var result = MemoryCompressor.ParseResponse("SUMMARY:\nJust a summary.");
 
         Assert.Equal("Just a summary.", result.Summary);
-        Assert.Empty(result.Facts);
+        Assert.Null(result.Self);
     }
 
     [Fact]
@@ -276,29 +245,32 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public void ParseResponse_FactsNone_YieldsNoFacts()
+    public void ParseResponse_AStrayRetiredSection_NeverSiltsUpTheSummaryOrTheSelf()
     {
-        var result = MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS:\n- none");
+        // Nothing asks for FACTS/GOALS any more, but a model with the old habit may volunteer one.
+        // It is discarded — and, crucially, still BOUNDS its neighbours, so no bullet list can leak
+        // into the memory or the self.
+        var result = MemoryCompressor.ParseResponse(
+            "SUMMARY:\nWe spoke of the war.\nFACTS:\n- The player spared my brother\nSELF:\nI am wearier than I was.\nGOALS:\n- to go home");
 
-        Assert.Empty(result.Facts);
+        Assert.Equal("We spoke of the war.", result.Summary);
+        Assert.Equal("I am wearier than I was.", result.Self);
     }
 
     [Fact]
-    public void ParseResponse_SelfSection_IsExtracted_AndNotMistakenForFacts()
+    public void ParseResponse_SelfSection_IsExtracted()
     {
         var result = MemoryCompressor.ParseResponse(
-            "SUMMARY:\nWe spoke of the war.\nFACTS:\n- The player spared my brother\nSELF:\nI am wearier than I was, but I still hope.");
+            "SUMMARY:\nWe spoke of the war.\nSELF:\nI am wearier than I was, but I still hope.");
 
         Assert.Equal("We spoke of the war.", result.Summary);
-        Assert.Contains("The player spared my brother", result.Facts);
-        Assert.Single(result.Facts); // the self paragraph did not leak into facts
         Assert.Equal("I am wearier than I was, but I still hope.", result.Self);
     }
 
     [Fact]
     public void ParseResponse_NoSelfSection_LeavesSelfNull()
     {
-        var result = MemoryCompressor.ParseResponse("SUMMARY:\nok\nFACTS:\n- a truth");
+        var result = MemoryCompressor.ParseResponse("SUMMARY:\nok");
 
         Assert.Null(result.Self);
     }
@@ -382,69 +354,19 @@ public class MemoryCompressorTests
     }
 
     [Fact]
-    public void ParseResponse_GoalsSection_IsExtracted_AndSelfNeverLeaksIntoIt()
+    public void BuildReflectionRequest_AsksForNeitherTruthsNorAims()
     {
-        var result = MemoryCompressor.ParseResponse(
-            "SUMMARY:\nWe spoke of the war.\nFACTS:\n- The player spared my brother\nSELF:\nI am wearier than I was.\nGOALS:\n- Win back my father's hall\n- See my sister wed");
-
-        Assert.Equal("I am wearier than I was.", result.Self); // self did not swallow the goals
-        Assert.True(result.HasGoalsSection);
-        Assert.Equal(new[] { "Win back my father's hall", "See my sister wed" }, result.Goals);
-    }
-
-    [Fact]
-    public void ParseResponse_ReportsWhetherAGoalsSectionWasPresent_AndHonorsNone()
-    {
-        Assert.False(MemoryCompressor.ParseResponse("SUMMARY:\ns\nFACTS:\n- f").HasGoalsSection);
-        var none = MemoryCompressor.ParseResponse("SUMMARY:\ns\nGOALS: none");
-        Assert.True(none.HasGoalsSection);
-        Assert.Empty(none.Goals);
-    }
-
-    [Fact]
-    public void BuildReflectionRequest_WithGoals_ShowsCurrentAimsAndAsksForGoals()
-    {
+        // Both were retired 2026.08.08 — the reflection settles the rolling memory and the self,
+        // nothing else. (The retired blocks read the same lists back to her that the memory held.)
         var memory = MemoryWithTurns(2);
 
         var prompt = MemoryCompressor.BuildReflectionRequest(
-            memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: null,
-            maxFacts: 10, goals: new[] { "Win back my father's hall" }, maxGoals: 4)[0].Content;
+            memory, System.Array.Empty<ConversationTurn>(), systemVoiceName: null, selfText: "I am a cautious soul.")[0].Content;
 
-        Assert.Contains("what I strive for", prompt);
-        Assert.Contains("Win back my father's hall", prompt); // current aims shown for reworking
-        Assert.Contains("GOALS:", prompt);                    // the answer slot is offered
-        Assert.Contains("at most 4", prompt);                 // the budget carried
-    }
-
-    [Fact]
-    public void BuildReflectionRequest_WithoutGoals_DoesNotAskForGoals()
-    {
-        var memory = MemoryWithTurns(2);
-
-        var prompt = MemoryCompressor.BuildReflectionRequest(memory, System.Array.Empty<ConversationTurn>())[0].Content;
-
+        Assert.DoesNotContain("FACTS:", prompt);
         Assert.DoesNotContain("GOALS:", prompt);
         Assert.DoesNotContain("what I strive for", prompt);
-    }
-
-    [Fact]
-    public async Task ReflectAsync_RepliedGoalsReplaceTheAims_AndAbsentSectionLeavesThemUntouched()
-    {
-        var memory = MemoryWithTurns(3);
-
-        // A present GOALS section replaces the aims wholesale (won ones released, new ones taken up).
-        var replacing = new FakeChatClient { Response = "SUMMARY:\nok\nGOALS:\n- Take back Sargot\n- Wed well" };
-        var goals = new NpcGoals();
-        goals.AddGoal("An old aim now finished");
-        await new MemoryCompressor(replacing).ReflectAsync(memory, keepMostRecent: 5, systemVoiceName: null, self: null, maxFacts: 10, goals: goals, maxGoals: 6);
-        Assert.Equal(new[] { "Take back Sargot", "Wed well" }, goals.Goals);
-
-        // No GOALS section at all → aims stand untouched (a malformed reply can't wipe them).
-        var silent = new FakeChatClient { Response = "SUMMARY:\nok\nFACTS:\n- a truth" };
-        var kept = new NpcGoals();
-        kept.AddGoal("An aim that must survive");
-        await new MemoryCompressor(silent).ReflectAsync(MemoryWithTurns(3), keepMostRecent: 5, systemVoiceName: null, self: null, maxFacts: 10, goals: kept, maxGoals: 6);
-        Assert.Equal(new[] { "An aim that must survive" }, kept.Goals);
+        Assert.DoesNotContain("Truths I already hold", prompt);
     }
 
     [Theory]

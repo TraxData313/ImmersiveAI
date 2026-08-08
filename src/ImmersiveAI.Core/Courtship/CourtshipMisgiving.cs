@@ -25,10 +25,10 @@ namespace ImmersiveAI.Core.Courtship
     }
 
     /// <summary>
-    /// The operations of her own hand over the misgivings list — pure and unit-tested, the NpcGoals
-    /// mold: fuzzy matching so a restatement lands on the misgiving it means, a hard cap so the
-    /// heart never files a ledger, and "none" honored as a real answer (a clear heart is weighed
-    /// too). The game layer owns when the tool rides and where the list lives (NpcMemory).
+    /// The operations of her own hand over the misgivings list — pure and unit-tested: fuzzy
+    /// matching so a restatement lands on the misgiving it means, a hard cap so the heart never
+    /// files a ledger, and "none" honored as a real answer (a clear heart is weighed too). The
+    /// game layer owns when the tool rides and where the list lives (NpcMemory).
     /// </summary>
     public static class CourtshipMisgivings
     {
@@ -112,9 +112,9 @@ namespace ImmersiveAI.Core.Courtship
             return hit;
         }
 
-        /// <summary>The held misgiving that best matches a restatement of it (NpcGoals' lenient
-        /// mold: exact, then containment, then word-overlap above a real majority), among those
-        /// passing <paramref name="among"/>. Null when nothing is close enough.</summary>
+        /// <summary>The held misgiving that best matches a restatement of it — leniently: exact,
+        /// then containment, then word-overlap above a real majority — among those passing
+        /// <paramref name="among"/>. Null when nothing is close enough.</summary>
         public static CourtshipMisgiving? FindBestMatch(
             List<CourtshipMisgiving>? list, string? query, Func<CourtshipMisgiving, bool>? among = null)
         {

@@ -12,8 +12,8 @@ decompilation only — no code was copied, so this is freely publishable).
 The two problems it exists to fix, in priority order:
 1. **Repetitive NPCs.** ChatAi stuffs a huge static context into one prompt with a single
    generic system message shared by every NPC. Immersive AI instead gives each NPC a real
-   multi-turn conversation, a rolling summary of older exchanges, durable "known facts",
-   and a distinct speech style.
+   multi-turn conversation, one deep rolling memory of everything older that they rewrite whole
+   when they gather their thoughts, and a distinct speech style.
 2. **Poor chat UI.** ChatAi reuses the vanilla text popup. A custom Gauntlet window is
    planned (Milestone 2); today the reply is shown in the native conversation panel.
 
@@ -65,9 +65,13 @@ TaleWorlds API usage patterns, never copy from it.
 - **Core stays pure.** No `TaleWorlds.*`, no `System.Net.Http`, no game or HTTP dependencies
   in `ImmersiveAI.Core`. That is what keeps it unit-testable. LLM backends and game glue
   live in `ImmersiveAI.Module` behind the `IChatClient` interface.
-- **Memory is three layers** (`NpcMemory`): `RecentTurns` (verbatim, sent as real
-  user/assistant messages), `Summary` (rolling, LLM-compressed when turns exceed
-  `MaxRecentTurns`), and `KnownFacts` (distilled one-liners). This is the anti-repetition core.
+- **Memory is TWO layers** (`NpcMemory`, since 2026.08.08): `RecentTurns` (verbatim, sent as real
+  user/assistant messages) and `Summary` — one rolling deep memory of everything older, rewritten
+  WHOLE at each compression. This is the anti-repetition core. A third layer of distilled
+  `KnownFacts` (the `hold_truth` tool + the `FACTS:` section) and a parallel `NpcGoals`/`goals.txt`
+  system (`tend_goals` + `GOALS:`) were RETIRED that day — they cramped what the memory already
+  held, read it back to her twice, and each cost a tool slot in every reply. Don't reintroduce
+  either. `NpcMemory.KnownFacts` survives as a dead field so old saves keep what they hold.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
@@ -138,10 +142,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   situation after the self: a daily humor for everyone, and for women 15–50 not with child the body's
   monthly season, "the custom of women", in four turnings on a per-woman 26–30-day calendar that also
   biases the humor; all deterministic FNV-1a(StringId, campaign day) — reloads reroll no one's weather),
-  `EnableNpcGoals` + `MaxNpcGoals` (personal aims in goals.txt: the `tend_goals` tool shapes them
-  one at a time mid-conversation, reflection reworks them wholesale via a `GOALS:` replace-all section),
-  `MaxKnownFacts` (lasting-truths budget; the NPC rewrites the whole list at each reflection —
-  replace, not append) + `MaxMemoryWriteTokens` (separate output budget for memory-writing calls),
+  `MaxMemoryWriteTokens` (separate output budget for memory-writing calls — with the truths and aims
+  retired, the only bound on how much of a person a soul may carry),
   `NotifyOnMemoryRefactor` (soft notice when an NPC's compression reworks her deep memory),
   `ModelContextWindows` (user-editable model → context-window dict the memory-percent settings
   scale against; longest key contained in the model id wins), `DevMode` (default false: hides the
@@ -172,11 +174,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
     First seeded from the story the world tells of them: a wanderer's tavern tale or a noble's
     encyclopedia account (`BackstoryBuilder` Module + `SelfSeedFormatter` Core, hooked in
     `LoadOrSeedSelf`); deleting the file re-seeds. Toggle: `SeedSelfFromWorldStory`.
-  - `goals.txt` — the NPC's OWN personal aims (`NpcGoals`), one per line, what they strive for of
-    their own will. General to them like the self; authored by them via the `tend_goals` tool
-    (mid-conversation) and the reflection `GOALS:` section (wholesale, replace-all like FACTS).
-    Folded into the prompt as "What you strive for". Comment lines `#`/`//` ignored; deleting it
-    clears their aims. Toggle: `EnableNpcGoals`.
+  - `goals.txt` — RETIRED 2026.08.08; nothing reads or writes it. Existing files are left where
+    they lie, so a long-played campaign's folders may still show one.
   - `letters.txt` — human-readable log of all letters carried between the player and this NPC.
   - future per-NPC files go here too.
 - `NPCs\campaign_<id>\_letters.json` — letters currently on the road (Core `LetterBag`); they

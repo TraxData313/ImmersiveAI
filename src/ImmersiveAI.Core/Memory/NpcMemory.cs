@@ -6,11 +6,13 @@ using ImmersiveAI.Core.Courtship;
 namespace ImmersiveAI.Core.Memory
 {
     /// <summary>
-    /// Long-term memory for one NPC. Three layers:
+    /// Long-term memory for one NPC. Two layers:
     /// - RecentTurns: verbatim recent exchanges, sent to the LLM as real multi-turn messages.
-    /// - Summary: rolling prose summary of older exchanges, compressed by an LLM call.
-    /// - KnownFacts: durable one-line facts the NPC has learned ("The player saved my caravan on day 34").
+    /// - Summary: rolling prose memory of everything older, rewritten whole by an LLM call.
     /// This replaces ChatAi's flat truncated string list, which is why its NPCs forget and repeat.
+    /// (A third layer of distilled one-line "known facts" rode here until 2026.08.08; it cramped
+    /// the same things the summary already held and read them back to her twice — see
+    /// <see cref="KnownFacts"/>.)
     /// </summary>
     public sealed class NpcMemory
     {
@@ -20,6 +22,12 @@ namespace ImmersiveAI.Core.Memory
 
         public List<ConversationTurn> RecentTurns { get; set; } = new List<ConversationTurn>();
         public string Summary { get; set; } = string.Empty;
+
+        /// <summary>LEGACY, retired 2026.08.08: the distilled one-line truths an NPC used to hold
+        /// beside the summary (the hold_truth tool and the reflection's FACTS section, both gone).
+        /// Nothing reads or writes it any more — it survives only so an older memories.json keeps
+        /// what it already holds instead of losing it on the next save. Never fold it into a prompt
+        /// again; the rolling <see cref="Summary"/> carries the whole of what she remembers now.</summary>
         public List<string> KnownFacts { get; set; } = new List<string>();
 
         /// <summary>Lifetime count of exchanges ever shared with the player, never reduced by
@@ -185,65 +193,19 @@ namespace ImmersiveAI.Core.Memory
                 : RecentTurns.Take(count).ToList();
         }
 
-        /// <summary>Sets down one lasting truth mid-conversation (the hold_truth tool). Trimmed and
-        /// deduplicated case-insensitively; refused when already held or when the mind is full —
-        /// reflection remains the place where the whole list is resettled.</summary>
-        public bool AddKnownFact(string fact, int maxFacts)
-        {
-            if (string.IsNullOrWhiteSpace(fact)) return false;
-            var trimmed = fact.Trim();
-            if (KnownFacts.Any(f => string.Equals(f, trimmed, StringComparison.OrdinalIgnoreCase))) return false;
-            if (maxFacts > 0 && KnownFacts.Count >= maxFacts) return false;
-            KnownFacts.Add(trimmed);
-            return true;
-        }
-
-        /// <summary>Releases one held truth by restatement: an exact match first, then a containment
-        /// match either way (the NPC sees the exact list in their prompt, so a close restatement is
-        /// enough). Returns the released truth, or null when nothing matched — a miss is safer than
-        /// a wrong release.</summary>
-        public string? DropKnownFact(string fact)
-        {
-            if (string.IsNullOrWhiteSpace(fact)) return null;
-            var needle = fact.Trim();
-
-            var hit = KnownFacts.FirstOrDefault(f => string.Equals(f, needle, StringComparison.OrdinalIgnoreCase))
-                ?? KnownFacts.FirstOrDefault(f =>
-                    f.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0
-                    || needle.IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0);
-            if (hit == null) return null;
-
-            KnownFacts.Remove(hit);
-            return hit;
-        }
-
         /// <summary>
-        /// Replaces the compressed turns with the new rolling summary and applies the facts the NPC
-        /// chose to hold. With <paramref name="replaceFacts"/> true the given list IS her truths now —
-        /// she was shown all of them and asked to keep, refine, or release, so what she did not restate
-        /// falls away (this is what lets her refactor instead of only pile up rewordings). With it
-        /// false (or a null list — e.g. a reply that carried no FACTS section at all) the old merge
-        /// behavior applies: new facts are appended, existing ones are never touched, so a malformed
-        /// reply can never wipe her memory.
+        /// Drops the turns that were folded away and takes the rewritten rolling summary as the whole
+        /// of what she now remembers. The summary is written anew at every compression — she is shown
+        /// all of it and asked to set it down whole — so what she did not carry forward is gone, which
+        /// is what lets her refactor her memory instead of piling up rewordings.
         /// </summary>
-        public void ApplyCompression(string newSummary, int consumedTurnCount, IEnumerable<string>? newFacts = null, bool replaceFacts = false)
+        public void ApplyCompression(string newSummary, int consumedTurnCount)
         {
             if (consumedTurnCount < 0 || consumedTurnCount > RecentTurns.Count)
                 throw new ArgumentOutOfRangeException(nameof(consumedTurnCount));
 
             Summary = newSummary ?? string.Empty;
             RecentTurns.RemoveRange(0, consumedTurnCount);
-
-            if (newFacts == null) return;
-
-            if (replaceFacts) KnownFacts.Clear();
-            foreach (var fact in newFacts)
-            {
-                if (string.IsNullOrWhiteSpace(fact)) continue;
-                var trimmed = fact.Trim();
-                if (!KnownFacts.Any(f => string.Equals(f, trimmed, StringComparison.OrdinalIgnoreCase)))
-                    KnownFacts.Add(trimmed);
-            }
         }
     }
 }
