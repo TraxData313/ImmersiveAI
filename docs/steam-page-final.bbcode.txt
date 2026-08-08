@@ -3,7 +3,7 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [h1]Looking for…?[/h1]
 If one of these searches brought you here — yes, this is that mod:
 [list]
-[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through the AI you choose
+[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], or a local model
 [*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted and married in conversation[/b], companions included
@@ -16,7 +16,7 @@ If one of these searches brought you here — yes, this is that mod:
 [*]Every soul begins as somebody: at your first meeting a private starting truth is written for them — an old wound, an odd habit, a vanity — grown from their real story. Yours to read or rewrite.
 [*]They see the moment — time, place, who stands near, what lately happened in the world — and they have moods, down to the women keeping a personal monthly cycle, gently simulated.
 [*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won — the last in detail, older ones by name ("what happened at the storming of Varcheg?"), from a real chronicle of every fight, sea included.
-[*]Your companions witness the everyday road too — the towns, the trade you struck, the men you hired, the tasks you carry and how each ended — and they know their own wounds, and see yours.
+[*]Your companions witness the everyday road too — the towns you called at, the trade you struck, the men you hired, the tasks you carry and how each ended — and they know their own wounds, and see yours.
 [*]They are free: told who they are and what the world is, never forced into anything. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
