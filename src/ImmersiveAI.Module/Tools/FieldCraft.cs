@@ -260,7 +260,20 @@ namespace ImmersiveAI.Tools
             {
                 bool foe = Safe(() => FactionManager.IsAtWarAgainstFaction(p.MapFaction, ours.MapFaction))
                     || Safe(() => p.IsBandit);
-                sb.Append(foe ? " — FOES" : " — no quarrel with me");
+                if (foe) { sb.Append(" — FOES"); return; }
+
+                // Not a foe. In this world neutrality is a hard rule, not a mood: a band whose realm
+                // is at peace with ours CANNOT raise arms against us — say so plainly, or the listener
+                // reads "not friendly" as danger and flees the very strength that could shelter her.
+                if (Safe(() => p.MapFaction != null && p.MapFaction == ours.MapFaction))
+                    sb.Append(" — friends, riding under my own realm's banner");
+                else
+                {
+                    sb.Append(" — no foe of ours: the peace between our peoples holds, and they will not and cannot raise arms against my company");
+                    int men = Safe(() => p.MemberRoster?.TotalManCount ?? 0, 0);
+                    if (men >= 40 && (Safe(() => p.IsLordParty) || Safe(() => p.Army != null)))
+                        sb.Append("; brigands keep well clear of such strength — its shadow is a shelter of a kind");
+                }
             });
 
             sb.Append(", " + Whereabouts(dist, ours, () => p.Position));

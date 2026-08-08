@@ -1032,10 +1032,21 @@ side's `PrisonRoster`s are still countable as captives-to-free; one dispatcher t
 `PlayerEncounter.RosterToReceiveLoot*` stand filled (spoils, prisoners taken) and hero fates are
 settled (capture runs after the event) — `FinalizeBattleRecord` enriches, re-saves, appends the
 chronicle line, records the beats, and shows the one soft notice. `MapEventEnded` is only the
-dedupe'd fallback. PER-HERO DOWNS need NO mission behavior: `CampaignEvents.OnHeroCombatHitEvent`
-(from `MapEventParty.OnTroopScoreHit`) fires for fought AND simulated battles with `isFatal` = the
-downing blow, team-kills pre-filtered — tallied by StringId while the player's event runs; an empty
-tally beside ≥20 enemy casualties records honest `Downs = -1` ("no tally was kept"). Naval is
+dedupe'd fallback. PER-HERO DOWNS COME FROM TWO PLACES, each honest only where it stands
+(2026.08.08, the "4 bandits but 6 felled" playtest): `CampaignEvents.OnHeroCombatHitEvent` (from
+`MapEventParty.OnTroopScoreHit`) fires for fought AND simulated battles, but ITS `isFatal` IS
+TRUSTWORTHY ONLY WHEN SIMULATED — in a fought mission `BattleAgentLogic.OnAgentHit` computes it as
+`affectedAgent.Health - blow.InflictedDamage < 1f` where `Health` is ALREADY post-damage (proof:
+the same class's `OnScoreHit` uses bare `Health < 1f` as its own kill test), so the blow is
+subtracted twice and EVERY heavy non-killing hit reports a kill. On the field the tally therefore
+comes from `Battles\BattleDownsMissionBehavior` — a `MissionLogic` added in
+`SubModule.OnMissionBehaviorInitialize`, reading `OnAgentRemoved`: one mark per soul who actually
+falls (Unconscious/Killed only), a mount's blow credited to its rider, our side's hands only
+(`Team.IsPlayerTeam || IsPlayerAlly`), gated on `MapEvent.PlayerMapEvent != null` so arenas,
+tournaments and practice rings never leak in. The campaign event stands down whenever
+`Mission.Current != null`, so the two never double-count. An empty tally beside ≥20 enemy
+casualties — or a tally that outruns the foe's real losses (Fallen+Wounded) — records honest
+`Downs = -1` ("no tally was kept"). Naval is
 first-class on this game version: `MapEvent.IsNavalMapEvent` (`!Position.IsOnLand`), per-side
 `ShipCasualties`, `party.Ships` — kind "sea" with its own titles. Casualties come from the per-party
 `DiedInBattle`/`WoundedInBattle`/`RoutedInBattle` rosters (NEVER from roster wounded-states — those
@@ -1074,7 +1085,19 @@ PlayerInventoryExchange — the tuple's int IS the denars that changed hands, an
 exchanges are battle loot/discards, never journaled — OnTroopRecruited, OnTroopGivenToSettlement,
 OnPrisonerSold/OnPrisonerDonatedToSettlement, OnQuestStarted/Completed), persisted per mutation to
 `_journey.json` (atomic, campaign-scoped → snapshots rewind the road). Config `EnableJourneyLog`
-(default on). No LLM calls anywhere — the journal is free.
+(default on). No LLM calls anywhere — the journal is free. RE-ENTRY RULE (the Onira bug, first
+playtest): a save loaded inside a town re-fires SettlementEntered at the instant of the recorded
+leave — `BeginVisit` therefore RESUMES a same-place stay within `ContinuedStayGapDays` (0.5d) and
+`LoadFrom` heals already-split files via `MergeContinuedStays`, else an empty twin visit steals the
+"latest stop, detailed" slot. JOURNEY BEATS (same day, Anton: "как битките — и аз да ги виждам в
+чата"): closing a stop WITH doings, taking a task, and settling one each set a SILENT first-person
+beat (`JourneyText.StopBeat`/`TaskTakenBeat`/`TaskSettledBeat`, markers `StopBeatMark`/`TaskBeatMark`
+— never reword) into every party hero's memory via `RecordStopBeats` (flag `JourneyVisit.BeatDone`,
+one beat per stay even across resumes; scan-based, so pre-feature stops backfill once) —
+`OutreachMark.None`, pass-through stops stay situation-only to keep the memory stream lean. The
+stop beat is DETAILED on purpose (Anton: the freshest stop must offer a conversation-opening
+detail — goods by name, men by kind — without a dig through deeper memory); only the situation
+roll of OLDER stops compresses to one-liners — time, not compression, moves a beat into the past.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

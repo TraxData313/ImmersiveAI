@@ -122,6 +122,96 @@ public class JourneyLogTests
     }
 
     [Fact]
+    public void ReEnteringTheSamePlace_ResumesTheStay_InsteadOfMintingAnEmptyLatestStop()
+    {
+        // The Onira bug (2026.08.08 playtest): a save loaded inside a town re-fires the entered
+        // event at the very instant of the recorded leave — the empty re-entry visit then stole
+        // the "latest stop, detailed" slot and demoted the real trade to a single line.
+        var log = new JourneyLog();
+        var onira = log.BeginVisit("Onira", JourneyVisit.Kinds.Town, 107.9, "Autumn 10");
+        onira.SoldValue = 3677; onira.PrisonersSold = 13;
+        log.CloseOpenVisit(109.2);
+        var again = log.BeginVisit("Onira", JourneyVisit.Kinds.Town, 109.2, "Autumn 12");
+
+        Assert.Same(onira, again);           // the same stay, resumed
+        Assert.True(again.LeaveDay < 0);     // and open once more
+        Assert.Single(log.Visits);
+
+        log.CloseOpenVisit(109.3);
+        var block = JourneyText.SituationBlock(log, 109.4);
+        Assert.Contains("Our latest stop — in the town of Onira", block);
+        Assert.Contains("3,677 denars", block);
+
+        // Days later is a genuinely new visit.
+        var later = log.BeginVisit("Onira", JourneyVisit.Kinds.Town, 115.0, "Autumn 18");
+        Assert.NotSame(onira, later);
+        Assert.Equal(2, log.Visits.Count);
+    }
+
+    [Fact]
+    public void LoadFrom_HealsAJournalSplitByReEntries()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "iai_journey_" + Guid.NewGuid().ToString("N"), "_journey.json");
+        try
+        {
+            // A file written before the resume rule: the real visit and its empty same-instant twin.
+            var split = new JourneyLog();
+            var real = new JourneyVisit
+            {
+                Place = "Onira", Kind = JourneyVisit.Kinds.Town, ArriveDay = 107.9, ArriveText = "Autumn 10",
+                LeaveDay = 109.2, SoldValue = 3677, BoughtValue = 964, PrisonersSold = 13,
+            };
+            real.SoldNotable.Add("Iron Ore ×11");
+            var twin = new JourneyVisit
+            {
+                Place = "Onira", Kind = JourneyVisit.Kinds.Town, ArriveDay = 109.2, ArriveText = "Autumn 12",
+                LeaveDay = 109.2,
+            };
+            split.Visits.Add(real); split.Visits.Add(twin);
+            split.SaveTo(path);
+
+            var healed = JourneyLog.LoadFrom(path);
+            Assert.Single(healed.Visits);
+            Assert.Equal(3677, healed.Visits[0].SoldValue);
+            Assert.Equal(13, healed.Visits[0].PrisonersSold);
+            Assert.Contains("Iron Ore ×11", healed.Visits[0].SoldNotable);
+            Assert.Contains("3,677 denars", JourneyText.SituationBlock(healed, 110));
+        }
+        finally
+        {
+            try { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Beats_SpeakTheStopAndTheTasks_AndWearTheirMarkers()
+    {
+        var log = SampleRoad();
+        var stop = log.Visits[^1];
+        var beat = JourneyText.StopBeat(stop);
+        Assert.True(JourneyText.IsJourneyBeat(beat));
+        Assert.StartsWith(JourneyText.StopBeatMark, beat);
+        // The beat keeps the DETAIL — chief goods by name, men by kind — so the freshest stop
+        // offers a conversation-opener without a dig through deeper memory.
+        Assert.Contains("In the town of Ortysia (Spring 5, Year 1084, we stayed half a day).", beat);
+        Assert.Contains("We sold goods worth 900 denars (Wool ×24, Hides ×11 the chief of it).", beat);
+        Assert.Contains("We took on Vlandian Recruit ×2.", beat);
+        Assert.Contains("5 captives were sold to the ransom broker.", beat);
+
+        var taken = log.NoteQuestTaken("An Escort for the Caravan", "Lucon", 100, "Spring 3", 14)!;
+        var takenBeat = JourneyText.TaskTakenBeat(taken);
+        Assert.True(JourneyText.IsJourneyBeat(takenBeat));
+        Assert.Contains("'An Escort for the Caravan' for Lucon — 14 days given", takenBeat);
+
+        // A re-fired start event must not earn a second beat.
+        Assert.Null(log.NoteQuestTaken("An Escort for the Caravan", "Lucon", 100, "Spring 3", 14));
+
+        var settled = log.NoteQuestResolved("An Escort for the Caravan", "Lucon", JourneyText.Outcomes.Timeout, 115)!;
+        var settledBeat = JourneyText.TaskSettledBeat(settled);
+        Assert.Contains("is settled — failed — the time ran out on us.", settledBeat);
+    }
+
+    [Fact]
     public void Journal_SavesAndLoads()
     {
         var path = Path.Combine(Path.GetTempPath(), "iai_journey_" + Guid.NewGuid().ToString("N"), "_journey.json");

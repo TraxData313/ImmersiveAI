@@ -55,6 +55,7 @@ namespace ImmersiveAI
                 _journeyLog!.BeginVisit(settlement.Name?.ToString() ?? string.Empty, kind,
                     CampaignTime.Now.ToDays, CalradiaDate());
                 SaveJourneyLog();
+                RecordStopBeats(); // a road bucket (or a dangling stop) may just have closed
             }
             catch { /* best-effort */ }
         }
@@ -66,6 +67,7 @@ namespace ImmersiveAI
                 if (!JournalOn || party != MobileParty.MainParty) return;
                 _journeyLog!.CloseOpenVisit(CampaignTime.Now.ToDays);
                 SaveJourneyLog();
+                RecordStopBeats();
             }
             catch { /* best-effort */ }
         }
@@ -180,11 +182,12 @@ namespace ImmersiveAI
                     double days = Safe(() => (quest.QuestDueTime - CampaignTime.Now).ToDays, 0.0);
                     if (days > 0 && days < 500) daysGiven = (int)Math.Round(days);
                 }
-                _journeyLog!.NoteQuestTaken(
+                var taken = _journeyLog!.NoteQuestTaken(
                     Safe(() => quest.Title?.ToString(), (string?)null) ?? "a task",
                     Safe(() => quest.QuestGiver?.Name?.ToString(), (string?)null) ?? string.Empty,
                     CampaignTime.Now.ToDays, CalradiaDate(), daysGiven);
                 SaveJourneyLog();
+                if (taken != null) RecordJourneyBeat(JourneyText.TaskTakenBeat(taken));
             }
             catch { /* best-effort */ }
         }
@@ -203,13 +206,57 @@ namespace ImmersiveAI
                     case QuestBase.QuestCompleteDetails.Cancel: outcome = JourneyText.Outcomes.Canceled; break;
                     default: outcome = JourneyText.Outcomes.Fail; break;
                 }
-                _journeyLog!.NoteQuestResolved(
+                var settled = _journeyLog!.NoteQuestResolved(
                     Safe(() => quest.Title?.ToString(), (string?)null) ?? "a task",
                     Safe(() => quest.QuestGiver?.Name?.ToString(), (string?)null) ?? string.Empty,
                     outcome, CampaignTime.Now.ToDays);
                 SaveJourneyLog();
+                if (settled != null) RecordJourneyBeat(JourneyText.TaskSettledBeat(settled));
             }
             catch { /* best-effort */ }
+        }
+
+        // ------------------------------ the recorded beats ------------------------------
+        // Like the battle beats, the journal's moments also land as SILENT first-person turns in
+        // the witnesses' memories, so the player SEES them in the chat thread (Anton's ask,
+        // 2026.08.08) — but sparingly, guarding the memory stream: one beat per stop and only
+        // when something was DONE there (a village merely passed through stays situation-only),
+        // plus one on taking a task and one on settling it. No outreach mark: witnessing a trade
+        // neither wounds nor mends anyone's waiting pride.
+
+        // Sets down the beat for every stop that closed with doings and was not yet remembered.
+        // Scanning (rather than hooking each close site) also backfills a stop recorded before
+        // this feature existed — once, harmlessly, with the stop's own dates in the line.
+        private void RecordStopBeats()
+        {
+            var log = _journeyLog;
+            if (log == null) return;
+            bool touched = false;
+            foreach (var visit in log.Visits)
+            {
+                if (visit == null || visit.LeaveDay < 0 || visit.BeatDone || !visit.HasAnyDoings) continue;
+                visit.BeatDone = true;
+                touched = true;
+                RecordJourneyBeat(JourneyText.StopBeat(visit));
+            }
+            if (touched) SaveJourneyLog();
+        }
+
+        // One silent inner turn for every hero riding in the player's party — the witnesses.
+        private void RecordJourneyBeat(string innerLine)
+        {
+            try
+            {
+                var roster = MobileParty.MainParty?.MemberRoster?.GetTroopRoster();
+                if (roster == null) return;
+                foreach (var el in roster)
+                {
+                    var hero = el.Character?.HeroObject;
+                    if (hero == null || hero == Hero.MainHero || !hero.IsAlive) continue;
+                    AppendRecordedTurn(hero, innerLine, string.Empty, OutreachMark.None);
+                }
+            }
+            catch { /* a missed note must never touch play */ }
         }
 
         // ------------------------------ what the situation reads ------------------------------

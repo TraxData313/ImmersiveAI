@@ -88,21 +88,32 @@ namespace ImmersiveAI.Core.Journey
             sb.Append(there ? ", where we are still" : Stay(v, ", where we stayed "));
             sb.AppendLine(".");
 
-            if (v.SoldValue > 0)
-                sb.AppendLine($"We sold goods worth {Denars(v.SoldValue)}{Chief(v.SoldNotable)}.");
-            if (v.BoughtValue > 0)
-                sb.AppendLine($"We bought for {Denars(v.BoughtValue)}{Chief(v.BoughtNotable)}.");
-            if (v.Recruited.Count > 0)
-                sb.AppendLine($"We took on {string.Join(", ", v.Recruited)}.");
-            if (v.LeftInGarrison.Count > 0)
-                sb.AppendLine($"We left {string.Join(", ", v.LeftInGarrison)} to hold the walls.");
-            if (v.PrisonersSold > 0)
-                sb.AppendLine($"{v.PrisonersSold} {(v.PrisonersSold == 1 ? "captive was" : "captives were")} sold to the ransom broker.");
-            if (v.PrisonersDonated > 0)
-                sb.AppendLine($"{v.PrisonersDonated} {(v.PrisonersDonated == 1 ? "captive was" : "captives were")} given over to the dungeon.");
-            if (!v.HasAnyDoings && !there)
+            var doings = DoingsSentences(v);
+            foreach (var line in doings) sb.AppendLine(line);
+            if (doings.Count == 0 && !there)
                 sb.AppendLine("We only rested and rode on.");
             return sb.ToString().TrimEnd();
+        }
+
+        // The full sentences of what was done at a stop — shared by the situation's detailed
+        // telling and the recorded beat (the beat keeps the detail on purpose: it is what a
+        // companion can open a conversation from without a dig through deeper memory).
+        private static List<string> DoingsSentences(JourneyVisit v)
+        {
+            var lines = new List<string>();
+            if (v.SoldValue > 0)
+                lines.Add($"We sold goods worth {Denars(v.SoldValue)}{Chief(v.SoldNotable)}.");
+            if (v.BoughtValue > 0)
+                lines.Add($"We bought for {Denars(v.BoughtValue)}{Chief(v.BoughtNotable)}.");
+            if (v.Recruited.Count > 0)
+                lines.Add($"We took on {string.Join(", ", v.Recruited)}.");
+            if (v.LeftInGarrison.Count > 0)
+                lines.Add($"We left {string.Join(", ", v.LeftInGarrison)} to hold the walls.");
+            if (v.PrisonersSold > 0)
+                lines.Add($"{v.PrisonersSold} {(v.PrisonersSold == 1 ? "captive was" : "captives were")} sold to the ransom broker.");
+            if (v.PrisonersDonated > 0)
+                lines.Add($"{v.PrisonersDonated} {(v.PrisonersDonated == 1 ? "captive was" : "captives were")} given over to the dungeon.");
+            return lines;
         }
 
         private static string AtPlace(JourneyVisit v)
@@ -195,6 +206,50 @@ namespace ImmersiveAI.Core.Journey
 
         private static string ForGiver(JourneyQuest q) =>
             string.IsNullOrWhiteSpace(q.Giver) ? string.Empty : $" for {q.Giver.Trim()}";
+
+        // ------------------------------ the recorded beats ------------------------------
+        // Like the battle beats, these markers open every journey beat set down in a witness's
+        // memory. Recorded turns keep the phrasing they were born with forever — NEVER reword a
+        // marker; add a second one beside it instead.
+
+        /// <summary>The word-for-word opening of a stop's recorded beat.</summary>
+        public const string StopBeatMark = "The road goes on, and I set the stop behind us down in my mind:";
+
+        /// <summary>The word-for-word opening of a task's recorded beats (taken and settled).</summary>
+        public const string TaskBeatMark = "I set it down in my mind:";
+
+        /// <summary>True when a recorded inner line is a journey beat (a stop or a task note).</summary>
+        public static bool IsJourneyBeat(string? innerLine)
+        {
+            var line = (innerLine ?? string.Empty).TrimStart();
+            return line.StartsWith(StopBeatMark, StringComparison.Ordinal)
+                || line.StartsWith(TaskBeatMark, StringComparison.Ordinal);
+        }
+
+        /// <summary>One stop, remembered — DETAILED on purpose (Anton, 2026.08.08: the freshest
+        /// stop must offer a conversation-opening detail without a dig through deeper memory; only
+        /// the situation's roll of OLDER stops compresses). Every beat is "the latest stop" the
+        /// moment it is set down; time, not compression, is what moves it into the past.</summary>
+        public static string StopBeat(JourneyVisit v)
+        {
+            var at = AtPlace(v);
+            var head = $"{char.ToUpperInvariant(at[0])}{at.Substring(1)} ({When(v)}{Stay(v, ", we stayed ")})";
+            var doings = DoingsSentences(v);
+            return doings.Count == 0
+                ? $"{StopBeatMark} {head}: we only passed through."
+                : $"{StopBeatMark} {head}. {string.Join(" ", doings)}";
+        }
+
+        /// <summary>A task taken, remembered.</summary>
+        public static string TaskTakenBeat(JourneyQuest q)
+        {
+            var days = q.DaysGiven > 0 ? $" — {q.DaysGiven} days given" : string.Empty;
+            return $"{TaskBeatMark} we have taken a task upon us, '{q.Title}'{ForGiver(q)}{days}.";
+        }
+
+        /// <summary>A task settled, remembered — outcome and reason in the same breath.</summary>
+        public static string TaskSettledBeat(JourneyQuest q) =>
+            $"{TaskBeatMark} the task '{q.Title}'{ForGiver(q)} is settled — {q.Outcome}.";
 
         // ------------------------------ outcome words ------------------------------
 

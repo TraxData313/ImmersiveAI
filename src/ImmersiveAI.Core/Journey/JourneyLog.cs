@@ -33,14 +33,32 @@ namespace ImmersiveAI.Core.Journey
         public JourneyVisit? OpenVisit =>
             Visits.LastOrDefault(v => v != null && v.LeaveDay < 0);
 
+        /// <summary>A re-entry into the same place within this many days is the SAME stay resumed,
+        /// not a new stop — a save loaded inside a town re-fires the entered event, and a player
+        /// stepping out to the map and back would otherwise mint an empty "latest stop" that
+        /// demotes the real one's telling to a single line (the Onira bug, 2026.08.08).</summary>
+        public const double ContinuedStayGapDays = 0.5;
+
         /// <summary>Begins a stop at a settlement, closing whatever was open (a dangling stop is
-        /// closed at the new one's day — leaving fires before arriving, but never trust order).</summary>
+        /// closed at the new one's day — leaving fires before arriving, but never trust order).
+        /// Re-entering the place just left resumes that same stay instead.</summary>
         public JourneyVisit BeginVisit(string place, string kind, double day, string dateText)
         {
             CloseOpenVisit(day);
+
+            var last = Visits.LastOrDefault(v => v != null);
+            if (last != null && last.LeaveDay >= 0
+                && day - last.LeaveDay < ContinuedStayGapDays
+                && string.Equals(last.Place, (place ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
+                && string.Equals(last.Kind, kind, StringComparison.Ordinal))
+            {
+                last.LeaveDay = -1; // the stay goes on
+                return last;
+            }
+
             var visit = new JourneyVisit
             {
-                Place = place ?? string.Empty,
+                Place = (place ?? string.Empty).Trim(),
                 Kind = kind ?? string.Empty,
                 ArriveDay = day,
                 ArriveText = dateText ?? string.Empty,
@@ -66,29 +84,32 @@ namespace ImmersiveAI.Core.Journey
 
         // ------------------------------ tasks ------------------------------
 
-        public void NoteQuestTaken(string title, string giver, double day, string dateText, int daysGiven)
+        /// <summary>Returns the entry added, or null when the same open task was already told
+        /// (a re-fired start event stays one entry — and one beat).</summary>
+        public JourneyQuest? NoteQuestTaken(string title, string giver, double day, string dateText, int daysGiven)
         {
-            if (string.IsNullOrWhiteSpace(title)) return;
-            // The same task told twice (a re-fired start event) stays one entry.
+            if (string.IsNullOrWhiteSpace(title)) return null;
             if (Quests.Any(q => q != null && q.Outcome.Length == 0
-                && string.Equals(q.Title, title.Trim(), StringComparison.Ordinal))) return;
+                && string.Equals(q.Title, title.Trim(), StringComparison.Ordinal))) return null;
 
-            Quests.Add(new JourneyQuest
+            var quest = new JourneyQuest
             {
                 Title = title.Trim(),
                 Giver = (giver ?? string.Empty).Trim(),
                 TakenDay = day,
                 TakenText = dateText ?? string.Empty,
                 DaysGiven = Math.Max(0, daysGiven),
-            });
+            };
+            Quests.Add(quest);
             Prune();
+            return quest;
         }
 
-        /// <summary>Settles the newest open entry bearing this title. Unknown titles are added
-        /// settled (a quest taken before the journal existed still gets its closing line).</summary>
-        public void NoteQuestResolved(string title, string giver, string outcome, double day)
+        /// <summary>Settles the newest open entry bearing this title, returning it. Unknown titles
+        /// are added settled (a quest taken before the journal existed still gets its closing line).</summary>
+        public JourneyQuest? NoteQuestResolved(string title, string giver, string outcome, double day)
         {
-            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(outcome)) return;
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(outcome)) return null;
             var open = Quests.LastOrDefault(q => q != null && q.Outcome.Length == 0
                 && string.Equals(q.Title, title.Trim(), StringComparison.Ordinal));
             if (open == null)
@@ -99,6 +120,7 @@ namespace ImmersiveAI.Core.Journey
             open.Outcome = outcome.Trim();
             open.ResolvedDay = day;
             Prune();
+            return open;
         }
 
         public IReadOnlyList<JourneyQuest> OpenQuests =>
@@ -106,6 +128,35 @@ namespace ImmersiveAI.Core.Journey
 
         public IReadOnlyList<JourneyQuest> ResolvedQuests =>
             Quests.Where(q => q != null && q.Outcome.Length > 0).ToList();
+
+        /// <summary>Heals a journal whose stays were split by re-entries before the resume rule
+        /// existed (or by a snapshot restore): adjacent same-place stops with barely a breath
+        /// between them fold into one, values summed, lists merged, the longer stay kept.</summary>
+        public void MergeContinuedStays()
+        {
+            for (int i = Visits.Count - 1; i >= 1; i--)
+            {
+                var prev = Visits[i - 1];
+                var next = Visits[i];
+                if (prev == null || next == null) continue;
+                if (prev.LeaveDay < 0) prev.LeaveDay = next.ArriveDay; // never trust order
+                if (next.ArriveDay - prev.LeaveDay >= ContinuedStayGapDays) continue;
+                if (!string.Equals(prev.Place, next.Place, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(prev.Kind, next.Kind, StringComparison.Ordinal)) continue;
+
+                prev.LeaveDay = next.LeaveDay < 0 ? -1 : Math.Max(prev.LeaveDay, next.LeaveDay);
+                prev.BeatDone = prev.BeatDone || next.BeatDone;
+                prev.BoughtValue += next.BoughtValue;
+                prev.SoldValue += next.SoldValue;
+                prev.PrisonersSold += next.PrisonersSold;
+                prev.PrisonersDonated += next.PrisonersDonated;
+                foreach (var line in next.BoughtNotable) JourneyVisit.AddCountedLine(prev.BoughtNotable, line);
+                foreach (var line in next.SoldNotable) JourneyVisit.AddCountedLine(prev.SoldNotable, line);
+                foreach (var line in next.Recruited) JourneyVisit.AddCountedLine(prev.Recruited, line);
+                foreach (var line in next.LeftInGarrison) JourneyVisit.AddCountedLine(prev.LeftInGarrison, line);
+                Visits.RemoveAt(i);
+            }
+        }
 
         private void Prune()
         {
@@ -130,6 +181,7 @@ namespace ImmersiveAI.Core.Journey
                 if (log == null) return new JourneyLog();
                 log.Visits = log.Visits?.Where(v => v != null).ToList() ?? new List<JourneyVisit>();
                 log.Quests = log.Quests?.Where(q => q != null).ToList() ?? new List<JourneyQuest>();
+                log.MergeContinuedStays();
                 return log;
             }
             catch { return new JourneyLog(); }
@@ -186,9 +238,24 @@ namespace ImmersiveAI.Core.Journey
         /// <summary>Captives given over to the settlement's dungeon.</summary>
         public int PrisonersDonated { get; set; }
 
+        /// <summary>True once this stop's one recorded beat has been set down in the witnesses'
+        /// memories — a resumed stay closed twice must not be remembered twice.</summary>
+        public bool BeatDone { get; set; }
+
         public bool HasAnyDoings =>
             BoughtValue > 0 || SoldValue > 0 || Recruited.Count > 0
             || LeftInGarrison.Count > 0 || PrisonersSold > 0 || PrisonersDonated > 0;
+
+        /// <summary>Folds an already-counted line ("Wool ×24") into a list, merging by name.</summary>
+        public static void AddCountedLine(List<string> lines, string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return;
+            int cut = line.LastIndexOf(" ×", StringComparison.Ordinal);
+            if (cut > 0 && int.TryParse(line.Substring(cut + 2), out int n))
+                AddCounted(lines, line.Substring(0, cut), n);
+            else
+                AddCounted(lines, line, 1);
+        }
 
         /// <summary>Merges "2 × Vlandian Recruit" into an existing line for the same kind of man.</summary>
         public static void AddCounted(List<string> lines, string name, int count)

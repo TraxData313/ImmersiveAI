@@ -12,6 +12,15 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
 
 ## [Unreleased]
 
+- Battle tallies tell the truth again: in battles you fight yourself, the count of who struck
+  down whom was inflated — a heavy blow that didn't kill was still counted as a kill, so four
+  bandits could leave you "credited" with six. Every hand's work is now counted as men actually
+  fall, and a tally that somehow outruns the enemy's real losses is honestly reported as no
+  tally kept rather than a flattering number.
+- Scouts no longer mistrust the peaceable: when surveying the country about, a band whose realm
+  is at peace with yours is now named plainly as no threat — by the law of the land it cannot
+  raise arms against you — and a strong neutral warband is even pointed out as a shadow brigands
+  keep well clear of, so your scout may counsel sheltering near it instead of fleeing it.
 - **New: the battle chronicle — your battles become their memories.** Every battle you fight is
   set down the moment it ends: where and when it was fought, attack or defense, field, siege,
   hideout or sea-fight (War Sails included), both armies by size and kind — foot, bows, horse,
@@ -47,6 +56,10 @@ change notes are already written when it is time to ship (see `tools/WORKSHOP-UP
   and its deadline ("14 days given, about 9 remain"), and when it ends they know how — succeeded,
   failed, the time ran out, or set aside — so "how did the caravan job end?" is a real
   conversation. Toggle: EnableJourneyLog (on by default).
+- The road is visible in the chat too, like the battles: when the company rides on from a stop
+  where something was done, and when a task is taken or settled, each companion quietly sets it
+  down in their memory — so those moments appear in their chat history as soft narration lines
+  you can scroll back to.
 - **New: marriage by courtship — win a heart, walk its road, wed for real.** Characters can now
   truly be courted through conversation: their heart walks its own road — liking, love,
   readiness, betrothal, wedding — moved by their own judgment of your talks, one honest step at

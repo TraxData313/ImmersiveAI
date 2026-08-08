@@ -49,6 +49,21 @@ namespace ImmersiveAI
             }
         }
 
+        // The chronicle's tally of who felled whom is kept on the field itself, by the game's own
+        // agent-removal event: it fires once per soul who falls and names the hand. (The campaign's
+        // hit event double-counts heavy blows — see BattleDownsMissionBehavior.) Harmless anywhere
+        // else: it only marks anything while a real battle of the player's is under way.
+        public override void OnMissionBehaviorInitialize(Mission mission)
+        {
+            base.OnMissionBehaviorInitialize(mission);
+            try
+            {
+                if (Campaign.Current != null && Config.EnableBattleChronicle)
+                    mission.AddMissionBehavior(new Battles.BattleDownsMissionBehavior());
+            }
+            catch { /* a missing tally must never cost a mission */ }
+        }
+
         protected override void OnBeforeInitialModuleScreenSetAsRoot()
         {
             base.OnBeforeInitialModuleScreenSetAsRoot();

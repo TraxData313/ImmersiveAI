@@ -26,9 +26,11 @@ namespace ImmersiveAI
     /// readable on the main party's MapEventParty, the defeated side's prison roster still countable
     /// as "souls we freed"), and one dispatcher tick later the loot rosters stand filled on
     /// PlayerEncounter — so the record is written at the field's edge and enriched with the spoils
-    /// a breath after. Per-hero downs come from the game's own hit scoring
-    /// (OnHeroCombatHitEvent, fired for fought and simulated battles alike). Everything here is
-    /// best-effort: a failed chronicle must never break a battle.
+    /// a breath after. Per-hero downs come from two places, each honest where it stands: on the
+    /// field from <see cref="Battles.BattleDownsMissionBehavior"/> (the agent-removal event, one
+    /// mark per soul who falls), and in a simulated press from OnHeroCombatHitEvent — whose isFatal
+    /// flag is trustworthy ONLY there. Everything here is best-effort: a failed chronicle must
+    /// never break a battle.
     /// </summary>
     public partial class ImmersiveChatBehavior
     {
@@ -72,6 +74,19 @@ namespace ImmersiveAI
             catch { /* the chronicle must never touch the battle itself */ }
         }
 
+        // A blow struck on the field, marked by the hand that landed it — handed in by
+        // BattleDownsMissionBehavior, which counts souls as they FALL and so counts them once.
+        internal void TallyBattleDownOnTheField(string heroId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(heroId)) return;
+                _battleDowns.TryGetValue(heroId, out int downs);
+                _battleDowns[heroId] = downs + 1;
+            }
+            catch { /* a lost tally mark is nothing; the battle goes on */ }
+        }
+
         // The game scores every downing blow a hero strikes — in fought missions and simulated
         // presses alike — through this one event. We keep the tally only for the player's battle.
         private void OnHeroCombatHitForChronicle(CharacterObject attacker, CharacterObject attacked,
@@ -79,6 +94,12 @@ namespace ImmersiveAI
         {
             try
             {
+                // On the field itself this event lies: its isFatal is the victim's health AFTER the
+                // blow minus that same blow's damage, so one heavy hit short of killing is counted
+                // as a kill (four bandits answering for six downs). Whenever a mission is on stage,
+                // BattleDownsMissionBehavior keeps the true tally from the removal event instead.
+                // With no mission running the press is simulated, and here the flag is honest.
+                if (TaleWorlds.MountAndBlade.Mission.Current != null) return;
                 if (!isFatal || attacker == null || !attacker.IsHero) return;
                 var mapEvent = Safe(() => party?.MapEvent, (MapEvent?)null);
                 if (mapEvent == null || !mapEvent.IsPlayerMapEvent) return;
@@ -187,7 +208,12 @@ namespace ImmersiveAI
             // their hand. If no blow at all reached the tally in a battle with real casualties,
             // the honest answer is "no tally was kept", never a page of zeroes.
             var heroes = HeroesOfSide(e, ourSide);
-            bool noTally = _battleDowns.Count == 0 && (theirs.Fallen + theirs.Wounded) >= 20;
+            int theirLosses = theirs.Fallen + theirs.Wounded;
+            int tallied = heroes.Sum(h => { _battleDowns.TryGetValue(h.StringId, out int d); return d; });
+            // Belt and braces: no hand can have felled more men than the field gave up. If the
+            // tally ever outruns the truth again, say plainly that none was kept — never hand a
+            // soul a number that flatters them.
+            bool noTally = (_battleDowns.Count == 0 && theirLosses >= 20) || tallied > theirLosses;
             foreach (var hero in heroes)
             {
                 _battleDowns.TryGetValue(hero.StringId, out int downs);
