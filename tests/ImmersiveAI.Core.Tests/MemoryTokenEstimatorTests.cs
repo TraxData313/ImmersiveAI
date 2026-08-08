@@ -22,4 +22,23 @@ public class MemoryTokenEstimatorTests
 
         Assert.Equal(12, MemoryTokenEstimator.EstimateRecentTurnsTokens(turns));
     }
+
+    [Fact]
+    public void EstimateTextTokens_ChargesNonLatinTextMore_BecauseItTokenizesWorse()
+    {
+        // English runs about four characters to the token; Cyrillic, Greek and CJK cost far more,
+        // because these models' byte-pair vocabularies are built mostly from English. Measured on
+        // a real Bulgarian memory (2026.08.08): ~2.8 chars per token, against 4 for English. A
+        // budget sized by the English figure silently overruns — that is how a rich memory came
+        // to be cut off in mid-word.
+        const string english = "the company rode north at dawn and took the ford";
+        var cyrillic = new string('щ', english.Length);
+
+        Assert.True(MemoryTokenEstimator.EstimateTextTokens(cyrillic)
+                  > MemoryTokenEstimator.EstimateTextTokens(english));
+
+        // And the estimate errs high rather than low: overestimating only compresses a little
+        // early, while underestimating sends a prompt larger than the player's chosen share.
+        Assert.True(MemoryTokenEstimator.EstimateTextTokens(new string('щ', 2800)) >= 1000);
+    }
 }

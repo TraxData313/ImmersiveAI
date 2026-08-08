@@ -326,7 +326,52 @@ namespace ImmersiveAI.Core.Memory
                 if (block.Length > 0) self = block;
             }
 
+            summary = TrimToLastCompleteSentence(summary);
             return new CompressionResult(summary.Length == 0 ? null : summary, self);
+        }
+
+        // Sentence-final punctuation, in the hands a model may actually leave it in — Latin,
+        // the CJK full stop, and the Arabic full stop.
+        private static readonly char[] SentenceEnders = { '.', '!', '?', '…', '。', '۔' };
+
+        // What may legitimately close a sentence AFTER its full stop: quotes of several nations
+        // (including the Bulgarian „…“ and the guillemets) and brackets.
+        private static readonly char[] ClosingMarks = { '"', '\'', '”', '“', '’', '»', '«', ')', ']', '*', '`' };
+
+        /// <summary>
+        /// Guards against a memory cut off in mid-word. The summary is written WHOLE at every
+        /// compression and is the only durable thing an NPC carries of a person, so when the model
+        /// runs out of output budget the severed tail would otherwise be saved as her memory and
+        /// read back to her forever ("…хора от Южната империя, разг" — the Sibylla case,
+        /// 2026.08.08). We drop back to the last finished sentence instead.
+        ///
+        /// Two deliberate restraints: nothing is trimmed when the text already ends on a closed
+        /// sentence, and nothing is trimmed when doing so would throw away a large share of what
+        /// she wrote (no sentence end anywhere near the tail) — a strange but complete memory is
+        /// worth more than a confidently mangled one.
+        /// </summary>
+        public static string TrimToLastCompleteSentence(string? summary)
+        {
+            var text = (summary ?? string.Empty).TrimEnd();
+            if (text.Length == 0) return string.Empty;
+
+            // Already whole: the last meaningful character closes a sentence.
+            var tail = text.TrimEnd(ClosingMarks);
+            if (tail.Length > 0 && Array.IndexOf(SentenceEnders, tail[tail.Length - 1]) >= 0) return text;
+
+            var cut = text.LastIndexOfAny(SentenceEnders);
+            if (cut < 0) return text;
+
+            // Carry any closing quote or bracket that belongs to that sentence over with it.
+            var end = cut + 1;
+            while (end < text.Length && Array.IndexOf(ClosingMarks, text[end]) >= 0) end++;
+
+            // Refuse to amputate: if trimming would throw away most of what she wrote, this is not
+            // a severed tail but prose we simply do not punctuate the way we expected — a strange
+            // but complete memory is worth more than a confidently mangled one.
+            if (end < text.Length / 2) return text;
+
+            return text.Substring(0, end).TrimEnd();
         }
 
         // The earliest section-label position at or after <afterPos>, or <length> if none of them apply.

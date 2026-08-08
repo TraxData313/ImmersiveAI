@@ -387,4 +387,38 @@ public class MemoryCompressorTests
     {
         Assert.Equal(expected, MemoryCompressor.IsUnchangedMarker(text));
     }
+
+    [Fact]
+    public void ParseResponse_ASummaryCutOffMidWord_FallsBackToTheLastWholeSentence()
+    {
+        // The Sibylla case (2026.08.08): the memory-write call ran out of output budget and her
+        // memory was saved ending "…хора от Южната империя, разг". It is written whole each time,
+        // so that severed tail would be read back to her forever.
+        var result = MemoryCompressor.ParseResponse(
+            "SUMMARY:\nWe rode north and took the ford at dawn, and he kept his word about the grain. "
+            + "In Onira we sold what the wagons could spare and he asked me twice whether I was well. "
+            + "I told him the truth, which is that I was not, and that I would say so again when it mattered. "
+            + "He kept his word about the grain. "
+            + "On the road we saw Vealos burning, and the company of Sihanis, southerners, spo");
+
+        Assert.EndsWith("He kept his word about the grain.", result.Summary);
+    }
+
+    [Theory]
+    // Already whole — nothing is touched, closing marks and all.
+    [InlineData("She kept her word.", "She kept her word.")]
+    [InlineData("He asked me: \"Will you stay?\"", "He asked me: \"Will you stay?\"")]
+    [InlineData("Запомних боя като „Схватката край Корения“.", "Запомних боя като „Схватката край Корения“.")]
+    // A severed tail is dropped back to the last finished sentence.
+    [InlineData("One whole thought. And then a second one. But this one was cu",
+                "One whole thought. And then a second one.")]
+    // Refusing to amputate: with no sentence end anywhere near, a strange memory beats a mangled one.
+    [InlineData("A short opener. and then a very long unpunctuated stretch of prose that simply never closes and would lose almost everything",
+                "A short opener. and then a very long unpunctuated stretch of prose that simply never closes and would lose almost everything")]
+    [InlineData("no punctuation at all", "no punctuation at all")]
+    [InlineData("", "")]
+    public void TrimToLastCompleteSentence_CutsOnlyASeveredTail(string summary, string expected)
+    {
+        Assert.Equal(expected, MemoryCompressor.TrimToLastCompleteSentence(summary));
+    }
 }

@@ -196,8 +196,11 @@ namespace ImmersiveAI
         /// <see cref="MaxTokens"/> — which paces spoken replies — so deep memory has room to be rich:
         /// the whole of a long shared story does not fit in a reply budget. Since the distilled
         /// truths and aims were retired (2026.08.08) this budget is the ONLY bound on how much of a
-        /// person an NPC may carry, so it is deliberately generous.</summary>
-        public int MaxMemoryWriteTokens { get; set; } = 1500;
+        /// person an NPC may carry, so it is deliberately generous. Raised 1500 → 4000 on
+        /// 2026.08.08, the first playtest after that retirement: at 1500 a rich Bulgarian memory
+        /// was severed in mid-word. Text outside ASCII costs roughly 1.6× the tokens English does,
+        /// so a budget sized by English prose is far tighter than it looks for most of the world.</summary>
+        public int MaxMemoryWriteTokens { get; set; } = 4000;
 
         /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
@@ -761,6 +764,19 @@ namespace ImmersiveAI
                 ConfigVersion = 3;
             }
 
+            // V4: with the distilled truths and aims retired (2026.08.08) the rolling memory became
+            // the only durable thing an NPC carries — and the first playtest cut a rich Bulgarian
+            // memory off in mid-word at the old 1500-token write budget (text outside ASCII costs
+            // roughly 1.6× the tokens English does, so that ceiling was always tighter than it
+            // looked). A budget too small to finish the memory is not a matter of taste, it is a
+            // wound, so it migrates like the prices do — but only where it still holds the exact
+            // old default; any hand-set budget is the player's own and stays.
+            if (ConfigVersion < 4)
+            {
+                if (MaxMemoryWriteTokens == 1500) MaxMemoryWriteTokens = 4000;
+                ConfigVersion = 4;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The spark mode knows exactly three spellings; anything else (typos, old hand edits)
@@ -846,7 +862,7 @@ namespace ImmersiveAI
 
             // Memory-writing budget: never below the spoken budget (that would make reflection the
             // narrowest voice she has), never runaway.
-            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 1500;
+            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 4000;
             if (MaxMemoryWriteTokens < MaxTokens) MaxMemoryWriteTokens = MaxTokens;
             if (MaxMemoryWriteTokens > 8000) MaxMemoryWriteTokens = 8000;
 

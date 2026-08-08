@@ -56,7 +56,7 @@ namespace ImmersiveAI
         public const string MemoryWriteTokensDisplayName = "Room for memory writing (tokens)";
 
         public const string MemoryWriteTokensHint =
-            "The output budget for the calls where an NPC reworks their memory — the rolling summary, the truths they hold, who they have become, what they strive for. Kept apart from the reply length so reflection is never squeezed. Never falls below the reply length. Default 1500.";
+            "The output budget for the calls where an NPC reworks their memory — the one rolling memory they carry of you, and who they have become. Kept apart from the reply length so reflection is never squeezed. Too small and a long memory is cut short; raise it if you play in a language other than English, which costs far more of this budget. Default 4000.";
 
         public const string NotifyOnMemoryRefactorDisplayName = "Notice when they turn memories over";
 

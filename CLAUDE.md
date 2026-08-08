@@ -533,8 +533,15 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   rewinds the relation inside the save; the fix for the reload-divergence "memories from the future" bug;
   default on) + `MaxMemorySnapshots` (disk cap on snapshots per campaign, oldest pruned first; default 40) +
   `MaxMemoryWriteTokens` (output budget for the memory-WRITING calls — reflection/compression run on
-  their own client so the summary+truths+self never get squeezed by the spoken `MaxTokens` cap;
-  default 1500, never below `MaxTokens`),
+  their own client so the rolling memory + self never get squeezed by the spoken `MaxTokens` cap;
+  default **4000** since 2026.08.08, never below `MaxTokens`. It was 1500 until the first playtest
+  after the truths were retired severed a rich Bulgarian memory in mid-word: **text outside ASCII
+  costs ~1.6× the tokens English does**, so every token budget in this mod is far tighter than it
+  looks for most of the world. Migrated by ConfigVersion V4 where it still held the exact old
+  1500. The mid-word cut itself is now impossible to SAVE — `MemoryCompressor.TrimToLastCompleteSentence`
+  drops a severed tail back to the last finished sentence, refusing when that would throw away most
+  of the text; and `MemoryTokenEstimator` charges non-ASCII characters 1.6× so the gauge and the
+  compression triggers stop under-reading non-English play),
   `NotifyOnMemoryRefactor` (a soft activity-style notice the moment an NPC's automatic compression
   reworks her deep memory — "…turns over old memories of you, and settles them deeper"; default on),
   **the consolidation dials, all live and all in MCM's own "Memory" group since 2026.08.08** (Anton's
@@ -575,12 +582,14 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   McmChoiceLists' append-only rule; historical: 5.4-mini was the default 2026.07.12–28 after terra →
   luna both stumbled on access-propagation 401s; NO 5.5 mini/nano exist; older models live on as
   config.json hand edits), existing configs deliberately unmigrated — see docs/models-and-costs.md),
-  `ConfigVersion` (format stamp, 3 — migrations key off it; V2 = the letter hotkey's U→Y move,
+  `ConfigVersion` (format stamp, 4 — migrations key off it; V2 = the letter hotkey's U→Y move,
   V3 = correcting superseded built-in `ModelPrices` after OpenAI cut luna 80% / terra 20% on
   2026.07.30 — only entries still equal to the exact old figure move, hand-edits survive; the list
-  of what was superseded lives in `ModConfig.SupersededModelPrices`. NOTE the asymmetry, it is
+  of what was superseded lives in `ModConfig.SupersededModelPrices`; V4 = `MaxMemoryWriteTokens`
+  1500 → 4000, same only-if-still-the-old-default rule. NOTE the asymmetry, it is
   deliberate: model DEFAULTS are never migrated, PRICES always are — a model swap changes voice and
-  money and stays the player's call, a stale price is just a lie in the cost notice),
+  money and stays the player's call, a stale price is just a lie in the cost notice. The V4 budget
+  migrates by that same test: a ceiling too low to finish the memory is not taste, it is a wound),
   `DevMode` (default **false**, for players: hides the `[Immersive AI • test]` levers and the
   "Reveal the whole of your mind" inspector in the face-to-face menu, and the deep-memory overview
   panel in the chat window; set true when working on the mod — Anton keeps it true).

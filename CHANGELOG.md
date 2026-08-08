@@ -17,6 +17,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 - An NPC's backstory now begins as their earliest deep memory instead of a fixed page — over time they decide what of their old life to keep, reshape, or let fade.
 - If your name is renowned, a soul you meet for the first time already carries the rumor of you as an early memory — faint word, tales traveling far, or fame across all Calradia.
+- Fixed: a long memory could be saved cut off in mid-word. Characters now get a much larger budget for writing their memory (existing setups are raised too), and a memory cut short falls back to its last finished sentence instead of being kept half-written.
+- Playing in a language other than English is measured honestly now: Cyrillic, Greek and Asian scripts cost the AI about 1.6× what English does, so memories are no longer quietly cut short and the memory gauge tells the truth.
 
 ## v2.0.0 — 2026.08.08
 
