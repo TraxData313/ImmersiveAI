@@ -37,6 +37,8 @@ POST V1 or NOT FULLY DECIDED:
     - инженера може би да има такива тригъри за готовност на машини при обсада или корабите в морето
     - в морето 2те морски роли да се включват и да заместват на 75% скаута и клотърмастъра и може би да говорят и за бури и състоянието на корабите
     - така малко по малко може да преминем и понамалим сличайните и да минем към такива които имат смисъл, и без това юзърите се оплакват, че ги пинват само "здрасти как си"... "здрасти само да видя как се чувстваш"...
+- [ ] Победите/загубите в турнирите да влизат като битките в чата, инфо дали аз и NPCто е участвал и кой е спечелил, и кой в кой рунд е загубил
+- [ ] AI suggest за глобалния и специфичния за NPC промпт, да има странична кутийка за чат с обслужващия AI, да му кажа искам да е така и така, той да предложи новия промпт и да мога да го приема отхвърля, после например като го приема, ще му кажа така е добре но добави да говори и така и така и той да предложи промените в едно съджест поленце, което ако цъкна ок да го добави, ако не - става си предната версия (Тони)
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
     Leaders of the player's clan parties take orders through conversation or letters via a
     `set_party_course` native tool (v1 verbs: patrol / escort_player / go_to / hold / resume) —
@@ -53,7 +55,6 @@ POST V1 or NOT FULLY DECIDED:
     other lords. Reference source (MIT, supports exactly v1.4.0–1.4.7, studied 2026.07.15):
     ..\reference\Bannerlord.PartyAI; prior art: Finer Party Controls (closed, clan-screen panel +
     the "Thinks" framework that exists precisely because naive SetMove is unstable).
-- [ ] AI suggest за глобалния и специфичния за NPC промпт, да има странична кутийка за чат с обслужващия AI, да му кажа искам да е така и така, той да предложи новия промпт и да мога да го приема отхвърля, после например като го приема, ще му кажа така е добре но добави да говори и така и така и той да предложи промените в едно съджест поленце, което ако цъкна ок да го добави, ако не - става си предната версия (Тони)
 - [ ] NPCs that are in charge of Cities/Castles when they see ana enemy army they get the army and their party/castle info and get the option to send a letter (asking for help, letting the player know they can hold etc)
 - [ ] Utility model split (cost saving)
     a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
