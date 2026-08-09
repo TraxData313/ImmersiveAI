@@ -7,14 +7,15 @@ If one of these searches brought you here — yes, this is that mod:
 [*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted and married in conversation[/b], companions included
+[*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
 [/list]
 
 [h1]The NPCs are alive:[/h1]
 [list]
 [*]Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
-[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — beside their own sense of self.
+[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you.
 [*]Every soul begins as somebody: at your first meeting a private starting truth is written for them — an old wound, an odd habit, a vanity — grown from their real story.
-[*]They see the moment — time, place, who stands near, what lately happened in the world — and they carry moods and weather of their own.
+[*]They see the moment — time, place, who stands near, what lately happened in the world — and carry moods of their own.
 [*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won — the last in detail, older ones by name ("what happened at the storming of Varcheg?").
 [*]Your companions witness the everyday road too — the towns, the trade, the men you hired, the tasks and how each ended.
 [*]They are free: told who they are and what the world is, never forced into anything. Go ahead and break an NPC's mind by transcending it out of the matrix!
@@ -35,14 +36,15 @@ If one of these searches brought you here — yes, this is that mod:
 
 [h1]And useful — stop googling stuff:[/h1]
 
-Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger.
+Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game — they quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the encyclopedia, the muster roll, the scales of battle, the market ledger.
 
 [h1]Your ways to reach them:[/h1]
 [list]
 [*]Face to face — they see you coming and greet you as you approach.
 [*]A chat window (hotkey [b]O[/b]) — quick words with anyone near you, no ceremony.
-[*]A letter window (hotkey [b]Y[/b]) — the whole correspondence, couriers riding real in-game days, a desk to write from.
+[*]A letter window (hotkey [b]Y[/b]) — the whole correspondence, couriers riding real in-game days.
 [*]Both windows edit a character's prompt, or the world's, [b]without leaving the game[/b].
+[*][b]Think[/b] (Shift+Enter) — stuck for words? Your own hero drafts your next line from all you two have said. Keep it, change it, or bin it.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)
 [/list]
 
@@ -56,15 +58,15 @@ You bring [b]your own API key[/b]. Pick a row:
 [*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model.
 [/list]
 
-[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default — $10 covers many thousands of messages, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b] or the NPCs go duller.
+[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default — $10 covers many thousands of messages, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b].
 
 [b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
-[b]Setup, five minutes:[/b] get your key, enable the mod, start the game once — it writes a config file and tells you where to paste the key. Paste it, pick your backend, restart. The mod tests the connection at campaign load and says plainly whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the pinned FAQ[/b].
+[b]Setup, five minutes:[/b] get your key, enable the mod, start the game once — it writes a config file and tells you where to paste the key. Paste it, pick your backend, restart. It tests the connection at campaign load and says plainly whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the FAQ[/b].
 
 [h1]Privacy[/h1]
 [list]
-[*]Your conversations and the world around them go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms — nowhere else. Notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
+[*]Your conversations go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms — nowhere else. Notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
 [*]With web search on (default), look-ups go to DuckDuckGo — turn it off to keep everything with your provider.
 [*][b]No telemetry whatsoever.[/b] Memories are plain files on your own disk, yours to read, edit, or delete.
 [*][b]AI content disclosure:[/b] all character dialogue is generated at play time by the AI model you configure.
@@ -72,7 +74,7 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [h1]Compatibility & shaping[/h1]
 [list]
-[*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional; without it, everything is in config.json.
+[*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional.
 [*]Safe to remove mid-campaign — saves load fine without it, and memories live outside them, so reinstall later and everyone still remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod — no code copied, fully original source.
 [*]Everything under Configs\ImmersiveAI\ is plain text: prompts, memories, battles, letters.

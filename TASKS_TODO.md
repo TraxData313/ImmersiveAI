@@ -1,20 +1,20 @@
 BUGS:
 
 NEXT UPDATE:
-- [ ] SHIP v2.0.0 — everything is ready, playtest passed. Done 2026.08.08: version bumped,
-      CHANGELOG rewritten as one-line pills with the 255-char Nexus block at the top of the
-      section, WorkshopUpdate.xml ChangeNotes on group-headlines-plus-pills, all four pages
-      rewritten and measured (steam 7954/8000, nexus 9385, faq 13584), git pushed + tagged
-      v2.0.0, branches pruned, dist\ImmersiveAI + dist\ImmersiveAI_v2.0.0.zip packaged.
-      THE REMAINING STEPS are Anton's, all three tiers already written for him:
-      (1) run the Workshop uploader — tools/WORKSHOP-UPLOAD.md step 3;
-      (2) paste docs/steam-page-final.bbcode.txt into the Steam item description, and
-          docs/steam-faq.bbcode.txt into the two pinned discussion threads;
-      (3) upload dist\ImmersiveAI_v2.0.0.zip to Nexus with docs/nexus-page.bbcode.txt as the
-          description and the CHANGELOG's fenced 255-char block as the changelog field.
-      RE-PACKAGE (tools\package.ps1) first if any code changes after this point.
-      NOTE: code HAS changed since the package — the wedding chronicle and the living misgivings
-      list landed after it (see [Unreleased] in the CHANGELOG). Re-package before uploading.
+- [ ] SHIP v2.2.0 — THE STEAM UPLOAD IS DONE (2026.08.10, "Uploading done!"). What is left is
+      Anton's, and the text is already written for him:
+      (1) Steam item page -> Owner Controls -> paste docs/steam-page-final.bbcode.txt as the
+          description (7847/8000 bytes; the uploader never touches title/description/visibility);
+      (2) Nexus -> upload dist\ImmersiveAI_v2.2.0.zip, paste docs/nexus-page.bbcode.txt as the
+          description and the CHANGELOG's fenced 249-char block into the per-version changelog;
+      (3) README on GitHub is already updated in the repo — just push.
+      NOTE the Workshop item stood at v1.4.1 before this upload, so subscribers receive v2.0.0,
+      v2.1.0 and v2.2.0 in one go; the Steam change note names v2.2.0 only. If that matters, the
+      CHANGELOG has each version's block separately to paste into the descriptions.
+      The whole ritual, for next time: docs/release-dance.md.
+- [ ] PLAYTEST "Think" (built 2026.08.10, live-probed against terra and luna on Anton's own save,
+      420 tests green): the preset menu, the Edit page and its Restore, Shift+Enter with an empty
+      box / a rant / a preset, Send greying out while a preset stands, and the letter window's twin.
 - [ ] PLAYTEST THE WEDDING CHRONICLE (built 2026.08.09, 322 tests green, unplaytested) — the
       centerpiece. Wed someone and watch for: the rose "the chronicler takes up the pen…" notice,
       then "❦ the day and the night are written"; TWO ❦ cards in the bride's chat thread and ONE

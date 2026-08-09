@@ -174,33 +174,112 @@
 
                     <!-- the whole of what you are typing, wrapped — the single-line input below can
                          only show its tail, so the draft mirror is where a long message stays
-                         readable while it is written (newest lines pinned to the bottom) -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="84" VerticalAlignment="Bottom" MarginBottom="78" MarginRight="210" IsVisible="@HasDraft">
+                         readable while it is written (newest lines pinned to the bottom). Its ink
+                         is bound: warm parchment for words that will be spoken, the nights' quiet
+                         violet for a WISH that will only be thought on, with a line at the top
+                         saying so plainly (2026.08.10) -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="84" VerticalAlignment="Bottom" MarginBottom="118" MarginRight="210" IsVisible="@HasDraft">
                       <Children>
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.05" />
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="10" MarginRight="10" MarginTop="6" MarginBottom="6" ClipContents="true">
                           <Children>
-                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="#D9C08CFF" Text="@InputText" />
+                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="@DraftColor" Text="@InputText" />
                           </Children>
                         </Widget>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginLeft="12" MarginRight="12" MarginTop="4" Brush="Popup.Description.Text" Brush.FontSize="13" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@WishHintText" IsVisible="@IsWish" />
                       </Children>
                     </Widget>
 
                     <!-- when the chosen one is away across the map, a gentle note that words cannot reach
                          them now — the send stays grayed; a letter is the road (see AwayNotice) -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" MarginBottom="86" MarginRight="210" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#B9A98BFF" Brush.TextHorizontalAlignment="Center" Text="@AwayNotice" IsVisible="@IsAway" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" MarginBottom="122" MarginRight="210" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#B9A98BFF" Brush.TextHorizontalAlignment="Center" Text="@AwayNotice" IsVisible="@IsAway" />
 
-                    <!-- your words -->
+                    <!-- your words. The writing line yields 150px on its right to the thinking's own
+                         little column ("Let me think…" over "Preset…"), which stands between it and
+                         the Send button; with the thinking turned off it keeps the old width. -->
                     <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="70" VerticalAlignment="Bottom" MarginRight="210" Sprite="General\CharacterCreation\name_input_area">
                       <Children>
                         <EditableTextWidget Id="ChatInput" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="14" MarginRight="14" MarginTop="12" MarginBottom="12" Brush="Review.NameInput.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Left" RealText="@InputText" MaxLength="1000" />
                       </Children>
                     </Widget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="62" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="4" Brush="Popup.Done.Button" Command.Click="ExecuteSend" IsEnabled="@CanSend">
+
+                    <!-- your own mind, lent: the thinking sits immediately LEFT of the sending, at the
+                         same height, so the pair reads as one choice — and each wears its own key
+                         under its name rather than hiding it in a hover (Anton, 2026.08.10: ENTER
+                         sends, SHIFT+ENTER thinks, fixed and simple). The standing presets that steer
+                         the thinking ride just above it. -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="210" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="78" MarginRight="226" Brush="Popup.Cancel.Button" Command.Click="ExecuteTogglePresets" IsVisible="@ShowThink">
                       <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.TextHorizontalAlignment="Center" Text="@SendText" />
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PresetText" />
                       </Children>
                     </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="210" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="78" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteThink" IsEnabled="@CanThink" IsVisible="@ShowThink">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@ThinkText" />
+                      </Children>
+                    </ButtonWidget>
+
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="62" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="4" Brush="Popup.Done.Button" Command.Click="ExecuteSend" IsEnabled="@CanSend">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="19" Brush.TextHorizontalAlignment="Center" Text="@SendText" />
+                      </Children>
+                    </ButtonWidget>
+
+                    <!-- the presets, as a little menu standing on its own buttons: five rows fit,
+                         and past that it scrolls (Anton, 2026.08.10). A click chooses one — its
+                         words drop into the writing box as a WISH, never as words to send. -->
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="440" SuggestedHeight="352" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="118" IsVisible="@IsPresetsShown">
+                      <Children>
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.99" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_9" ExtendLeft="14" ExtendTop="14" ExtendRight="14" ExtendBottom="14" IsEnabled="false" />
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="30" VerticalAlignment="Top" MarginTop="10" MarginLeft="14" MarginRight="14" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="#C9BFA8FF" Brush.TextHorizontalAlignment="Left" Text="@PresetsTitleText" />
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="44" MarginLeft="14" MarginRight="14" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@NoPresetsText" IsHidden="@HasPresets" />
+
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="44" MarginBottom="52" MarginLeft="10" MarginRight="10">
+                          <Children>
+                            <ScrollablePanel Id="PresetsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="PresetsClip" InnerPanel="PresetsClip\PresetsList" VerticalScrollbar="..\PresetsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                              <Children>
+                                <Widget Id="PresetsClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                                  <Children>
+                                    <ListPanel Id="PresetsList" DataSource="{Presets}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <ItemTemplate>
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="52" MarginBottom="4" MarginRight="12" Brush="Popup.Cancel.Button" Command.Click="ExecuteChoose">
+                                          <Children>
+                                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="12" MarginRight="12" MarginTop="4" MarginBottom="4" ClipContents="true">
+                                              <Children>
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="20" VerticalAlignment="Top" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#D9C08CFF" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="20" VerticalAlignment="Top" MarginTop="20" Brush="Popup.Description.Text" Brush.FontSize="13" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@Wish" />
+                                              </Children>
+                                            </Widget>
+                                          </Children>
+                                        </ButtonWidget>
+                                      </ItemTemplate>
+                                    </ListPanel>
+                                  </Children>
+                                </Widget>
+                              </Children>
+                            </ScrollablePanel>
+                            <ScrollbarWidget Id="PresetsScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="PresetsScrollbarHandle" MinValue="0" MaxValue="100">
+                              <Children>
+                                <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                                <BrushWidget Id="PresetsScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                              </Children>
+                            </ScrollbarWidget>
+                          </Children>
+                        </Widget>
+
+                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="36" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="8" MarginLeft="14" Brush="Popup.Cancel.Button" Command.Click="ExecuteOpenPresetEditor">
+                          <Children>
+                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PresetEditorText" />
+                          </Children>
+                        </ButtonWidget>
+                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="36" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="8" MarginRight="14" Brush="Popup.Cancel.Button" Command.Click="ExecuteTogglePresets">
+                          <Children>
+                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                          </Children>
+                        </ButtonWidget>
+                      </Children>
+                    </Widget>
 
                   </Children>
                 </Widget>
@@ -309,6 +388,101 @@
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="220" SuggestedHeight="56" HorizontalAlignment="Left" VerticalAlignment="Bottom" Brush="Popup.Cancel.Button" Command.Click="ExecutePromptCancel">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.TextHorizontalAlignment="Center" Text="Discard" />
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </Widget>
+              </Children>
+            </Widget>
+
+            <!-- the presets' own editing page: the standing wishes that steer your thinking. A row's
+                 body chooses it, the pen brings it down into the writing lines for reworking, the
+                 cross strikes it out; Save adds what is written (a name already kept is rewritten).
+                 "Restore the first three" undoes everything, and asks before it does. -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsPresetEditShown">
+              <Children>
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
+                  <Children>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="180" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@PresetEditTitleText" />
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Top" MarginTop="40" MarginRight="180" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@PresetEditHintText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                      </Children>
+                    </ButtonWidget>
+
+                    <!-- the kept presets -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="94" MarginBottom="132">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@NoPresetsText" />
+                        <ScrollablePanel Id="PresetRowsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="PresetRowsClip" InnerPanel="PresetRowsClip\PresetRowsList" VerticalScrollbar="..\PresetRowsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                          <Children>
+                            <Widget Id="PresetRowsClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                              <Children>
+                                <ListPanel Id="PresetRowsList" DataSource="{PresetRows}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                  <ItemTemplate>
+                                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="56" MarginBottom="6" MarginRight="20">
+                                      <Children>
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginRight="120" Brush="Popup.Cancel.Button" Command.Click="ExecuteChoose">
+                                          <Children>
+                                            <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="14" MarginRight="14" MarginTop="6" MarginBottom="6" ClipContents="true">
+                                              <Children>
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="21" VerticalAlignment="Top" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="#D9C08CFF" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="21" VerticalAlignment="Top" MarginTop="21" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@Wish" />
+                                              </Children>
+                                            </Widget>
+                                          </Children>
+                                        </ButtonWidget>
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="52" HorizontalAlignment="Right" MarginRight="62" Brush="Popup.Cancel.Button" Command.Click="ExecuteEdit">
+                                          <Children>
+                                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="edit" />
+                                          </Children>
+                                        </ButtonWidget>
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="52" HorizontalAlignment="Right" Brush="Popup.Cancel.Button" Command.Click="ExecuteRemove">
+                                          <Children>
+                                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="X" />
+                                          </Children>
+                                        </ButtonWidget>
+                                      </Children>
+                                    </Widget>
+                                  </ItemTemplate>
+                                </ListPanel>
+                              </Children>
+                            </Widget>
+                          </Children>
+                        </ScrollablePanel>
+                        <ScrollbarWidget Id="PresetRowsScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="PresetRowsScrollbarHandle" MinValue="0" MaxValue="100">
+                          <Children>
+                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                            <BrushWidget Id="PresetRowsScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                          </Children>
+                        </ScrollbarWidget>
+                      </Children>
+                    </Widget>
+
+                    <!-- writing one: its short name, then the wish itself -->
+                    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="54" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="62" Sprite="General\CharacterCreation\name_input_area">
+                      <Children>
+                        <EditableTextWidget Id="PresetNameInput" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="12" MarginRight="12" MarginTop="10" MarginBottom="10" Brush="Review.NameInput.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" RealText="@PresetEditName" MaxLength="24" />
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="14" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#6E6A60FF" Brush.TextHorizontalAlignment="Left" Text="@PresetNameHintText" IsVisible="@IsPresetNameEmpty" />
+                      </Children>
+                    </Widget>
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="54" VerticalAlignment="Bottom" MarginBottom="62" MarginLeft="212" MarginRight="200" Sprite="General\CharacterCreation\name_input_area">
+                      <Children>
+                        <EditableTextWidget Id="PresetTextInput" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="12" MarginRight="12" MarginTop="10" MarginBottom="10" Brush="Review.NameInput.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" RealText="@PresetEditText" MaxLength="400" />
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="14" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#6E6A60FF" Brush.TextHorizontalAlignment="Left" Text="@PresetTextHintText" IsVisible="@IsPresetTextEmpty" />
+                      </Children>
+                    </Widget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="180" SuggestedHeight="54" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="62" Brush="Popup.Done.Button" Command.Click="ExecuteSavePreset" IsEnabled="@CanSavePreset">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.TextHorizontalAlignment="Center" Text="@PresetSaveText" />
+                      </Children>
+                    </ButtonWidget>
+
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="260" SuggestedHeight="44" HorizontalAlignment="Left" VerticalAlignment="Bottom" Brush="Popup.Cancel.Button" Command.Click="ExecuteRestorePresets">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PresetRestoreText" />
                       </Children>
                     </ButtonWidget>
                   </Children>

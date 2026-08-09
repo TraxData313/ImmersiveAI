@@ -123,6 +123,105 @@ namespace ImmersiveAI.Core.Prompts
             return messages;
         }
 
+        /// <summary>
+        /// The player's own next line, thought out from everything the one before them would read —
+        /// the same identity, memory, situation and shared story, no more and no less.
+        ///
+        /// SHAPE (reworked after the first playtest, 2026.08.10): ONE system message in the PLAYER's
+        /// own first person, then ONE user message carrying the NPC's sheet and the transcript as
+        /// MATERIAL, closing on whose turn it is. It deliberately does NOT reuse <see cref="Build"/>:
+        /// there, the sheet says "I am Sibylla" and the last assistant turn is hers, so a model asked
+        /// for the player's line simply carried on as her — and handed the player HER words to send
+        /// back to her. With no chair of hers to sit in, the only "I" in the call is the player's.
+        ///
+        /// Nothing here is ever recorded: the answer goes into the player's writing box, and no turn
+        /// is made of it.
+        /// </summary>
+        public IReadOnlyList<ChatMessage> BuildPlayerThought(
+            string facts,
+            NpcMemory memory,
+            string playerName,
+            string npcName,
+            string? wish,
+            bool asLetter = false,
+            bool mayAct = false,
+            string? world = null)
+        {
+            var them = string.IsNullOrWhiteSpace(npcName) ? "them" : npcName.Trim();
+
+            var user = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(facts))
+            {
+                user.AppendLine("[What I know, standing here:]");
+                user.AppendLine(facts.Trim());
+                user.AppendLine();
+            }
+            if (!string.IsNullOrWhiteSpace(world))
+            {
+                user.AppendLine("[Of this world, this I know:]");
+                user.AppendLine(world.Trim());
+                user.AppendLine();
+            }
+
+            var script = RenderScript(memory, playerName, them);
+            user.AppendLine(script.Length > 0
+                ? "[What has passed between us — our own words, in order:]"
+                : $"[{them} and I have never yet spoken. Mine would be the first words.]");
+            if (script.Length > 0) user.AppendLine(script);
+
+            user.AppendLine();
+            user.Append(asLetter
+                ? PlayerThought.LetterLine(playerName, wish)
+                : PlayerThought.SpokenLine(playerName, wish, mayAct));
+
+            return new List<ChatMessage>
+            {
+                ChatMessage.System(PlayerThought.MindFrame(playerName, them, asLetter)),
+                ChatMessage.User(user.ToString()),
+            };
+        }
+
+        // The remembered turns as a plain script — the same stream the chat window draws, named for
+        // who spoke each line so whose turn it is can never be in doubt. This is the ONE place the
+        // NPC's own voice belongs in a thinking call, and it is quoted, not inhabited. Her inner
+        // beats ride along as asides (the window shows the player those too, so nothing is smuggled
+        // in), and a silent beat simply stands with no answer under it.
+        private static string RenderScript(NpcMemory memory, string playerName, string npcName)
+        {
+            var sb = new StringBuilder();
+            foreach (var turn in memory.RecentTurns)
+            {
+                var stamp = StampOf(turn);
+                if (turn.IsFromAngel || turn.IsInnerThought)
+                    sb.AppendLine($"{stamp}({npcName}, to themselves: {turn.PlayerLine.Trim()})");
+                else
+                    sb.AppendLine($"{stamp}{playerName}: {turn.PlayerLine.Trim()}");
+
+                if (!string.IsNullOrWhiteSpace(turn.NpcLine))
+                    sb.AppendLine($"{npcName}: {Tighten(turn.NpcLine)}");
+            }
+            return sb.ToString().TrimEnd();
+        }
+
+        // A spoken turn may hold blank lines of its own; in a script those read as the turn ending.
+        // Tightened to single breaks — the words and their *acted* marks stand untouched.
+        private static string Tighten(string line)
+        {
+            var kept = (line ?? string.Empty)
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0);
+            return string.Join("\n", kept);
+        }
+
+        private static string StampOf(ConversationTurn turn)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
+            if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
+            return parts.Count == 0 ? string.Empty : "[" + string.Join(", ", parts) + "] ";
+        }
+
         /// <summary>The NPC's own reckoning on whether to approach the player — one simple nudge, first
         /// person: is there something I want to DISCUSS with them (not merely "do I want to say hi"), the
         /// rest left wholly to their own nature and what the sheet has stirred (news, mood, trade, memory).

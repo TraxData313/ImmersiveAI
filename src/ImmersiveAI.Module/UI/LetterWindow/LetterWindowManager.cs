@@ -54,6 +54,29 @@ namespace ImmersiveAI.UI.LetterWindow
             _hotkey = ParseKey(config.LetterWindowHotkey);
         }
 
+        // ------------------------------ "Let me think…" ------------------------------
+
+        /// <summary>The player's own thought came back — the letter they would write. Into the draft
+        /// store first (a window walked away from still keeps it), then to the open view. Drafts are
+        /// keyed by the correspondent's folder, which is how the window knows its own threads.</summary>
+        internal static void OnThoughtReady(Hero npc, string words)
+        {
+            if (npc == null) return;
+            try
+            {
+                var folder = NpcPaths.NpcFolder(npc);
+                SetDraft(folder, words);
+                _vm?.OnThoughtReady(folder, words);
+            }
+            catch { /* the words are in the draft store either way */ }
+        }
+
+        internal static void OnThoughtFailed(Hero npc)
+        {
+            try { if (npc != null) _vm?.OnThoughtFailed(NpcPaths.NpcFolder(npc)); }
+            catch { /* best-effort */ }
+        }
+
         private static InputKey ParseKey(string name)
         {
             return Enum.TryParse<InputKey>((name ?? string.Empty).Trim(), ignoreCase: true, out var key)
@@ -230,11 +253,25 @@ namespace ImmersiveAI.UI.LetterWindow
             var input = _layer?.Input;
             if (input != null && input.IsKeyReleased(InputKey.Escape))
             {
-                // Escape folds the prompt editor first (discarding), then the info overlay;
-                // only a press with neither up closes the window.
+                // Escape folds the prompt editor first (discarding), then the presets' two pages,
+                // then the info overlay; only a press with none of them up closes the window.
                 if (_vm != null && _vm.IsPromptEditShown) _vm.ExecutePromptCancel();
+                else if (_vm != null && _vm.IsPresetEditShown) _vm.IsPresetEditShown = false;
+                else if (_vm != null && _vm.IsPresetsShown) _vm.IsPresetsShown = false;
                 else if (_vm != null && _vm.IsInfoShown) _vm.IsInfoShown = false;
                 else Close();
+                return;
+            }
+
+            // Enter still seals nothing here — a letter deserves a deliberate hand — but SHIFT+ENTER
+            // sets the player's own mind to work on it, the same fixed key as in the chat window.
+            if (input != null && _vm != null
+                && (input.IsKeyReleased(InputKey.Enter) || input.IsKeyReleased(InputKey.NumpadEnter))
+                && ChatWindow.ChatWindowManager.ShiftHeld()
+                && _vm.IsInfoShown != true && _vm.IsPromptEditShown != true
+                && _vm.IsPresetsShown != true && _vm.IsPresetEditShown != true)
+            {
+                _vm.ExecuteThink();
                 return;
             }
 

@@ -352,6 +352,18 @@ namespace ImmersiveAI
         /// InputKey name (e.g. "O", "Y", "F10"). Chosen not to collide with the vanilla map keys.</summary>
         public string ChatWindowHotkey { get; set; } = "O";
 
+        /// <summary>When true, the chat and letter windows carry a "Let me think…" button: your own
+        /// character works out what to say (or write) next and puts it in your writing box, for you
+        /// to keep, change, or throw away. It reads exactly what the one before you reads — who you
+        /// both are, everything that has passed between you, where you stand — so the line fits the
+        /// moment. Whatever already stands in the box is taken as your INTENT ("I want to say
+        /// something romantic"), never as words to send; the little menu above the button keeps
+        /// your standing conversation presets, which live in conversation_presets.txt and are yours
+        /// to edit. Each
+        /// thinking is one paid call, billed like an exchange. Set false to hide the whole thing and
+        /// write every word yourself.</summary>
+        public bool EnableThinkForMe { get; set; } = true;
+
         /// <summary>When true (and the chat window is enabled), an NPC moved to reach out no longer asks
         /// through an accept/decline popup — they simply come and SPEAK: their first words land in the
         /// chat window as an unread message (with a faced toast, and the portrait map notice now opening

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ImmersiveAI.Core.Prompts;
 
 namespace ImmersiveAI
 {
@@ -123,6 +124,67 @@ $@"# Immersive AI - Custom instructions for {npcName}
         {
             LoadGlobalPrompt();
             WriteKeepingComments(GlobalPromptPath, text);
+        }
+
+        // ── The player's own presets ("Let me think…") ─────────────────────────────────
+        // Not a prompt anyone reads: the standing wishes the think-menu offers ("romantic",
+        // "ender"), which only ever steer the PLAYER's own next line. Same #-comment convention as
+        // every other file here, so the template can explain itself and survive editing in game.
+
+        public static string ConversationPresetsPath => Path.Combine(RootDirectory, "conversation_presets.txt");
+
+        // The name this file wore for the few hours between being built and being renamed
+        // (2026.08.10). Kept only so an early file is carried over rather than left orphaned.
+        private static string LegacyPresetsPath => Path.Combine(RootDirectory, "think_intents.txt");
+
+        private const string PresetsTemplate =
+@"# Immersive AI - your conversation presets
+#
+# ""Think"" (Shift+Enter) in the chat and letter windows has your own character work
+# out what to say next. It reads everything the one before you reads - who you both
+# are, all that has passed between you, where you stand, the whole conversation - and
+# writes their next line into your writing box, for you to keep, change, or throw away.
+#
+# The lines below are the standing presets its little menu offers. Choosing one drops
+# its words into your writing box: they are NEVER sent to anyone, they only steer your
+# own thinking. Then press Shift+Enter and the words come back.
+#
+# One per line, in your own words:
+#
+#     name = what I mean to get across
+#
+# Edit them here, or from the menu itself without leaving the game.
+
+";
+
+        /// <summary>The player's standing presets, creating the commented template on first run.</summary>
+        public static List<ConversationPreset> LoadConversationPresets()
+        {
+            try
+            {
+                Directory.CreateDirectory(RootDirectory);
+                if (!File.Exists(ConversationPresetsPath) && File.Exists(LegacyPresetsPath))
+                    File.Move(LegacyPresetsPath, ConversationPresetsPath);
+                if (!File.Exists(ConversationPresetsPath))
+                    File.WriteAllText(ConversationPresetsPath,
+                        PresetsTemplate + ConversationPresets.Format(ConversationPresets.Defaults));
+                // An emptied file stays empty on purpose: the defaults are a starting gift, not a
+                // floor — a player who strikes them all out meant to.
+                return ConversationPresets.Parse(File.ReadAllText(ConversationPresetsPath));
+            }
+            catch { return ConversationPresets.Defaults.ToList(); }
+        }
+
+        /// <summary>Writes the presets back (the in-game menu's add / rewrite / strike-out), keeping
+        /// the file's own comment lines at the top.</summary>
+        public static void SaveConversationPresets(IEnumerable<ConversationPreset> presets)
+        {
+            try
+            {
+                LoadConversationPresets();   // ensures the file and its template exist
+                WriteKeepingComments(ConversationPresetsPath, ConversationPresets.Format(presets));
+            }
+            catch { /* the menu still holds them for this session */ }
         }
 
         // ── The director's spark (the generated starting persona) ──────────────────────

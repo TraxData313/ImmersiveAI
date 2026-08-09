@@ -151,6 +151,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   test levers, the raw-prompt inspector, and the chat window's deep-memory overview).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
+- `conversation_presets.txt` — the PLAYER's own standing conversation presets for "Think" (2026.08.10): the
+  button in both windows that has the player's character work out their next line, on the very
+  sheet the chosen NPC would answer on. `name = wish` lines, same #-comment convention; Core
+  `Prompts\PlayerThought` (the closing aside + answer-taming) + `Prompts\ConversationPresets` (the file
+  model), Module `ImmersiveChatBehavior.Thoughts.cs`. Plain call, no tools, nothing recorded —
+  the words land in the writing box only. Enter sends, Shift+Enter thinks. Ships with
+  starter / romantic / ender; config `EnableThinkForMe`.
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
   campaigns, so memories are scoped by a campaign id minted once by `ImmersiveChatBehavior` and
   persisted inside the save via `SyncData` (`Campaign.UniqueGameId` changes on every save, so it

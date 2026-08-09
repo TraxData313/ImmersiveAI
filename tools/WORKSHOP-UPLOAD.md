@@ -1,5 +1,8 @@
 # Updating the mod on the Steam Workshop
 
+> This is the STEAM STEP alone. The whole shipping ritual — who does what, the three change-note
+> tiers, the store-page byte budgets, the order of it all — lives in **`docs/release-dance.md`**.
+
 The upload path is Bannerlord's **own official uploader** —
 `TaleWorlds.MountAndBlade.SteamWorkshop.exe` in the game's `bin\Win64_Shipping_Client`.
 It rides the **already-logged-in Steam client**: no SteamCMD, no password, no Steam Guard.
@@ -40,13 +43,17 @@ Item: **3764210301** (already created via `WorkshopCreate.xml` — never run tha
   successful. Comments are only safe INSIDE `<GetItem>`/`<UpdateItem>`.
 - The item **title** comes from the module's `SubModule.xml <Name>`, not the task file.
 - The tool ends by writing `steam_workshop_uploader.txt` to the working directory and then
-  **crashing on a harmless press-any-key read** when run non-interactively. Judge success
-  by **"Uploading done!"** in the output, never by the exit code.
+  **crashing on a harmless press-any-key read** when run non-interactively (exit code 82,
+  `System.InvalidOperationException: Cannot read keys…` — confirmed again 2026.08.10). Judge
+  success by **"Uploading done!"** in the output, never by the exit code.
 - Title/description/visibility on the Workshop page are NOT touched by `WorkshopUpdate.xml`
   (it has no `<ItemDescription>`/`<Visibility>`) — edit those on the item page itself
   (Owner Controls), including flipping Private → Public.
 
 ## Sanity check after upload
+
+The locally subscribed copy under `steamapps\workshop\content±550þ4210301` still shows the
+OLD version for a while — Steam re-downloads on its own schedule. That is not a failed upload.
 
 Steam re-downloads the item; enable the plain "Immersive AI" (not the .Dev copy) in the
 launcher and smoke-test the exact build subscribers get. Never enable both at once.

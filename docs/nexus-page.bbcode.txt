@@ -9,6 +9,7 @@ If one of these searches brought you here - yes, this is that mod:
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story - [b]courted and married in conversation[/b], companions included
 [*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
+[*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
 [/list]
 
 [b]The NPCs are alive:[/b]
@@ -26,7 +27,7 @@ If one of these searches brought you here - yes, this is that mod:
 [b][size=4]Court them. Wed them. Hire them.[/size][/b]
 [list]
 [*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road - liking, love, readiness, betrothal, wedding - moved by their own judgment of your talks, not by a menu.
-[*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words. Talk them over; only they decide when life has answered one, and their readiness waits until nothing they wrote still stands.
+[*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words. Talk them over; only they decide when one is answered, and their readiness waits until nothing they wrote still stands.
 [*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing - and her family's blessing costs a bride-price, haggled in talk or letter.
 [*][b]Companion brides and grooms[/b] - vanilla forbids them; here they are the point. Wed the wanderer riding at your side and she keeps her place and duties.
 [*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself. They open at their worth and never volunteer their lowest price.
@@ -37,14 +38,15 @@ If one of these searches brought you here - yes, this is that mod:
 
 [b]And useful - stop googling stuff:[/b]
 
-Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game - they can quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, your chronicle.
+Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game - they quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the muster roll, the scales of battle, the market ledger, your chronicle.
 
 [b]Your ways to reach them:[/b]
 [list]
 [*]Face to face - they see you coming and greet you as you approach.
 [*]A chat window (hotkey [b]O[/b]) - quick words with anyone near you, no ceremony.
-[*]A letter window (hotkey [b]Y[/b]) - the whole correspondence, couriers riding real in-game days, a desk to write from.
-[*]Both windows edit a character's prompt, or the whole world's, [b]without leaving the game[/b] - it speaks from the next reply.
+[*]A letter window (hotkey [b]Y[/b]) - the whole correspondence, couriers riding real in-game days.
+[*]Both windows edit a character's prompt, or the world's, [b]without leaving the game[/b] - it speaks from the next reply.
+[*][b]Think[/b] (Shift+Enter) - stuck for words? Your own hero drafts your next line from all you two have said, to keep, change or bin. Presets steer it: starter, romantic, ender, or your own.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)
 [/list]
 
@@ -59,9 +61,9 @@ You bring [b]your own API key[/b]. Pick a row:
 [*][b]Also fine[/b] - OpenAI, Anthropic (Claude), a local model, or any OpenAI-compatible service via the Custom endpoint option.
 [/list]
 
-[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default - $10 covers many thousands of messages, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b] or the NPCs go duller.
+[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default - $10 covers many thousands of messages, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b].
 
-[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own the setup; I don't debug them.
+[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own that setup.
 
 [b][size=4]Installation[/size][/b]
 
@@ -74,12 +76,12 @@ You bring [b]your own API key[/b]. Pick a row:
 [b][size=4]If characters are silent[/size][/b]
 [list]
 [*][b]Read the startup message.[/b] It says what it found ("connected", a missing/wrong key, a network problem) and where to fix it. Fix config.json and restart; the check runs again.
-[*][b]Check the log:[/b] Configs\ImmersiveAI\log.txt records every call and error in plain words. A wrong or dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Still stuck? Post its last lines in the comments - the mod never logs your key.
+[*][b]Check the log:[/b] Configs\ImmersiveAI\log.txt records every call and error in plain words. A wrong or dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Stuck? Post its last lines in the comments - your key is never logged.
 [/list]
 
 [b][size=4]Privacy[/size][/b]
 [list]
-[*]Your conversations - plus the world context around them (character sheets, campaign facts, your name) - go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms, nowhere else. Their policy is theirs: notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
+[*]Your conversations - plus the world context around them (character sheets, campaign facts, your name) - go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms, nowhere else. Notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
 [*]With web search on (default), look-ups go to DuckDuckGo - turn it off to keep everything with your provider.
 [*][b]No telemetry whatsoever.[/b] All memories live as plain files on your own disk, yours to read, edit, or delete.
 [*][b]AI content disclosure:[/b] all character dialogue is generated at play time by the AI model you configure.
@@ -90,7 +92,7 @@ You bring [b]your own API key[/b]. Pick a row:
 [*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered - it coexists with overhauls, War Sails, Marry Anyone and Training Battles. MCM optional; without it, everything is in config.json.
 [*][b]Safe to remove mid-campaign.[/b] Saves load fine without the mod (just the usual "different modules" warning), and memories live outside them - reinstall later and every character remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod - no code copied, fully original source.
-[*]Under Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world, and each character's folder holds their own prompt (in their own voice - "I stutter when I am nervous"), memories, battles, nights and letters as readable text.
+[*]Under Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world, and each character's folder holds their own prompt (in their own voice), memories, battles, nights and letters as readable text.
 [/list]
 
 [b][size=4]Final thoughts[/size][/b]

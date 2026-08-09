@@ -15,6 +15,30 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v2.2.0 — 2026.08.10
+
+When the words will not come, your own hero finds them for you.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Think (Shift+Enter): your hero drafts your next line
+* It reads everything the two of you have said
+* Empty box? It finds something worth saying
+* A half-typed rant? It turns it into words
+* Presets steer it - starter, romantic, ender, or your own
+```
+
+- **New: "Think" (Shift+Enter) in the chat and letter windows.** Your own character works out what to say — or write — next, and the words land in your writing box, yours to keep, change, or throw away. Nothing is sent until you send it.
+- They think from what you would actually know: who the person before you is, how they stand toward you, where you both are, and every word the two of you have ever exchanged. Not from that person's private mind — you do not have that, and neither does the thinking.
+- **Leave the box empty** and they find something worth saying from the moment itself — a continuation, or an opening with someone you have never spoken to.
+- **Half-type a rant** and it is read as a half-formed thought, not as wording: it comes back as words a person would actually say, in the language you two speak.
+- **Conversation presets** steer it — "something romantic", "a courteous way to end this". Three to start with (*starter*, *romantic*, *ender*), a scrollable menu above the buttons, and an Edit page to add, rework or strike out your own. "Restore the first three" puts them back, after asking.
+- A chosen preset is a wish, never a message: the box turns violet, says so, and **Send stays shut** until you make the words your own. Change a single word of it and it is yours to send.
+- Try to send one anyway and it tells you why rather than sitting there dead.
+- Enter sends, Shift+Enter thinks — fixed, and written on the buttons.
+- The message log tells it in your own voice ("What should I say… let me think."), and the cost line beneath is the honest note that it was a paid call. Toggle: EnableThinkForMe.
+
 ## v2.1.0 — 2026.08.10
 
 The wedding's morning after: the nights of a marriage, and one plain line for everything the two

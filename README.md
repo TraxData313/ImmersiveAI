@@ -20,6 +20,7 @@ If one of these searches brought you here — yes, this is that mod:
 - an **AI wife or companion** that roleplays and never forgets your story — **courted and married
   in conversation**, companions included
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
+- **never knowing what to say?** one key and your own hero drafts your next line for you
 - **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — or, for tinkerers only, a
   **local model (LM Studio / Ollama)** at your own risk
 
@@ -93,6 +94,7 @@ If one of these searches brought you here — yes, this is that mod:
 - **Chat window** (hotkey `O`) — quick words with anyone near you, no ceremony.
 - **Letter window** (hotkey `Y`) — the whole correspondence as readable letters, couriers riding real in-game days, and a desk to write from.
 - Both windows edit a character's own prompt, or the whole world's, **without leaving the game** — it speaks from the very next reply.
+- **Think** (Shift+Enter) — stuck for words? Your own hero drafts your next line from everything the two of you have said; it lands in your writing box to keep, change or bin. Standing presets steer it: *starter*, *romantic*, *ender*, or your own.
 - Any language in, the same language out.
 
 ![A letter arrives](Screenshots/3_incoming_letter.jpg)
@@ -151,6 +153,10 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - Each character's folder holds their memories, self-image, and letters as readable text
   — the whole inner life, yours to browse. Changes apply on the next conversation.
 - Both prompt files are editable from inside the game too, in the chat and letter windows.
+- `conversation_presets.txt` — your standing presets for **Think** (Shift+Enter in either window),
+  the button that has your own character work out what to say or write next. Starts with three —
+  *starter*, *romantic*, *ender* — and is yours to rewrite, from the file or from the menu's own
+  Edit page.
 - `NPCs\campaign_*\_battles\` — the chronicle of every battle you fought: one file per battle and
   a running `chronicle.txt` telling the whole war in order.
 - `NPCs\campaign_*\_weddings\` — your wedding days, kept whole: the account of the day itself and,

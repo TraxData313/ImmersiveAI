@@ -27,6 +27,7 @@ You usually only need to open:
 - **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `CraftsBuilder` (real skills → honest craft-words, on every sheet) + `TidingsBuilder` + `TroubleBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
 - **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
+- **"Think" (the player's own next line)** → Core `Prompts\PlayerThought` (the aside + the answer-taming) + `Prompts\ConversationPresets` (the presets file model) + the `ImmersiveChatBehavior.Thoughts.cs` partial + both windows' VMs/prefabs.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self). NOTE two subsystems were RETIRED 2026.08.08 — the distilled `KnownFacts` (the `hold_truth` tool + the reflection `FACTS:` section) and `NpcGoals`/`goals.txt` (the `tend_goals` tool + the `GOALS:` section): both cramped what the rolling memory already held and read it back to her twice, and each cost a tool slot in every reply. Do not reintroduce either; the deep memory carries it all now.
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
@@ -81,11 +82,14 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
                           NpcSelf (general self-concept), ConversationTurn, JsonMemoryStore,
                           MemoryCompressor (the SUMMARY: contract + the reflection's SELF:)
   Prompts/                PromptBuilder (multi-turn message assembly + first-person beat/letter lines
-                          + legacy Angel replay), NpcPersona
+                          + legacy Angel replay), NpcPersona, PlayerThought + ConversationPresets (the
+                          player's OWN next line: the closing aside, the answer-taming, the intents)
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
   ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
+  ImmersiveChatBehavior.Thoughts.cs partial: "Think" (Shift+Enter) — the PLAYER's own next line, thought
+                          out on the NPC's own sheet (plain call, nothing recorded) + the intents file
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   Tools/FieldCraft.cs     the field-craft (2026.07.12): survey_surroundings + weigh_battle — the country
@@ -108,6 +112,8 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           sheet opens with her worth, her FIXED day-wage, her private haggling bounds
                           (live percent) and the seller's mind — open high, concede only what the talk
                           earned, never volunteer the floor
+  Personas/ThoughtFacts.cs   the few PLAIN facts the player's own thinking gets — them in the third
+                          person, me in the first (never the persona sheet: its first person wins)
   Personas/CraftsBuilder.cs  real skills weighed into honest craft-words ("masterly in Medicine") —
                           the sheet line, the duty sentences, and recall_person all draw on it
   Personas/SituationBuilder.cs  builds the first-person "current situation" narration (+ mood, + the
@@ -151,6 +157,12 @@ tools/deploy.ps1          build + install into the game as Modules\ImmersiveAI.D
                           its own Id so it coexists with the Workshop copy (enable only ONE); keep the
                           script ASCII-only (BOM-less .ps1 + em-dash bytes = smart quote = PS 5.1 parse error)
 tools/package.ps1         clean dist\ImmersiveAI layout + version-stamped zip for the Workshop upload
+docs/release-dance.md     THE RELEASE RUNBOOK — read this before shipping anything. Who does what
+                          (Claude: version, notes, pages, package, the Steam uploader; Anton: the two
+                          store descriptions + the Nexus file), the three change-note tiers written at
+                          once, the byte budgets, and every trap learned the hard way — including that
+                          a version PREPARED is not a version SHIPPED (v2.0.0 and v2.1.0 both sat
+                          packaged and unuploaded while the Workshop item stayed at v1.4.1)
 docs/steam-page-draft.md  SUPERSEDED draft; the LIVE pages are the .bbcode.txt files beside it —
                           steam-page-final.bbcode.txt, steam-faq.bbcode.txt (pinned), nexus-page.bbcode.txt.
                           All three are AT their length limit: any addition must be paid for by a cut
@@ -623,6 +635,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   panel in the chat window; set true when working on the mod — Anton keeps it true).
 - `global_prompt.txt` — world-wide instructions added to every NPC (lines starting with
   `#` or `//` are ignored, matching ChatAi's convention).
+- `conversation_presets.txt` — the PLAYER's own standing conversation presets for "Think" (`name = wish` lines,
+  same #-comment convention; Core `ConversationPresets` parses/formats, `PromptFiles` reads/writes,
+  both windows edit it in game). Nothing an NPC ever sees. Ships with starter / romantic / ender.
 - `NPCs\campaign_<id>\` — one folder per **campaign** (playthrough). Hero stringIds repeat across
   campaigns (lord_7_13_1 is "the same" Gunjadrid in every new game), so memories are scoped by a
   campaign id minted once by `ImmersiveChatBehavior` and persisted *inside the save* via `SyncData`
@@ -973,6 +988,55 @@ settlement. `PlayerMeetLordLogEntry` is excluded (it importance-spams every clan
 `TidingsFormatter` (Core, unit-tested); the block is appended by `SituationBuilder.Build` (which now takes
 the `ModConfig`), so it reaches every path — live chat, NPC-initiated flows, `current_situation_info.txt`,
 and the prompt inspector. Config: `EnableWorldTidings`, `MaxWorldTidings`, `MaxLocalRumors`.
+
+**"Think" (Shift+Enter) — the player's own next line (2026.08.10).** The one lever that points INWARD:
+every other feature gives the NPCs a mind, this lends the PLAYER theirs when the words will not
+come. A button in both windows (Core `Prompts\PlayerThought` + `Prompts\ConversationPresets`, Module
+`ImmersiveChatBehavior.Thoughts.cs`) hands the player everything the chosen one would read and asks
+for their own next line.
+**THE SEATING CHART IS THE WHOLE TRICK — learned twice in one evening (2026.08.10, playtested).**
+Cut one hung an aside off the end of the NPC's own live chat (`BuildPlayerThought` = `Build` with a
+different closing message): every word of the aside said "now it is Mizam's turn", and terra still
+answered *as Sibylla* and handed Anton HER line to send back to her. Cut two kept her whole first-
+person sheet as quoted material inside one user message — and it happened AGAIN ("Но първо ти
+благодаря, че ми вярваш. Това ми дава сила, мъжо мой."). Of course it did: eleven thousand tokens of
+"I am Sibylla" against two lines of system message is not an argument, it is a landslide. So the
+sheet is OUT of the thinking altogether. `BuildPlayerThought` emits exactly TWO messages:
+• **system** — the PLAYER's own mind, first person (`PlayerThought.MindFrame`: "I am Mizam… I set
+  down my own words only… I do not answer in their voice").
+• **user** — `ThoughtFacts` (Module): a handful of PLAIN THIRD-PERSON facts about them and first-
+  person ones about me (who I am, who they are to me, what they are good at, how they stand toward
+  me, where we both are), the world prompt (mine too), then the shared story as a NAMED SCRIPT
+  (`RenderScript`: `[place, time] Mizam: …` / `Sibylla: …`, her inner beats as `(Sibylla, to
+  themselves: …)`), closing on whose turn it is.
+**Her own voice now appears in exactly one place — the transcript, quoted, never inhabited** — and
+that is also the honester shape: the player has no access to her private mind, moods or misgivings,
+only to who she is and everything the two of them have said. Guarded by a test asserting the message
+count and the absence of any assistant role. LIVE-PROBED before shipping against terra and luna, on
+Anton's own save, with a preset and with an empty box: four for four in his own voice, in Bulgarian,
+with the *gesture* custom intact. It also cut the call from ~11k tokens to ~5k. The closing block is Anton's own shape: *[Now it is my turn to speak.] — What turns in my
+mind: "…" — Mizam:*. That ONE frame carries all three uses with no branching prose: an EMPTY box
+("nothing is settled in my mind yet — the moment itself must find it": a continuation, or an
+opening), a half-typed RANT (read as half-formed thought, handed back as words), and a chosen PRESET
+(slots in as naturally as anything else). Deliberately SHORT — his ask was "без чаршафи от
+инструкции"; the speech rules, the acting-out custom and the whole story already ride in the material
+above it, so the block adds only whose turn it is plus three light rails (same spirit, same tongue,
+as short as talk truly is unless the thought asks for more). THREE HARD RAILS: it is a PLAIN call (no
+tools — a thought must never move a heart or tend a courtship, and it stays one call), NOTHING is
+recorded (the words go to the window's draft store and the writing box, theirs to keep or throw away;
+the NPC learns of them only if they are sent), and the log speaks in the PLAYER's own first person
+("What should I say… let me think." → "I think this is what I should say."), billed to the PLAYER's
+name, with the ledger's `✒ … thought:` line beneath as the honest hint that a paid call was made —
+Anton's call: the price tells it, so the words need not (which is also why the button is not named
+"Think (AI)": "ще е имържън брейкър"). Keys are FIXED and dumb on purpose (an earlier cut had Enter
+guess by what stood in the box): **Enter sends, Shift+Enter thinks**, both spelled into the button
+labels ("Think  (Shift+Enter)" / "Send  (Enter)"), the pair riding a row of their own ABOVE the
+writing line. The PRESETS are `conversation_presets.txt` ("name = wish", #-comments, lenient parse),
+a scrollable menu opening above that row (5 rows then it scrolls) with an Edit page — click to use,
+pen to rework, cross to strike out, Save to add, and "Restore the first three" behind a warning
+popup. A chosen preset turns the draft mirror violet and says plainly it is a wish, not words to
+send. Spoken thinking rides `_client` (the reply budget), a letter's rides `_storyClient` (the
+written budget). Config: `EnableThinkForMe` (default on).
 
 **The gift of recall (NPC tool-use).** Mid-reply, an NPC can reach into the world's memory instead of
 hallucinating: seven native tools (`Tools\WorldRecall` — `recall_person`, `recall_place`, `recall_clan`,

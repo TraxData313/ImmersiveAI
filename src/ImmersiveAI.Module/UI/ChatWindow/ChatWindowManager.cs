@@ -121,6 +121,26 @@ namespace ImmersiveAI.UI.ChatWindow
             catch { /* best-effort */ }
         }
 
+        /// <summary>The player's own thought came back ("Let me think…"). The words go into the draft
+        /// store FIRST, so a thought asked for and then walked away from still waits in the writing
+        /// box on the way back; the open window then picks them up. Must run on the game thread.</summary>
+        internal static void OnThoughtReady(Hero npc, string words)
+        {
+            if (npc == null) return;
+            try
+            {
+                SetDraft(npc.StringId, words);
+                _vm?.OnThoughtReady(npc.StringId, words);
+            }
+            catch { /* the words are in the draft store either way */ }
+        }
+
+        internal static void OnThoughtFailed(Hero npc)
+        {
+            try { if (npc != null) _vm?.OnThoughtFailed(npc.StringId); }
+            catch { /* best-effort */ }
+        }
+
         // ------------------------------ open / close ------------------------------
 
         /// <summary>Opens the window (optionally with someone's thread already on stage). Safe to call
@@ -251,10 +271,13 @@ namespace ImmersiveAI.UI.ChatWindow
             {
                 if (input.IsKeyReleased(InputKey.Escape))
                 {
-                    // Escape folds the prompt editor first (discarding), then the dev panel, the
-                    // misgivings view, the deep-memory page, and the info overlay — the same order
-                    // every overlay's own "Back" button walks; only a bare press closes the window.
+                    // Escape folds the prompt editor first (discarding), then the presets' own two
+                    // pages, then the dev panel, the misgivings view, the deep-memory page, and the
+                    // info overlay — the same order every overlay's own "Back" button walks; only a
+                    // bare press closes the window.
                     if (_vm != null && _vm.IsPromptEditShown) _vm.ExecutePromptCancel();
+                    else if (_vm != null && _vm.IsPresetEditShown) _vm.IsPresetEditShown = false;
+                    else if (_vm != null && _vm.IsPresetsShown) _vm.IsPresetsShown = false;
                     else if (_vm != null && _vm.IsDevShown) _vm.IsDevShown = false;
                     else if (_vm != null && _vm.IsMisgivingsShown) _vm.IsMisgivingsShown = false;
                     else if (_vm != null && _vm.IsOverviewShown) _vm.IsOverviewShown = false;
@@ -265,8 +288,17 @@ namespace ImmersiveAI.UI.ChatWindow
                 if ((input.IsKeyReleased(InputKey.Enter) || input.IsKeyReleased(InputKey.NumpadEnter))
                     && _vm?.IsInfoShown != true && _vm?.IsPromptEditShown != true
                     && _vm?.IsDevShown != true && _vm?.IsMisgivingsShown != true
+                    && _vm?.IsPresetsShown != true && _vm?.IsPresetEditShown != true
                     && _vm?.ShowOverviewBlock != true)
-                    _vm?.ExecuteSend();
+                {
+                    // Two fixed keys, and nothing clever (Anton, 2026.08.10 — the earlier shape had
+                    // Enter guess between sending and thinking by what stood in the box, which is
+                    // exactly the kind of rule nobody should have to hold in their head):
+                    // ENTER sends, SHIFT+ENTER thinks. Sending an empty box still does nothing, as
+                    // it always has; thinking on an empty box is the whole point of thinking.
+                    if (ShiftHeld()) _vm?.ExecuteThink();
+                    else _vm?.ExecuteSend();
+                }
             }
 
             if (_scrollCountdown > 0 && --_scrollCountdown == 0)
@@ -286,6 +318,15 @@ namespace ImmersiveAI.UI.ChatWindow
                 }
             }
             catch { /* the label is a nicety; never let it break the window */ }
+        }
+
+        /// <summary>Either shift, read from the engine's own keyboard state rather than the window's
+        /// layer: a modifier is not a layer's business, and the layer's input reports only the keys
+        /// it was given. Shared with the letter window, whose twin binding is the same.</summary>
+        internal static bool ShiftHeld()
+        {
+            try { return Input.IsKeyDown(InputKey.LeftShift) || Input.IsKeyDown(InputKey.RightShift); }
+            catch { return false; }
         }
 
         // ------------------------------ scroll to the newest word ------------------------------

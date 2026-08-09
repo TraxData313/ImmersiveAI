@@ -43,8 +43,23 @@ namespace ImmersiveAI.UI.LetterWindow
         private string _promptEditTitle = string.Empty;
         private string _promptEditText = string.Empty;
 
+        // "Let me think…", the chat window's twin — here it writes the LETTER, not a spoken line.
+        private readonly ModConfig _config;
+        private bool _isWish;
+        private string _wishText = string.Empty;
+        private bool _isThinking;
+        private bool _isPresetsShown;
+        private bool _isPresetEditShown;
+        private string _presetEditName = string.Empty;
+        private string _presetEditText = string.Empty;
+        private System.Collections.Generic.List<Core.Prompts.ConversationPreset> _presetList =
+            new System.Collections.Generic.List<Core.Prompts.ConversationPreset>();
+        private MBBindingList<ConversationPresetVM> _presets = new MBBindingList<ConversationPresetVM>();
+        private MBBindingList<ConversationPresetVM> _presetRows = new MBBindingList<ConversationPresetVM>();
+
         public LetterWindowVM(ModConfig config)
         {
+            _config = config;
             _letterHotkey = string.IsNullOrWhiteSpace(config.LetterWindowHotkey) ? "Y" : config.LetterWindowHotkey.Trim();
             _chatHotkey = string.IsNullOrWhiteSpace(config.ChatWindowHotkey) ? "O" : config.ChatWindowHotkey.Trim();
             RefreshContacts();
@@ -192,6 +207,7 @@ namespace ImmersiveAI.UI.LetterWindow
             OnPropertyChanged("HasSelection");
             OnPropertyChanged("CanWrite");
             OnPropertyChanged("CanSend");
+            RefreshThinkState();
         }
 
         // ------------------------------ writing ------------------------------
@@ -201,6 +217,15 @@ namespace ImmersiveAI.UI.LetterWindow
             var npc = _selected?.Hero;
             var text = (_inputText ?? string.Empty).Trim();
             if (npc == null || text.Length == 0 || !_canWrite) return;
+            // The graying is a courtesy; this is the rail — a wish is never sealed into a letter,
+            // and the refusal says why rather than doing nothing at all.
+            if (_isWish)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "Those are my own thoughts, not the letter — Shift+Enter turns them into words.",
+                    new Color(0.85f, 0.75f, 0.55f, 1f)));
+                return;
+            }
 
             if (!ImmersiveChatBehavior.SendLetterFromWindow(npc, text)) { RefreshSelectionState(); return; }
 
@@ -218,7 +243,117 @@ namespace ImmersiveAI.UI.LetterWindow
         public void ExecuteBack()
         {
             if (IsPromptEditShown) ExecutePromptCancel();
+            else if (IsPresetEditShown) IsPresetEditShown = false;
+            else if (IsPresetsShown) IsPresetsShown = false;
             else if (IsInfoShown) IsInfoShown = false;
+        }
+
+        // ------------------------------ "Let me think…" ------------------------------
+        // The chat window's twin, writing the LETTER instead of a spoken line — the same presets
+        // file, the same rail that a wish is never sent. Enter still seals nothing here (a letter
+        // deserves a deliberate seal), but it does set the mind to work when the box holds a wish.
+
+        public void ExecuteThink()
+        {
+            var npc = _selected?.Hero;
+            if (npc == null || !CanThink) return;
+            if (!ImmersiveChatBehavior.BeginPlayerThought(npc, asLetter: true, _inputText)) return;
+
+            IsPresetsShown = false;
+            RefreshThinkState();
+        }
+
+        public void OnThoughtReady(string folder, string words)
+        {
+            // Folders reach the list two ways (a live hero's path, or one read off a letters file),
+            // so the match is case-blind — a mismatch here would strand the words in the draft store.
+            if (_selected != null && string.Equals(_selected.Folder, folder, StringComparison.OrdinalIgnoreCase))
+            {
+                InputText = words ?? string.Empty;
+                IsWish = false;
+            }
+            RefreshThinkState();
+        }
+
+        public void OnThoughtFailed(string folder) => RefreshThinkState();
+
+        private void RefreshThinkState()
+        {
+            IsThinking = _selected?.Hero != null
+                         && ImmersiveChatBehavior.IsThinkingFor(_selected.Hero, asLetter: true);
+            OnPropertyChanged("CanThink");
+            OnPropertyChanged("ThinkText");
+        }
+
+        public void ExecuteTogglePresets()
+        {
+            if (!_isPresetsShown) LoadPresets();
+            IsPresetsShown = !_isPresetsShown;
+        }
+
+        public void ExecuteOpenPresetEditor()
+        {
+            LoadPresets();
+            PresetEditName = string.Empty;
+            PresetEditText = string.Empty;
+            IsPresetsShown = false;
+            IsPresetEditShown = true;
+        }
+
+        public void ExecuteSavePreset()
+        {
+            if (string.IsNullOrWhiteSpace(_presetEditText)) return;
+            _presetList = Core.Prompts.ConversationPresets.Upsert(_presetList, _presetEditName, _presetEditText);
+            ImmersiveChatBehavior.SaveConversationPresets(_presetList);
+            PresetEditName = string.Empty;
+            PresetEditText = string.Empty;
+            BuildPresetRows();
+        }
+
+        private void LoadPresets()
+        {
+            _presetList = ImmersiveChatBehavior.ConversationPresetsForMenu();
+            BuildPresetRows();
+        }
+
+        private void BuildPresetRows()
+        {
+            var menu = new MBBindingList<ConversationPresetVM>();
+            var rows = new MBBindingList<ConversationPresetVM>();
+            foreach (var preset in _presetList)
+            {
+                menu.Add(new ConversationPresetVM(preset, ChoosePreset));
+                rows.Add(new ConversationPresetVM(preset, ChoosePreset, EditPreset, RemovePreset));
+            }
+            Presets = menu;
+            PresetRows = rows;
+            OnPropertyChanged("HasPresets");
+            OnPropertyChanged("NoPresetsText");
+        }
+
+        private void ChoosePreset(ConversationPresetVM row)
+        {
+            if (row == null) return;
+            InputText = row.Wish;
+            _wishText = row.Wish;
+            IsWish = true;
+            IsPresetsShown = false;
+            IsPresetEditShown = false;
+        }
+
+        private void EditPreset(ConversationPresetVM row)
+        {
+            if (row == null) return;
+            PresetEditName = row.Name;
+            PresetEditText = row.Wish;
+        }
+
+        private void RemovePreset(ConversationPresetVM row)
+        {
+            if (row == null) return;
+            _presetList = Core.Prompts.ConversationPresets.Remove(_presetList, row.Name);
+            ImmersiveChatBehavior.SaveConversationPresets(_presetList);
+            BuildPresetRows();
         }
 
         // The editing doors, same in-game overlay as the chat window's: a wrapped mirror + a
@@ -416,6 +551,11 @@ namespace ImmersiveAI.UI.LetterWindow
                     OnPropertyChanged("HasDraft");
                     OnPropertyChanged("EntriesBottomMargin");
 
+                    // A chosen preset holds the SEAL shut (see CanSend) until the player makes the
+                    // words their own — one keystroke away from the preset and it is theirs again.
+                    if (_isWish && !string.Equals(_inputText, _wishText, StringComparison.Ordinal))
+                        IsWish = false;
+
                     if (_selected != null)
                         LetterWindowManager.SetDraft(_selected.Folder, _inputText);
                 }
@@ -430,10 +570,166 @@ namespace ImmersiveAI.UI.LetterWindow
         /// <summary>Where the correspondence ends vertically: above the input line, or above the
         /// draft mirror while a letter is being written (letters run long — the mirror is tall).</summary>
         [DataSourceProperty]
-        public float EntriesBottomMargin => HasDraft ? 240f : 82f;
+        public float EntriesBottomMargin => HasDraft ? 280f : 122f;
 
         [DataSourceProperty]
-        public bool CanSend => HasSelection && _canWrite && !string.IsNullOrWhiteSpace(_inputText);
+        public bool CanSend => HasSelection && _canWrite && !_isWish && !string.IsNullOrWhiteSpace(_inputText);
+
+        // ------------------------------ "Let me think…" ------------------------------
+
+        [DataSourceProperty]
+        public bool ShowThink => _config.EnableThinkForMe;
+
+        [DataSourceProperty]
+        public string ThinkText => _isThinking ? "…thinking" : "Think  (Shift+Enter)";
+
+        [DataSourceProperty]
+        public string PresetText => "Conversation preset";
+
+        /// <summary>An EMPTY box is a perfectly good ask: "think what I should write to them".</summary>
+        [DataSourceProperty]
+        public bool CanThink => ShowThink && HasSelection && _canWrite && !_isThinking;
+
+        [DataSourceProperty]
+        public bool IsThinking
+        {
+            get => _isThinking;
+            set
+            {
+                if (value == _isThinking) return;
+                _isThinking = value;
+                OnPropertyChangedWithValue(value, "IsThinking");
+                OnPropertyChanged("CanThink");
+                OnPropertyChanged("ThinkText");
+            }
+        }
+
+        /// <summary>Whether the writing box holds an PRESET rather than the letter itself. Enter
+        /// seals nothing here either way, but it does set the mind to work.</summary>
+        [DataSourceProperty]
+        public bool IsWish
+        {
+            get => _isWish;
+            set
+            {
+                if (value == _isWish) return;
+                _isWish = value;
+                OnPropertyChangedWithValue(value, "IsWish");
+                OnPropertyChanged("DraftColor");
+                OnPropertyChanged("CanSend");
+            }
+        }
+
+        [DataSourceProperty]
+        public string WishHintText =>
+            "what I mean to get across, not the letter itself — so the seal is held shut. Shift+Enter and I "
+            + "will think what to write; change a word of it and it is yours to send.";
+
+        [DataSourceProperty]
+        public Color DraftColor => _isWish
+            ? new Color(0.72f, 0.70f, 0.92f, 1f)
+            : new Color(0.85f, 0.75f, 0.55f, 1f);
+
+        [DataSourceProperty]
+        public MBBindingList<ConversationPresetVM> Presets
+        {
+            get => _presets;
+            set { if (value != _presets) { _presets = value; OnPropertyChangedWithValue(value, "Presets"); } }
+        }
+
+        [DataSourceProperty]
+        public MBBindingList<ConversationPresetVM> PresetRows
+        {
+            get => _presetRows;
+            set { if (value != _presetRows) { _presetRows = value; OnPropertyChangedWithValue(value, "PresetRows"); } }
+        }
+
+        [DataSourceProperty]
+        public bool HasPresets => _presetList.Count > 0;
+
+        [DataSourceProperty]
+        public string NoPresetsText => _presetList.Count > 0
+            ? string.Empty
+            : "No presets kept yet — write one below, or simply press \"Let me think…\" with the box empty.";
+
+        [DataSourceProperty]
+        public bool IsPresetsShown
+        {
+            get => _isPresetsShown;
+            set { if (value != _isPresetsShown) { _isPresetsShown = value; OnPropertyChangedWithValue(value, "IsPresetsShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string PresetsTitleText => "What shall I turn my mind to?";
+
+        [DataSourceProperty]
+        public string PresetEditorText => "Edit…";
+
+        [DataSourceProperty]
+        public bool IsPresetEditShown
+        {
+            get => _isPresetEditShown;
+            set { if (value != _isPresetEditShown) { _isPresetEditShown = value; OnPropertyChangedWithValue(value, "IsPresetEditShown"); } }
+        }
+
+        [DataSourceProperty]
+        public string PresetEditTitleText => "My own presets";
+
+        [DataSourceProperty]
+        public string PresetEditHintText =>
+            "Standing wishes for your own thinking — never sent to anyone. Click one to use it now, the pen to bring it down for reworking, the cross to strike it out. Write below and Save to add one (a name already kept is rewritten). They live in conversation_presets.txt.";
+
+        [DataSourceProperty]
+        public string PresetNameHintText => "name";
+
+        [DataSourceProperty]
+        public string PresetTextHintText => "what I mean to get across…";
+
+        [DataSourceProperty]
+        public string PresetSaveText => "Save";
+
+        [DataSourceProperty]
+        public string PresetRestoreText => "Restore the first three";
+
+        /// <summary>Back to the three given at the start — asked about first, since it throws every
+        /// preset of the player's own away.</summary>
+        public void ExecuteRestorePresets() => ImmersiveChatBehavior.RestoreConversationPresets(LoadPresets);
+
+        [DataSourceProperty]
+        public string PresetEditName
+        {
+            get => _presetEditName;
+            set
+            {
+                if (value == _presetEditName) return;
+                _presetEditName = value ?? string.Empty;
+                OnPropertyChangedWithValue(value, "PresetEditName");
+                OnPropertyChanged("IsPresetNameEmpty");
+            }
+        }
+
+        [DataSourceProperty]
+        public bool IsPresetNameEmpty => string.IsNullOrEmpty(_presetEditName);
+
+        [DataSourceProperty]
+        public string PresetEditText
+        {
+            get => _presetEditText;
+            set
+            {
+                if (value == _presetEditText) return;
+                _presetEditText = value ?? string.Empty;
+                OnPropertyChangedWithValue(value, "PresetEditText");
+                OnPropertyChanged("IsPresetTextEmpty");
+                OnPropertyChanged("CanSavePreset");
+            }
+        }
+
+        [DataSourceProperty]
+        public bool IsPresetTextEmpty => string.IsNullOrEmpty(_presetEditText);
+
+        [DataSourceProperty]
+        public bool CanSavePreset => !string.IsNullOrWhiteSpace(_presetEditText);
 
         // ------------------------------ the info overlay ------------------------------
 
@@ -504,6 +800,7 @@ namespace ImmersiveAI.UI.LetterWindow
             "WRITING\n" +
             "• The writing line below holds a single line; the tall mirror above it shows the whole letter as it grows.\n" +
             "• Enter does NOT send here — a letter deserves a deliberate seal. Press \"Seal and send\" when it is ready.\n" +
+            "• \"Let me think…\" (Shift+Enter) has your own character draft the letter for you, reading everything the one you are writing to would read; \"Preset…\" keeps standing wishes to steer it (\"ask after her health\"). A chosen preset fills the box with the WISH, never with the letter — Shift+Enter turns it into one.\n" +
             "• An unfinished letter is kept when the window closes; come back and it waits in the writing line.\n" +
             "\n" +
             "WHAT TO TRY\n" +
