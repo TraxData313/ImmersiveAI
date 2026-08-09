@@ -167,9 +167,10 @@ namespace ImmersiveAI.Core.Tests
             Assert.Equal("Well met, my lady.",
                 PlayerThought.Tame("Here is what you might say:\n\nWell met, my lady."));
 
-            // A genuine line that happens to end its first breath on a colon is left alone.
-            const string real = "Listen, brother:\nwe ride at dawn, and no later.";
-            Assert.Equal(real, PlayerThought.Tame(real));
+            // A genuine line that happens to end its first breath on a colon keeps its words —
+            // only the break itself closes up (every answer comes back as one line now).
+            Assert.Equal("Listen, brother: we ride at dawn, and no later.",
+                PlayerThought.Tame("Listen, brother:\nwe ride at dawn, and no later."));
         }
 
         [Fact]
@@ -192,6 +193,26 @@ namespace ImmersiveAI.Core.Tests
             Assert.Equal("Well met.", PlayerThought.Tame("Vulgrim writes -> Well met.", "Vulgrim"));
             // An em dash opens a spoken line in half the world's typography — never cut it.
             Assert.Equal("— Well met.", PlayerThought.Tame("— Well met.", "Vulgrim"));
+        }
+
+
+        [Fact]
+        public void Tame_hands_back_one_unbroken_line()
+        {
+            // The writing box is a single-line field; a drafted line with breaks in it bugs it out
+            // (Anton, 2026.08.10), so blank lines close up and breaks become spaces however the
+            // model chose to lay its answer out.
+            Assert.Equal("*I take her hand.* Well met, my lady. The road was long.",
+                PlayerThought.Tame("*I take her hand.*\n\nWell met, my lady.\n\nThe road was long."));
+            Assert.Equal("Listen, brother: we ride at dawn.",
+                PlayerThought.Tame("Listen, brother:\r\nwe ride at dawn."));
+        }
+
+        [Fact]
+        public void SpokenLine_and_LetterLine_both_ask_for_one_line()
+        {
+            Assert.Contains("one unbroken line", PlayerThought.SpokenLine("Vulgrim", null));
+            Assert.Contains("one unbroken line", PlayerThought.LetterLine("Vulgrim", null));
         }
 
         [Fact]

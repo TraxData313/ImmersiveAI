@@ -1,17 +1,15 @@
 BUGS:
 
 NEXT UPDATE:
-- [ ] SHIP v2.2.0 — THE STEAM UPLOAD IS DONE (2026.08.10, "Uploading done!"). What is left is
-      Anton's, and the text is already written for him:
-      (1) Steam item page -> Owner Controls -> paste docs/steam-page-final.bbcode.txt as the
-          description (7847/8000 bytes; the uploader never touches title/description/visibility);
-      (2) Nexus -> upload dist\ImmersiveAI_v2.2.0.zip, paste docs/nexus-page.bbcode.txt as the
-          description and the CHANGELOG's fenced 249-char block into the per-version changelog;
-      (3) README on GitHub is already updated in the repo — just push.
-      NOTE the Workshop item stood at v1.4.1 before this upload, so subscribers receive v2.0.0,
-      v2.1.0 and v2.2.0 in one go; the Steam change note names v2.2.0 only. If that matters, the
-      CHANGELOG has each version's block separately to paste into the descriptions.
-      The whole ritual, for next time: docs/release-dance.md.
+- [ ] SHIP v2.2.1 — STEAM IS DONE (uploaded 2026.08.10, "Uploading done!"; v2.2.0 went up the same
+      evening and v2.2.1 is the one-line fix on top of it). What is left is Anton's:
+      (1) Nexus -> upload dist\ImmersiveAI_v2.2.1.zip with the CHANGELOG's fenced v2.2.1 block
+          (118 chars) as the changelog field;
+      (2) the two store DESCRIPTIONS only need doing once for v2.2.x — docs/steam-page-final.bbcode.txt
+          (7847/8000 bytes) and docs/nexus-page.bbcode.txt; a patch does not change them;
+      (3) push the repo (committed and tagged here).
+      NOTE the Workshop item stood at v1.4.1 until this evening, so subscribers receive v2.0.0,
+      v2.1.0, v2.2.0 and v2.2.1 in one go. The whole ritual: docs/release-dance.md.
 - [ ] PLAYTEST "Think" (built 2026.08.10, live-probed against terra and luna on Anton's own save,
       420 tests green): the preset menu, the Edit page and its Restore, Shift+Enter with an empty
       box / a rant / a preset, Send greying out while a preset stands, and the letter window's twin.

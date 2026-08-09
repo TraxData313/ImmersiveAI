@@ -32,6 +32,11 @@ exists. (Learned the hard way — see `TASKS_DONE.md`.)
 `module\SubModule.xml` → `<Version value="vX.Y.Z" />`. `package.ps1` stamps the zip name from
 it; nothing else needs touching.
 
+**Then LOOK at the file.** A scripted bump that reads and writes the same path in one expression
+truncates it, and an empty `SubModule.xml` packages a module the launcher cannot read — caught only
+by grepping for the new version afterwards (2026.08.10). `git checkout -- module/SubModule.xml`
+puts it back.
+
 ### 4. Write all three change-note tiers AT ONCE
 They say the same news at three lengths. Writing them together is what keeps them honest.
 
@@ -118,4 +123,6 @@ Steam client open and logged in. Details and uploader quirks: `tools/WORKSHOP-UP
 - `<Tasks>` must be the FIRST node of the task XML — a declaration or comment above it makes the
   uploader parse zero tasks and exit looking successful.
 - The Workshop item's title comes from `SubModule.xml <Name>`, not the task file.
+- A PATCH needs no store-page work: the descriptions describe the mod, not the build. Only the
+  Nexus file and its 255-char changelog change hands.
 - `WorkshopCreate.xml` is spent — never run it again. `WorkshopUpdate.xml` is the one, forever.

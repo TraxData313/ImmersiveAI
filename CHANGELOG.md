@@ -15,6 +15,16 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v2.2.1 - 2026.08.10
+
+**The Nexus changelog (255 max - copy this verbatim):**
+
+```
+* Fix: a drafted line came back with line breaks in it, which the writing box does not take. It is one clean line now.
+```
+
+- Fixed: what "Think" hands you now always arrives as one unbroken line — line breaks in a drafted line confused the writing box.
+
 ## v2.2.0 — 2026.08.10
 
 When the words will not come, your own hero finds them for you.

@@ -65,7 +65,8 @@ namespace ImmersiveAI.Core.Prompts
             AppendWish(sb, wish, "say");
             sb.AppendLine();
             sb.AppendLine("I carry the talk on in the same spirit, and in the same tongue we have been speaking " +
-                          "in. As short as talk truly is, unless the thought above asks for more.");
+                          "in. As short as talk truly is, unless the thought above asks for more, and all of it " +
+                          "on one unbroken line.");
             if (mayAct)
                 sb.AppendLine("A small act of mine may ride between single *asterisks*, as our custom is — sparingly.");
             sb.AppendLine();
@@ -83,7 +84,8 @@ namespace ImmersiveAI.Core.Prompts
             AppendWish(sb, wish, "write");
             sb.AppendLine();
             sb.AppendLine("I write in the same spirit, and in the same tongue we have been speaking in — the words " +
-                          "that will stand on the page before them, not a telling about them.");
+                          "that will stand on the page before them, not a telling about them, and all of it on one " +
+                          "unbroken line.");
             sb.AppendLine();
             sb.Append($"{player} writes:");
             return sb.ToString();
@@ -120,7 +122,20 @@ namespace ImmersiveAI.Core.Prompts
             text = DropSpeakerLabel(text, playerName);
             text = DropEchoedArrow(text);
             text = Unwrap(text);
-            return text.Trim();
+            return Flatten(text);
+        }
+
+        // ONE LINE, always (Anton, 2026.08.10 — a drafted line with breaks in it bugs the writing
+        // box out). The box is a single-line field: whatever the player types by hand is one flow,
+        // so what is handed to them must be too. The aside asks for it; this makes sure of it,
+        // because a model will slip. Blank lines close up, breaks become spaces.
+        private static string Flatten(string text)
+        {
+            var kept = (text ?? string.Empty)
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0);
+            return string.Join(" ", kept).Trim();
         }
 
         // An echoed "[An aside, …]" — or any wholly bracketed opening line — is stage furniture.
