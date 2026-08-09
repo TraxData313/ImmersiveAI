@@ -1279,8 +1279,10 @@ a floor under the marriage, not a ceiling) and `NightsPreventChild` (on auto it 
 rather than whoever is nearest her season, and either way cuts the night to a tenth). No nights at
 all is `EnableNights = false`. An ignored dusk question is settled a day later as a night alone (`LastSettledNight`, a NIGHT-level mark because a night nobody noticed
 writes no records). Memory keeps TITLES, never paragraphs — the flesh lives in the 14-night ledger
-and `nights.txt`. **THE LINE** (Core `Together\TogetherLine`, folded in LAST by `SituationBuilder` and drawn at
-the foot of the chat thread for the player too): ONE mark at the last moment the two of them had
+and `nights.txt`. **THE LINE** (Core `Together\TogetherLine`, folded in LAST by `SituationBuilder`, and drawn INLINE in the
+chat thread for the player too — at the moment itself, never at the foot, or "from this moment"
+means nothing; night beats carry only a name, so the thread fills the freshest 3 accounts from the
+ledger under a ☾ card): ONE mark at the last moment the two of them had
 time to themselves, then a plain dated list of everything since — nights, battles, markets, in
 order. Without it a soul reads the sheet as settled background and greets him the morning after a
 night elsewhere as though it had been had out. WHAT MOVES IT IS TIME ALONE and nothing else: a

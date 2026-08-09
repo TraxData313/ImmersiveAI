@@ -32,7 +32,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - **New: characters now know what has NOT been talked about yet.** One plain divider in their sense of you, at the last moment the two of you had time to yourselves — and after it a dated list of everything since: the markets, the battles, the nights. So the morning after you went to another wife, she knows it happened and knows the two of you have not sat down to it.
 - Only time alone moves that divider: a talk that ended, a night together, your wedding night. A battle does not, a market does not, hearing where you slept does not. And it stays put while you are talking, so what she meant to raise cannot vanish from under her mid-sentence.
 - Nothing tells them what to do with the list — whether to raise it, and how, is theirs.
-- **You see the same list** at the foot of the chat window — the honest answer to "why are they being like this with me".
+- **You see the same list** in the chat window, standing exactly where it belongs: right after the last words you two had alone, with everything that came after it below. The honest answer to "why are they being like this with me".
+- And a written night is read in the chat itself — the last few in full, older ones by the name they keep it by. The window of the hearth still holds them all.
 - Once you have talked it away it simply disappears, and comes back the next time something happens that you have not gone over together.
 - **New: your wedding day is written down — in two parts.** When you wed, the day itself is set down as a story in the manner of the old Scriptures, in whatever tongue you and they speak: the place, the hour, who stood there and what they did, the road that brought you both here, the doubts they once wrote and how each came to rest.
 - The one you wed remembers it — and so does everyone who stood there. It appears in their chat as the wedding day's own card, and they will speak of it as people speak of a day like that.

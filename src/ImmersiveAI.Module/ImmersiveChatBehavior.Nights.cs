@@ -1244,6 +1244,42 @@ namespace ImmersiveAI
             catch { return string.Empty; }
         }
 
+        /// <summary>The day the line stands on, so the chat thread can draw it in its own place —
+        /// right after the last exchange the two of them had alone, not nailed to the foot of the
+        /// thread where "from this moment" would mean nothing (Anton's screenshot, 2026.08.10).</summary>
+        internal static double LastAloneDayOf(Hero npc)
+        {
+            try { return Current?.LastAloneDay(npc) ?? double.MaxValue; }
+            catch { return double.MaxValue; }
+        }
+
+        /// <summary>How many written nights are read IN FULL in the chat thread. The freshest few
+        /// only (Anton: "за последните 2-3"): a night keeps its name in memory forever, but the
+        /// account of it belongs to the days when it was still fresh — and the window of the hearth
+        /// holds them all anyway.</summary>
+        private const int NightStoriesInThread = 3;
+
+        /// <summary>The account of the night recorded on this day, when it is one of the freshest
+        /// few; empty otherwise, and the thread then shows only the name she keeps it by.</summary>
+        internal static string NightStoryInThread(Hero npc, double gameDay)
+        {
+            try
+            {
+                var self = Current;
+                if (self == null || npc == null || !self.NightsOn) return string.Empty;
+
+                var storied = self._nightLedger!.For(npc.StringId)
+                    .Where(n => n.IsStoried)
+                    .OrderByDescending(n => n.GameDay)
+                    .Take(NightStoriesInThread)
+                    .ToList();
+
+                var match = storied.FirstOrDefault(n => Math.Floor(n.GameDay) == Math.Floor(gameDay));
+                return match?.Story?.Trim() ?? string.Empty;
+            }
+            catch { return string.Empty; }
+        }
+
         // A night as one line of the list. The closed door and what she saw of him that same night
         // ride together with a comma, as Anton asked — and when she saw nothing there is simply
         // nothing after the comma.

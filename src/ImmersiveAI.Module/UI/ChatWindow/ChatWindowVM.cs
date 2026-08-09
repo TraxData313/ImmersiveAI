@@ -216,11 +216,30 @@ namespace ImmersiveAI.UI.ChatWindow
             OverviewTitleText = _config.DevMode ? OverviewHeading(memory, npcName) : string.Empty;
             OverviewText = _config.DevMode ? BuildOverview(memory) : string.Empty;
 
+            // THE LINE stands where it belongs — at the moment, not at the end (Anton's screenshot,
+            // 2026.08.10). "From this moment until now" is meaningless nailed to the foot of the
+            // thread: it goes in immediately after the last exchange the two of them actually had
+            // alone, with everything that came after it below. -1 means there is no such moment,
+            // and then it simply never appears.
+            var lineBlock = ImmersiveChatBehavior.TogetherBlock(npc);
+            double lineDay = string.IsNullOrWhiteSpace(lineBlock)
+                ? double.MaxValue : ImmersiveChatBehavior.LastAloneDayOf(npc);
+            bool lineDrawn = string.IsNullOrWhiteSpace(lineBlock);
+
+            void DrawLineBefore(double turnDay)
+            {
+                if (lineDrawn || turnDay <= lineDay) return;
+                lineDrawn = true;
+                messages.Add(new ChatMessageVM("— not yet discussed between you —",
+                    lineBlock.Trim(), isNarration: true, LineHeaderColor));
+            }
+
             if (memory != null)
             {
                 foreach (var turn in memory.RecentTurns)
                 {
                     var stamp = Stamp(turn);
+                    DrawLineBefore(turn.GameDay);
                     if (turn.IsFromAngel || turn.IsInnerThought)
                     {
                         // Letter beats wear their letters openly (Anton's ask, 2026.07.10): the
@@ -258,6 +277,25 @@ namespace ImmersiveAI.UI.ChatWindow
                                 messages.Add(new ChatMessageVM(string.Empty,
                                     $"({npcName}, on whether to answer: {turn.NpcLine})",
                                     isNarration: true, Colors.White));
+                            continue;
+                        }
+
+                        // A night of the marriage wears its own card too (2026.08.10). The beat in
+                        // her memory holds only the NAME — the account itself lives in the night
+                        // ledger — so the card is filled from there, and only for the freshest few:
+                        // older nights keep their name and nothing more, which is how memory works
+                        // anyway. Same shape as the wedding's cards, in the nights' own violet.
+                        if (Core.Nights.NightText.IsNightBeat(turn.PlayerLine))
+                        {
+                            var nightName = Core.Nights.NightText.ExtractNightName(turn.PlayerLine);
+                            var nightStory = ImmersiveChatBehavior.NightStoryInThread(npc, turn.GameDay);
+                            messages.Add(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, "☾ " + turn.PlayerLine),
+                                isNarration: true, Colors.White));
+                            if (!string.IsNullOrWhiteSpace(nightStory))
+                                messages.Add(new ChatMessageVM(
+                                    string.IsNullOrWhiteSpace(nightName) ? $"☾ {npcName} — that night" : "☾ " + nightName,
+                                    nightStory, isNarration: false, LineHeaderColor));
                             continue;
                         }
 
@@ -341,18 +379,11 @@ namespace ImmersiveAI.UI.ChatWindow
                     $"(No words have yet passed between you and {npcName} — yours would be the first.)",
                     isNarration: true, Colors.White));
 
-            // THE LINE, shown to the player too (Anton, 2026.08.09): the same block their sheet
-            // carries — the last time the two of you had time to yourselves, and everything since
-            // that has not been gone over. It is the honest answer to "why are they being like
-            // this", and it belongs at the FOOT of the thread, right where you are about to speak.
-            try
-            {
-                var line = ImmersiveChatBehavior.TogetherBlock(npc);
-                if (!string.IsNullOrWhiteSpace(line))
-                    messages.Add(new ChatMessageVM("— not yet discussed between you —",
-                        line.Trim(), isNarration: true, LineHeaderColor));
-            }
-            catch { /* a missing footnote is not a broken thread */ }
+            // If everything after the moment has already aged out of the verbatim turns, the line
+            // never found a beat to stand before — it still belongs in the thread, at the foot.
+            if (!lineDrawn)
+                messages.Add(new ChatMessageVM("— not yet discussed between you —",
+                    lineBlock.Trim(), isNarration: true, LineHeaderColor));
 
             Messages = messages;
             ChatWindowManager.RequestScrollToBottom();

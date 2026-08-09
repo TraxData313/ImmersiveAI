@@ -225,9 +225,16 @@ the thing to try again — but only after seeing what they do with this.
 **The nights roll stops AT the line** (`NightsRollFor` filters to `GameDay <= line`), so nothing is
 ever told twice — the double-read mistake the retired truths already cost us once.
 
-**The player sees it too** (Anton's ask): the same block draws at the foot of the chat window's
-thread, in the nights' dusk-violet, headed "— not yet discussed between you —". It is the honest
-answer to "why are they being like this".
+**The player sees it too** (Anton's ask), and **it stands in its own place in the thread** — right
+after the last exchange the two of them had alone, with everything that came after it below. Nailed
+to the foot of the thread, "from this moment" meant nothing; drawn inline it is a real divider. It
+falls back to the foot only when everything after the moment has already aged out of the verbatim
+turns. Headed "— not yet discussed between you —", in the nights' dusk-violet.
+
+**And a night reads in the chat, not just in the ledger.** A night's beat carries only its NAME, so
+the thread fills the card from the ledger: the freshest `NightStoriesInThread` (3) written nights
+are read in full under a ☾ header, older ones keep the name alone. Memory works that way anyway, and
+the window of the hearth holds them all regardless.
 
 ---
 
