@@ -211,7 +211,6 @@ namespace ImmersiveAI.Mcm
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
             if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
-            if (s.NightsAutoMode == null) { s.NightsAutoMode = new Dropdown<string>(McmChoiceLists.NightModes, 0); repaired = true; }
             if (s.NightWindowHotkey == null) { s.NightWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 9); repaired = true; }
             if (repaired)
                 ModLog.Warn("MCM served an uninitialized settings instance — dropdowns rebuilt by hand " +
@@ -247,7 +246,7 @@ namespace ImmersiveAI.Mcm
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 SelectedOf(s.PersonaSparkMode),
-                s.EnableNights, SelectedOf(s.NightsAutoMode), s.NightCooldownHours,
+                s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightCooldownHours,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
                 s.EnableNightWindow, SelectedOf(s.NightWindowHotkey),
                 s.RevertMemoriesWithSaves,
@@ -275,7 +274,7 @@ namespace ImmersiveAI.Mcm
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.PersonaSparkMode,
-                c.EnableNights, c.NightsAutoMode, c.NightCooldownHours,
+                c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightCooldownHours,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
                 c.EnableNightWindow, c.NightWindowHotkey,
                 c.RevertMemoriesWithSaves,
@@ -333,7 +332,8 @@ namespace ImmersiveAI.Mcm
             s.MinBetrothalDays = Clamp(c.MinBetrothalDays, 0, 30);
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.EnableNights = c.EnableNights;
-            Select(s.NightsAutoMode, NightModeLabel(c.NightsAutoMode));
+            s.NightsAutoVisit = c.NightsAutoVisit;
+            s.NightsPreventChild = c.NightsPreventChild;
             s.NightCooldownHours = Clamp(c.NightCooldownHours, 1, 72);
             s.ConceptionRevealDelayDays = Clamp(c.ConceptionRevealDelayDays, 0, 30);
             s.ShowConceptionOdds = c.ShowConceptionOdds;
@@ -426,7 +426,8 @@ namespace ImmersiveAI.Mcm
             c.MinBetrothalDays = s.MinBetrothalDays;
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.EnableNights = s.EnableNights;
-            c.NightsAutoMode = NightModeValue(SelectedOf(s.NightsAutoMode)) ?? c.NightsAutoMode;
+            c.NightsAutoVisit = s.NightsAutoVisit;
+            c.NightsPreventChild = s.NightsPreventChild;
             c.NightCooldownHours = s.NightCooldownHours;
             c.ConceptionRevealDelayDays = s.ConceptionRevealDelayDays;
             c.ShowConceptionOdds = s.ShowConceptionOdds;
@@ -664,30 +665,6 @@ namespace ImmersiveAI.Mcm
 
         private static string? SparkModeValue(string? menuLabel) =>
             menuLabel == null ? null : (menuLabel == "Ask first" ? "Ask" : menuLabel);
-
-        // The night mode has two spellings too: the menu says it in words, config.json in one.
-        private static string NightModeLabel(string configValue)
-        {
-            switch ((configValue ?? string.Empty).Trim())
-            {
-                case "Seek": return "Seek a child";
-                case "Careful": return "Take care";
-                case "Abstain": return "Keep to yourself";
-                default: return "Ask me at dusk";
-            }
-        }
-
-        private static string? NightModeValue(string? menuLabel)
-        {
-            switch (menuLabel)
-            {
-                case "Seek a child": return "Seek";
-                case "Take care": return "Careful";
-                case "Keep to yourself": return "Abstain";
-                case "Ask me at dusk": return "Ask";
-                default: return null;
-            }
-        }
 
         private static int Clamp(int value, int min, int max) =>
             value < min ? min : (value > max ? max : value);

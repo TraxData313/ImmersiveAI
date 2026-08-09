@@ -23,7 +23,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Every wife keeps a rolling fortnight of nights — the ones you came to her, the ones her door was closed, the ones she learned you were elsewhere, and the ones she simply never saw you come in. Nothing tells her how to feel about any of it. That has always been her own.
 - A wife far away keeps no watch on your nights — but word of another woman travels.
 - **New window, on H:** your own hearth. Every wife, where she stands, how her season runs, when the next night is yours, and the fortnight she keeps.
-- Rather not be asked? Four ways to live your evenings: be asked at dusk, seek a child, take care (you keep your nights, a child comes only rarely), or keep to yourself.
+- Two plain switches in the window: **Visiting — Manual or Auto**, and **Try to prevent a child — On or Off**. Manual asks you at dusk and lets you go at any hour from the window; Auto goes on its own once the hours are up, late in the evening, with nothing asked, bought or written.
+- Auto never takes the day away from you: it waits for the evening, and a night you chose yourself resets the clock. It is a floor under your marriage, not a ceiling — want more than it gives, or want a night written, go yourself in the afternoon.
+- Taking care means you go to whoever rather than to whoever is nearest her season, and any night's chance of a child falls to a tenth. Small, never nothing.
 - A child begun is not a child known: the announcement now waits a sensible week, and when she learns of it she may come and tell you herself — or write, if you are apart. Even if she would never otherwise reach out.
 - Optional line in the log after each night: the chance that stood, and whether a child was begun.
 - Toggle: EnableNights (on by default). A night costs one writing call only if you paid for it.

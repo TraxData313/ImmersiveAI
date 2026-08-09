@@ -1271,9 +1271,13 @@ deferring `Apply` itself, so the birth moves with it. The gift (`NightGifts`) bu
 odds, a written memory, and TALK: its `AwarenessMultiplier` scales the other wives' chance of
 hearing (×0.5 plain → ×2 for the jewel) and a leaked night **leaks its NAME too**
 (`OtherNightTitle`, back-filled by `LeakTheNameOfTheNight` once the chronicler answers). A paid night
-also costs the morning (`SetDisorganized`). Four modes (`NightsAutoMode`: Ask / Seek / Careful —
-whoever, not whoever is ripest, at a tenth the odds / Abstain); an ignored dusk question is settled a
-day later as a night alone (`LastSettledNight`, a NIGHT-level mark because a night nobody noticed
+also costs the morning (`SetDisorganized`). TWO plain switches, not four poetic modes (Anton killed the cycling
+"Change how the evenings go" button the day it shipped): `NightsAutoVisit` (manual = asked at dusk +
+the window at any hour, the only way to gifts and written nights; auto = it goes on its own once the
+hours are up, LATE IN THE EVENING and never earlier, so the whole day between stays the player's —
+a floor under the marriage, not a ceiling) and `NightsPreventChild` (on auto it also picks whoever
+rather than whoever is nearest her season, and either way cuts the night to a tenth). No nights at
+all is `EnableNights = false`. An ignored dusk question is settled a day later as a night alone (`LastSettledNight`, a NIGHT-level mark because a night nobody noticed
 writes no records). Memory keeps TITLES, never paragraphs — the flesh lives in the 14-night ledger
 and `nights.txt`. **THE LINE** (Core `Together\TogetherLine`, folded in LAST by `SituationBuilder` and drawn at
 the foot of the chat thread for the player too): ONE mark at the last moment the two of them had

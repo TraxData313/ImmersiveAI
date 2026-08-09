@@ -111,14 +111,27 @@ morale, no prisoners. Ordinary nights cost the road nothing, and say nothing abo
 
 ---
 
-## The four ways to live an evening (`NightsAutoMode`)
+## Two switches, not four modes
 
-- **Ask** (default) — the dusk question.
-- **Seek** — auto, whichever wife stands nearest her season. The surest road to children.
-- **Careful** — auto, **whoever, deliberately not whoever is ripest**, and the whole night is cut to
-  `CarefulNightChanceFactor` (0.10) — gift and season and all. Contraception as the period actually
-  had it: not nothing, and not much.
-- **Abstain** — no nights at all.
+The first cut had a four-way `NightsAutoMode` behind one cycling button labelled "Change how the
+evenings go". Anton's screenshot killed it: the label said nothing a player could act on, and the
+mode's own description wrapped and slid under the button. It is two plain switches now, and they are
+independent:
+
+| | prevent OFF | prevent ON |
+|---|---|---|
+| **Visiting: Manual** (default) | asked at dusk; the window at any hour; gifts, written nights, her best days | you still choose everything, but no night is meant to make a child |
+| **Visiting: Auto** | it looks after itself and goes to whoever is nearest her season | it looks after itself and goes to whoever, at a tenth the odds |
+
+`NightsAutoVisit` and `NightsPreventChild`, both live, both in MCM. Wanting no nights at all is
+`EnableNights = false` — where a player would actually look for it.
+
+**Auto waits for the evening, and only for it.** It does not pounce the instant the hours are up: it
+fires at `NightHour` and no earlier, so the whole day between belongs to the player. Come to the
+window at noon, go yourself with a jewel and a written night, and the automatic one finds the clock
+running again and stands down. **Auto is a floor under the marriage, never a ceiling on it** — and
+because nothing is ever bought or written on an automatic night, wanting more than it gives is
+always a reason to go yourself.
 
 Nothing is ever bought or written on an automatic night. That is the trade for not being asked.
 
@@ -126,6 +139,11 @@ Nothing is ever bought or written on an automatic night. That is the trade for n
 `LastSettledNight` does not cover last night, it is settled as a night slept alone, the other wives
 roll for what they made of it, and the log says so. The mark is **night-level, not per-wife**,
 because a night nobody noticed anything about writes no records at all.
+
+**A wrapping label needs a measured margin.** The window's left column stacks the two switches in a
+`ListPanel` and the wives' list below rides `ControlsHeight`, computed from the sentences' own
+length — a fixed margin is exactly what clipped the words in the screenshot, and it is the letter
+window's own old bug, now learned twice.
 
 ---
 

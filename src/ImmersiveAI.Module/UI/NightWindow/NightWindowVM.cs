@@ -139,16 +139,34 @@ namespace ImmersiveAI.UI.NightWindow
             ImmersiveChatBehavior.GoToHerFromWindow(hero);
         }
 
-        public void ExecuteCycleMode()
+        public void ExecuteToggleVisitMode()
         {
             try
             {
-                ImmersiveChatBehavior.CycleNightMode();
-                OnPropertyChanged("ModeText");
-                OnPropertyChanged("ModeButtonText");
-                RefreshContacts();
+                ImmersiveChatBehavior.ToggleNightAutoVisit();
+                RefreshModeText();
             }
-            catch (Exception ex) { ModLog.Error("changing how the evenings are lived", ex); }
+            catch (Exception ex) { ModLog.Error("changing how the women are visited", ex); }
+        }
+
+        public void ExecuteTogglePrevent()
+        {
+            try
+            {
+                ImmersiveChatBehavior.ToggleNightPreventChild();
+                RefreshModeText();
+            }
+            catch (Exception ex) { ModLog.Error("changing whether a child is prevented", ex); }
+        }
+
+        private void RefreshModeText()
+        {
+            OnPropertyChanged("VisitModeText");
+            OnPropertyChanged("VisitModeButtonText");
+            OnPropertyChanged("PreventText");
+            OnPropertyChanged("PreventButtonText");
+            OnPropertyChanged("ControlsHeight");
+            RefreshContacts();
         }
 
         public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
@@ -183,11 +201,38 @@ namespace ImmersiveAI.UI.NightWindow
                 ? "You have no wife. This window keeps the nights of a marriage — it will fill itself when there is one."
                 : "Choose one of them.";
 
+        // The two switches, each with its own plain sentence under it. No lyric here on purpose:
+        // a control has to say what it does (Anton, 2026.08.10).
         [DataSourceProperty]
-        public string ModeText => ImmersiveChatBehavior.NightModeDescription();
+        public string VisitModeText => ImmersiveChatBehavior.NightVisitModeLine();
 
         [DataSourceProperty]
-        public string ModeButtonText => "Change how the evenings go";
+        public string VisitModeButtonText => ImmersiveChatBehavior.NightVisitButtonText();
+
+        [DataSourceProperty]
+        public string PreventText => ImmersiveChatBehavior.NightPreventLine();
+
+        [DataSourceProperty]
+        public string PreventButtonText => ImmersiveChatBehavior.NightPreventButtonText();
+
+        /// <summary>Where the wives' list starts, below the two switches. Their sentences wrap, and
+        /// how far they wrap depends on which way each switch stands, so this is measured from the
+        /// text rather than nailed to a number — the fixed margin is exactly what clipped the words
+        /// in Anton's screenshot.</summary>
+        [DataSourceProperty]
+        public int ControlsHeight
+        {
+            get
+            {
+                // ~26px a wrapped line at font 14 in this column's width, two buttons and the gaps.
+                int lines = EstimateLines(VisitModeText) + EstimateLines(PreventText);
+                return 44 + 36 + 36 + 24 + lines * 20;
+            }
+        }
+
+        // The column is ~330px wide at font 14 — about 52 characters to a line.
+        private static int EstimateLines(string text) =>
+            string.IsNullOrWhiteSpace(text) ? 0 : Math.Max(1, (text.Trim().Length + 51) / 52);
 
         [DataSourceProperty]
         public string SelectedName
@@ -295,10 +340,18 @@ namespace ImmersiveAI.UI.NightWindow
                     "This is your own hearth. Every wife you have is here, with where her season stands and "
                     + "when the next night is yours to spend.\n\n"
                     + "WHAT THE NIGHTS ARE FOR. A child is no longer begun by a coin the world flips behind "
-                    + "your back — it is begun on a night you chose. Each evening you are asked where you will "
-                    + "sleep (or you can leave that to itself, with the button on the left). A woman's body keeps "
-                    + "its own month, and the nights near the crest of it are the ones that may quicken; through "
-                    + "the days of the custom her door is closed and no one is asked anything.\n\n"
+                    + "your back — it is begun on a night you chose. A woman's body keeps its own month, and the "
+                    + "nights near the crest of it are the ones that may quicken; through the days of the custom "
+                    + "her door is closed and no one is asked anything.\n\n"
+                    + "THE TWO SWITCHES on the left. VISITING: Manual means you are asked at dusk and can also "
+                    + "come here at any hour of the day and go then; Auto means that once the hours between "
+                    + "nights are up you go to one of them on your own, late in the evening, with nothing asked "
+                    + "of you, nothing bought and nothing written. PREVENT A CHILD: On means the two of you take "
+                    + "care — on Auto you go to whoever rather than to whoever is nearest her season, and any "
+                    + "night's chance falls to a tenth. Either switch can stand either way.\n\n"
+                    + "A visit of any kind resets the clock, so an automatic night never lands on a day you "
+                    + "already chose one. Auto is a floor under your marriage, not a ceiling on it: want more "
+                    + "than it gives, or want a night written — come here in the afternoon and go yourself.\n\n"
                     + "WHAT COIN BUYS. Nothing, and it is still a true night. Ten denars buys wine; a thousand "
                     + "buys a jewel. What the coin actually buys is three things: better odds, a WRITTEN account "
                     + "of the night with a name she will keep it by — and talk. The grander the night, the more "

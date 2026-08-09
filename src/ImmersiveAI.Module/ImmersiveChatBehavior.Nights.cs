@@ -145,6 +145,12 @@ namespace ImmersiveAI
 
             try
             {
+                // LATE IN THE EVENING AND NOT BEFORE (Anton, 2026.08.10). The automatic night does
+                // not pounce the instant the hours are up — it waits for this hour, so the whole
+                // day between belongs to the player: he may come to the window at noon and go
+                // himself, with a gift and a written night, and the automatic one simply finds the
+                // clock running again and stands down. It is a floor under the marriage, never a
+                // ceiling on it.
                 int hour = (int)CampaignTime.Now.CurrentHourInDay;
                 if (hour != _config.NightHour) return;
 
@@ -197,21 +203,17 @@ namespace ImmersiveAI
             catch { return 0; }
         }
 
-        /// <summary>The four ways an evening may be lived. Parsed leniently: an unknown word is
-        /// "Ask", which is the one that never surprises anyone.</summary>
-        private enum NightMode { Ask, Seek, Careful, Abstain }
-
-        private NightMode Mode
-        {
-            get
-            {
-                var raw = (_config.NightsAutoMode ?? string.Empty).Trim();
-                if (raw.Equals("Seek", StringComparison.OrdinalIgnoreCase)) return NightMode.Seek;
-                if (raw.Equals("Careful", StringComparison.OrdinalIgnoreCase)) return NightMode.Careful;
-                if (raw.Equals("Abstain", StringComparison.OrdinalIgnoreCase)) return NightMode.Abstain;
-                return NightMode.Ask;
-            }
-        }
+        // TWO PLAIN SWITCHES, not four poetic modes (Anton, 2026.08.10 — the cycling
+        // "Change how the evenings go" button said nothing a player could act on). Auto decides WHO
+        // KNOCKS; taking care decides WHAT THE NIGHT IS FOR. They are independent, and between them
+        // they cover every one of the old four:
+        //   manual + not careful = you are asked at dusk and choose everything (the default)
+        //   manual + careful     = you still choose, but no night is meant to make a child
+        //   auto   + not careful = it looks after itself and aims for children
+        //   auto   + careful     = it looks after itself and aims not to
+        // Wanting no nights at all is EnableNights = false, which is where a player would look.
+        private bool AutoVisit => _config.NightsAutoVisit;
+        private bool PreventChild => _config.NightsPreventChild;
 
         private void HandleTheEvening()
         {
@@ -243,16 +245,7 @@ namespace ImmersiveAI
                 return;
             }
 
-            switch (Mode)
-            {
-                case NightMode.Abstain:
-                    RecordTheRestOfTheNight(null);         // kept to yourself; the wives still see what they see
-                    return;
-                case NightMode.Seek:
-                case NightMode.Careful:
-                    SpendTheNightAutomatically(open);
-                    return;
-            }
+            if (AutoVisit) { SpendTheNightAutomatically(open); return; }
 
             if (!_config.AskEachEvening) return;                       // the window's key is the only door
             if (CampaignTime.Now.ToDays < _dontAskNightsUntilDay) return;
@@ -431,7 +424,7 @@ namespace ImmersiveAI
 
                 // Seeking: whoever stands nearest her season. Taking care: whoever — deliberately
                 // NOT the ripest, which is half of what taking care has always meant.
-                var wife = Mode == NightMode.Careful
+                var wife = PreventChild
                     ? open[MBRandom.RandomInt(open.Count)]
                     : open.OrderBy(NightSortKey).FirstOrDefault();
 
@@ -573,7 +566,7 @@ namespace ImmersiveAI
                 // grandest evening of your life still mostly does not make a child if you meant it
                 // not to (Anton's rule, 2026.08.09).
                 double dial = _config.ConceptionChanceMultiplier;
-                if (Mode == NightMode.Careful)
+                if (PreventChild)
                     dial *= Math.Max(0, Math.Min(1, _config.CarefulNightChanceFactor));
 
                 double chance = NightOdds.NightlyChanceFor(
@@ -1472,41 +1465,66 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("going to her from the window", ex); }
         }
 
-        internal static string NightModeDescription()
+        /// <summary>The visiting switch in plain words — what it is, and what it means for you.
+        /// Deliberately unpoetic: this is a control, and a control has to say what it does.</summary>
+        internal static string NightVisitModeLine()
         {
             try
             {
                 var self = Current;
                 if (self == null) return string.Empty;
-                switch (self.Mode)
-                {
-                    case NightMode.Seek: return "The evenings look after themselves: each night you go to whichever wife stands nearest her season. No gifts, no writing.";
-                    case NightMode.Careful: return "The evenings look after themselves, and you take care: whoever, not whoever is ripest, and a child comes only rarely.";
-                    case NightMode.Abstain: return "You keep to yourself. No nights are spent, and no children come.";
-                    default: return "You are asked at dusk where you will sleep.";
-                }
+                return self.AutoVisit
+                    ? "Visiting the women: AUTO. Once the hours are up, you go to one of them on your own, late in the evening. No questions asked of you, no gifts, no story written."
+                    : "Visiting the women: MANUAL. You are asked at dusk, and you can also go at any hour from this window. Gifts, written nights and picking her best days are only possible this way.";
             }
             catch { return string.Empty; }
         }
 
-        /// <summary>Walks the four ways round, saving as it goes — the window's one live hand.</summary>
-        internal static void CycleNightMode()
+        /// <summary>The same for taking care.</summary>
+        internal static string NightPreventLine()
+        {
+            try
+            {
+                var self = Current;
+                if (self == null) return string.Empty;
+                int tenth = (int)Math.Round(Math.Max(0, Math.Min(1, self._config.CarefulNightChanceFactor)) * 100);
+                return self.PreventChild
+                    ? $"Trying to prevent a child: ON. On auto you go to whoever, not to whoever is nearest her season, and any night's chance of a child falls to about {tenth}% of what it would be. Small, never nothing."
+                    : "Trying to prevent a child: OFF. Nothing is done against one. On auto you go to whichever wife stands nearest her season, so over a month the odds work out close to the game's own.";
+            }
+            catch { return string.Empty; }
+        }
+
+        internal static string NightVisitButtonText() =>
+            "Visiting: " + (Current != null && Current.AutoVisit ? "Auto" : "Manual");
+
+        internal static string NightPreventButtonText() =>
+            "Prevent a child: " + (Current != null && Current.PreventChild ? "On" : "Off");
+
+        internal static void ToggleNightAutoVisit()
         {
             try
             {
                 var self = Current;
                 if (self == null) return;
-                switch (self.Mode)
-                {
-                    case NightMode.Ask: self._config.NightsAutoMode = "Seek"; break;
-                    case NightMode.Seek: self._config.NightsAutoMode = "Careful"; break;
-                    case NightMode.Careful: self._config.NightsAutoMode = "Abstain"; break;
-                    default: self._config.NightsAutoMode = "Ask"; break;
-                }
+                self._config.NightsAutoVisit = !self._config.NightsAutoVisit;
                 self._config.Save();
-                self.NotifyNight(NightModeDescription());
+                self.NotifyNight(NightVisitModeLine());
             }
-            catch (Exception ex) { ModLog.Error("changing how the evenings are lived", ex); }
+            catch (Exception ex) { ModLog.Error("changing how the women are visited", ex); }
+        }
+
+        internal static void ToggleNightPreventChild()
+        {
+            try
+            {
+                var self = Current;
+                if (self == null) return;
+                self._config.NightsPreventChild = !self._config.NightsPreventChild;
+                self._config.Save();
+                self.NotifyNight(NightPreventLine());
+            }
+            catch (Exception ex) { ModLog.Error("changing whether a child is prevented", ex); }
         }
 
         // ------------------------------ the notices and the test lever ------------------------------

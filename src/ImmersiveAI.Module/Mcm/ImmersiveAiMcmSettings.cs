@@ -252,27 +252,32 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableNights { get; set; } = true;
 
-        [SettingPropertyDropdown("How the evenings go", Order = 19, RequireRestart = false,
-            HintText = "Ask: you are asked at dusk. Seek: each night goes to whichever wife stands nearest her season - the surest road to children. Careful: you keep your nights but take care, going to whoever rather than whoever is ripest, and a child comes only rarely. Abstain: you keep to yourself. Nothing is ever bought or written on an automatic night.")]
+        [SettingPropertyBool("Visit the women automatically", Order = 19, RequireRestart = false,
+            HintText = "Off (default): you are asked at dusk, and can also go at any hour from the window of the hearth - gifts, written nights and picking her best days are only possible this way. On: once the hours between nights are up you go to one of them on your own, late in the evening, with no question put to you, no coin spent and nothing written.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
-        public Dropdown<string> NightsAutoMode { get; set; } = new Dropdown<string>(McmChoiceLists.NightModes, 0);
+        public bool NightsAutoVisit { get; set; }
 
-        [SettingPropertyInteger("Hours between nights", 1, 72, "0 hours", Order = 20, RequireRestart = false,
+        [SettingPropertyBool("Try to prevent a child", Order = 20, RequireRestart = false,
+            HintText = "On: the two of you take care. Visiting automatically then goes to whoever rather than to whoever is nearest her season, and any night's chance of a child falls to a tenth of what it would be - small, but never nothing. Off: nothing is done against one.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool NightsPreventChild { get; set; }
+
+        [SettingPropertyInteger("Hours between nights", 1, 72, "0 hours", Order = 21, RequireRestart = false,
             HintText = "How long must pass before another night can be spent. A man cannot be in two beds in one evening; this is also what greys the choice out with the hours still to go.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int NightCooldownHours { get; set; } = 24;
 
-        [SettingPropertyInteger("Days before she knows of the child", 0, 30, "0 days", Order = 21, RequireRestart = false,
+        [SettingPropertyInteger("Days before she knows of the child", 0, 30, "0 days", Order = 22, RequireRestart = false,
             HintText = "A child begun is not a child known. Until this many days pass the world is told nothing either - so the game's own announcement no longer lands the same evening like a receipt. The birth waits the same days with it.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int ConceptionRevealDelayDays { get; set; } = 7;
 
-        [SettingPropertyBool("Show the night's odds", Order = 22, RequireRestart = false,
+        [SettingPropertyBool("Show the night's odds", Order = 23, RequireRestart = false,
             HintText = "After each night, one line in the log: the chance that stood, and whether a child was begun. Off keeps the reckoning hidden and you simply find out in a week - the window still tells you her season in plain words either way.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool ShowConceptionOdds { get; set; } = true;
 
-        [SettingPropertyBool("A paid night costs you the morning", Order = 23, RequireRestart = false,
+        [SettingPropertyBool("A paid night costs you the morning", Order = 24, RequireRestart = false,
             HintText = "A night you laid something out for leaves the company slow to break camp - disorganized, as after a fight. That is what the coin and the hours actually cost, and she is told of the lingering, since it was for her. Ordinary nights cost the road nothing.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool PaidNightsDisorganizeParty { get; set; } = true;

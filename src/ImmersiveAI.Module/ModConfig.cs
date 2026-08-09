@@ -474,23 +474,25 @@ namespace ImmersiveAI
         public bool ShowConceptionOdds { get; set; } = true;
 
         /// <summary>
-        /// How the evenings look after themselves when you would rather not be asked. Nothing is
-        /// ever bought and nothing is ever written on an automatic night — a story is something you
-        /// choose and pay for; that is the whole trade.
-        /// <list type="bullet">
-        /// <item>"Ask" — the evening's question is put to you, and you decide. (Default.)</item>
-        /// <item>"Seek" — each night you go to whichever wife stands nearest her season. The
-        /// surest road to children.</item>
-        /// <item>"Careful" — you still keep your nights, but you go to whoever, not to whoever is
-        /// ripest, and you take care: a child may still come, but far more rarely
-        /// (<see cref="CarefulNightChanceFactor"/>).</item>
-        /// <item>"Abstain" — you keep to yourself. No nights, and therefore no children.</item>
-        /// </list>
+        /// Who decides the night. False (the default) is MANUAL: you are asked at dusk, and you may
+        /// also go at any hour of the day from the window of the hearth — gifts, written nights and
+        /// picking her best days are only possible this way. True is AUTO: once the hours between
+        /// nights are up, you go to one of them on your own, late in the evening, with no question
+        /// put to you, no coin spent and nothing written. A visit of either kind resets the clock,
+        /// so an automatic night never lands on a day you already chose one.
+        /// Wanting no nights at all is <see cref="EnableNights"/> = false.
         /// </summary>
-        public string NightsAutoMode { get; set; } = "Ask";
+        public bool NightsAutoVisit { get; set; }
 
-        /// <summary>What is left of a night's odds when you are taking care. A tenth, by default —
-        /// the old ways were not nothing, and they were not much.</summary>
+        /// <summary>
+        /// Whether the two of you are trying NOT to have a child. On auto this also changes who you
+        /// go to — whoever, rather than whoever stands nearest her season — and in either mode it
+        /// cuts any night's chance to <see cref="CarefulNightChanceFactor"/> of what it would have
+        /// been. The old ways were not nothing, and they were not much.
+        /// </summary>
+        public bool NightsPreventChild { get; set; }
+
+        /// <summary>What is left of a night's odds when you are taking care. A tenth, by default.</summary>
         public double CarefulNightChanceFactor { get; set; } = 0.10;
 
         /// <summary>How many nights each wife keeps in her rolling memory of them — a fortnight by

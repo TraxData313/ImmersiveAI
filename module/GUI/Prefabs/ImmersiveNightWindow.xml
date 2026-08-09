@@ -27,15 +27,30 @@
 
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@TitleText" />
 
-                <!-- how the evenings are being lived, and the hand on it -->
-                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="44" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@ModeText" />
-                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="38" VerticalAlignment="Top" MarginTop="72" Brush="Popup.Cancel.Button" Command.Click="ExecuteCycleMode">
+                <!-- The two switches. They STACK in a list panel and the list is measured by its
+                     children, never placed at fixed margins: both sentences wrap, and at fixed
+                     margins a wrapped one slides straight under the button below it (Anton's
+                     screenshot, 2026.08.10 — the letter window's own old bug, twice learned). The
+                     nights list below then rides @ControlsHeight, which counts the wrapping. -->
+                <ListPanel Id="NightControls" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="44" StackLayout.LayoutMethod="VerticalTopToBottom">
                   <Children>
-                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@ModeButtonText" />
-                  </Children>
-                </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="36" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleVisitMode">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VisitModeButtonText" />
+                      </Children>
+                    </ButtonWidget>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="4" MarginBottom="10" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@VisitModeText" />
 
-                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="120">
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="36" Brush="Popup.Cancel.Button" Command.Click="ExecuteTogglePrevent">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PreventButtonText" />
+                      </Children>
+                    </ButtonWidget>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="4" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@PreventText" />
+                  </Children>
+                </ListPanel>
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="@ControlsHeight">
                   <Children>
 
                     <ScrollablePanel Id="WivesScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="WivesClip" InnerPanel="WivesClip\WivesList" VerticalScrollbar="..\WivesScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
