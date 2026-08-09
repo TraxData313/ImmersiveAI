@@ -239,6 +239,34 @@ namespace ImmersiveAI.Personas
                 sb.AppendLine(journey);
             }
 
+            // The nights lately, for a wife of the player's: the ones he came to her, the ones her
+            // own door was closed, and whatever she came to learn of the rest. Nothing here tells
+            // her how to feel about any of it — her hand has been on her own heart since move_heart,
+            // and this only gives it something true to weigh (see the behavior's Nights partial).
+            string nights;
+            try { nights = ImmersiveChatBehavior.NightsBlockFor(speaker) ?? string.Empty; }
+            catch { nights = string.Empty; }
+            if (nights.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(nights);
+            }
+
+            // THE LINE (Anton's design, 2026.08.09): the last moment the two of them had any time to
+            // themselves, and after it a plain dated list of everything that has happened since.
+            // Everything above reads as settled background — without this she would greet him the
+            // morning after a night with another wife as though it had all been talked through
+            // off-stage. It rides LAST, right before the moment, because it is the thing she is most
+            // likely to act on; and it disappears by itself once there is nothing after the line.
+            string together;
+            try { together = ImmersiveChatBehavior.TogetherBlock(speaker) ?? string.Empty; }
+            catch { together = string.Empty; }
+            if (together.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(together);
+            }
+
             // And past the separator, the person: who stands before me (or writes from afar), named
             // with what they are to me — my husband, my daughter, my liege — and how my heart leans.
             var meeting = BuildMeeting(speaker, partner, moment);

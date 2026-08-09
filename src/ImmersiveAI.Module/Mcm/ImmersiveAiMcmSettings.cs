@@ -147,6 +147,16 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
         public Dropdown<string> LetterWindowHotkey { get; set; } = HotkeyChoices("Y");
 
+        [SettingPropertyBool("Window of the hearth", Order = 4, RequireRestart = false,
+            HintText = "A small window of your own marriage: your wives, where each of them stands and how her season runs, when the next night is yours to spend, and the fortnight of nights each of them keeps.")]
+        [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
+        public bool EnableNightWindow { get; set; } = true;
+
+        [SettingPropertyDropdown("Hearth window key", Order = 5, RequireRestart = true,
+            HintText = "The key that opens and closes the window of the hearth on the map. H by default; the vanilla map already holds I, P, C, N, K, Q and E.")]
+        [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
+        public Dropdown<string> NightWindowHotkey { get; set; } = HotkeyChoices("H");
+
         [SettingPropertyBool("Notify when a reply is ready", Order = 3, RequireRestart = false,
             HintText = "Shows a short notice the moment an NPC's answer arrives, so you need not click 'wait' and guess whether it has come.")]
         [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
@@ -232,6 +242,40 @@ namespace ImmersiveAI.Mcm
             HintText = "How many in-game days a betrothal must season before the wedding day can be reached for. 0 = you may wed the very day of the promise.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int MinBetrothalDays { get; set; } = 3;
+
+        // ── The nights ──────────────────────────────────────────────────────────────
+        // Conception stops being a coin the world flips behind your back and becomes a thing you do,
+        // on a night you chose. Everything here is live; the window of the hearth shows the rest.
+
+        [SettingPropertyBool("The nights of a marriage", Order = 18, RequireRestart = false,
+            HintText = "Each evening you choose where you will sleep, and a child is begun on a night you actually chose. A woman's body keeps its own month: the nights near its crest are the ones that may quicken, and through the days of the custom her door is closed. Every wife keeps a rolling fortnight of the nights you came, and of whatever she learned of the rest. Off: the world decides as it always did.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableNights { get; set; } = true;
+
+        [SettingPropertyDropdown("How the evenings go", Order = 19, RequireRestart = false,
+            HintText = "Ask: you are asked at dusk. Seek: each night goes to whichever wife stands nearest her season - the surest road to children. Careful: you keep your nights but take care, going to whoever rather than whoever is ripest, and a child comes only rarely. Abstain: you keep to yourself. Nothing is ever bought or written on an automatic night.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public Dropdown<string> NightsAutoMode { get; set; } = new Dropdown<string>(McmChoiceLists.NightModes, 0);
+
+        [SettingPropertyInteger("Hours between nights", 1, 72, "0 hours", Order = 20, RequireRestart = false,
+            HintText = "How long must pass before another night can be spent. A man cannot be in two beds in one evening; this is also what greys the choice out with the hours still to go.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int NightCooldownHours { get; set; } = 24;
+
+        [SettingPropertyInteger("Days before she knows of the child", 0, 30, "0 days", Order = 21, RequireRestart = false,
+            HintText = "A child begun is not a child known. Until this many days pass the world is told nothing either - so the game's own announcement no longer lands the same evening like a receipt. The birth waits the same days with it.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int ConceptionRevealDelayDays { get; set; } = 7;
+
+        [SettingPropertyBool("Show the night's odds", Order = 22, RequireRestart = false,
+            HintText = "After each night, one line in the log: the chance that stood, and whether a child was begun. Off keeps the reckoning hidden and you simply find out in a week - the window still tells you her season in plain words either way.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool ShowConceptionOdds { get; set; } = true;
+
+        [SettingPropertyBool("A paid night costs you the morning", Order = 23, RequireRestart = false,
+            HintText = "A night you laid something out for leaves the company slow to break camp - disorganized, as after a fight. That is what the coin and the hours actually cost, and she is told of the lingering, since it was for her. Ordinary nights cost the road nothing.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool PaidNightsDisorganizeParty { get; set; } = true;
 
         [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]

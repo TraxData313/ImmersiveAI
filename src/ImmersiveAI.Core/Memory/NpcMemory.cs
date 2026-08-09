@@ -57,6 +57,13 @@ namespace ImmersiveAI.Core.Memory
         /// (see Initiation.InitiationScorer.OutreachDamping), so no one knocks twice in an afternoon.</summary>
         public double LastOutreachGameDay { get; set; } = -1;
 
+        /// <summary>Campaign day their last talk with the player ENDED (2026.08.09). Not when it
+        /// began and not the last turn of it — the moment they parted, which is when everything
+        /// said in it becomes "said". It anchors the line in <see cref="Together.TogetherLine"/>:
+        /// while a talk is still running the line must stay where it was, or the very thing she
+        /// meant to raise would vanish from her sheet halfway through raising it. -1 = never.</summary>
+        public double LastTalkEndedDay { get; set; } = -1;
+
         /// <summary>How many of their own outreaches have met the player's silence since the player last
         /// engaged (spoke with them, met them, or wrote). Each one stretches how long they wait and lowers
         /// how strongly they try again — two letters into silence is enough for anyone's pride. Reset the

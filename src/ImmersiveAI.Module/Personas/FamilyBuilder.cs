@@ -269,7 +269,7 @@ namespace ImmersiveAI.Personas
         /// <summary>Every living spouse — the Spouse slot first, then living "exes", where polygamy
         /// mods park further wives while both live on wed (a living ex in an unmodded game is next
         /// to none). Dead spouses are the caller's own story to tell.</summary>
-        private static List<Hero> SpousesOf(Hero h)
+        public static List<Hero> SpousesOf(Hero h)
         {
             var list = new List<Hero>();
             if (h == null) return list;

@@ -22,6 +22,9 @@ namespace ImmersiveAI.UI.ChatWindow
         // sea-glass as the activity notices — read at a glance without bubbles.
         private static readonly Color PlayerHeaderColor = new Color(0.85f, 0.75f, 0.55f, 1f);
         private static readonly Color NpcHeaderColor = new Color(0.74f, 0.90f, 0.86f, 1f);
+        // The "since you were last alone" footnote: the nights' own dusk-violet, so it reads as a
+        // margin note about the two of you rather than as anyone's spoken words.
+        private static readonly Color LineHeaderColor = new Color(0.72f, 0.70f, 0.92f, 1f);
         // The wedding accounts wear the courtship road's own rose, so the day reads as the end of
         // that story rather than as one more exchange.
         private static readonly Color WeddingHeaderColor = new Color(0.93f, 0.62f, 0.72f, 1f);
@@ -41,6 +44,11 @@ namespace ImmersiveAI.UI.ChatWindow
         private MBBindingList<ChatContactVM> _contacts = new MBBindingList<ChatContactVM>();
         private MBBindingList<ChatMessageVM> _messages = new MBBindingList<ChatMessageVM>();
         private ChatContactVM? _selected;
+
+        /// <summary>Whoever's thread is on stage — the manager stamps their talk as ended when the
+        /// window closes, so the "since we were last alone" line moves only once you have walked
+        /// away (see the behavior's Nights partial).</summary>
+        internal Hero? SelectedHero => _selected?.Hero;
         private string _inputText = string.Empty;
         private string _searchText = string.Empty;
         private string _selectedName = string.Empty;
@@ -333,6 +341,19 @@ namespace ImmersiveAI.UI.ChatWindow
                     $"(No words have yet passed between you and {npcName} — yours would be the first.)",
                     isNarration: true, Colors.White));
 
+            // THE LINE, shown to the player too (Anton, 2026.08.09): the same block their sheet
+            // carries — the last time the two of you had time to yourselves, and everything since
+            // that has not been gone over. It is the honest answer to "why are they being like
+            // this", and it belongs at the FOOT of the thread, right where you are about to speak.
+            try
+            {
+                var line = ImmersiveChatBehavior.TogetherBlock(npc);
+                if (!string.IsNullOrWhiteSpace(line))
+                    messages.Add(new ChatMessageVM("— not yet discussed between you —",
+                        line.Trim(), isNarration: true, LineHeaderColor));
+            }
+            catch { /* a missing footnote is not a broken thread */ }
+
             Messages = messages;
             ChatWindowManager.RequestScrollToBottom();
         }
@@ -595,6 +616,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public void ExecuteDevLetter() => RunDev(ImmersiveChatBehavior.DevForceLetter);
         public void ExecuteDevBattle() => RunDev(ImmersiveChatBehavior.DevForgeBattle);
         public void ExecuteDevWedding() => RunDev(ImmersiveChatBehavior.DevForgeWedding);
+        public void ExecuteDevNight() => RunDev(ImmersiveChatBehavior.DevForgeNight);
         public void ExecuteDevRename() => RunDev(ImmersiveChatBehavior.DevRenameNpc);
 
         public void ExecuteDevOdds()

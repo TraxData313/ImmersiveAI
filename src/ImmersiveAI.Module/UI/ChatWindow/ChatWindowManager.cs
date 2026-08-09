@@ -164,6 +164,15 @@ namespace ImmersiveAI.UI.ChatWindow
 
         private static void TearDown()
         {
+            // Walking away from the window ends that talk, the way closing a conversation does —
+            // and only then does what was said in it count as said (the line, 2026.08.09).
+            try
+            {
+                var talkedWith = _vm?.SelectedHero;
+                if (talkedWith != null) ImmersiveChatBehavior.NoteTalkEndedWith(talkedWith);
+            }
+            catch { /* the grace fallback still moves the line by itself */ }
+
             try
             {
                 if (_layer != null)

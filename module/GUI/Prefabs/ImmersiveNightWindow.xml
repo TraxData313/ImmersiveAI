@@ -1,0 +1,219 @@
+<!--
+  Immersive AI window of the hearth: your wives on the left with where each of them stands and how
+  her season runs, and on the right her fortnight of nights - the ones you came to her, the ones her
+  door was closed, and whatever she came to learn of the rest - with the evening's own choice at the
+  bottom. Same skeleton and brushes as ImmersiveLetterWindow.xml, which is playtested and rendering
+  true; deliberately leaner (no composer, no prompt editor - this is a place to look, and to decide
+  one thing).
+  Loaded by NightWindowManager via GauntletLayer.LoadMovie("ImmersiveNightWindow", NightWindowVM).
+-->
+<Prefab>
+  <Window>
+    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
+      <Children>
+
+        <!-- Dim the world behind, softly -->
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#000000FF" AlphaFactor="0.40" />
+
+        <!-- The window itself -->
+        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="1100" SuggestedHeight="700" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Children>
+
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.97" />
+
+            <!-- ============================ left: your own house ============================ -->
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="330" HorizontalAlignment="Left" MarginLeft="20" MarginTop="18" MarginBottom="18">
+              <Children>
+
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@TitleText" />
+
+                <!-- how the evenings are being lived, and the hand on it -->
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="44" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@ModeText" />
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="38" VerticalAlignment="Top" MarginTop="72" Brush="Popup.Cancel.Button" Command.Click="ExecuteCycleMode">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@ModeButtonText" />
+                  </Children>
+                </ButtonWidget>
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="120">
+                  <Children>
+
+                    <ScrollablePanel Id="WivesScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="WivesClip" InnerPanel="WivesClip\WivesList" VerticalScrollbar="..\WivesScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                      <Children>
+                        <Widget Id="WivesClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                          <Children>
+                            <ListPanel Id="WivesList" DataSource="{Contacts}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" StackLayout.LayoutMethod="VerticalTopToBottom">
+                              <ItemTemplate>
+                                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="72" Command.Click="ExecuteSelect">
+                                  <Children>
+                                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.10" IsVisible="@IsSelected" />
+                                    <Widget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="54" SuggestedHeight="54" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="6" CircularClipEnabled="true" CircularClipRadius="27">
+                                      <Children>
+                                        <ImageIdentifierWidget DataSource="{Visual}" DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" AdditionalArgs="@AdditionalArgs" ImageId="@Id" TextureProviderName="@TextureProviderName" />
+                                      </Children>
+                                    </Widget>
+                                    <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="72" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <Children>
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="@SeasonColor" Brush.TextHorizontalAlignment="Left" Text="@SeasonText" />
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@Detail" />
+                                      </Children>
+                                    </ListPanel>
+                                  </Children>
+                                </ButtonWidget>
+                              </ItemTemplate>
+                            </ListPanel>
+                          </Children>
+                        </Widget>
+                      </Children>
+                    </ScrollablePanel>
+
+                    <ScrollbarWidget Id="WivesScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="WivesScrollbarHandle" MinValue="0" MaxValue="100">
+                      <Children>
+                        <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                        <BrushWidget Id="WivesScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                      </Children>
+                    </ScrollbarWidget>
+
+                  </Children>
+                </Widget>
+
+              </Children>
+            </Widget>
+
+            <!-- column divider -->
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Left" MarginLeft="362" MarginTop="24" MarginBottom="24" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.12" />
+
+            <!-- ============================ right: her nights ============================ -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="380" MarginRight="20" MarginTop="18" MarginBottom="18">
+              <Children>
+
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Center" Text="@EmptyHint" IsHidden="@HasSelection" />
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@HasSelection">
+                  <Children>
+
+                    <!-- her name, and where the heart stands. 28px down so it clears the bar's ? / X row. -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="28" MarginRight="120" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                      <Children>
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="16" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@RelationColor" Brush.TextHorizontalAlignment="Left" Text="@RelationText" IsVisible="@HasRelation" />
+                      </Children>
+                    </ListPanel>
+
+                    <!-- her season, where she stands, and when the next night is yours. These STACK
+                         in a list panel, never at fixed margins - any of them can wrap, and at fixed
+                         margins a wrap overlaps what comes next (the letter window's own bug). -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="72" MarginRight="30" StackLayout.LayoutMethod="VerticalTopToBottom">
+                      <Children>
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@SeasonColor" Brush.TextHorizontalAlignment="Left" Text="@SeasonText" />
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@StatusText" />
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@OddsText" IsVisible="@HasOdds" />
+                      </Children>
+                    </ListPanel>
+
+                    <!-- the fortnight -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="@EntriesTopMargin" MarginBottom="80">
+                      <Children>
+                        <ScrollablePanel Id="NightsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="NightsClip" InnerPanel="NightsClip\NightsList" VerticalScrollbar="..\NightsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                          <Children>
+                            <Widget Id="NightsClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                              <Children>
+                                <ListPanel Id="NightsList" DataSource="{Entries}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                  <ItemTemplate>
+                                    <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginBottom="14" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <Children>
+                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@Header" IsVisible="@HasHeader" />
+                                        <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="18" Text="@Body" IsHidden="@IsNarration" />
+                                        <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#9AA3B2FF" Text="@Body" IsVisible="@IsNarration" />
+                                      </Children>
+                                    </ListPanel>
+                                  </ItemTemplate>
+                                </ListPanel>
+                              </Children>
+                            </Widget>
+                          </Children>
+                        </ScrollablePanel>
+                        <ScrollbarWidget Id="NightsScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="NightsScrollbarHandle" MinValue="0" MaxValue="100">
+                          <Children>
+                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                            <BrushWidget Id="NightsScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                          </Children>
+                        </ScrollbarWidget>
+                      </Children>
+                    </Widget>
+
+                    <!-- the one decision this window exists for -->
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Bottom" MarginBottom="66" MarginRight="30" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@GoHintText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="260" SuggestedHeight="58" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginRight="30" Brush="Popup.Done.Button" Command.Click="ExecuteGo" IsEnabled="@CanGo">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.TextHorizontalAlignment="Center" Text="@GoText" />
+                      </Children>
+                    </ButtonWidget>
+
+                  </Children>
+                </Widget>
+
+              </Children>
+            </Widget>
+
+            <!-- the info overlay: what this window is, how the nights work, what to try -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsInfoShown">
+              <Children>
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.98" />
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="34" MarginRight="34" MarginTop="20" MarginBottom="26">
+                  <Children>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginRight="180" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@InfoTitleText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleInfo">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                      </Children>
+                    </ButtonWidget>
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="54">
+                      <Children>
+                        <ScrollablePanel Id="InfoScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="InfoClip" InnerPanel="InfoClip\InfoBody" VerticalScrollbar="..\InfoScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                          <Children>
+                            <Widget Id="InfoClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                              <Children>
+                                <RichTextWidget Id="InfoBody" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="18" Brush.FontColor="#C9BFA8FF" Text="@InfoText" />
+                              </Children>
+                            </Widget>
+                          </Children>
+                        </ScrollablePanel>
+                        <ScrollbarWidget Id="InfoScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="InfoScrollbarHandle" MinValue="0" MaxValue="100">
+                          <Children>
+                            <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                            <BrushWidget Id="InfoScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                          </Children>
+                        </ScrollbarWidget>
+                      </Children>
+                    </Widget>
+                  </Children>
+                </Widget>
+              </Children>
+            </Widget>
+
+            <!-- info toggle ("?") - beside the close button, above the overlay -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="34" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="48" Command.Click="ExecuteToggleInfo">
+              <Children>
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Center" Text="@InfoButtonText" />
+              </Children>
+            </ButtonWidget>
+
+            <!-- close -->
+            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="34" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="8" MarginRight="8" Command.Click="ExecuteClose">
+              <Children>
+                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.TextHorizontalAlignment="Center" Text="X" />
+              </Children>
+            </ButtonWidget>
+
+            <!-- frame border -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="frame_9" ExtendLeft="18" ExtendTop="18" ExtendRight="18" ExtendBottom="18" IsEnabled="false" />
+
+          </Children>
+        </Widget>
+
+      </Children>
+    </Widget>
+  </Window>
+</Prefab>

@@ -182,6 +182,14 @@ namespace ImmersiveAI
         /// loaded from before the wedding un-writes it along with the memories of it.</summary>
         public static string WeddingsFolder => Path.Combine(CampaignRoot, Core.Weddings.WeddingLedger.FolderName);
 
+        /// <summary>The campaign's book of nights (see Core's NightLedger): every wife's rolling
+        /// fortnight of them. Same campaign scoping and the same snapshot-rewind ride, so reloading
+        /// an older save un-spends the nights along with the memories of them.</summary>
+        public static string NightsFile => Path.Combine(CampaignRoot, "_nights.json");
+
+        /// <summary>The readable keepsake beside it: every written night, in full, never pruned.</summary>
+        public static string NightsKeepsakeFile => Path.Combine(CampaignRoot, "nights.txt");
+
         /// <summary>The NPC's first name only (second names excluded), for the folder label. Falls back
         /// to the first token of the full name, then to the raw id.</summary>
         public static string FirstNameOf(Hero npc)

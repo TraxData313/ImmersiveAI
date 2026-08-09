@@ -21,6 +21,11 @@ namespace ImmersiveAI
             // notification VM (a public game API; nothing vanilla is altered). If it fails,
             // MapNoticePatch.Applied stays false and offers fall back to the direct popup.
             UI.MapNoticePatch.TryApply();
+
+            // The second: takes the player's own marriages out of the world's nightly conception
+            // roll, so a child is begun on a night the player chose. Everything else in Calradia
+            // keeps its own nights, and a failure here only means the world keeps deciding.
+            Nights.PregnancyPatch.TryApply();
         }
 
         protected override void OnGameStart(Game game, IGameStarter gameStarterObject)
@@ -90,6 +95,8 @@ namespace ImmersiveAI
             UI.ChatWindow.ChatWindowManager.Tick();
             // The letter window's, likewise (its own hotkey; Escape closes, Enter never sends).
             UI.LetterWindow.LetterWindowManager.Tick();
+            // And the window of the hearth, the third of the three (only one stands at a time).
+            UI.NightWindow.NightWindowManager.Tick();
             // The socialness control: appears with the map, folds away everywhere else.
             UI.Socialness.SocialnessManager.Tick();
         }

@@ -154,6 +154,7 @@ namespace ImmersiveAI
             _config = config;
             UI.ChatWindow.ChatWindowManager.Configure(config);
             UI.LetterWindow.LetterWindowManager.Configure(config);
+            UI.NightWindow.NightWindowManager.Configure(config);
             UI.Socialness.SocialnessManager.Configure(config);
             _client = ChatClientFactory.Create(config);
             // Paths are resolved per-NPC via NpcPaths (one folder per NPC); the root here is only a
@@ -892,6 +893,10 @@ namespace ImmersiveAI
                 {
                     var npc = character?.HeroObject;
                     if (npc == null || npc == Hero.MainHero || !npc.IsAlive) continue;
+                    // The talk is over, so what was in it now counts as SAID — this is the stamp the
+                    // "since we were last alone" line hangs on, and it must land whether or not the
+                    // talk left a meeting beat behind (see the Nights partial).
+                    NoteTalkEnded(npc);
                     if (npc.StringId == alreadyRecorded) continue;
                     RecordMeetingBeat(npc);
                 }
@@ -1004,6 +1009,11 @@ namespace ImmersiveAI
             LoadBattleLedger();
             LoadJourneyLog();
             LoadWeddingLedger();
+            LoadNightLedger();
+
+            // The world's nightly roll steps aside for the player's own marriages only while this
+            // hook says so, and only while the feature is truly awake.
+            Nights.PregnancyPatch.IsOursToDecide = NightsOwnConceptionFor;
 
             // Menus exist and are initialized by now (vanilla behaviors ran first), so the courier
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
@@ -1903,6 +1913,11 @@ namespace ImmersiveAI
             // came back to fold it in.
             try { FlushParkedWeddingBeats(); }
             catch { /* a late beat is still a beat */ }
+
+            // The evening's own question, the day a conception becomes known, and any night's
+            // account the chronicler still owes.
+            try { OnNightsHourlyTick(); }
+            catch { /* the nights must never take down the hour */ }
 
             // Self-heal a wedged PlayerEncounter: a half-real encounter left behind (e.g. by a talk
             // once hung on a distant settlement's party — the Brunda wedge) makes that settlement

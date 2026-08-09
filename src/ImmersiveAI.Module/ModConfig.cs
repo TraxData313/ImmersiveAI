@@ -433,6 +433,103 @@ namespace ImmersiveAI
         /// Costs two writing calls, once per wedding. Set false and a wedding passes unwritten.</summary>
         public bool EnableWeddingChronicle { get; set; } = true;
 
+        // ------------------------------ the nights ------------------------------
+
+        /// <summary>When true, the nights of your marriage are yours to spend: each evening you are
+        /// asked where you will sleep, and a child is begun on a night you actually chose rather
+        /// than by a coin the world flips behind your back. Every wife keeps a rolling fortnight of
+        /// them — the nights you came, the nights her door was closed, and whatever she came to
+        /// learn of the nights you were elsewhere. Set false and the world decides as it always
+        /// did, and no night is ever asked about or written down.</summary>
+        public bool EnableNights { get; set; } = true;
+
+        /// <summary>The hour the evening's question is put (0-23). Late enough to be a night, early
+        /// enough that the day's travelling is done.</summary>
+        public int NightHour { get; set; } = 21;
+
+        /// <summary>Hours that must pass between one night and the next. A man cannot be in two
+        /// beds in one evening, and this is also what greys the choice out with an honest count of
+        /// the hours left.</summary>
+        public int NightCooldownHours { get; set; } = 24;
+
+        /// <summary>When true, the choice is offered as a popup each evening. False leaves it to
+        /// the window's own key — the whole feature stays, and nothing ever interrupts you.</summary>
+        public bool AskEachEvening { get; set; } = true;
+
+        /// <summary>Your own dial on how readily a night quickens. The nights are already tuned so
+        /// that taking every night of a wife's season is about as likely to give you a child in a
+        /// month as the world's own reckoning was; halve this for a slower house, double it for a
+        /// faster one. 0 turns conception off entirely while leaving the nights themselves.</summary>
+        public double ConceptionChanceMultiplier { get; set; } = 1.0;
+
+        /// <summary>Days between the night a child is begun and the morning she knows of it. Until
+        /// that day the world knows nothing either — the game's own announcement waits with her, so
+        /// it no longer arrives the same evening like a receipt. Note that the birth waits the same
+        /// number of days with it.</summary>
+        public int ConceptionRevealDelayDays { get; set; } = 7;
+
+        /// <summary>When true, each reckoned night writes one line in the log: the chance that
+        /// stood, and whether a child was begun (green) or not (grey-red). Set false to let the
+        /// world keep its own counsel and simply find out in a week.</summary>
+        public bool ShowConceptionOdds { get; set; } = true;
+
+        /// <summary>
+        /// How the evenings look after themselves when you would rather not be asked. Nothing is
+        /// ever bought and nothing is ever written on an automatic night — a story is something you
+        /// choose and pay for; that is the whole trade.
+        /// <list type="bullet">
+        /// <item>"Ask" — the evening's question is put to you, and you decide. (Default.)</item>
+        /// <item>"Seek" — each night you go to whichever wife stands nearest her season. The
+        /// surest road to children.</item>
+        /// <item>"Careful" — you still keep your nights, but you go to whoever, not to whoever is
+        /// ripest, and you take care: a child may still come, but far more rarely
+        /// (<see cref="CarefulNightChanceFactor"/>).</item>
+        /// <item>"Abstain" — you keep to yourself. No nights, and therefore no children.</item>
+        /// </list>
+        /// </summary>
+        public string NightsAutoMode { get; set; } = "Ask";
+
+        /// <summary>What is left of a night's odds when you are taking care. A tenth, by default —
+        /// the old ways were not nothing, and they were not much.</summary>
+        public double CarefulNightChanceFactor { get; set; } = 0.10;
+
+        /// <summary>How many nights each wife keeps in her rolling memory of them — a fortnight by
+        /// default, which is exactly enough to judge how the last two weeks went.</summary>
+        public int MaxNightsRemembered { get; set; } = Core.Nights.NightLedger.DefaultMaxPerWife;
+
+        /// <summary>How many written nights she carries in full before the older ones fold away to
+        /// the names she keeps them by.</summary>
+        public int MaxNightsToldInFull { get; set; } = Core.Nights.NightLedger.DefaultStoriesInFull;
+
+        /// <summary>How likely a wife who is with you is to learn where you spent the night, by the
+        /// kind of place you spent it in — a camp on the road hides nothing, a town hides a great
+        /// deal. Percentages, 0-100. A wife who is NOT with you learns nothing at all, except that
+        /// word may still reach her that you were with another (at half these odds).</summary>
+        public int NightAwarenessOnRoadPercent { get; set; } = 70;
+        public int NightAwarenessInVillagePercent { get; set; } = 50;
+        public int NightAwarenessInCastlePercent { get; set; } = 30;
+        public int NightAwarenessInTownPercent { get; set; } = 20;
+
+        /// <summary>When true, a night you paid for leaves the company slow to break camp in the
+        /// morning — disorganized, as after a fight. That is what the coin and the hours actually
+        /// cost you, and she is told of the lingering, since it was for her.</summary>
+        public bool PaidNightsDisorganizeParty { get; set; } = true;
+
+        /// <summary>At most how many denars a single night may be given, of the offered gifts. Lower
+        /// it to keep the grander gifts out of your game entirely.</summary>
+        public int MaxNightGift { get; set; } = 1000;
+
+        /// <summary>When true (and the nights are enabled), a small window of your own hearth can be
+        /// opened anywhere on the map with its hotkey: your wives, where each of them stands and how
+        /// her season runs, when the next night is yours to spend, and the fortnight of nights each
+        /// of them keeps. Set false to keep only the evening's question.</summary>
+        public bool EnableNightWindow { get; set; } = true;
+
+        /// <summary>The key that opens (and closes) the window of the hearth. A single letter or an
+        /// InputKey name, as with the other two windows. "H" is chosen because the vanilla map keys
+        /// already hold I (inventory), P (party), C, N, K, Q and E.</summary>
+        public string NightWindowHotkey { get; set; } = "H";
+
         /// <summary>At most how many recall rounds one reply may spend before it must simply speak
         /// (each round can carry several lookups). Keeps a curious NPC from wandering the archives
         /// while the player waits. 0 disables recalls (as does <see cref="EnableWorldRecall"/>).</summary>
@@ -858,6 +955,24 @@ namespace ImmersiveAI
             // The road can only hold so many letters bound for one reader; anything above is a typo.
             if (MaxLettersInFlight < 0) MaxLettersInFlight = 0;
             if (MaxLettersInFlight > 20) MaxLettersInFlight = 20;
+
+            // The nights. The hour must be an hour; the cooldown must leave a night to be a night,
+            // and a day and a half is as far as it is worth stretching one.
+            NightHour = Clamp(NightHour, 0, 23);
+            NightCooldownHours = Clamp(NightCooldownHours, 1, 72);
+            if (ConceptionChanceMultiplier < 0 || double.IsNaN(ConceptionChanceMultiplier)) ConceptionChanceMultiplier = 0;
+            if (ConceptionChanceMultiplier > 10) ConceptionChanceMultiplier = 10;
+            ConceptionRevealDelayDays = Clamp(ConceptionRevealDelayDays, 0, 30);
+            MaxNightsRemembered = Clamp(MaxNightsRemembered, 1, 60);
+            // Telling more nights in full than are kept at all would silently do nothing.
+            MaxNightsToldInFull = Clamp(MaxNightsToldInFull, 0, MaxNightsRemembered);
+            NightAwarenessOnRoadPercent = Clamp(NightAwarenessOnRoadPercent, 0, 100);
+            NightAwarenessInVillagePercent = Clamp(NightAwarenessInVillagePercent, 0, 100);
+            NightAwarenessInCastlePercent = Clamp(NightAwarenessInCastlePercent, 0, 100);
+            NightAwarenessInTownPercent = Clamp(NightAwarenessInTownPercent, 0, 100);
+            MaxNightGift = Clamp(MaxNightGift, 0, 1000000);
+            if (string.IsNullOrWhiteSpace(NightWindowHotkey)) NightWindowHotkey = "H";
+            NightWindowHotkey = NightWindowHotkey.Trim();
 
             // The model table: never null, and every built-in entry present (so new defaults reach
             // configs written before them); user edits to existing keys are honored as-is.

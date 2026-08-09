@@ -31,6 +31,12 @@ NEXT UPDATE:
       button's count keeping step.
 
 POST V1 or NOT FULLY DECIDED:
+- [ ] В репортите за битките, за специалните роли, например лечителя, да му пише освен дали е повалил някой в боя, да пише колко е спасил, и това да е видимо за всички, но и късичко. За другите може и да се помисли, ако имат ефект във ванила какъв е и кога в тези логове да се добави, може би Quatermaster-а би се итересувал повече от продажбите с дажбите храна, даже може би да има специални активации, с които да може да каже "Хей, храната/парите в хазната е вече за по-малко от 5 дни", но не на забит руул а от сошълнеса и с намаляването на храната например да се вдига възможността да ме предупреди и някакъв минимален праг в който дори да съм сошълнес 0 да каже просто скриптнато "Хей, храната така и така" и после като говорим да го види като събитие, след което още не сме имали време да говорим насаме и ще е добра тема на разговор, но да го виждат така, нещо "докладвах му че хранта привършва", защото така няма да имаме проблем да оцелим характера му и едновременно няма да харчим ей ай кол, например "добре, че спря там да вземеш зърно, защото бяхме на ръба". Ще мисля в тази посока (Тони)
+    - за медика може би да помни колко са ранени и да репортне като всички са оздравяли, или за състоянието на мене или компанионите нещо
+    - за скаута може би да казва като забележи някой (пак, в зависимост от сошълнес и тук може би опасност - големина дали е вражествен, особено и ако е по-бърз), но тези неща без колове, а като конверсейшън стартъри, а само с голям сошълнес, да може да тригърне и идване е казване в свободен текст
+    - инженера може би да има такива тригъри за готовност на машини при обсада или корабите в морето
+    - в морето 2те морски роли да се включват и да заместват на 75% скаута и клотърмастъра и може би да говорят и за бури и състоянието на корабите
+    - така малко по малко може да преминем и понамалим сличайните и да минем към такива които имат смисъл, и без това юзърите се оплакват, че ги пинват само "здрасти как си"... "здрасти само да видя как се чувстваш"...
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
     Leaders of the player's clan parties take orders through conversation or letters via a
     `set_party_course` native tool (v1 verbs: patrol / escort_player / go_to / hold / resume) —
@@ -47,6 +53,7 @@ POST V1 or NOT FULLY DECIDED:
     other lords. Reference source (MIT, supports exactly v1.4.0–1.4.7, studied 2026.07.15):
     ..\reference\Bannerlord.PartyAI; prior art: Finer Party Controls (closed, clan-screen panel +
     the "Thinks" framework that exists precisely because naive SetMove is unstable).
+- [ ] AI suggest за глобалния и специфичния за NPC промпт, да има странична кутийка за чат с обслужващия AI, да му кажа искам да е така и така, той да предложи новия промпт и да мога да го приема отхвърля, после например като го приема, ще му кажа така е добре но добави да говори и така и така и той да предложи промените в едно съджест поленце, което ако цъкна ок да го добави, ако не - става си предната версия (Тони)
 - [ ] NPCs that are in charge of Cities/Castles when they see ana enemy army they get the army and their party/castle info and get the option to send a letter (asking for help, letting the player know they can hold etc)
 - [ ] Utility model split (cost saving)
     a UtilityModel per backend (gpt-5.6-luna / claude-haiku-4-5) for the small calls — feeling number,
@@ -147,3 +154,31 @@ POST V1 or NOT FULLY DECIDED:
     Small change, serves every total conversion, not just ROT.
 - [ ] NPC to NPC chat
     In the future have a system that lets the NPC pick a person (another NPC) to talk to and for them to be able to exchange a few messages and for me to be able to see the log or watch them in real time talk, again maybe based on how popular they are, but even the unused to have the option to do it. So they should have a general deep memory, a per person deep memory and per person hist maybe
+
+- [ ] PLAYTEST THE NIGHTS (built 2026.08.09, 393 tests green, unplaytested — docs/nights-and-conception-design.md)
+      Wed and then watch for, in order:
+      (1) At 21:00 a popup "Where will you sleep tonight?" listing your wives, nearest-her-season
+          first, each with a plain-words hint; her name greyed with "the custom of women is upon her"
+          during her closed days; "Let me look at my own house first" opens the H window.
+      (2) Pick her, then a gift. Free = a short beat in her chat and nothing else. Paid = a ☾ notice
+          with the night's NAME, the account in the hearth window and in nights.txt, and the party
+          disorganized in the morning.
+      (3) The green/grey odds line, if ShowConceptionOdds is on. Roughly 66% on her crest for a
+          young wife is CORRECT — that is vanilla's own monthly chance, spread onto her season.
+      (4) Ignore the popup one evening: the NEXT dusk should log "Last night you slept alone".
+      (5) With two wives (Marry Anyone): the other one should sometimes learn where you were, and if
+          it was a paid night she learns its NAME too. THE ONE THING TO WATCH FOR BUGS: a second
+          wife's pregnancy — the child's father is set by hand before vanilla records it, and a
+          mistake there would only surface as a crash at the BIRTH, 36 days later.
+      (6) Seven days after a conception: vanilla's "she has learned she is with child", her own beat
+          in the chat, and her coming to tell you (or writing, if apart).
+      (7) The H window: her season in words, the fortnight, the mode button cycling four ways.
+      (8) THE LINE, and it is the one to read carefully. Talk to her the morning after a night you
+          spent elsewhere: at the foot of the chat thread you should see "— since you two were last
+          alone —" with the mark and a dated list (markets, battles, nights). She should know it
+          happened and know it has not been had out, WITHOUT sounding like you have been estranged.
+          Watch that it does NOT vanish mid-conversation once she answers, and that it IS gone the
+          next time you open the thread after that talk. If the balance of the wording is off,
+          quote her back to me. It rides for every companion, not only wives — try a companion
+          you have fought and shopped with too.
+      Dev lever: the chat window's Dev panel, "Spend a night with them now (if wed)".

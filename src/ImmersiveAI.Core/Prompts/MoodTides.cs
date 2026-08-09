@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace ImmersiveAI.Core.Prompts
 {
@@ -85,6 +86,51 @@ namespace ImmersiveAI.Core.Prompts
             return CyclePhase.Waning;
         }
 
+        /// <summary>The days of the custom itself, when a woman's door is closed (2026.08.09) —
+        /// the same rail the night's choice greys out on, kept here beside the phase it comes from
+        /// so the two can never drift apart.</summary>
+        public static bool DoorIsClosed(string npcId, int campaignDay) =>
+            PhaseOf(npcId, campaignDay, out _) == CyclePhase.Menses;
+
+        // How readily a night may quicken, day by day around the crest — a curve, not four steps.
+        // The peak is the crest's first day and the one before it; it falls away sharply after and
+        // gently before, as a body's own season does. Indexed by (dayOfCycle - crestStart).
+        private static readonly (int Offset, double Weight)[] FertileWindow =
+        {
+            (-5, 0.25), (-4, 0.45), (-3, 0.65), (-2, 0.85), (-1, 1.00),
+            (0, 1.00), (1, 0.35), (2, 0.10),
+        };
+
+        /// <summary>What every night of the fertile window sums to. The window never overlaps the
+        /// days of the custom (the shortest cycle's crest still stands eight days clear of them),
+        /// so this is one constant for every woman — and it is what the night's odds are normalized
+        /// against, so that a player who takes every night of the window is as likely to father a
+        /// child in a month as the world's own reckoning would have made him.</summary>
+        public static readonly double FertileWindowSum = FertileWindow.Sum(w => w.Weight);
+
+        /// <summary>The quiet weight of a day outside the window — never nothing, as bodies are
+        /// never nothing, but a hundredth of the crest.</summary>
+        public const double QuietFertility = 0.03;
+
+        /// <summary>
+        /// How readily this day may quicken, 0..1 — her own calendar, deterministic like all the
+        /// rest of her weather. Zero through the days of the custom: there the door is closed and
+        /// the question never arises.
+        /// </summary>
+        public static double Fertility(string npcId, int campaignDay)
+        {
+            if (string.IsNullOrWhiteSpace(npcId)) return 0.0;
+
+            var phase = PhaseOf(npcId, campaignDay, out int dayOfCycle);
+            if (phase == CyclePhase.Menses) return 0.0;
+
+            int crestStart = CycleLength(npcId) / 2;
+            int offset = dayOfCycle - crestStart;
+            foreach (var (o, w) in FertileWindow)
+                if (o == offset) return w;
+            return QuietFertility;
+        }
+
         /// <summary>
         /// The day's humor for this soul — deterministic in the id and the day. When a
         /// <paramref name="phase"/> rides along (a woman in her body's season), two days of three
@@ -99,6 +145,20 @@ namespace ImmersiveAI.Core.Prompts
                 return Humors[cluster[(int)((roll / 3u) % (uint)cluster.Length)]];
             }
             return Humors[(int)((roll / 3u) % (uint)Humors.Length)];
+        }
+
+        /// <summary>The season in a few plain words, for the player's own eyes — a phrase, never a
+        /// chart and never a number (2026.08.09). The reckoning behind it stays behind the odds
+        /// toggle; what the player reads is what a husband would actually know of his wife.</summary>
+        public static string PhaseWord(CyclePhase phase)
+        {
+            switch (phase)
+            {
+                case CyclePhase.Menses: return "the custom of women is upon her";
+                case CyclePhase.Rising: return "her strength is returning";
+                case CyclePhase.Crest: return "she is at the crest of her season";
+                default: return "her waning days";
+            }
         }
 
         /// <summary>Where her body's season stands, in her own words — reverent and plain, in the old

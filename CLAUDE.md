@@ -34,6 +34,7 @@ You usually only need to open:
 - **The wedding chronicle** → Core `Weddings\` (`WeddingRecord`/`WeddingLedger` JSON-per-wedding + `weddings.txt`, `WeddingText` — the two chronicler prompts, the permanent beat marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Weddings.cs` partial (hooks `BeforeHeroesMarried`, captures the day BEFORE the clan change scatters it, two story calls off-thread, beats to the spouse + every witness) + `Tools\NuptialTool` (`recall_wedding`; the night is refused to anyone but the spouse).
 - **The battle chronicle** → Core `Battles\` (`BattleRecord` data, `BattleLedger` JSON-per-battle + loose find-by-name, `BattleText` — titles/tales/beats/accounts, all unit-tested) + the `ImmersiveChatBehavior.Battles.cs` partial (capture at `OnPlayerBattleEnd` BEFORE the game commits gains, enrich one dispatcher tick later, per-hero downs via `OnHeroCombatHitEvent`) + `Tools\ChronicleTool` (`recall_battle`).
 - **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
+- **The nights of a marriage & THE LINE** → Core `Nights\` + `Together\TogetherLine` (the line since we were last alone) (`NightRecord`/`NightLedger` `_nights.json` + `nights.txt`, `NightGifts` the 0/10/100/300/1000 tiers, `NightOdds` the fertility-spread arithmetic, `NightText` — the short Song-of-Songs prompt, the permanent beat marks, the roll; unit-tested) + `MoodTides.Fertility` + the `ImmersiveChatBehavior.Nights.cs` partial + `Nights\PregnancyPatch` (the SECOND Harmony touch) + `UI\NightWindow\` (hotkey H). Decision record docs/nights-and-conception-design.md.
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
@@ -687,6 +688,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   every allied hero's downs and fate) plus an append-only `chronicle.txt` of the full accounts.
   Lives inside the campaign folder ON PURPOSE: the save-scoped memory snapshots photograph it, so
   reloading rewinds the war together with the memories of it. Toggle `EnableBattleChronicle`.
+- `NPCs\campaign_<id>\_nights.json` + `nights.txt` — the NIGHTS (Core `NightLedger`, 2026.08.09):
+  every wife's rolling fortnight of them (who came to her, whose door was closed, what she learned of
+  the rest) plus the append-only keepsake of every written night, in full, never pruned. Same
+  snapshot-rewind ride. Toggle `EnableNights`.
 - `NPCs\campaign_<id>\_journey.json` — the ROAD JOURNAL (Core `JourneyLog`, 2026.08.08): the light
   witness log of the player's everyday life — the last ~12 stops kept (place/kind/stay + trade
   values with chief pieces + recruits + garrison drops + captives sold/donated) and the tasks
@@ -1244,6 +1249,56 @@ exchange is in flight are parked and folded by `SaveMemory` (the `_pendingBlessi
 Config `EnableWeddingChronicle` (default on); DevMode lever in the chat window's Dev panel ("Write
 your wedding day anew"). Decision record + the review round's eight fixes:
 docs/wedding-chronicle-design.md.
+
+**The nights of a marriage (2026.08.09) — the wedding's morning after.** The game used to flip a
+coin every day behind the player's back; now the nights are his to spend. Each evening (hour
+`NightHour`, 21) he is asked where he will sleep; a woman's own month (`MoodTides.Fertility`, a curve
+around the crest, ZERO through the days of the custom — her door is greyed shut and no popup fires
+at all when every door is closed) decides what may come of it; and a night he pays for is written in
+3–5 sentences with a NAME. FOUR RULES: conception is the player's doing (`Nights\PregnancyPatch`
+prefixes the private `PregnancyCampaignBehavior.RefreshSpouseVisit` and skips ONLY women wed to the
+player — fail-open, and then we deliberately do not roll either); THE ODDS ARE THE GAME'S OWN, only
+spread (`V × L × f / MoodTides.FertileWindowSum`, so taking her whole window ≈ vanilla's month —
+unit-tested); her door is hers; and she SEES what she would see while nothing ever scripts the
+feeling (`move_heart` has been hers since day one). THREE DECOMPILE-VERIFIED TRAPS, all handled and
+all silent killers: `GetDailyChanceOfPregnancyForHero` **NREs on a null Spouse** (it reads
+`hero.Spouse.GetPerkValue` unchecked, and Marry Anyone empties that slot daily) → a mirrored formula
+stands behind the model call; `MakePregnantAction` **fathers the child on whatever is in
+`mother.Spouse` at that instant** → `EnsureFatherSlot` sets it first, or a second wife's child is
+fathered by null and crashes at the delivery 36 days later; and vanilla **announces the pregnancy AT
+conception** → the "she comes to know" delay (`ConceptionRevealDelayDays`, 7) is achieved by
+deferring `Apply` itself, so the birth moves with it. The gift (`NightGifts`) buys three things —
+odds, a written memory, and TALK: its `AwarenessMultiplier` scales the other wives' chance of
+hearing (×0.5 plain → ×2 for the jewel) and a leaked night **leaks its NAME too**
+(`OtherNightTitle`, back-filled by `LeakTheNameOfTheNight` once the chronicler answers). A paid night
+also costs the morning (`SetDisorganized`). Four modes (`NightsAutoMode`: Ask / Seek / Careful —
+whoever, not whoever is ripest, at a tenth the odds / Abstain); an ignored dusk question is settled a
+day later as a night alone (`LastSettledNight`, a NIGHT-level mark because a night nobody noticed
+writes no records). Memory keeps TITLES, never paragraphs — the flesh lives in the 14-night ledger
+and `nights.txt`. **THE LINE** (Core `Together\TogetherLine`, folded in LAST by `SituationBuilder` and drawn at
+the foot of the chat thread for the player too): ONE mark at the last moment the two of them had
+time to themselves, then a plain dated list of everything since — nights, battles, markets, in
+order. Without it a soul reads the sheet as settled background and greets him the morning after a
+night elsewhere as though it had been had out. WHAT MOVES IT IS TIME ALONE and nothing else: a
+talk that has ENDED, a night together, the wedding night — never a battle, a market, or hearing
+where he slept. A RUNNING TALK MUST NOT MOVE IT (the sheet is rebuilt every reply, so her own first
+answer would erase the thing she was raising): the talk side reads `NpcMemory.LastTalkEndedDay`,
+stamped at `ConversationEnded` and at chat-window teardown, with an 8-hour grace as the fallback.
+It disappears by itself when nothing stands after it — no flags. The nights roll stops AT the line
+so nothing is told twice. It is ONE divider and the list, nothing else — cut down three times on
+purpose (the opening mark is redundant beside the turns' own `[place, time]` stamps and the entries'
+dates; the closing sentence told her how to USE the list, so it went too, to see how much a soul
+works out unaided). The words carrying the old closing's work are **"a private
+discussion"**: they leave the door open that light passing remarks were made while saying plainly the
+two never sat down to any of it — which is why the flat "we have not spoken of this" had to go, it
+read as estrangement. And **"from this moment"** anchors the divider to its own place: the block
+stands BEFORE the transcript, so a backward-looking "since then" had nothing yet to point at. REFUSALS WERE
+PROPOSED AND CUT (Anton: "като е жена да приемем че винаги иска и е готова и от мене зависи") — the
+only refusal is the custom days; do not reintroduce her saying no without asking. Same-sex is not
+modelled and a female player is only kept from crashing (`MotherOf`), his explicit call. Window:
+`UI\NightWindow\`, hotkey **H** (I and P are vanilla Inventory/Party). Toggle `EnableNights`;
+DevMode lever in the chat window's Dev panel ("Spend a night with them now"). Full record:
+docs/nights-and-conception-design.md.
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

@@ -15,6 +15,23 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- **New: the nights of your marriage are yours to spend.** Each evening you are asked where you will sleep — a child is now begun on a night you actually chose, not by a coin the game flips behind your back.
+- A woman's body keeps its own month, and you can see where hers stands in plain words. The nights near its crest are the ones that may quicken; through the days of the custom her door is closed and no one is asked anything.
+- Take every night of her season and a child is about as likely over a month as the game would have made it anyway — miss the season and you have missed the month. The old odds are still the odds; you just have to be there.
+- **What you lay out for a night buys three things.** Wine (10 denars) up to a jewel (1,000): better chances, a WRITTEN account of that night in her own voice with a name she keeps it by — and talk. The grander the night, the more surely your other wives hear of it, and they hear its name too.
+- And it costs you the morning: a night you paid for leaves the company slow to break camp. Ordinary nights cost the road nothing and say nothing about it.
+- Every wife keeps a rolling fortnight of nights — the ones you came to her, the ones her door was closed, the ones she learned you were elsewhere, and the ones she simply never saw you come in. Nothing tells her how to feel about any of it. That has always been her own.
+- A wife far away keeps no watch on your nights — but word of another woman travels.
+- **New window, on H:** your own hearth. Every wife, where she stands, how her season runs, when the next night is yours, and the fortnight she keeps.
+- Rather not be asked? Four ways to live your evenings: be asked at dusk, seek a child, take care (you keep your nights, a child comes only rarely), or keep to yourself.
+- A child begun is not a child known: the announcement now waits a sensible week, and when she learns of it she may come and tell you herself — or write, if you are apart. Even if she would never otherwise reach out.
+- Optional line in the log after each night: the chance that stood, and whether a child was begun.
+- Toggle: EnableNights (on by default). A night costs one writing call only if you paid for it.
+- **New: characters now know what has NOT been talked about yet.** One plain divider in their sense of you, at the last moment the two of you had time to yourselves — and after it a dated list of everything since: the markets, the battles, the nights. So the morning after you went to another wife, she knows it happened and knows the two of you have not sat down to it.
+- Only time alone moves that divider: a talk that ended, a night together, your wedding night. A battle does not, a market does not, hearing where you slept does not. And it stays put while you are talking, so what she meant to raise cannot vanish from under her mid-sentence.
+- Nothing tells them what to do with the list — whether to raise it, and how, is theirs.
+- **You see the same list** at the foot of the chat window — the honest answer to "why are they being like this with me".
+- Once you have talked it away it simply disappears, and comes back the next time something happens that you have not gone over together.
 - **New: your wedding day is written down — in two parts.** When you wed, the day itself is set down as a story in the manner of the old Scriptures, in whatever tongue you and they speak: the place, the hour, who stood there and what they did, the road that brought you both here, the doubts they once wrote and how each came to rest.
 - The one you wed remembers it — and so does everyone who stood there. It appears in their chat as the wedding day's own card, and they will speak of it as people speak of a day like that.
 - And a second part, the night that followed, written in your beloved's own voice — theirs and yours alone. It never reaches a guest's memory, and no one else can ever be told it, however they ask.

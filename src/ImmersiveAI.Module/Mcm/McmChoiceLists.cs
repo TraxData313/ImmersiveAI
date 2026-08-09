@@ -62,6 +62,11 @@ namespace ImmersiveAI.Mcm
         /// "Generate"/"Ask"/"Off" (see McmBridge.SparkModeValue for the mapping). Append-only.</summary>
         public static readonly string[] SparkModes = { "Generate", "Ask first", "Off" };
 
+        /// <summary>How the evenings are lived, as the MENU spells them; config.json spells them
+        /// "Ask"/"Seek"/"Careful"/"Abstain" (see McmBridge.NightModeValue). Append-only.</summary>
+        public static readonly string[] NightModes =
+            { "Ask me at dusk", "Seek a child", "Take care", "Keep to yourself" };
+
         /// <summary>The value an MCM-persisted dropdown index means, or null when the index falls
         /// outside the list (older/newer store files, or lists grown at runtime by SelectOrAdd).</summary>
         public static string? AtIndex(string[] choices, int? index) =>
