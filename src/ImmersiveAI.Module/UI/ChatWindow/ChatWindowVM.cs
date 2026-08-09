@@ -60,6 +60,8 @@ namespace ImmersiveAI.UI.ChatWindow
         private string _promptEditText = string.Empty;
         private bool _isWaiting;
         private bool _isMisgivingsShown;
+        // Whether the little page under the name is the WEDDING (wed) or the misgivings (courting).
+        private bool _pageIsWedding;
         private string _misgivingsButtonText = string.Empty;
         private string _misgivingsTitleText = string.Empty;
         private string _misgivingsBodyText = string.Empty;
@@ -406,12 +408,18 @@ namespace ImmersiveAI.UI.ChatWindow
 
             BondStatsText = _selected == null ? string.Empty : ImmersiveChatBehavior.BondStatsLabel(_selected.Hero);
 
-            // Her written misgivings before marriage, worn openly as a little button (Anton's ask,
-            // 2026.08.08): visible only while a courtship road is walked (or something was written).
+            // One little button under the name, carrying whatever this bond's own page is right now
+            // (Anton, 2026.08.08 and 2026.08.09): the misgivings while the road is walked — and once
+            // you are wed, the WEDDING DAY takes its place, because the doubts are answered and the
+            // day is what remains. Wed souls open theirs forever; it never goes away.
             string mLabel = string.Empty, mTitle = string.Empty, mBody = string.Empty;
-            bool hasMisgivings = _selected != null
-                && ImmersiveChatBehavior.TryGetMisgivingsView(_selected.Hero, out mLabel, out mTitle, out mBody);
-            if (hasMisgivings)
+            bool wedding = _selected != null
+                && ImmersiveChatBehavior.TryGetWeddingView(_selected.Hero, out mLabel, out mTitle, out mBody);
+            bool hasPage = wedding
+                || (_selected != null
+                    && ImmersiveChatBehavior.TryGetMisgivingsView(_selected.Hero, out mLabel, out mTitle, out mBody));
+            _pageIsWedding = wedding;
+            if (hasPage)
             {
                 MisgivingsButtonText = mLabel;
                 MisgivingsTitleText = mTitle;
@@ -423,6 +431,7 @@ namespace ImmersiveAI.UI.ChatWindow
                 IsMisgivingsShown = false;
             }
             OnPropertyChanged("HasMisgivings");
+            OnPropertyChanged("MisgivingsHintText");
         }
 
         // Warm green when they hold you dear, cool red when they do not, plain parchment at neutral.
@@ -519,7 +528,19 @@ namespace ImmersiveAI.UI.ChatWindow
 
         // ------------------------------ the misgivings overlay ------------------------------
 
-        public void ExecuteToggleMisgivings() => IsMisgivingsShown = !IsMisgivingsShown;
+        // The misgivings read fine inside the window's own overlay; the wedding is long and meant to
+        // be READ, so it opens in the same paused popup the day itself came in — the player asked
+        // to be able to sit with it (2026.08.09).
+        public void ExecuteToggleMisgivings()
+        {
+            if (_pageIsWedding)
+            {
+                var npc = _selected?.Hero;
+                if (npc != null) ImmersiveChatBehavior.ShowWeddingViewFor(npc);
+                return;
+            }
+            IsMisgivingsShown = !IsMisgivingsShown;
+        }
 
         // ------------------------------ the dev panel ------------------------------
         // The DevMode levers, launched from where Anton already stands (his ask, 2026.08.08):
@@ -540,6 +561,11 @@ namespace ImmersiveAI.UI.ChatWindow
         public void ExecuteDevClearMisgivings() => RunDev(npc =>
         {
             ImmersiveChatBehavior.DevClearMisgivings(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevAdvanceRoad() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevAdvanceCourtship(npc);
             RefreshSelectionState();
         });
         public void ExecuteDevRerollSpark() => RunDev(ImmersiveChatBehavior.DevRerollSpark);
@@ -866,8 +892,9 @@ namespace ImmersiveAI.UI.ChatWindow
         }
 
         [DataSourceProperty]
-        public string MisgivingsHintText =>
-            "Their own words, written by their own hand mid-talk — a living list, never a checklist: new doubts may join it, empty ones get struck out, settled ones may return. They lay one to rest only when life truly answers it; while any stands, their hand waits.";
+        public string MisgivingsHintText => _pageIsWedding
+            ? "Your wedding day, kept whole — the day itself, and the night that is yours and theirs alone. It opens in its own window, and it is here for as long as this marriage lasts."
+            : "Their own words, written by their own hand mid-talk — a living list, never a checklist: new doubts may join it, empty ones get struck out, settled ones may return. They lay one to rest only when life truly answers it; while any stands, their hand waits.";
 
         // ------------------------------ the dev panel ------------------------------
 

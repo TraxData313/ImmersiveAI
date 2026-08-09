@@ -417,6 +417,11 @@
                             <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="The road of their heart (courtship)" />
                           </Children>
                         </ButtonWidget>
+                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevAdvanceRoad" IsEnabled="@HasSelection">
+                          <Children>
+                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Push their heart one step toward marriage" />
+                          </Children>
+                        </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevClearMisgivings" IsEnabled="@HasSelection">
                           <Children>
                             <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Clear their marriage misgivings" />

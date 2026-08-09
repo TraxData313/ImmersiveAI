@@ -1457,7 +1457,7 @@ namespace ImmersiveAI
 
         // Shows read-only text in the game's scrollable inquiry pop-up, which handles long content
         // the native conversation panel cannot. Interim until the Milestone 2 chat window.
-        private static void ShowScrollPopup(string title, string body)
+        private static void ShowScrollPopup(string title, string body, bool pause = false)
         {
             var close = GameTexts.FindText("str_ok", null)?.ToString() ?? "OK";
             var data = new InquiryData(
@@ -1466,7 +1466,9 @@ namespace ImmersiveAI
                 "", 0f, (Action?)null,
                 (Func<ValueTuple<bool, string>>?)null,
                 (Func<ValueTuple<bool, string>>?)null);
-            InformationManager.ShowInquiry(data, false, false);
+            // pauseGameActiveState: for a thing meant to be READ, not glanced at — the world waits
+            // while the player reads their own wedding (Anton's ask, 2026.08.09).
+            InformationManager.ShowInquiry(data, pause, false);
         }
 
         private void OnPlayerInputCancelled()
@@ -1874,6 +1876,11 @@ namespace ImmersiveAI
             // of the vow) gets a few more honest attempts — the record keeps every fact of it.
             try { RetryUnwrittenWeddings(); }
             catch { /* the chronicle must never take down the hour */ }
+
+            // And any wedding beat parked while its soul was mid-exchange, if their own turn never
+            // came back to fold it in.
+            try { FlushParkedWeddingBeats(); }
+            catch { /* a late beat is still a beat */ }
 
             // Self-heal a wedged PlayerEncounter: a half-real encounter left behind (e.g. by a talk
             // once hung on a distant settlement's party — the Brunda wedge) makes that settlement

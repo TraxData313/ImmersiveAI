@@ -1290,6 +1290,61 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("revealing the courtship road", ex); }
         }
 
+        // DevMode: shove the road one step forward, rails and waiting and all — the only way to
+        // reach a wedding in minutes instead of a week of game days, which is what testing the
+        // wedding chronicle actually needs (2026.08.09). Never reachable by a player.
+        internal void AdvanceCourtshipFor(Hero npc)
+        {
+            try
+            {
+                if (npc == null) return;
+                var memory = LoadMemory(npc);
+                var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
+                var now = CampaignTime.Now.ToDays;
+
+                // Whatever she has not yet weighed or laid to rest, take as answered — the rails
+                // ask for it and this lever exists precisely to skip the asking.
+                memory.MisgivingsWeighed = true;
+                foreach (var m in memory.CourtshipMisgivings)
+                    if (m != null && !m.Settled) { m.Settled = true; m.SettledNote = "(set aside for testing)"; }
+
+                if (memory.CourtshipStage < CourtshipStage.Betrothed)
+                {
+                    memory.CourtshipStage = memory.CourtshipStage + 1;
+                    memory.CourtshipStepDay = now - CourtshipRoad.DaysBetweenForwardSteps - 1;
+                    if (memory.CourtshipStage == CourtshipStage.Betrothed)
+                        memory.BetrothedGameDay = now - Math.Max(0, _config.MinBetrothalDays) - 1;
+                    memory.CourtshipSeeded = true;
+                    SaveMemory(npc, memory);
+                    MirrorRomance(npc, memory.CourtshipStage);
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"[test] {npc.Name}'s road now stands at {CourtshipRoad.StageName(memory.CourtshipStage)}"
+                        + (memory.CourtshipStage == CourtshipStage.Betrothed
+                            ? " — the troth is already seasoned; speak of the wedding day and she may lay it."
+                            : " — misgivings cleared, the day's rail lifted."), ActivityColor));
+                }
+                else if (memory.CourtshipStage == CourtshipStage.Betrothed)
+                {
+                    memory.BetrothedGameDay = now - Math.Max(0, _config.MinBetrothalDays) - 1;
+                    SaveMemory(npc, memory);
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"[test] {npc.Name} is betrothed and the waiting is behind you — speak of the wedding day and she may lay it.", ActivityColor));
+                }
+                else
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"[test] {npc.Name} and you are already wed; the road has no further step.", SealGrey));
+                }
+            }
+            catch (Exception ex) { ModLog.Error("advancing the courtship road", ex); }
+        }
+
+        internal static void DevAdvanceCourtship(Hero npc)
+        {
+            try { if (npc != null) Current?.AdvanceCourtshipFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: advancing the road", ex); }
+        }
+
         private void OnDebugClearMisgivings()
         {
             var npc = Hero.OneToOneConversationHero ?? _currentNpc;

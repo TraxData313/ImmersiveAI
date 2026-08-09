@@ -105,9 +105,13 @@ namespace ImmersiveAI
                 var spouse = hero1 == player ? hero2 : hero1;
                 if (spouse == null || spouse == player) return;
                 if (_weddingsWriting.Contains(spouse.StringId)) return;
-                // Guarded by CONTENT, not existence: a day saved at the seal but never written is
-                // not "already in the book" — it is the very thing the retry exists for.
-                if (!IsUnwritten(_weddingLedger!.OwnWeddingOf(spouse.StringId))) return;
+                // Guarded by CONTENT, not existence: only a day already WRITTEN stands down. A day
+                // saved at the seal but never written is the very thing the retry exists for — and
+                // at a real wedding there is no record at all yet, which is the case that must
+                // above all be let through (a "!IsUnwritten(null)" here made the whole feature dead
+                // code — the pre-ship sweep's catch, 2026.08.09).
+                var already = _weddingLedger!.OwnWeddingOf(spouse.StringId);
+                if (already != null && !IsUnwritten(already)) return;
 
                 // Everything below reads live campaign state and MUST run here, synchronously:
                 // one heartbeat later a noble bride has left her settlement and her party.
@@ -191,6 +195,12 @@ namespace ImmersiveAI
         // then the souls of the settlement the player is in. The bride and the player are not
         // witnesses to their own wedding, and the count is capped so a crowded town does not hand
         // the day to a dozen strangers who merely happened to be indoors.
+        //
+        // WHO SURVIVES THE CAP IS THE POINT (Anton, 2026.08.09, seeing his own campaign's souls at
+        // the demo wedding — "харесва ми как са там тези с които сме имали история, дори да не са с
+        // нас в дружината"): the townsfolk are sorted by how much story the player truly shares
+        // with them, so the notable whose fields you saved and the wanderer you have talked with
+        // for hours stand at the front, and a hall full of strangers can never crowd them out.
         private const int MaxWeddingWitnesses = 12;
 
         private List<WeddingWitness> GatherWitnesses(Hero spouse, Settlement? settlement)
@@ -199,51 +209,81 @@ namespace ImmersiveAI
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var player = Hero.MainHero;
 
-            void Consider(Hero? hero, string detail)
+            bool Eligible(Hero? hero)
             {
                 try
                 {
-                    if (hero == null || hero == player || hero == spouse) return;
-                    if (!hero.IsAlive || hero.IsPrisoner || hero.IsChild) return;
-                    if (witnesses.Count >= MaxWeddingWitnesses) return;
-                    if (!seen.Add(hero.StringId)) return;
+                    return hero != null && hero != player && hero != spouse
+                        && hero.IsAlive && !hero.IsPrisoner && !hero.IsChild
+                        && !seen.Contains(hero.StringId);
+                }
+                catch { return false; }
+            }
+
+            void Take(Hero hero)
+            {
+                try
+                {
+                    if (witnesses.Count >= MaxWeddingWitnesses || !seen.Add(hero.StringId)) return;
                     witnesses.Add(new WeddingWitness
                     {
                         HeroId = hero.StringId,
                         Name = hero.Name?.ToString() ?? "someone",
-                        Detail = detail,
+                        Detail = WitnessDetail(hero),
                     });
                 }
                 catch { /* one soul missed is not the day lost */ }
             }
 
-            // The company that rides with them.
+            // The company that rides with them — never in doubt, never sorted away.
             try
             {
                 var party = MobileParty.MainParty;
                 if (party != null)
                     foreach (var member in party.MemberRoster.GetTroopRoster().ToList())
-                        if (member.Character != null && member.Character.IsHero && member.Character.HeroObject != null)
-                            Consider(member.Character.HeroObject, WitnessDetail(member.Character.HeroObject));
+                    {
+                        var hero = member.Character != null && member.Character.IsHero
+                            ? member.Character.HeroObject : null;
+                        if (Eligible(hero)) Take(hero!);
+                    }
             }
             catch { }
 
             // And the souls of the place, when there is a place — those the player could truly reach
-            // (the keep's closed doors keep their lords out of the hall, as everywhere else in the mod).
+            // (the keep's closed doors keep their lords out of the hall, as everywhere else in the
+            // mod), richest shared story first.
             try
             {
                 if (settlement != null)
                 {
+                    var locals = new List<Hero>();
                     foreach (var hero in settlement.HeroesWithoutParty.ToList())
-                        if (!IsBehindClosedDoors(hero, settlement)) Consider(hero, WitnessDetail(hero));
+                        if (Eligible(hero) && !IsBehindClosedDoors(hero, settlement)) locals.Add(hero);
                     foreach (var party in settlement.Parties.ToList())
-                        if (party?.LeaderHero != null && !IsBehindClosedDoors(party.LeaderHero, settlement))
-                            Consider(party.LeaderHero, WitnessDetail(party.LeaderHero));
+                    {
+                        var leader = party?.LeaderHero;
+                        if (Eligible(leader) && !IsBehindClosedDoors(leader!, settlement)) locals.Add(leader!);
+                    }
+
+                    foreach (var hero in locals.OrderByDescending(SharedStoryWeight).ThenBy(h => h.Name?.ToString(), StringComparer.OrdinalIgnoreCase))
+                        Take(hero);
                 }
             }
             catch { }
 
             return witnesses;
+        }
+
+        // How much story the player truly shares with this soul — the cheap cached read the hourly
+        // rolls use, so ordering a crowded hall costs nothing.
+        private int SharedStoryWeight(Hero hero)
+        {
+            try
+            {
+                var known = MemoryIndex.Get(NpcPaths.MemoryFile(hero), _memoryStore);
+                return known?.Richness ?? 0;
+            }
+            catch { return 0; }
         }
 
         // A word about who this soul was on that day, for the chronicler to name them as a person.
@@ -503,8 +543,11 @@ namespace ImmersiveAI
             {
                 // The world may have moved on while the chronicler wrote: a campaign closed, or
                 // another loaded. Writing this day into THAT campaign's folder would be a lie —
-                // the ledger's own folder is the honest test of which campaign it belongs to.
+                // the ledger's own folder is the honest test of which campaign it belongs to, and
+                // `Current != this` catches a RELOAD of the same campaign, where the folder still
+                // matches but this behavior instance is a ghost of the session before.
                 if (_weddingLedger == null || Campaign.Current == null) return;
+                if (!ReferenceEquals(Current, this)) return;
                 if (!string.Equals(_weddingLedger.Folder, NpcPaths.WeddingsFolder, StringComparison.OrdinalIgnoreCase))
                 {
                     ModLog.Info("the wedding chronicle: the campaign changed while it was written; the day is left to its own save.");
@@ -521,6 +564,9 @@ namespace ImmersiveAI
                 NotifyWedding($"❦ The wedding of {record.PlayerName} and {record.SpouseName}: {written}. "
                             + $"{record.SpouseName} will remember this day"
                             + (record.Witnesses.Count > 0 ? ", and so will those who stood there." : "."));
+
+                // And the day is laid before the player to READ, with the world held still for it.
+                ShowWeddingKeepsake(record);
                 ModLog.Info($"the wedding chronicle: {record.Title()} written "
                           + $"({record.FeastAccount.Length} + {record.NightAccount.Length} characters, "
                           + $"{record.Witnesses.Count} witnesses).");
@@ -563,12 +609,28 @@ namespace ImmersiveAI
         // One beat, written safely: a soul whose own exchange is in flight holds a memory instance
         // loaded before this moment and would save straight over a beat written now — so theirs is
         // PARKED and folded in by SaveMemory when their turn lands (the blessing's discipline).
+        //
+        // BOTH kinds of exchange count, and the second one is the likely one at a wedding: the seal
+        // happens inside a face-to-face talk, and a player who has just been wed usually says
+        // something to their spouse before walking away — that turn holds its own memory instance
+        // across the very seconds the chronicler is writing (pre-ship sweep, 2026.08.09).
+        private bool IsExchangeInFlight(Hero hero)
+        {
+            try
+            {
+                if (hero == null) return false;
+                if (IsQuickChatBusy(hero)) return true;
+                return Hero.OneToOneConversationHero == hero || _currentNpc == hero;
+            }
+            catch { return false; }
+        }
+
         private void WriteWeddingBeat(Hero hero, string beat, OutreachMark mark)
         {
             try
             {
                 if (hero == null || string.IsNullOrWhiteSpace(beat)) return;
-                if (IsQuickChatBusy(hero))
+                if (IsExchangeInFlight(hero))
                 {
                     _pendingWeddingBeats.AddOrUpdate(hero.StringId,
                         _ => new List<string> { beat },
@@ -578,6 +640,31 @@ namespace ImmersiveAI
                 AppendRecordedTurn(hero, beat, string.Empty, mark);
             }
             catch (Exception ex) { ModLog.Error("writing a wedding beat", ex); }
+        }
+
+        // A parked beat lands at that soul's next memory write — but a talk that simply ENDS writes
+        // nothing, so the hour sweeps up whatever is still waiting. Without this a wedding beat
+        // parked during the closing words of the wedding talk could wait forever.
+        private void FlushParkedWeddingBeats()
+        {
+            try
+            {
+                if (_pendingWeddingBeats.IsEmpty) return;
+                foreach (var heroId in _pendingWeddingBeats.Keys.ToList())
+                {
+                    var hero = FindAliveHero(heroId);
+                    if (hero == null)
+                    {
+                        _pendingWeddingBeats.TryRemove(heroId, out _);
+                        continue;
+                    }
+                    if (IsExchangeInFlight(hero)) continue;      // their own turn will fold it in
+                    if (!_pendingWeddingBeats.TryRemove(heroId, out var beats) || beats == null) continue;
+                    foreach (var beat in beats)
+                        if (!string.IsNullOrWhiteSpace(beat)) AppendRecordedTurn(hero, beat, string.Empty);
+                }
+            }
+            catch (Exception ex) { ModLog.Error("flushing the parked wedding beats", ex); }
         }
 
         // ------------------------------ the retry ------------------------------
@@ -619,6 +706,106 @@ namespace ImmersiveAI
                     InformationManager.DisplayMessage(new InformationMessage(line, RoadColor)));
             }
             catch { /* the notice is a nicety; the record is the thing */ }
+        }
+
+        // ------------------------------ the keepsake: the day, laid before the player ------------------------------
+
+        /// <summary>
+        /// The wedding read at leisure, with the world held still (Anton's ask, 2026.08.09 — a story
+        /// this size deserves more than a line in the log). It opens once when the chronicler is
+        /// done, and thereafter whenever the player wants it: the chat window's own button carries
+        /// the same page for as long as the marriage lasts. The scene notification of vanilla's
+        /// wedding cutscene draws above the inquiry layer, so if the cutscene is still running the
+        /// popup simply waits beneath it and is there when it clears.
+        /// </summary>
+        private void ShowWeddingKeepsake(WeddingRecord record)
+        {
+            try
+            {
+                if (record == null) return;
+                ShowScrollPopup(WeddingKeepsakeTitle(record), WeddingKeepsakeBody(record, opened: false), pause: true);
+            }
+            catch (Exception ex) { ModLog.Error("laying the wedding before the player", ex); }
+        }
+
+        private static string WeddingKeepsakeTitle(WeddingRecord record) =>
+            $"{record.PlayerName} and {record.SpouseName} — your wedding day";
+
+        // The page itself. `opened` is true when the player asked for it (the chat window's button),
+        // false the first time it comes on its own — only the opening line differs.
+        private static string WeddingKeepsakeBody(WeddingRecord record, bool opened)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine(opened
+                ? "(Your wedding day, kept whole. It is here whenever you want it.)"
+                : "(This day is yours to keep — you can open it again at any time from the chat window, under their name.)");
+            sb.AppendLine();
+
+            var head = new StringBuilder();
+            head.Append(string.IsNullOrWhiteSpace(record.DateText) ? "That day" : record.DateText.Trim());
+            if (!string.IsNullOrWhiteSpace(record.PlaceName)) head.Append(", in ").Append(record.PlaceName.Trim());
+            sb.AppendLine(head.ToString());
+            var standing = record.Witnesses?.Where(w => w != null && !string.IsNullOrWhiteSpace(w.Name))
+                .Select(w => w.Name.Trim()).ToList() ?? new List<string>();
+            sb.AppendLine(standing.Count > 0
+                ? "Those who stood with you: " + string.Join(", ", standing) + "."
+                : "No one stood with you but each other.");
+            if (!string.IsNullOrWhiteSpace(record.BlessedBy))
+                sb.AppendLine(record.BridePrice > 0
+                    ? $"Blessed by {record.BlessedBy.Trim()}, for {record.BridePrice} denars."
+                    : $"Blessed by {record.BlessedBy.Trim()}.");
+
+            if (!string.IsNullOrWhiteSpace(record.FeastAccount))
+            {
+                sb.AppendLine();
+                sb.AppendLine("THE DAY");
+                sb.AppendLine(record.FeastAccount.Trim());
+            }
+            if (!string.IsNullOrWhiteSpace(record.NightAccount))
+            {
+                sb.AppendLine();
+                sb.AppendLine("THE NIGHT — yours and theirs alone");
+                sb.AppendLine(record.NightAccount.Trim());
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("— — —");
+            sb.AppendLine("Kept on your own machine, in plain text, for as long as you keep the folder:");
+            sb.AppendLine(Safe(() => NpcPaths.WeddingsFolder, "the campaign's _weddings folder"));
+            sb.AppendLine("Copy it somewhere of your own if you would like to keep it past this playthrough.");
+            return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>The chat window's own page for this soul once you are wed: the wedding replaces
+        /// the misgivings there, since the doubts are answered and the day is what remains. False
+        /// when no written wedding of theirs exists.</summary>
+        internal static bool TryGetWeddingView(Hero npc, out string buttonLabel, out string title, out string body)
+        {
+            buttonLabel = title = body = string.Empty;
+            try
+            {
+                var self = Current;
+                if (self == null || npc == null || !self._config.EnableWeddingChronicle) return false;
+                var record = self._weddingLedger?.OwnWeddingOf(npc.StringId);
+                if (record == null || IsUnwritten(record)) return false;   // null is "no page", not "written"
+
+                buttonLabel = "Our wedding day";
+                title = WeddingKeepsakeTitle(record!);
+                body = WeddingKeepsakeBody(record!, opened: true);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>Opens that page from the chat window. Pauses, like the first telling.</summary>
+        internal static void ShowWeddingViewFor(Hero npc)
+        {
+            try
+            {
+                if (TryGetWeddingView(npc, out _, out var title, out var body))
+                    ShowScrollPopup(title, body, pause: true);
+            }
+            catch (Exception ex) { ModLog.Error("opening the wedding keepsake", ex); }
         }
 
         // ------------------------------ what the rest of the mod reads ------------------------------
