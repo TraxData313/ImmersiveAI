@@ -238,12 +238,31 @@ namespace ImmersiveAI.Core.Weddings
             sb.AppendLine();
             AppendFacts(sb, facts);
 
+            bool hasPlace = !string.IsNullOrWhiteSpace(facts.PlacePhrase);
+            bool hasWitnesses = facts.Witnesses != null && facts.Witnesses.Any(w => !string.IsNullOrWhiteSpace(w));
+            bool hasBlessing = !string.IsNullOrWhiteSpace(facts.BlessingPhrase);
+
             sb.AppendLine();
             sb.AppendLine("Now write the account of the day: eight to fourteen sentences.");
-            sb.AppendLine("- Third person, naming both of them by name. This is the day as the hall remembers it.");
-            sb.AppendLine("- Stand it on the truths above: the place, the day and its season, the souls who truly stood there (name some of them, and let one or two of them do something small and real), the road that brought these two here — the promise given and the waiting, the kin's blessing and its price, the doubts once set down and how they came to rest.");
-            sb.AppendLine("- The cadence of the old Scriptures. Concrete, common things: bread and wine, hands and cloaks, a doorway, a lamp, the weather of that season. Small true details, never grand words.");
-            sb.AppendLine("- Say numbers in words, as a chronicle does, not in figures.");
+            sb.AppendLine(hasWitnesses
+                ? "- Third person, naming both of them by name. This is the day as the hall remembers it."
+                : "- Third person, naming both of them by name. No hall remembers this day — only the two of them and the country around them, and that is how you tell it.");
+
+            var stand = new StringBuilder("- Stand it on the truths above: the place, the day and its season");
+            if (hasWitnesses) stand.Append(", the souls who truly stood there (name some of them, and let one or two of them do something small and real)");
+            else stand.Append(", the emptiness of the country about them and what they had with them");
+            stand.Append(", the road that brought these two here — the promise given and the waiting");
+            if (hasBlessing) stand.Append(", the kin's blessing and its price");
+            stand.Append(", the doubts once set down and how they came to rest.");
+            sb.AppendLine(stand.ToString());
+
+            // The concrete things must match the place, or the prompt fights its own facts: asking
+            // for a doorway and a lamp at a wedding on the open road invents a room that was never
+            // there (live find on gpt-5.6-terra, 2026.08.09).
+            sb.AppendLine(hasPlace
+                ? "- The cadence of the old Scriptures. Concrete, common things: bread and wine, hands and cloaks, a doorway, a lamp, the weather of that season. Small true details, never grand words."
+                : "- The cadence of the old Scriptures. Concrete, common things, and all of them of the open country: bread and wine carried in a saddlebag, hands and cloaks, the horses, the ground they stood on, the sky and the weather of that season. Small true details, never grand words — and never a hall, a door or a hearth, for there were none.");
+            sb.AppendLine("- Numbers of things — men, days, coins — are said in words, as a chronicle does, not in figures. THE DATE IS THE ONE EXCEPTION, and it has two halves: put the season and the day of it into the tongue you are writing in, as that tongue names its seasons — never leave them in the words given above — but let the YEAR stand as its plain figures, never spelled out.");
             sb.AppendLine("- No prophecy, no omens, no falling stars, no miracles. The world is as it is, and it is enough.");
             sb.AppendLine("- Nothing from outside their world may enter: no modern word, no thought of readers, chronicles, tales, or the telling itself.");
             sb.AppendLine("- End on the two of them.");
@@ -294,7 +313,11 @@ namespace ImmersiveAI.Core.Weddings
             sb.AppendLine("Now write that night: six to twelve sentences.");
             sb.AppendLine($"- {Upper(her)} own \"I\", remembering it after; name {Name(facts.PlayerName)} by name.");
             sb.AppendLine($"- Let {herObject} carry into it the whole of who {she} truly {(she == "they" ? "are" : "is")}: {her} gladness and {her} fear both, the doubts {she} once set down and let go, the road that brought {herObject} here, what {she} was before this day.");
-            sb.AppendLine($"- Concrete and small: the room and its lamp, the cold or the warmth, a cup, a cloak laid aside, {his} hands and {her} own, what was said between them, what was not said, the first grey light after.");
+            // As in the day's prompt: the small true things must match where they truly were, or
+            // the list conjures a room onto an open road (live find on terra, 2026.08.09).
+            sb.AppendLine(string.IsNullOrWhiteSpace(facts.PlacePhrase)
+                ? $"- Concrete and small, and every piece of it of the open country where they truly were — there was no room, no door, no bed, and you must not invent one: the fire or the dark, the cold and what they had against it, the horses standing near, cloaks spread on the ground, {his} hands and {her} own, what was said between them, what was not said, the first grey light after."
+                : $"- Concrete and small: the room and its lamp, the cold or the warmth, a cup, a cloak laid aside, {his} hands and {her} own, what was said between them, what was not said, the first grey light after.");
             sb.AppendLine("- No sermon, no moral, no prophecy, nothing from outside their world.");
             sb.AppendLine("- End inside that night, or in the morning that follows it.");
             sb.AppendLine("Output only the account itself: no title, no heading, no quotation marks around the whole, no note before or after.");

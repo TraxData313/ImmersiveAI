@@ -278,9 +278,47 @@ public class WeddingTests
         facts.BlessingPhrase = string.Empty;
         facts.MisgivingsAnswered.Clear();
 
-        var prompt = WeddingText.BuildFeastPrompt(facts);
-        Assert.Contains("they were wed on the road", prompt);
-        Assert.Contains("no company to witness it", prompt);
+        var day = WeddingText.BuildFeastPrompt(facts);
+        Assert.Contains("they were wed on the road", day);
+        Assert.Contains("no company to witness it", day);
+        // The small true things must follow the facts. Asking for a doorway and a lamp on an open
+        // road made terra invent a room that was never there (live find, 2026.08.09) — so with no
+        // place, neither prompt may offer one, and both say so outright.
+        Assert.Contains("never a hall, a door or a hearth, for there were none", day);
+        Assert.DoesNotContain("a doorway, a lamp", day);
+        Assert.Contains("No hall remembers this day", day);
+        Assert.DoesNotContain("the kin's blessing and its price", day);   // there was none
+
+        var night = WeddingText.BuildNightPrompt(facts, "…");
+        Assert.Contains("there was no room, no door, no bed, and you must not invent one", night);
+        Assert.DoesNotContain("the room and its lamp", night);
+    }
+
+    [Fact]
+    public void AWeddingInAHall_KeepsTheHallsOwnDetails()
+    {
+        var day = WeddingText.BuildFeastPrompt(Facts());       // Onira, two witnesses, a blessing
+        Assert.Contains("a doorway, a lamp", day);
+        Assert.Contains("This is the day as the hall remembers it", day);
+        Assert.Contains("name some of them", day);
+        Assert.Contains("the kin's blessing and its price", day);
+
+        var night = WeddingText.BuildNightPrompt(Facts(), "…");
+        Assert.Contains("the room and its lamp", night);
+    }
+
+    [Fact]
+    public void TheYearIsNeverSpelledOut_OnlyTheCountingOfThings()
+    {
+        // "Say numbers in words" made terra render Year 1084 as "хиляда осемдесет и осемдесет и
+        // четвърта" — a garbled year in a permanent memory (live find, 2026.08.09).
+        // …and the correction for THAT ("let the date stand as given") left "На Winter 3, Year
+        // 1084" sitting in English inside a Bulgarian account. Both halves are spelled out now:
+        // the season translates, the year stays a figure.
+        var day = WeddingText.BuildFeastPrompt(Facts());
+        Assert.Contains("put the season and the day of it into the tongue you are writing in", day);
+        Assert.Contains("let the YEAR stand as its plain figures, never spelled out", day);
+        Assert.DoesNotContain("Say numbers in words, as a chronicle does, not in figures.", day);
     }
 
     [Fact]
