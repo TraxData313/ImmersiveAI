@@ -4,6 +4,94 @@ namespace ImmersiveAI.Core.Tests;
 
 public class WeddingTests
 {
+    // ------------------------- what a wedding costs, and what the coin buys -------------------------
+
+    [Fact]
+    public void Tiers_ClimbInPriceReachAndRenown_AndTheLegendaryOneCannotBeBoughtWithMoneyAlone()
+    {
+        var tiers = WeddingTiers.All;
+        Assert.Equal(5, tiers.Count);
+
+        for (int i = 1; i < tiers.Count; i++)
+        {
+            Assert.True(tiers[i].Price > tiers[i - 1].Price, "prices must climb");
+            Assert.True(tiers[i].WitnessCap > tiers[i - 1].WitnessCap, "the hall must grow with the purse");
+            Assert.True(tiers[i].Renown > tiers[i - 1].Renown, "so must the name");
+            Assert.True(tiers[i].MinVenue >= tiers[i - 1].MinVenue, "and the place asked for");
+        }
+
+        // The coin buys MEMORY: only from the invited wedding up do couriers ride out.
+        Assert.False(WeddingTiers.Of(WeddingScale.Modest)!.InvitesRememberedBonds);
+        Assert.True(WeddingTiers.Of(WeddingScale.Invited)!.InvitesRememberedBonds);
+
+        // THE DUMPING GROWS WITH THE TARIFF (Anton's call): every step up buys renown at a worse
+        // denars-per-point rate than the one below, so a grand wedding can never become the cheap
+        // road to a clan tier — which matters doubly with a polygamy mod, where one may wed often.
+        for (int i = 1; i < tiers.Count; i++)
+        {
+            double below = (double)tiers[i - 1].Price / tiers[i - 1].Renown;
+            double here = (double)tiers[i].Price / tiers[i].Renown;
+            Assert.True(here > below, $"{tiers[i].Name} must pay worse per point than {tiers[i - 1].Name}");
+        }
+        // The plain wedding pays honest market (~100-300 denars a point); the legendary one is
+        // deliberately the worst bargain of the five.
+        Assert.Equal(100, WeddingTiers.Of(WeddingScale.Modest)!.Price / WeddingTiers.Of(WeddingScale.Modest)!.Renown);
+        Assert.True(WeddingTiers.Of(WeddingScale.Legendary)!.Price
+            / WeddingTiers.Of(WeddingScale.Legendary)!.Renown >= 400);
+
+        // And the last one asks for something gold cannot supply.
+        Assert.True(WeddingTiers.Of(WeddingScale.Legendary)!.RequiresOwnTown);
+        Assert.False(WeddingTiers.Of(WeddingScale.Regal)!.RequiresOwnTown);
+    }
+
+    [Theory]
+    [InlineData(WeddingScale.Modest, WeddingVenue.OpenField, true)]
+    [InlineData(WeddingScale.Invited, WeddingVenue.OpenField, false)]
+    [InlineData(WeddingScale.Invited, WeddingVenue.Village, true)]
+    [InlineData(WeddingScale.Great, WeddingVenue.Village, false)]
+    [InlineData(WeddingScale.Great, WeddingVenue.Castle, true)]
+    [InlineData(WeddingScale.Regal, WeddingVenue.Castle, false)]
+    [InlineData(WeddingScale.Regal, WeddingVenue.Town, true)]
+    public void Tiers_AskThePlaceToBeWorthyOfThem(WeddingScale scale, WeddingVenue venue, bool fits) =>
+        Assert.Equal(fits, WeddingTiers.Of(scale)!.FitsIn(venue, inOwnTown: false));
+
+    [Fact]
+    public void TheLegendaryWedding_NeedsATownOfYourOwn()
+    {
+        var legendary = WeddingTiers.Of(WeddingScale.Legendary)!;
+        Assert.False(legendary.FitsIn(WeddingVenue.Town, inOwnTown: false));
+        Assert.True(legendary.FitsIn(WeddingVenue.Town, inOwnTown: true));
+        // Your own village is still a village.
+        Assert.False(legendary.FitsIn(WeddingVenue.Village, inOwnTown: true));
+    }
+
+    [Fact]
+    public void AWeddingSealedOutsideOurDoor_TellsTheChroniclerNothingOfMoney()
+    {
+        // Vanilla's own barter, another mod: we know nothing of the purse and must invent nothing.
+        Assert.Equal(string.Empty, WeddingTiers.ChroniclerNote(WeddingScale.Unpaid));
+        Assert.Equal(0, WeddingTiers.PriceOf(WeddingScale.Unpaid));
+        Assert.Equal(0, WeddingTiers.RenownOf(WeddingScale.Unpaid));
+        Assert.Equal(WeddingTiers.DefaultWitnessCap, WeddingTiers.WitnessCap(WeddingScale.Unpaid));
+
+        var facts = new WeddingText.Facts { SpouseName = "Sibylla", PlayerName = "Mizam" };
+        Assert.DoesNotContain("The wedding they paid for", WeddingText.BuildFeastPrompt(facts));
+    }
+
+    [Fact]
+    public void AWeddingWeSold_TellsTheChroniclerWhatKindOfDayItWas()
+    {
+        var facts = new WeddingText.Facts
+        {
+            SpouseName = "Sibylla",
+            PlayerName = "Mizam",
+            ScaleNote = WeddingTiers.ChroniclerNote(WeddingScale.Legendary),
+        };
+        var prompt = WeddingText.BuildFeastPrompt(facts);
+        Assert.Contains("The wedding they paid for", prompt);
+        Assert.Contains("THE WHOLE TOWN feasted", prompt);
+    }
+
     private static WeddingRecord Record(
         string id = "d0123",
         string spouseId = "npc_1",

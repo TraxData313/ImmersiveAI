@@ -68,6 +68,13 @@ namespace ImmersiveAI.Core.Weddings
         /// truest material the chronicler has, for these are the doubts the day answered.</summary>
         public List<string> MisgivingsAnswered { get; set; } = new List<string>();
 
+        /// <summary>How great a wedding was paid for (2026.08.09) — it decides how far the
+        /// invitation reached and therefore who carries the day, and the chronicler is told of it.
+        /// <see cref="WeddingScale.Unpaid"/> for a wedding sealed outside our own door.</summary>
+        public WeddingScale Scale { get; set; } = WeddingScale.Unpaid;
+        /// <summary>What the feast cost the player's purse; 0 when we sold them nothing.</summary>
+        public int FeastCost { get; set; }
+
         /// <summary>Part one: the day, as the world tells it. Public to every witness.</summary>
         public string FeastAccount { get; set; } = string.Empty;
         /// <summary>Part two: the night, in the spouse's own voice. Theirs alone — never a witness's.</summary>

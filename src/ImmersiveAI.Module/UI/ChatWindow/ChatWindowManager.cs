@@ -43,6 +43,9 @@ namespace ImmersiveAI.UI.ChatWindow
         // Frames left before the message list is nudged to its newest line (layout must run first).
         private static int _scrollCountdown;
 
+        // The last campaign day the road button was recomputed on — see the tick.
+        private static int _lastSeenDay = -1;
+
         internal static bool IsOpen => _layer != null;
 
         internal static void Configure(ModConfig config)
@@ -258,6 +261,21 @@ namespace ImmersiveAI.UI.ChatWindow
 
             if (_scrollCountdown > 0 && --_scrollCountdown == 0)
                 ScrollMessagesToBottom();
+
+            // The map keeps running under this window, so a road that counts DAYS ("Preparations
+            // 1/3") would sit stale until the player clicked away and back — and a button that
+            // does not move is indistinguishable from a broken one (2026.08.09). One cheap check
+            // per tick, one real refresh per game day.
+            try
+            {
+                int today = (int)CampaignTime.Now.ToDays;
+                if (today != _lastSeenDay)
+                {
+                    _lastSeenDay = today;
+                    _vm?.RefreshRoadPage();
+                }
+            }
+            catch { /* the label is a nicety; never let it break the window */ }
         }
 
         // ------------------------------ scroll to the newest word ------------------------------

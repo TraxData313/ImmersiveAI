@@ -208,6 +208,10 @@ namespace ImmersiveAI.Core.Weddings
             public string RoadPhrase = string.Empty;
             /// <summary>The head of the house who blessed it and what was paid, in a phrase.</summary>
             public string BlessingPhrase = string.Empty;
+            /// <summary>How great a wedding was bought, in the chronicler's own register — see
+            /// <see cref="WeddingTiers.ChroniclerNote"/>. Empty when we sold them nothing, and then
+            /// no word of money enters the account at all.</summary>
+            public string ScaleNote = string.Empty;
             /// <summary>The doubts she once set down and laid to rest, in her own words.</summary>
             public List<string> MisgivingsAnswered = new List<string>();
 
@@ -365,7 +369,13 @@ namespace ImmersiveAI.Core.Weddings
                 ?? new List<string>();
             sb.AppendLine(witnesses.Count == 0
                 ? "- Who stood there: no one but the two of them; there was no company to witness it."
-                : "- Who stood there: " + string.Join("; ", witnesses.Take(12)) + ".");
+                : "- Who stood there: " + string.Join("; ", witnesses.Take(40)) + ".");
+
+            // What was spent on the day, and therefore what kind of day it was (2026.08.09). Empty
+            // for a wedding sealed outside our own door — there we know nothing of the purse and
+            // must invent nothing.
+            if (!string.IsNullOrWhiteSpace(facts.ScaleNote))
+                sb.AppendLine("- The wedding they paid for: " + facts.ScaleNote.Trim());
 
             if (!string.IsNullOrWhiteSpace(facts.RoadPhrase))
                 sb.AppendLine($"- The road that brought them here: {facts.RoadPhrase.Trim().TrimEnd('.')}.");

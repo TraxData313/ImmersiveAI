@@ -699,6 +699,23 @@ namespace ImmersiveAI
         // into the rolling summary, the held truths rewritten — a soft notice says so, in the same
         // voice as the activity notices. Called from LLM background threads; marshaled to the game
         // thread. Best-effort, like every notice.
+        // The same voice, at the OTHER end of the wait: the moment the reworking begins. The
+        // consolidation is a whole second call on the memory-writing budget and it happens between
+        // the reply being ready and the reply being shown — without this line the game just seems
+        // to hang, and the explanation arrives only once the waiting is already over.
+        private void NotifyMemoryRefactorBegins(Hero npc)
+        {
+            if (!_config.NotifyOnMemoryRefactor) return;
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"{name} pauses to gather their thoughts, turning over old memories of you — their answer will take a moment longer…", ActivityColor)));
+            }
+            catch { /* the notice is a nicety; never let it break a turn */ }
+        }
+
         private void NotifyMemoryRefactor(Hero npc)
         {
             if (!_config.NotifyOnMemoryRefactor) return;
@@ -1663,6 +1680,11 @@ namespace ImmersiveAI
 
                 try
                 {
+                    // Said BEFORE the call, not only after it (Anton, 2026.08.09): this is a second
+                    // LLM call, on the memory-writing budget, standing between the finished reply
+                    // and the player seeing it — from the outside the game simply looks hung until
+                    // the closing notice lands. The player is owed the reason while they wait.
+                    NotifyMemoryRefactorBegins(npc);
                     if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
                     {
                         memory.SummaryAsOf = SituationBuilder.Timestamp();

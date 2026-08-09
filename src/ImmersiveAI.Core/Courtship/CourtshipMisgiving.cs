@@ -37,6 +37,100 @@ namespace ImmersiveAI.Core.Courtship
         /// <summary>The most a heart holds OPEN at once — settled ones never block a new doubt.</summary>
         public const int MaxMisgivings = 5;
 
+        // The five things her hand can do. They live here, in Core, because the words are the
+        // TOOL'S CONTRACT and the contract is only as good as its reading — see CanonicalAction.
+        public const string ActSetDown = "set_down";
+        public const string ActSettle = "settle";
+        public const string ActRevise = "revise";
+        public const string ActReopen = "reopen";
+        public const string ActRelease = "release";
+
+        /// <summary>
+        /// One of the five words, from whatever the model actually said — empty when nothing close
+        /// came. The schema's own enum is the first defense; this is the second, and it exists
+        /// because the first did not: caught live on gpt-5.6-terra (2026.08.09), Sibylla laid all
+        /// three of her marriage misgivings to rest in one breath — the right texts, honest notes,
+        /// perfect timing — under the action word "resolve", and again under "review", and every
+        /// one of them fell into the resolver's do-nothing branch. She could never have married
+        /// him. A synonym a soul reaches for honestly must land where she meant it.
+        /// </summary>
+        public static string CanonicalAction(string? raw)
+        {
+            var a = (raw ?? string.Empty).Trim().ToLowerInvariant()
+                .Replace('-', '_').Replace(' ', '_').Trim('_', '.', '"', '\'');
+            if (a.Length == 0) return string.Empty;
+            switch (a)
+            {
+                case ActSetDown:
+                case "set":
+                case "setdown":
+                case "write":
+                case "write_down":
+                case "writedown":
+                case "record":
+                case "note":
+                case "add":
+                case "new":
+                case "weigh":
+                case "weigh_heart":
+                case "review":
+                case "list":
+                case "none":
+                    return ActSetDown;
+
+                case ActSettle:
+                case "settled":
+                case "resolve":
+                case "resolved":
+                case "answer":
+                case "answered":
+                case "lay_to_rest":
+                case "laytorest":
+                case "lay_down":
+                case "rest":
+                case "close":
+                case "closed":
+                case "satisfy":
+                case "satisfied":
+                case "put_to_rest":
+                    return ActSettle;
+
+                case ActRelease:
+                case "released":
+                case "strike":
+                case "strike_out":
+                case "strikeout":
+                case "remove":
+                case "delete":
+                case "drop":
+                case "discard":
+                case "withdraw":
+                case "retract":
+                    return ActRelease;
+
+                case ActRevise:
+                case "revised":
+                case "reword":
+                case "rewrite":
+                case "edit":
+                case "update":
+                case "amend":
+                case "change":
+                    return ActRevise;
+
+                case ActReopen:
+                case "reopened":
+                case "unsettle":
+                case "restore":
+                case "revive":
+                case "return":
+                    return ActReopen;
+
+                default:
+                    return string.Empty;
+            }
+        }
+
         /// <summary>The most the list carries in ALL (standing + settled): past this, the oldest
         /// settled ones quietly fade — kept history, not an endless ledger in every sheet.</summary>
         public const int MaxCarried = 10;
@@ -80,7 +174,7 @@ namespace ImmersiveAI.Core.Courtship
             foreach (var piece in pieces)
             {
                 if (OpenCount(list) >= max) break;
-                if (list.Any(m => m != null && Normalize(m.Text) == Normalize(piece))) continue;
+                if (Restates(list, piece)) continue;
                 list.Add(new CourtshipMisgiving { Text = piece });
                 added++;
             }
@@ -93,6 +187,50 @@ namespace ImmersiveAI.Core.Courtship
                 list.Remove(oldest);
             }
             return added;
+        }
+
+        /// <summary>
+        /// Whether a line she is setting down merely says again something the list already holds —
+        /// exactly, or as the plain containment of one inside the other. A soul asked "what stops
+        /// you?" often recites her whole list back through the tool (live on gpt-5.6-terra,
+        /// 2026.08.09), and a recital must never breed a second copy of a doubt she cannot then
+        /// tell apart. Deliberately NOT the lenient word-overlap of <see cref="FindBestMatch"/>:
+        /// two truly different doubts in the same register share plenty of words, and swallowing a
+        /// real new one is the worse mistake. The length floor keeps a stray word from vanishing
+        /// into a long held line.
+        /// </summary>
+        private static bool Restates(List<CourtshipMisgiving> list, string piece)
+        {
+            var p = Normalize(piece);
+            if (p.Length == 0) return true;
+            foreach (var m in list)
+            {
+                if (m == null || string.IsNullOrWhiteSpace(m.Text)) continue;
+                var t = Normalize(m.Text);
+                if (t.Length == 0) continue;
+                if (t == p) return true;
+                if (Math.Min(t.Length, p.Length) >= 12 && (t.Contains(p) || p.Contains(t))) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Whether the two hands came in swapped — the misgiving written into her light word, and
+        /// the word into the misgiving's place. Caught live on gpt-5.6-terra (2026.08.09) on every
+        /// single settle it made: it laid the answer ("he named me free before the whole clan") in
+        /// the misgiving's field and the misgiving itself in the note, so nothing matched and
+        /// nothing was ever laid to rest. Named fields and clearer wording are the first fix; this
+        /// is the one that holds when a model reads them its own way anyway. Deliberately narrow:
+        /// it swaps ONLY when what came as the misgiving matches nothing and what came as the note
+        /// truly names one.
+        /// </summary>
+        public static bool HandsCameSwapped(
+            List<CourtshipMisgiving>? list, string? which, string? note, bool amongSettled = false)
+        {
+            if (list == null || string.IsNullOrWhiteSpace(note)) return false;
+            Func<CourtshipMisgiving, bool> among = m => m.Settled == amongSettled;
+            return FindBestMatch(list, which, among) == null
+                && FindBestMatch(list, note, among) != null;
         }
 
         /// <summary>Strikes the misgiving best matching <paramref name="which"/> out entirely —
@@ -163,12 +301,12 @@ namespace ImmersiveAI.Core.Courtship
                 if (t.Length > 0 && (t.Contains(q) || q.Contains(t))) return m;
             }
 
-            var qWords = Words(q);
+            var qWords = Stems(q);
             CourtshipMisgiving? best = null;
             double bestScore = 0.34;
             foreach (var m in pool)
             {
-                var score = Jaccard(qWords, Words(Normalize(m.Text)));
+                var score = Overlap(qWords, Stems(Normalize(m.Text)));
                 if (score > bestScore) { bestScore = score; best = m; }
             }
             return best;
@@ -186,15 +324,37 @@ namespace ImmersiveAI.Core.Courtship
             return sb.ToString().Trim();
         }
 
-        private static HashSet<string> Words(string normalized) =>
-            new HashSet<string>(normalized.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+        /// <summary>
+        /// The words of a line, each cut back to its first few letters. Crude on purpose — no
+        /// language is named and none is favored — but it is what lets an INFLECTED tongue match
+        /// itself: Anton plays in Bulgarian, where "избере" and "избереш" are the same word wearing
+        /// two endings, and word-for-word comparison called them strangers. Four letters is the
+        /// bargain: enough to keep "разлика" apart from "разум", short enough to fold an ending.
+        /// </summary>
+        private static HashSet<string> Stems(string normalized)
+        {
+            var set = new HashSet<string>();
+            foreach (var w in normalized.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                set.Add(w.Length <= 4 ? w : w.Substring(0, 4));
+            return set;
+        }
 
-        private static double Jaccard(HashSet<string> a, HashSet<string> b)
+        /// <summary>
+        /// How near two lines are. Jaccard alone punishes the honest shape of a restatement — a
+        /// short paraphrase of a long written doubt shares nearly all ITS words and still scores
+        /// low against the longer line — so a real overlap of the SHORTER line counts too, guarded
+        /// by a floor of three shared words so a two-word scrap can never sweep the list.
+        /// </summary>
+        private static double Overlap(HashSet<string> a, HashSet<string> b)
         {
             if (a.Count == 0 || b.Count == 0) return 0;
             int inter = a.Count(b.Contains);
+            if (inter == 0) return 0;
             int union = a.Count + b.Count - inter;
-            return union == 0 ? 0 : (double)inter / union;
+            double jaccard = union == 0 ? 0 : (double)inter / union;
+            if (inter < 3) return jaccard;
+            double contained = (double)inter / Math.Min(a.Count, b.Count);
+            return contained >= 0.5 && contained > jaccard ? contained : jaccard;
         }
     }
 }

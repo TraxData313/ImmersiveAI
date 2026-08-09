@@ -459,4 +459,152 @@ public class CourtshipTests
         Assert.True(system.IndexOf("What Mizam is to me") < system.IndexOf("Where my heart stands with Mizam"));
         Assert.True(system.IndexOf("Where my heart stands with Mizam") < system.IndexOf("And now Mizam comes to me."));
     }
+
+    // ------------------------- the action word, as models actually say it -------------------------
+    //
+    // Every string below came off the wire on gpt-5.6-terra (2026.08.09), with the real sheet, the
+    // real tool list and Sibylla's own three misgivings: she reached for the hand at exactly the
+    // right moments, quoted her own misgivings word for word, wrote honest notes — and named the
+    // deed "resolve" and "review". Both fell through the resolver and nothing moved. The words are
+    // kept here verbatim so the reading can never quietly narrow again.
+
+    [Theory]
+    [InlineData("settle")]
+    [InlineData("resolve")]      // live, gpt-5.6-terra
+    [InlineData("resolved")]
+    [InlineData("Settle")]
+    [InlineData(" lay to rest ")]
+    [InlineData("answered")]
+    public void CanonicalAction_ReadsLayingToRest_HoweverItIsNamed(string said) =>
+        Assert.Equal(CourtshipMisgivings.ActSettle, CourtshipMisgivings.CanonicalAction(said));
+
+    [Theory]
+    [InlineData("set_down")]
+    [InlineData("review")]       // live, gpt-5.6-terra
+    [InlineData("set-down")]
+    [InlineData("write_down")]
+    [InlineData("weigh")]
+    [InlineData("none")]
+    public void CanonicalAction_ReadsTheWriting_HoweverItIsNamed(string said) =>
+        Assert.Equal(CourtshipMisgivings.ActSetDown, CourtshipMisgivings.CanonicalAction(said));
+
+    [Theory]
+    [InlineData("release", CourtshipMisgivings.ActRelease)]
+    [InlineData("strike out", CourtshipMisgivings.ActRelease)]
+    [InlineData("revise", CourtshipMisgivings.ActRevise)]
+    [InlineData("reword", CourtshipMisgivings.ActRevise)]
+    [InlineData("reopen", CourtshipMisgivings.ActReopen)]
+    [InlineData("unsettle", CourtshipMisgivings.ActReopen)]
+    public void CanonicalAction_ReadsTheRest(string said, string expected) =>
+        Assert.Equal(expected, CourtshipMisgivings.CanonicalAction(said));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("marry")]
+    [InlineData("tend_courtship")]
+    public void CanonicalAction_AnswersEmptyForWhatItCannotRead(string said) =>
+        Assert.Equal(string.Empty, CourtshipMisgivings.CanonicalAction(said));
+
+    [Fact]
+    public void Settle_LandsOnHerOwnWords_InHerOwnTongue()
+    {
+        // Her three, verbatim from memories.json, and the texts the model sent back with them.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "Страх ме е, че разликата между свободен мъж и слугиня може да донесе тежест и опасност и на двама ни." },
+            new CourtshipMisgiving { Text = "Страх ме е, че под властта и славата ти може да избереш благородна жена, а аз да остана настрана." },
+            new CourtshipMisgiving { Text = "Трябва да знам, че в брака ще има място и за моята съвест, разум и честна дума, не само за мълчание." },
+        };
+
+        Assert.NotNull(CourtshipMisgivings.Settle(list,
+            "Страх ме е, че разликата между свободен мъж и слугиня може да донесе тежест и опасност и на двама ни.",
+            "Публичното ми освобождаване пред клана отговори на този страх."));
+        // A loose restatement, not a quotation — the lenient matching must still find its mark.
+        Assert.NotNull(CourtshipMisgivings.Settle(list,
+            "Страх, че ще избере благородна жена вместо мен", "Той се закле пред Бога."));
+        Assert.NotNull(CourtshipMisgivings.Settle(list,
+            "място за моята съвест и честна дума в брака", "Обеща, че гласът ми ще се чува."));
+
+        Assert.Equal(0, CourtshipMisgivings.OpenCount(list));
+        Assert.Equal(3, CourtshipMisgivings.TotalCount(list));
+    }
+
+    [Fact]
+    public void RoadSection_AtReadyWithNothingStanding_SaysSheWaitsToBeAsked()
+    {
+        var settled = new List<CourtshipText.MisgivingView>
+        {
+            new CourtshipText.MisgivingView { Text = "His purse is lighter than his promises.", Settled = true, Note = "his word held" },
+        };
+
+        var ready = CourtshipText.RoadSection("Mizam", CourtshipStage.Ready, settled, true, false, false, "");
+        Assert.Contains("I wait now to be asked", ready);
+        Assert.Contains("lay my promise before them by my own hand", ready);
+
+        // Not before readiness — a heart still on its way is not waiting for the word.
+        Assert.DoesNotContain("I wait now to be asked",
+            CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, settled, true, false, false, ""));
+        // Not while something of hers still stands, even at Ready (a new doubt may be written
+        // down after the rung was reached).
+        var oneOpen = new List<CourtshipText.MisgivingView>(settled)
+        {
+            new CourtshipText.MisgivingView { Text = "What of my Da, left alone?" },
+        };
+        Assert.DoesNotContain("I wait now to be asked",
+            CourtshipText.RoadSection("Mizam", CourtshipStage.Ready, oneOpen, true, false, false, ""));
+        // And never once the promise is given — the posture then is the troth, not the waiting.
+        Assert.DoesNotContain("I wait now to be asked",
+            CourtshipText.RoadSection("Mizam", CourtshipStage.Betrothed, settled, true, false, false, ""));
+    }
+
+    [Fact]
+    public void HandsCameSwapped_CatchesTheMisgivingWrittenIntoItsOwnAnswer()
+    {
+        // Verbatim off the wire, gpt-5.6-terra, 2026.08.09: every settle it made came crossed —
+        // the answer where the misgiving belongs, the misgiving in the note.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "Страх ме е, че разликата между свободен мъж и слугиня може да донесе тежест и опасност и на двама ни." },
+            new CourtshipMisgiving { Text = "Трябва да знам, че в брака ще има място и за моята съвест, разум и честна дума, не само за мълчание." },
+        };
+        var came = "Мизам ме обяви пред клана за свободна жена и господарка в дома си.";
+        var note = "Страх ме е, че разликата между свободен мъж и слугиня може да донесе тежест и опасност и на двама ни.";
+
+        Assert.True(CourtshipMisgivings.HandsCameSwapped(list, came, note));
+
+        // Untangled, it lands — and her light word is the answer, kept beside it.
+        var settled = CourtshipMisgivings.Settle(list, note, came);
+        Assert.NotNull(settled);
+        Assert.Equal(came, settled!.SettledNote);
+
+        // Hands the right way round are never "swapped"; nor are two lines that both match nothing.
+        Assert.False(CourtshipMisgivings.HandsCameSwapped(list,
+            "място за моята съвест и честна дума", "Обеща, че гласът ми ще се чува."));
+        Assert.False(CourtshipMisgivings.HandsCameSwapped(list,
+            "времето над планините", "конете са напоени"));
+    }
+
+    [Fact]
+    public void SetDown_DoesNotBreedCopiesWhenSheRecitesTheListBack()
+    {
+        // Asked "what stops you?", she reaches for the hand and reads her whole list back through
+        // it (live, gpt-5.6-terra). A recital must add nothing — least of all a second copy of a
+        // doubt she then could not tell apart from its twin.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "Страх ме е, че под властта и славата ти може да избереш благородна жена, а аз да остана настрана." },
+        };
+
+        Assert.Equal(0, CourtshipMisgivings.SetDown(list,
+            "Страх ме е, че под властта и славата ти може да избереш благородна жена, а аз да остана настрана."));
+        Assert.Equal(0, CourtshipMisgivings.SetDown(list,
+            "Страх ме е, че под властта и славата ти може да избереш благородна жена"));
+        Assert.Single(list);
+
+        // A truly new doubt in the very same register still lands.
+        Assert.Equal(1, CourtshipMisgivings.SetDown(list,
+            "Страх ме е, че децата ни ще носят срама на майка си."));
+        Assert.Equal(2, CourtshipMisgivings.OpenCount(list));
+    }
 }

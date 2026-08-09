@@ -62,6 +62,9 @@ namespace ImmersiveAI.UI.ChatWindow
         private bool _isMisgivingsShown;
         // Whether the little page under the name is the WEDDING (wed) or the misgivings (courting).
         private bool _pageIsWedding;
+        // The whole road stage this button currently stands at — it decides both the hover text
+        // and what a click actually does.
+        private ImmersiveChatBehavior.RoadPage? _roadPage;
         private string _misgivingsButtonText = string.Empty;
         private string _misgivingsTitleText = string.Empty;
         private string _misgivingsBodyText = string.Empty;
@@ -412,18 +415,17 @@ namespace ImmersiveAI.UI.ChatWindow
             // (Anton, 2026.08.08 and 2026.08.09): the misgivings while the road is walked — and once
             // you are wed, the WEDDING DAY takes its place, because the doubts are answered and the
             // day is what remains. Wed souls open theirs forever; it never goes away.
-            string mLabel = string.Empty, mTitle = string.Empty, mBody = string.Empty;
-            bool wedding = _selected != null
-                && ImmersiveChatBehavior.TryGetWeddingView(_selected.Hero, out mLabel, out mTitle, out mBody);
-            bool hasPage = wedding
-                || (_selected != null
-                    && ImmersiveChatBehavior.TryGetMisgivingsView(_selected.Hero, out mLabel, out mTitle, out mBody));
-            _pageIsWedding = wedding;
-            if (hasPage)
+            // …and since 2026.08.09 it walks the WHOLE road, not just its two ends: her misgivings,
+            // then her kin's blessing to be sought, then the days of preparation counting down,
+            // then the wedding itself — each stage naming what to do next in its hover text.
+            var page = _selected != null ? ImmersiveChatBehavior.RoadPageFor(_selected.Hero) : null;
+            _roadPage = page;
+            _pageIsWedding = page != null && page.Kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay;
+            if (page != null)
             {
-                MisgivingsButtonText = mLabel;
-                MisgivingsTitleText = mTitle;
-                MisgivingsBodyText = mBody;
+                MisgivingsButtonText = page.Label;
+                MisgivingsTitleText = page.Title;
+                MisgivingsBodyText = page.Body;
             }
             else
             {
@@ -531,14 +533,34 @@ namespace ImmersiveAI.UI.ChatWindow
         // The misgivings read fine inside the window's own overlay; the wedding is long and meant to
         // be READ, so it opens in the same paused popup the day itself came in — the player asked
         // to be able to sit with it (2026.08.09).
+        /// <summary>Recomputes just the road button — called when a game day turns under an open
+        /// window, so a countdown counts down where the player is looking.</summary>
+        public void RefreshRoadPage()
+        {
+            try { if (_selected != null) RefreshSelectionState(); }
+            catch { }
+        }
+
         public void ExecuteToggleMisgivings()
         {
-            if (_pageIsWedding)
+            var npc = _selected?.Hero;
+            var kind = _roadPage?.Kind ?? ImmersiveChatBehavior.RoadPageKind.Misgivings;
+
+            // The wedding day plays itself again before it is read (Anton, 2026.08.09).
+            if (kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay)
             {
-                var npc = _selected?.Hero;
                 if (npc != null) ImmersiveChatBehavior.ShowWeddingViewFor(npc);
                 return;
             }
+
+            // The wedding stage is a DOOR, not a page: it opens the choice of the day itself.
+            if (kind == ImmersiveChatBehavior.RoadPageKind.Wedding && npc != null)
+            {
+                IsMisgivingsShown = false;
+                ImmersiveChatBehavior.OpenWeddingDoorFor(npc);
+                return;
+            }
+
             IsMisgivingsShown = !IsMisgivingsShown;
         }
 
@@ -891,10 +913,10 @@ namespace ImmersiveAI.UI.ChatWindow
             set { if (value != _isMisgivingsShown) { _isMisgivingsShown = value; OnPropertyChangedWithValue(value, "IsMisgivingsShown"); } }
         }
 
+        /// <summary>The hover text — and at every stage but the first it is INSTRUCTIONS: what the
+        /// road now asks of the player, and where to go for it.</summary>
         [DataSourceProperty]
-        public string MisgivingsHintText => _pageIsWedding
-            ? "Your wedding day, kept whole — the day itself, and the night that is yours and theirs alone. It opens in its own window, and it is here for as long as this marriage lasts."
-            : "Their own words, written by their own hand mid-talk — a living list, never a checklist: new doubts may join it, empty ones get struck out, settled ones may return. They lay one to rest only when life truly answers it; while any stands, their hand waits.";
+        public string MisgivingsHintText => _roadPage?.Hint ?? string.Empty;
 
         // ------------------------------ the dev panel ------------------------------
 

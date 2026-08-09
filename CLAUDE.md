@@ -236,6 +236,17 @@ TaleWorlds API usage patterns, never copy from it.
   plain `IChatClient` stays the base so test fakes and simple calls remain untouched. Once a
   history holds tool calls, both APIs require the tool definitions to keep riding along; the
   final spoken-only round is forced with `tool_choice: none`, never by dropping the definitions.
+- **A tool's contract lives in its SCHEMA, not in its prose** (2026.08.09, learned the hard way on
+  `weigh_misgivings` — see TASKS_DONE). A closed set of words explained only in a parameter's
+  description comes back as the model's own synonym ("resolve" for `settle`), and a parameter named
+  `text` gets whatever the model has most to say (the ANSWER, with the misgiving pushed into `note`).
+  So: put allowed values in `ToolParameter.AllowedValues` (both clients emit them as the schema's
+  `enum`), NAME each parameter for what it holds and say in its description what it never holds,
+  canonicalize honest synonyms in the parser as the second line of defense, and never let a resolver
+  branch do nothing SILENTLY — say which words it wanted, the tool loop has rounds left to correct
+  itself. And **probe a new tool live before trusting it**: the harness that found both of these
+  reads the ToolDefinitions out of the C# sources, rebuilds the sheet from the NPC's own runtime
+  files, and runs the real 3-round loop against the real backend.
 - **Async LLM calls never touch UI directly.** Background results are queued via
   `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`. Tool resolution
   (`WorldRecall`) reads campaign state the same way: marshaled to the game thread via the

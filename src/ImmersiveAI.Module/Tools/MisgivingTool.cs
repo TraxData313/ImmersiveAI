@@ -18,11 +18,13 @@ namespace ImmersiveAI.Tools
     {
         public const string WeighMisgivings = "weigh_misgivings";
 
-        public const string ActSetDown = "set_down";
-        public const string ActSettle = "settle";
-        public const string ActRevise = "revise";
-        public const string ActReopen = "reopen";
-        public const string ActRelease = "release";
+        // The vocabulary itself lives in Core beside the list operations (and its reading with it —
+        // CourtshipMisgivings.CanonicalAction), so both are unit-tested.
+        public const string ActSetDown = Core.Courtship.CourtshipMisgivings.ActSetDown;
+        public const string ActSettle = Core.Courtship.CourtshipMisgivings.ActSettle;
+        public const string ActRevise = Core.Courtship.CourtshipMisgivings.ActRevise;
+        public const string ActReopen = Core.Courtship.CourtshipMisgivings.ActReopen;
+        public const string ActRelease = Core.Courtship.CourtshipMisgivings.ActRelease;
 
         public static readonly ToolDefinition Tool = new ToolDefinition(WeighMisgivings,
             "Tend what weighs on my own heart about a life wed to the one I speak with — my open " +
@@ -42,31 +44,52 @@ namespace ImmersiveAI.Tools
             new[]
             {
                 new ToolParameter("action",
-                    "\"" + ActSetDown + "\" — write down my misgivings (first weighing, or a new " +
-                    "one that truly arose); \"" + ActSettle + "\" — lay one to rest, truly " +
-                    "answered; \"" + ActRelease + "\" — strike one out that proved empty or is no " +
-                    "longer truly mine; \"" + ActRevise + "\" — reword one that has changed; \"" +
-                    ActReopen + "\" — a settled one has returned to me."),
-                new ToolParameter("text",
-                    "For " + ActSetDown + ": my misgivings, each on its own line — or the single " +
-                    "word \"none\" if my heart is clear. For the rest: the misgiving I mean, as " +
-                    "near to how I set it down as I can."),
+                    "One of these five words exactly, and no other: \"" + ActSetDown + "\" — write " +
+                    "down my misgivings (first weighing, or a new one that truly arose); \"" +
+                    ActSettle + "\" — lay one to rest, truly answered; \"" + ActRelease + "\" — " +
+                    "strike one out that proved empty or is no longer truly mine; \"" + ActRevise +
+                    "\" — reword one that has changed; \"" + ActReopen + "\" — a settled one has " +
+                    "returned to me.",
+                    allowedValues: new[] { ActSetDown, ActSettle, ActRelease, ActRevise, ActReopen }),
+                // NAMED for what they hold, not for their type: with a field called "text" a model
+                // fills it with whatever it has most to say — on gpt-5.6-terra (2026.08.09) that
+                // was the ANSWER, every time, with the misgiving itself pushed into the note, so
+                // nothing ever matched and nothing was ever laid to rest.
+                new ToolParameter("misgiving",
+                    "THE MISGIVING ITSELF, never what answered it. For " + ActSetDown + ": the " +
+                    "misgivings I am writing down, each on its own line — or the single word " +
+                    "\"none\" if my heart is clear. For every other action: the one misgiving I " +
+                    "mean, in its own words, as near to how I first set it down as I can."),
                 new ToolParameter("note",
-                    "For " + ActSettle + ": one short honest sentence on what answered it, kept " +
-                    "beside it. For " + ActRevise + ": the misgiving as it now stands, reworded.",
+                    "My own short word ABOUT that misgiving — never the misgiving itself. For " +
+                    ActSettle + ": the one honest sentence on what answered it, kept beside it " +
+                    "forever. For " + ActRevise + ": its new wording. Left out otherwise.",
                     required: false),
             });
 
-        /// <summary>The action word, lowered and trimmed; empty when unreadable.</summary>
+        /// <summary>The action word, canonicalized to one of the five — empty when nothing close
+        /// came. The schema's own enum is the first defense (see ToolParameter.AllowedValues); the
+        /// reading in Core is the second, and it is there because the first was not enough.</summary>
         public static string ParseAction(ToolCall call)
         {
-            try { return (JObject.Parse(call.ArgumentsJson)["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant(); }
+            try
+            {
+                return Core.Courtship.CourtshipMisgivings.CanonicalAction(
+                    JObject.Parse(call.ArgumentsJson)["action"]?.ToString());
+            }
             catch { return string.Empty; }
         }
 
+        /// <summary>The misgiving itself. "text" is still read as a fallback — it was the field's
+        /// name until 2026.08.09, and a model that has seen the old shape costs nothing to honor.</summary>
         public static string ParseText(ToolCall call)
         {
-            try { return (JObject.Parse(call.ArgumentsJson)["text"]?.ToString() ?? string.Empty).Trim(); }
+            try
+            {
+                var args = JObject.Parse(call.ArgumentsJson);
+                var raw = args["misgiving"]?.ToString() ?? args["text"]?.ToString() ?? string.Empty;
+                return raw.Trim();
+            }
             catch { return string.Empty; }
         }
 

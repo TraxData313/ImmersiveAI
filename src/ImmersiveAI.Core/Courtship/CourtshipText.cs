@@ -91,6 +91,19 @@ namespace ImmersiveAI.Core.Courtship
                 sb.AppendLine();
                 sb.AppendLine($"I have not yet sat with myself over what a life wed to {playerName} would truly ask of me. When marriage truly enters the talk between us, I pause and weigh it honestly — this is the one life I am given, and I would know the soul I am to spend it beside: if misgivings stand in me I set them down in my own words — a few, five at the very most — and if none do, I say so plainly and set down none. The list then lives with me: mine to raise openly in our talks, mine to add to when a true doubt arises, and mine alone to lay to rest.");
             }
+
+            // Readiness with nothing left standing is a POSTURE, not merely a rung on the road —
+            // she waits to be asked, and the asking is answered by her own hand (Anton's ask,
+            // 2026.08.09: the moment there is nothing left to wonder about, she should know plainly
+            // what she is now waiting for). Deliberately silent while any doubt of hers stands,
+            // even at Ready — a new one may be written down after the rung was already reached.
+            bool anyStanding = misgivings != null
+                && misgivings.Any(m => m != null && !m.Settled && !string.IsNullOrWhiteSpace(m.Text));
+            if (stage == CourtshipStage.Ready && !anyStanding)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"So I wait now to be asked. Let {playerName} speak the word of marriage between us and I say yes gladly — and then I lay my promise before them by my own hand; the sealing of it is theirs alone, and if they let it lie I do not press.");
+            }
             return sb.ToString().TrimEnd();
         }
 

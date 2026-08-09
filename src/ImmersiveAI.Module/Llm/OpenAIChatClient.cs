@@ -396,7 +396,12 @@ namespace ImmersiveAI.Llm
                 var required = new JArray();
                 foreach (var p in tool.Parameters)
                 {
-                    properties[p.Name] = new JObject { ["type"] = "string", ["description"] = p.Description };
+                    var schema = new JObject { ["type"] = "string", ["description"] = p.Description };
+                    // A closed vocabulary belongs in the schema, not only in the prose: a word
+                    // explained in the description alone comes back as the model's own synonym.
+                    if (p.AllowedValues != null)
+                        schema["enum"] = new JArray(p.AllowedValues.Cast<object>().ToArray());
+                    properties[p.Name] = schema;
                     if (p.Required) required.Add(p.Name);
                 }
 

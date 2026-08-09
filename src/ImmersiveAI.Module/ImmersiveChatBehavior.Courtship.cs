@@ -11,6 +11,7 @@ using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -509,7 +510,12 @@ namespace ImmersiveAI
                 SaveMemory(npc, memory);
                 if (!troth.ByLetter) NotifyRoadStep(npc, target, forward: true);
                 MirrorRomance(npc, target);
-                return $"It is so, and it is set down: {CourtshipText.StagePhrase(target, playerName)}. I speak now from this truth — warmly, in my own way — and I need not name the change aloud unless my heart moves me to.";
+                // Arriving at readiness, she is told what readiness now MEANS in her own hands —
+                // the same in-the-moment telling as the misgivings' last rest (Anton, 2026.08.09).
+                var whatFollows = target == CourtshipStage.Ready
+                    ? " From here I wait to be asked: let the word be spoken between us and I say yes gladly, and lay my promise before them by my own hand — the sealing of it is theirs alone."
+                    : string.Empty;
+                return $"It is so, and it is set down: {CourtshipText.StagePhrase(target, playerName)}. I speak now from this truth — warmly, in my own way — and I need not name the change aloud unless my heart moves me to.{whatFollows}";
             }
             catch { return "The moment does not allow it; I let the matter rest."; }
         }
@@ -532,8 +538,37 @@ namespace ImmersiveAI
                 var note = Tools.MisgivingTool.ParseNote(call);
                 bool quiet = troth.ByLetter;
 
+                // The two hands, untangled when they arrive crossed — the misgiving written into
+                // her light word and the word into the misgiving's place (live, 2026.08.09). Only
+                // where a misgiving is being POINTED AT, and only when the swap is the sole reading
+                // that finds one; set_down writes new lines and can never be untangled this way.
+                if (action == Tools.MisgivingTool.ActSettle || action == Tools.MisgivingTool.ActRelease
+                    || action == Tools.MisgivingTool.ActRevise || action == Tools.MisgivingTool.ActReopen)
+                {
+                    bool settledSide = action == Tools.MisgivingTool.ActReopen;
+                    if (CourtshipMisgivings.HandsCameSwapped(list, text, note, settledSide))
+                    {
+                        var swap = text; text = note; note = swap;
+                        ModLog.Info($"weigh_misgivings ({action}): the misgiving and the note came crossed — untangled.");
+                    }
+                }
+
                 int Open() => CourtshipMisgivings.OpenCount(list);
                 int Total() => CourtshipMisgivings.TotalCount(list);
+
+                // The moment the last doubt falls silent, the hand's own answer tells her what is
+                // now open to her (Anton's ask, 2026.08.09). The sheet says it too, but a sheet is
+                // read once at the top of a long prompt; THIS arrives in the very breath she acts,
+                // and the arrival is exactly when a heart decides. Tailored to where her road
+                // actually stands, and it never promises what the rails may still refuse.
+                string NothingStandsNow()
+                {
+                    if (Open() > 0) return string.Empty;
+                    if (memory.CourtshipStage >= CourtshipStage.Betrothed) return string.Empty;
+                    return memory.CourtshipStage == CourtshipStage.Ready
+                        ? " And my heart already stands ready and waits to be asked: let them speak the word between us and I say yes gladly, and lay my promise before them by my own hand — the sealing of it is theirs alone."
+                        : " And nothing of mine bars the road now. If my heart has truly come to the place where I would give my hand were the word spoken, I own that in this same breath and set it down by my own hand — I would not have them ask me blind.";
+                }
 
                 switch (action)
                 {
@@ -546,7 +581,7 @@ namespace ImmersiveAI
                             SaveMemory(npc, memory);
                             if (!quiet && Total() == 0)
                                 NotifyMisgivings(npc, "weighs their heart about a life together — and finds it clear.", RoadColor);
-                            return "It is weighed and set down: nothing stands in me — my heart is clear on this. I speak on from that truth.";
+                            return "It is weighed and set down: nothing stands in me — my heart is clear on this. I speak on from that truth." + NothingStandsNow();
                         }
                         else
                         {
@@ -567,18 +602,33 @@ namespace ImmersiveAI
                     {
                         var settled = CourtshipMisgivings.Settle(list, text, note);
                         if (settled == null)
-                            return "No misgiving of mine matches those words — I lay nothing to rest that I did not set down.";
+                        {
+                            // Reaching for one already at rest is not a failure and must not be
+                            // answered as one — she would only try again, or doubt her own hand.
+                            if (CourtshipMisgivings.FindBestMatch(list, text, m => m.Settled) != null)
+                                return "That one I laid to rest already — it stands answered, and a " +
+                                    "thing answered is not answered twice. I say so warmly and speak on.";
+                            return "No misgiving of mine matches those words — I lay nothing to rest " +
+                                "that I did not set down. If I meant one of the ones I truly hold, I " +
+                                "reach again with the MISGIVING'S own words in its own place, and what " +
+                                "answered it in the note beside — never the two the other way about.";
+                        }
                         SaveMemory(npc, memory);
                         if (!quiet)
                         {
                             var tail = string.IsNullOrWhiteSpace(settled.SettledNote) ? string.Empty : $" — “{settled.SettledNote}”";
+                            // The player is told the door is open in the same breath she is, so
+                            // "now would be the hour to ask" never has to be guessed at.
+                            var clear = memory.CourtshipStage < CourtshipStage.Betrothed
+                                ? " — their heart is clear, and they wait to be asked."
+                                : " — their heart is clear.";
                             NotifyMisgivings(npc, Open() == 0
-                                ? $"lays their last misgiving to rest{tail} — their heart is clear."
+                                ? $"lays their last misgiving to rest{tail}{clear}"
                                 : $"lays a misgiving to rest{tail} ({Open()} of {Total()} still stand).",
                                 RoadColor);
                         }
                         return Open() == 0
-                            ? "It is laid to rest — and with it, nothing stands in me any longer. My heart is clear, and I may say so."
+                            ? "It is laid to rest — and with it, nothing stands in me any longer. My heart is clear, and I may say so." + NothingStandsNow()
                             : $"It is laid to rest, with my word on what answered it. {Open()} still stand{(Open() == 1 ? "s" : string.Empty)} in me.";
                     }
 
@@ -592,7 +642,7 @@ namespace ImmersiveAI
                             ? "strikes a misgiving out — it was never truly theirs; nothing stands in their heart now."
                             : $"strikes a misgiving out — it was never truly theirs ({Open()} of {Total()} still stand).",
                             RoadColor);
-                        return "It is struck out — not answered, simply no longer mine. My list holds only what my heart truly asks.";
+                        return "It is struck out — not answered, simply no longer mine. My list holds only what my heart truly asks." + NothingStandsNow();
                     }
 
                     case Tools.MisgivingTool.ActRevise:
@@ -618,7 +668,17 @@ namespace ImmersiveAI
                     }
 
                     default:
-                        return "My heart did not move over its misgivings just now — I stay in the talk.";
+                        // Nothing was done — and she is told plainly WHY and with what words to
+                        // reach again, because the round budget still allows it. A silent "I did
+                        // not move" here is how three misgivings were laid to rest three times over
+                        // and none of them moved (live, 2026.08.09).
+                        return "My hand did not close on anything — I must name what I am doing with " +
+                            "one of these words exactly: " + Tools.MisgivingTool.ActSetDown + ", " +
+                            Tools.MisgivingTool.ActSettle + ", " + Tools.MisgivingTool.ActRelease + ", " +
+                            Tools.MisgivingTool.ActRevise + ", " + Tools.MisgivingTool.ActReopen +
+                            ". If I truly meant to lay one to rest or to set one down, I reach again " +
+                            "now with the right word and the misgiving's own words; otherwise I let " +
+                            "it be and stay in the talk.";
                 }
             }
             catch { return "The moment does not allow it; I let the matter rest."; }
@@ -1007,6 +1067,71 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("declining the betrothal", ex); }
         }
 
+        /// <summary>The road button's own door to the wedding: what kind of day to give them
+        /// (2026.08.09, Anton's design). The coin does not buy adjectives — it buys how far the
+        /// invitation travels, and every soul it reaches carries the day in memory forever. Rides
+        /// the global inquiry layer, safely above the chat window.</summary>
+        internal void ShowWeddingScaleInquiry(Hero npc)
+        {
+            try
+            {
+                var player = Hero.MainHero;
+                if (npc == null || player == null) return;
+
+                // The world's own rules first — never open a purse for a day that cannot happen.
+                var block = TrothBlockReason(npc, forWedding: true, _config);
+                if (block == TrothBlock.None && BlessingRequired(npc) && LoadMemory(npc).FamilyBlessingDay < 0)
+                    block = TrothBlock.BlessingMissing;
+                if (block != TrothBlock.None)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"You cannot wed {npc.Name} just now — {TrothBlockForPlayer(block, npc)}.", SealGrey));
+                    return;
+                }
+
+                var venue = CurrentWeddingVenue(out bool ownTown);
+                var elements = new List<InquiryElement>();
+                foreach (var tier in Core.Weddings.WeddingTiers.All)
+                {
+                    bool afford = player.Gold >= tier.Price;
+                    bool fits = tier.FitsIn(venue, ownTown);
+                    var why = new StringBuilder(tier.PlayerDescription);
+                    why.Append("\n\nHeld ").Append(tier.VenueRequirement).Append('.');
+                    why.Append(" Your house gains ").Append(tier.Renown).Append(" renown.");
+                    if (!fits)
+                        why.Append($"\n\n(Not here: you stand {WeddingPlacePhrase()}. Ride somewhere worthier and open this again.)");
+                    else if (!afford)
+                        why.Append("\n\n(Your purse cannot carry this.)");
+                    elements.Add(new InquiryElement(
+                        tier.Scale,
+                        $"{tier.Name} — {tier.Price} denars",
+                        null, afford && fits, why.ToString()));
+                }
+
+                var data = new MultiSelectionInquiryData(
+                    new TextObject("{=ImmersiveAI_WedScaleTitle}What wedding will you give them?").ToString(),
+                    $"You are to wed {npc.Name}, {WeddingPlacePhrase()} — a wedding is held where you stand when you seal it.\n\n"
+                    + "What you spend decides how far the invitation travels — and everyone who stands there will carry this day in their memory for the rest of their life.\n\n"
+                    + $"You hold {player.Gold} denars.",
+                    elements, true, 1, 1,
+                    new TextObject("{=ImmersiveAI_WedScaleAccept}Wed them this day").ToString(),
+                    new TextObject("{=ImmersiveAI_WedScaleDecline}Not yet").ToString(),
+                    chosen =>
+                    {
+                        try
+                        {
+                            var pick = chosen?.FirstOrDefault()?.Identifier;
+                            if (!(pick is Core.Weddings.WeddingScale scale)) return;
+                            OnWeddingSealed(npc, scale);
+                        }
+                        catch (Exception ex) { ModLog.Error("choosing the wedding", ex); }
+                    },
+                    _ => { });
+                MBInformationManager.ShowMultiSelectionInquiry(data, true);
+            }
+            catch (Exception ex) { ModLog.Error("showing the wedding's own door", ex); }
+        }
+
         private void ShowWeddingInquiry(Hero npc)
         {
             try
@@ -1030,7 +1155,10 @@ namespace ImmersiveAI
                     body, true, true,
                     new TextObject("{=ImmersiveAI_WedAccept}Wed them this day").ToString(),
                     new TextObject("{=ImmersiveAI_WedDecline}Not yet").ToString(),
-                    () => OnWeddingSealed(npc),
+                    // Whichever door the wedding is reached through — her own laid day, or the road
+                    // button — the KIND of wedding is chosen in one place. Dispatched a tick later
+                    // so the new inquiry never opens inside the closing one's own callback.
+                    () => MainThreadDispatcher.Enqueue(() => ShowWeddingScaleInquiry(npc)),
                     () => OnWeddingDeclined(npc),
                     "", 0f, null, null, null);
                 InformationManager.ShowInquiry(data, pauseGameActiveState: true);
@@ -1038,7 +1166,10 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("showing the wedding inquiry", ex); }
         }
 
-        private void OnWeddingSealed(Hero npc)
+        /// <summary>The seal itself. <paramref name="scale"/> is the wedding the player bought — it
+        /// is stashed for the chronicle hook (which fires INSIDE MarriageAction.Apply, before we
+        /// could hand it anything) and its price leaves the purse only once every rule has passed.</summary>
+        private void OnWeddingSealed(Hero npc, Core.Weddings.WeddingScale scale = Core.Weddings.WeddingScale.Unpaid)
         {
             bool graduated = false;
             try
@@ -1046,8 +1177,17 @@ namespace ImmersiveAI
                 var player = Hero.MainHero;
                 var playerName = player?.Name?.ToString() ?? "the traveler";
                 var memory = LoadMemory(npc);
+                int price = Core.Weddings.WeddingTiers.PriceOf(scale);
 
                 var block = TrothBlockReason(npc, forWedding: true, _config);
+                // The purse is a rule like any other, and it is re-run here, not trusted from the
+                // popup: a battle's ransom could have emptied it between choosing and sealing.
+                if (block == TrothBlock.None && price > 0 && (player?.Gold ?? 0) < price)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"The wedding could not be sealed — {price} denars is more than you hold.", SealGrey));
+                    return;
+                }
                 if (block == TrothBlock.None && BlessingRequired(npc) && memory.FamilyBlessingDay < 0)
                     block = TrothBlock.BlessingMissing;
                 if (block == TrothBlock.None && memory.CourtshipStage != CourtshipStage.Betrothed)
@@ -1088,6 +1228,11 @@ namespace ImmersiveAI
                     return;
                 }
 
+                // The day they bought, laid where the chronicle hook can find it: BeforeHeroesMarried
+                // fires INSIDE MarriageAction.Apply, so there is no later moment to hand it over.
+                SetPendingWeddingScale(npc, scale);
+                if (price > 0) player!.ChangeHeroGold(-price);
+
                 // The REAL game marriage: spouse both ways, relation, the wedding cutscene, the log
                 // entry the world's tidings gossip about, SetHasMet — all vanilla's own listeners.
                 MarriageAction.Apply(player, npc);
@@ -1095,8 +1240,11 @@ namespace ImmersiveAI
                 if (player.Spouse != npc)
                 {
                     // The action refused after all (it no-ops silently on an unsuitable couple) —
-                    // never leave a half-married state behind.
+                    // never leave a half-married state behind, and never keep coin for a feast
+                    // that never happened.
                     if (graduated) npc.SetNewOccupation(Occupation.Wanderer);
+                    if (price > 0) player.ChangeHeroGold(price);
+                    SetPendingWeddingScale(npc, Core.Weddings.WeddingScale.Unpaid);
                     InformationManager.DisplayMessage(new InformationMessage(
                         "The wedding could not be sealed — the world refused the match at the last.", SealGrey));
                     AppendRecordedTurn(npc,
@@ -1111,6 +1259,16 @@ namespace ImmersiveAI
                 AddSilentInnerBeat(memory, npc, CourtshipText.WeddingSealedBeat(playerName));
                 memory.NotePlayerEngaged();
                 SaveMemory(npc, memory);
+
+                // What the day added to the house's name — given after the marriage truly landed,
+                // never before, so a refused wedding can never leave renown behind it.
+                int renown = Core.Weddings.WeddingTiers.RenownOf(scale);
+                if (renown > 0)
+                {
+                    try { GainRenownAction.Apply(player!, renown, doNotNotify: true); } catch { }
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"The wedding is spoken of: your house gains {renown} renown.", RoadColor));
+                }
 
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"This day you and {npc.Name} are wed.", SealGreen));
@@ -1367,6 +1525,248 @@ namespace ImmersiveAI
                     $"{npc.Name}'s misgivings are released — they will weigh their heart anew when marriage next enters the talk.", ActivityColor));
             }
             catch (Exception ex) { ModLog.Error("clearing the misgivings", ex); }
+        }
+
+        // ------------------------- the road's own button -------------------------
+
+        /// <summary>What the one little button under a soul's name is RIGHT NOW. The road answers
+        /// "what do I do next?" at every stage instead of only showing a list of doubts (Anton,
+        /// 2026.08.09): the misgivings while she is deciding, then her kin's blessing to be sought,
+        /// then the days of preparation counting down, then the wedding itself to be paid for and
+        /// sealed — and once wed, the day itself, kept forever.</summary>
+        internal enum RoadPageKind { None, Misgivings, Blessing, Preparations, Wedding, WeddingDay }
+
+        internal sealed class RoadPage
+        {
+            public RoadPageKind Kind = RoadPageKind.None;
+            /// <summary>The button's own words ("Misgivings 2/4", "Preparations 1/3", "Wed Sibylla").</summary>
+            public string Label = string.Empty;
+            /// <summary>The hover text — this is where the player is TOLD what to do next.</summary>
+            public string Hint = string.Empty;
+            public string Title = string.Empty;
+            public string Body = string.Empty;
+        }
+
+        /// <summary>The whole road in one call, in the order the stages actually come.</summary>
+        internal static RoadPage? RoadPageFor(Hero npc)
+        {
+            try
+            {
+                var self = Current;
+                if (self == null || npc == null) return null;
+
+                // Wed already — the day itself takes the button, forever.
+                if (TryGetWeddingView(npc, out var wLabel, out var wTitle, out var wBody))
+                    return new RoadPage
+                    {
+                        Kind = RoadPageKind.WeddingDay,
+                        Label = wLabel,
+                        Title = wTitle,
+                        Body = wBody,
+                        Hint = "Your wedding day, kept whole — the day itself, and the night that is yours and theirs alone. Opening it plays the wedding once more, and the account follows it.",
+                    };
+
+                if (!self._config.EnableConversationMarriage) return self.MisgivingsPage(npc);
+
+                var memory = self.LoadMemory(npc);
+                if (memory.CourtshipStage != CourtshipStage.Betrothed || npc.Spouse != null)
+                    return self.MisgivingsPage(npc);
+
+                // Betrothed: her kin's word first, if her house asks one.
+                if (self.BlessingRequired(npc) && memory.FamilyBlessingDay < 0)
+                    return self.BlessingPage(npc);
+
+                // Then the days the world asks a promise to season in.
+                int need = Math.Max(0, self._config.MinBetrothalDays);
+                double stood = memory.BetrothedGameDay < 0 ? need : CampaignTime.Now.ToDays - memory.BetrothedGameDay;
+                if (stood < need) return self.PreparationsPage(npc, stood, need);
+
+                return self.WeddingPage(npc);
+            }
+            catch { return null; }
+        }
+
+        // Her house has not spoken yet — and this is the page that tells the player, plainly, that
+        // the road now runs through her kin and every way there is to reach them.
+        private RoadPage BlessingPage(Hero npc)
+        {
+            var head = Safe(() => npc.Clan?.Leader, (Hero?)null);
+            var headName = head?.Name?.ToString() ?? "the head of their house";
+            var her = npc.IsFemale ? "her" : "his";
+            bool near = Safe(() => head != null && IsCoLocated(head), false);
+            var whereabouts = Safe(() => WhereaboutsOf(head), string.Empty);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"You are betrothed to {npc.Name}, but by the custom of this world {her} hand cannot be given without the word of {her} house — and that word is {headName}'s to give.");
+            sb.AppendLine();
+            if (!string.IsNullOrWhiteSpace(whereabouts)) sb.AppendLine(whereabouts);
+            sb.AppendLine();
+            sb.AppendLine("There are three ways to their word, and any of them serves:");
+            sb.AppendLine($"• Stand before them and speak of the match — the bride-price is haggled in the talk itself, and {headName} will lay the offer before you when you have agreed on a figure.");
+            sb.AppendLine($"• Write to them. A betrothal opens the road for letters, so {headName} is a correspondent now — the offer can be struck in writing and is laid before you when the reply comes.");
+            sb.AppendLine("• Or settle it the world's own way, through the ordinary talk of houses, if that is where you find them.");
+            sb.AppendLine();
+            sb.AppendLine("Nothing is spent until you seal it yourself, and the price is never fixed: their house has its bounds, and what you pay inside them is what your words have earned.");
+
+            return new RoadPage
+            {
+                Kind = RoadPageKind.Blessing,
+                Label = $"{headName}'s blessing",
+                Title = $"The blessing of {npc.Name}'s house",
+                Hint = near
+                    ? $"Their kin must bless the match before the wedding. {headName} is here with you — speak with them of it, agree a bride-price, and seal it."
+                    : $"Their kin must bless the match before the wedding. Go to {headName} and speak of it, or write — a betrothal opens the road for letters, and the bride-price can be settled on paper.",
+                Body = sb.ToString().TrimEnd(),
+            };
+        }
+
+        // The promise is given and the house has spoken; now the world simply asks for days.
+        private RoadPage PreparationsPage(Hero npc, double stood, int need)
+        {
+            int done = (int)Math.Floor(Math.Max(0, stood));
+            if (done >= need) done = Math.Max(0, need - 1);
+            double left = Math.Max(0, need - stood);
+            var leftWord = left >= 1 ? $"about {Math.Ceiling(left):0} more day{(Math.Ceiling(left) == 1 ? string.Empty : "s")}" : "less than a day more";
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"You and {npc.Name} are promised to one another, and their kin have no objection left. What remains is the world's own asking: a troth is given time to season, and a wedding takes preparing.");
+            sb.AppendLine();
+            sb.AppendLine($"{done} of {need} days have passed — {leftWord}. Ride, fight, trade, talk: the days pass as days do, and nothing here needs tending.");
+            sb.AppendLine();
+            sb.AppendLine("When they are done, this button becomes the wedding itself, and you will choose what kind of day to give them.");
+
+            return new RoadPage
+            {
+                Kind = RoadPageKind.Preparations,
+                Label = $"Preparations {done}/{need}",
+                Title = $"Preparing to wed {npc.Name}",
+                Hint = $"You are betrothed. The world asks {need} days for the promise to season and the preparations to be made — {leftWord}. Then this becomes the wedding itself.",
+                Body = sb.ToString().TrimEnd(),
+            };
+        }
+
+        // Everything asked has been given: the day is the player's to buy and to seal.
+        private RoadPage WeddingPage(Hero npc)
+        {
+            // WHERE it will happen, said before a single denar is spent (Anton, 2026.08.09): the
+            // wedding is held where the player is STANDING at the moment they seal it, and nobody
+            // should discover that only afterwards, married in a ditch and wondering where the hall
+            // went. It is the first line of the page and it rides the hover text too.
+            var wherePhrase = WeddingPlacePhrase();
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Everything the world asked has been given. You may wed {npc.Name} this day.");
+            sb.AppendLine();
+            sb.AppendLine("WHERE: " + wherePhrase + " — a wedding is held where the two of you stand when you seal it. If you would be wed somewhere worthier, close this, ride there, and open it again; the day will wait for you.");
+            sb.AppendLine();
+            sb.AppendLine("What it costs is your own choice, and the choice is not only a price: it decides how far the invitation travels, and therefore who stands there — and every soul who stands there carries that day in their own memory for the rest of their life.");
+            sb.AppendLine();
+            foreach (var tier in Core.Weddings.WeddingTiers.All)
+            {
+                sb.AppendLine($"• {tier.Name} — {tier.Price} denars. {tier.PlayerDescription}");
+                sb.AppendLine($"   Held {tier.VenueRequirement}. Your house gains {tier.Renown} renown.");
+            }
+            sb.AppendLine();
+            sb.AppendLine("Choose, and the day is written down as it truly was.");
+
+            return new RoadPage
+            {
+                Kind = RoadPageKind.Wedding,
+                Label = $"Wed {npc.Name}",
+                Title = $"Your wedding with {npc.Name}",
+                Hint = $"Everything has been given: the promise, the days, the blessing. The wedding is held WHERE YOU STAND — right now that is {wherePhrase}. Open this to choose what kind of day to give them; the price decides how far the invitation reaches, and who will remember standing there.",
+                Body = sb.ToString().TrimEnd(),
+            };
+        }
+
+        /// <summary>The chat window's own door to the wedding — the road button's last stage.</summary>
+        internal static void OpenWeddingDoorFor(Hero npc)
+        {
+            try { if (npc != null) Current?.ShowWeddingScaleInquiry(npc); }
+            catch (Exception ex) { ModLog.Error("opening the wedding door", ex); }
+        }
+
+        /// <summary>Where a wedding sealed at this instant would be held.</summary>
+        private static Settlement? WeddingPlaceNow()
+        {
+            try
+            {
+                return Hero.MainHero?.CurrentSettlement
+                    ?? MobileParty.MainParty?.CurrentSettlement
+                    ?? Settlement.CurrentSettlement;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>What kind of place that is — and whether the town is the player's own, which is
+        /// the one thing the legendary wedding asks that no purse can supply.</summary>
+        internal static Core.Weddings.WeddingVenue CurrentWeddingVenue(out bool ownTown)
+        {
+            ownTown = false;
+            try
+            {
+                var settlement = WeddingPlaceNow();
+                if (settlement == null) return Core.Weddings.WeddingVenue.OpenField;
+                if (settlement.IsTown)
+                {
+                    ownTown = Safe(() => settlement.OwnerClan == Clan.PlayerClan, false);
+                    return Core.Weddings.WeddingVenue.Town;
+                }
+                if (settlement.IsCastle) return Core.Weddings.WeddingVenue.Castle;
+                if (settlement.IsVillage) return Core.Weddings.WeddingVenue.Village;
+                return Core.Weddings.WeddingVenue.OpenField;
+            }
+            catch { return Core.Weddings.WeddingVenue.OpenField; }
+        }
+
+        /// <summary>Where a wedding sealed at this instant would be held, in plain words.</summary>
+        internal static string WeddingPlacePhrase()
+        {
+            try
+            {
+                var settlement = WeddingPlaceNow();
+                var name = settlement?.Name?.ToString();
+                if (string.IsNullOrWhiteSpace(name))
+                    return "out on the open road, under the sky, with no hall and no town about you";
+                if (settlement!.IsTown)
+                    return Safe(() => settlement.OwnerClan == Clan.PlayerClan, false)
+                        ? $"in your own town of {name}"
+                        : $"in the town of {name}";
+                if (settlement.IsCastle) return $"in the castle of {name}";
+                if (settlement.IsVillage) return $"in the village of {name}";
+                return "in " + name;
+            }
+            catch { return "wherever you happen to be standing"; }
+        }
+
+        // The first stage, and the only one that existed before: her own written doubts.
+        private RoadPage? MisgivingsPage(Hero npc)
+        {
+            if (!TryGetMisgivingsView(npc, out var label, out var title, out var body)) return null;
+            return new RoadPage
+            {
+                Kind = RoadPageKind.Misgivings,
+                Label = label,
+                Title = title,
+                Body = body,
+                Hint = "Their own words, written by their own hand mid-talk — a living list, never a checklist: new doubts may join it, empty ones get struck out, settled ones may return. They lay one to rest only when life truly answers it; while any stands, their hand waits.",
+            };
+        }
+
+        // Where a soul was last heard of, phrased as hearsay — the same courtesy WorldRecall gives.
+        private static string WhereaboutsOf(Hero? hero)
+        {
+            try
+            {
+                if (hero == null || !hero.IsAlive) return string.Empty;
+                var where = hero.CurrentSettlement?.Name?.ToString()
+                    ?? hero.PartyBelongedTo?.CurrentSettlement?.Name?.ToString();
+                if (!string.IsNullOrWhiteSpace(where)) return $"Last word places {hero.Name} at {where}.";
+                return hero.PartyBelongedTo != null
+                    ? $"Last word has {hero.Name} somewhere on the road with their own company."
+                    : string.Empty;
+            }
+            catch { return string.Empty; }
         }
 
         // ------------------------- the misgivings, shown to the player -------------------------

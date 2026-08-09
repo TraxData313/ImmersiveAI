@@ -135,6 +135,7 @@ namespace ImmersiveAI
             var settlement = WeddingPlace();
             var memory = LoadMemory(spouse);
             double now = CampaignTime.Now.ToDays;
+            var scale = TakePendingWeddingScale(spouse);
 
             var record = new WeddingRecord
             {
@@ -160,12 +161,43 @@ namespace ImmersiveAI
                     .Where(m => m != null && m.Settled && !string.IsNullOrWhiteSpace(m.Text))
                     .Select(m => m.Text.Trim())
                     .Take(5).ToList(),
+                Scale = scale,
+                FeastCost = WeddingTiers.PriceOf(scale),
             };
 
-            foreach (var witness in GatherWitnesses(spouse, settlement))
+            foreach (var witness in GatherWitnesses(spouse, settlement, scale))
                 record.Witnesses.Add(witness);
 
             return record;
+        }
+
+        // The wedding the player PAID for, laid aside by the seal a heartbeat before
+        // MarriageAction.Apply, since BeforeHeroesMarried fires inside it and there is no later
+        // moment to hand it anything (2026.08.09). A wedding reached any other way — vanilla's own
+        // barter, another mod — simply has no entry here and is chronicled as Unpaid, which means
+        // "we know nothing of the purse", never "the cheapest one".
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, WeddingScale>
+            _pendingWeddingScale = new System.Collections.Concurrent.ConcurrentDictionary<string, WeddingScale>();
+
+        private static void SetPendingWeddingScale(Hero spouse, WeddingScale scale)
+        {
+            try
+            {
+                if (spouse == null) return;
+                if (scale == WeddingScale.Unpaid) _pendingWeddingScale.TryRemove(spouse.StringId, out _);
+                else _pendingWeddingScale[spouse.StringId] = scale;
+            }
+            catch { }
+        }
+
+        private static WeddingScale TakePendingWeddingScale(Hero spouse)
+        {
+            try
+            {
+                return spouse != null && _pendingWeddingScale.TryRemove(spouse.StringId, out var scale)
+                    ? scale : WeddingScale.Unpaid;
+            }
+            catch { return WeddingScale.Unpaid; }
         }
 
         // Where the player stands at the moment of the vow. Null on the open road — a wedding under
@@ -201,13 +233,24 @@ namespace ImmersiveAI
         // нас в дружината"): the townsfolk are sorted by how much story the player truly shares
         // with them, so the notable whose fields you saved and the wanderer you have talked with
         // for hours stand at the front, and a hall full of strangers can never crowd them out.
-        private const int MaxWeddingWitnesses = 12;
+        //
+        // AND THE PURSE DECIDES HOW FAR THE INVITATION TRAVELS (2026.08.09, Anton's design): the
+        // coin does not buy adjectives in a paragraph, it buys MEMORY. A plain wedding is witnessed
+        // by whoever already stood there; from an invited wedding upward COURIERS GO OUT to the
+        // souls the player truly has a story with, wherever in the world they are — that was the
+        // explicit ask, and it is the point of the whole feature: the guests are the people who
+        // matter to you, not merely the people who happened to be indoors. Grander still calls the
+        // lords of the country round about, and grandest the great names of the realm.
+        private const int MaxWeddingWitnesses = WeddingTiers.DefaultWitnessCap;
 
-        private List<WeddingWitness> GatherWitnesses(Hero spouse, Settlement? settlement)
+        private List<WeddingWitness> GatherWitnesses(Hero spouse, Settlement? settlement,
+            WeddingScale scale = WeddingScale.Unpaid)
         {
             var witnesses = new List<WeddingWitness>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var player = Hero.MainHero;
+            var tier = WeddingTiers.Of(scale);
+            int cap = WeddingTiers.WitnessCap(scale);
 
             bool Eligible(Hero? hero)
             {
@@ -224,7 +267,7 @@ namespace ImmersiveAI
             {
                 try
                 {
-                    if (witnesses.Count >= MaxWeddingWitnesses || !seen.Add(hero.StringId)) return;
+                    if (witnesses.Count >= cap || !seen.Add(hero.StringId)) return;
                     witnesses.Add(new WeddingWitness
                     {
                         HeroId = hero.StringId,
@@ -271,7 +314,77 @@ namespace ImmersiveAI
             }
             catch { }
 
+            // THE COURIERS. From an invited wedding upward, the souls the player truly shares a
+            // story with are called wherever they stand — the friend three weeks' ride away comes.
+            // Richest story first, so the coin buys the people who actually matter.
+            try
+            {
+                if (tier != null && tier.InvitesRememberedBonds && witnesses.Count < cap)
+                {
+                    var invited = MemoryIndex.All(NpcPaths.CampaignRoot, NpcPaths.MemoryFileName, _memoryStore)
+                        .Where(k => k != null && k.Richness > 0)
+                        .OrderByDescending(k => k.Richness)
+                        .Select(k => FindAliveHero(k.NpcId))
+                        .Where(h => Eligible(h))
+                        .ToList();
+                    foreach (var hero in invited) Take(hero!);
+                }
+            }
+            catch { }
+
+            // The lords of the country round about, and of the houses this match joins.
+            try
+            {
+                if (tier != null && tier.InvitesLordsOfTheRealm && witnesses.Count < cap)
+                {
+                    var kin = new List<Hero>();
+                    foreach (var clan in new[] { spouse.Clan, Clan.PlayerClan })
+                        if (clan != null)
+                            foreach (var hero in clan.Heroes.ToList())
+                                if (Eligible(hero)) kin.Add(hero!);
+                    foreach (var hero in kin.OrderByDescending(SharedStoryWeight)) Take(hero);
+
+                    if (witnesses.Count < cap && settlement != null)
+                    {
+                        var near = Clan.All.SelectMany(c => (IEnumerable<Hero>?)c?.AliveLords ?? Enumerable.Empty<Hero>())
+                            .Where(h => Eligible(h))
+                            .Select(h => new { Hero = h, Distance = DistanceToWedding(h, settlement) })
+                            .Where(x => x.Distance < 120f)
+                            .OrderBy(x => x.Distance)
+                            .Select(x => x.Hero)
+                            .ToList();
+                        foreach (var hero in near) Take(hero);
+                    }
+                }
+            }
+            catch { }
+
+            // And the great names: those who rule, and those who head a house.
+            try
+            {
+                if (tier != null && tier.InvitesGreatNames && witnesses.Count < cap)
+                {
+                    var great = Kingdom.All.Select(k => k?.Leader).Where(h => Eligible(h)).ToList();
+                    great.AddRange(Clan.All.Select(c => c?.Leader).Where(h => Eligible(h))!);
+                    foreach (var hero in great.OrderByDescending(h => Safe(() => h!.Clan?.Renown ?? 0f, 0f)))
+                        Take(hero!);
+                }
+            }
+            catch { }
+
             return witnesses;
+        }
+
+        // How far a soul stands from the wedding, in the map's own units; huge when it cannot be told.
+        private static float DistanceToWedding(Hero hero, Settlement settlement)
+        {
+            try
+            {
+                var where = hero.CurrentSettlement?.Position ?? hero.PartyBelongedTo?.Position;
+                if (where == null) return float.MaxValue;
+                return settlement.Position.Distance(where.Value);
+            }
+            catch { return float.MaxValue; }
         }
 
         // How much story the player truly shares with this soul — the cheap cached read the hourly
@@ -372,6 +485,7 @@ namespace ImmersiveAI
                         : $"given by {record.BlessedBy}, the head of their house";
             }
             catch { }
+            try { facts.ScaleNote = WeddingTiers.ChroniclerNote(record.Scale); } catch { }
             try
             {
                 var world = PromptFiles.LoadGlobalPrompt();
@@ -797,12 +911,17 @@ namespace ImmersiveAI
             catch { return false; }
         }
 
-        /// <summary>Opens that page from the chat window. Pauses, like the first telling.</summary>
+        /// <summary>Opens that page from the chat window — but the DAY ITSELF comes first (Anton,
+        /// 2026.08.09): the game's own wedding scene plays again, and the written account follows
+        /// the moment the player clicks through it. A scene that cannot be played (an old save, a
+        /// game that moved the API) simply falls through to the account, as before.</summary>
         internal static void ShowWeddingViewFor(Hero npc)
         {
             try
             {
-                if (TryGetWeddingView(npc, out _, out var title, out var body))
+                if (!TryGetWeddingView(npc, out _, out var title, out var body)) return;
+                var day = Safe(() => Current?._weddingLedger?.OwnWeddingOf(npc.StringId)?.GameDay ?? 0d, 0d);
+                if (!UI.WeddingSceneReplay.TryPlay(npc, day, () => ShowScrollPopup(title, body, pause: true)))
                     ShowScrollPopup(title, body, pause: true);
             }
             catch (Exception ex) { ModLog.Error("opening the wedding keepsake", ex); }
