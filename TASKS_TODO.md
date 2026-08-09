@@ -1,34 +1,7 @@
 BUGS:
 
 NEXT UPDATE:
-- [ ] SHIP v2.2.1 — STEAM IS DONE (uploaded 2026.08.10, "Uploading done!"; v2.2.0 went up the same
-      evening and v2.2.1 is the one-line fix on top of it). What is left is Anton's:
-      (1) Nexus -> upload dist\ImmersiveAI_v2.2.1.zip with the CHANGELOG's fenced v2.2.1 block
-          (118 chars) as the changelog field;
-      (2) the two store DESCRIPTIONS only need doing once for v2.2.x — docs/steam-page-final.bbcode.txt
-          (7847/8000 bytes) and docs/nexus-page.bbcode.txt; a patch does not change them;
-      (3) push the repo (committed and tagged here).
-      NOTE the Workshop item stood at v1.4.1 until this evening, so subscribers receive v2.0.0,
-      v2.1.0, v2.2.0 and v2.2.1 in one go. The whole ritual: docs/release-dance.md.
-- [ ] PLAYTEST "Think" (built 2026.08.10, live-probed against terra and luna on Anton's own save,
-      420 tests green): the preset menu, the Edit page and its Restore, Shift+Enter with an empty
-      box / a rant / a preset, Send greying out while a preset stands, and the letter window's twin.
-- [ ] PLAYTEST THE WEDDING CHRONICLE (built 2026.08.09, 322 tests green, unplaytested) — the
-      centerpiece. Wed someone and watch for: the rose "the chronicler takes up the pen…" notice,
-      then "❦ the day and the night are written"; TWO ❦ cards in the bride's chat thread and ONE
-      (the day only) in each witness's; both in YOUR language, in a biblical register, roughly a
-      paragraph each — not two lines, not a bedsheet; and the night tender and unmistakable
-      without ever turning coarse. That last balance is the whole ask: if it reads coy OR crude,
-      tell me exactly how and I will re-tune the prompt against live samples. Then ask her
-      "разкажи ми за онзи ден" (recall_wedding should give it back whole) and ask a WITNESS the
-      same — they must get the day only, never the night. Files land in NPCs\campaign_*\_weddings\
-      (JSON + weddings.txt). The chat window's Dev panel has "Write your wedding day anew" for
-      re-rolling it while tuning.
-- [ ] PLAYTEST the living misgivings list (built 2026.08.08 evening): a new worry set down mid-talk,
-      one struck out as empty (release), the rose/frost-blue log lines, and the "Misgivings n/m"
-      button's count keeping step.
-
-POST V1 or NOT FULLY DECIDED:
+- [ ] Истории, подобни на тази на сватбата, за раждане на детенце
 - [ ] В репортите за битките, за специалните роли, например лечителя, да му пише освен дали е повалил някой в боя, да пише колко е спасил, и това да е видимо за всички, но и късичко. За другите може и да се помисли, ако имат ефект във ванила какъв е и кога в тези логове да се добави, може би Quatermaster-а би се итересувал повече от продажбите с дажбите храна, даже може би да има специални активации, с които да може да каже "Хей, храната/парите в хазната е вече за по-малко от 5 дни", но не на забит руул а от сошълнеса и с намаляването на храната например да се вдига възможността да ме предупреди и някакъв минимален праг в който дори да съм сошълнес 0 да каже просто скриптнато "Хей, храната така и така" и после като говорим да го види като събитие, след което още не сме имали време да говорим насаме и ще е добра тема на разговор, но да го виждат така, нещо "докладвах му че хранта привършва", защото така няма да имаме проблем да оцелим характера му и едновременно няма да харчим ей ай кол, например "добре, че спря там да вземеш зърно, защото бяхме на ръба". Ще мисля в тази посока (Тони)
     - за медика може би да помни колко са ранени и да репортне като всички са оздравяли, или за състоянието на мене или компанионите нещо
     - за скаута може би да казва като забележи някой (пак, в зависимост от сошълнес и тук може би опасност - големина дали е вражествен, особено и ако е по-бърз), но тези неща без колове, а като конверсейшън стартъри, а само с голям сошълнес, да може да тригърне и идване е казване в свободен текст
@@ -37,6 +10,8 @@ POST V1 or NOT FULLY DECIDED:
     - така малко по малко може да преминем и понамалим сличайните и да минем към такива които имат смисъл, и без това юзърите се оплакват, че ги пинват само "здрасти как си"... "здрасти само да видя как се чувстваш"...
 - [ ] Победите/загубите в турнирите да влизат като битките в чата, инфо дали аз и NPCто е участвал и кой е спечелил, и кой в кой рунд е загубил
 - [ ] AI suggest за глобалния и специфичния за NPC промпт, да има странична кутийка за чат с обслужващия AI, да му кажа искам да е така и така, той да предложи новия промпт и да мога да го приема отхвърля, после например като го приема, ще му кажа така е добре но добави да говори и така и така и той да предложи промените в едно съджест поленце, което ако цъкна ок да го добави, ако не - става си предната версия (Тони)
+
+POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
     Leaders of the player's clan parties take orders through conversation or letters via a
     `set_party_course` native tool (v1 verbs: patrol / escort_player / go_to / hold / resume) —
