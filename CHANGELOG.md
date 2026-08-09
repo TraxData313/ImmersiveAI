@@ -15,7 +15,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-- **New: the nights of your marriage are yours to spend.** Each evening a notice waits on the right of the map — the same place a companion knocks or a letter arrives — asking where you will sleep — a child is now begun on a night you actually chose, not by a coin the game flips behind your back.
+- **New: the nights of your marriage are yours to spend.** A child is now begun on a night you actually chose, not by a coin the game flips behind your back.
+- Each evening a notice waits on the right of the map — the same place a companion's knock or an arriving letter waits — asking where you will sleep.
 - A woman's body keeps its own month, and you can see where hers stands in plain words. The nights near its crest are the ones that may quicken; through the days of the custom her door is closed and no one is asked anything.
 - Take every night of her season and a child is about as likely over a month as the game would have made it anyway — miss the season and you have missed the month. The old odds are still the odds; you just have to be there.
 - **What you lay out for a night buys three things.** Wine (10 denars) up to a jewel (1,000): better chances, a WRITTEN account of that night in her own voice with a name she keeps it by — and talk. The grander the night, the more surely your other wives hear of it, and they hear its name too.
