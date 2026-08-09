@@ -70,6 +70,12 @@ If one of these searches brought you here — yes, this is that mod:
   A second part — the night that followed, in your beloved's own voice — belongs to the two of you
   alone and reaches no one else, ever. Years later, ask them about that day and they will tell it
   back to you whole.
+- **And then the nights are yours.** Each evening a notice waits on the map asking where you will
+  sleep, and her own month decides what may come of it — a child is begun on a night you chose,
+  not by a hidden daily roll. Bring wine or a jewel and that night is written down and given a
+  name she keeps it by; the grander it was, the likelier your other wives are to hear of it, and
+  of its name. Every wife keeps her own fortnight of nights — the ones you came, the ones her
+  door was closed, and whatever she learned of the rest.
 
 
 ## Useful — stop googling stuff

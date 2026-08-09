@@ -642,20 +642,13 @@ namespace ImmersiveAI.UI.ChatWindow
             ImmersiveChatBehavior.DevAdvanceCourtship(npc);
             RefreshSelectionState();
         });
-        public void ExecuteDevRerollSpark() => RunDev(ImmersiveChatBehavior.DevRerollSpark);
-        public void ExecuteDevReachOut() => RunDev(ImmersiveChatBehavior.DevForceReachOut);
-        public void ExecuteDevLetter() => RunDev(ImmersiveChatBehavior.DevForceLetter);
-        public void ExecuteDevBattle() => RunDev(ImmersiveChatBehavior.DevForgeBattle);
-        public void ExecuteDevWedding() => RunDev(ImmersiveChatBehavior.DevForgeWedding);
-        public void ExecuteDevNight() => RunDev(ImmersiveChatBehavior.DevForgeNight);
         public void ExecuteDevChild() => RunDev(ImmersiveChatBehavior.DevHastenConception);
-        public void ExecuteDevRename() => RunDev(ImmersiveChatBehavior.DevRenameNpc);
 
-        public void ExecuteDevOdds()
-        {
-            IsDevShown = false;
-            ImmersiveChatBehavior.DevShowOdds();
-        }
+        // The panel is deliberately SHORT (Anton, 2026.08.10): the eight levers he never reaches
+        // for — reroll a spark, force a reach-out, force a letter, forge a battle, spend a night,
+        // rewrite the wedding, rename, the odds view — are gone from it. Every one of them still
+        // lives on the face-to-face devmode menu; this is the panel he actually works in, and a
+        // panel of thirteen buttons is a panel you stop reading.
 
         // ------------------------------ bound properties ------------------------------
 

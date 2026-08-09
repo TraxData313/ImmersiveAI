@@ -15,10 +15,10 @@ If one of these searches brought you here - yes, this is that mod:
 [list]
 [*]Distinct voices, no repetition - and when you leave a letter unanswered, they hear the silence and hold their peace.
 [*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words - the names, promises and debts between you - beside their own sense of self and opinion of you.
-[*]Every soul begins as somebody: at your first meeting a private starting truth is written for them - an old wound, an odd habit, a vanity - grown from their real story. Yours to read or rewrite.
-[*]They see the moment - time, place, who stands near, what lately happened in the world - and they have moods, down to the women keeping a personal monthly cycle, gently simulated.
-[*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won - the last in detail, older ones by name ("what happened at the storming of Varcheg?"), from a real chronicle of every fight, sea included.
-[*]Your companions witness the everyday road too - the towns, the trade you struck, the men you hired, the tasks you carry and how each ended - and they know their own wounds, and see yours.
+[*]Every soul begins as somebody: at your first meeting a private starting truth is written for them - an old wound, an odd habit, a vanity - grown from their real story.
+[*]They see the moment - time, place, who stands near, what lately happened in the world - and they carry moods and weather of their own.
+[*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won - the last in detail, older ones by name ("what happened at the storming of Varcheg?").
+[*]Your companions witness the everyday road too - the towns, the trade, the men you hired, the tasks and how each ended - and they know their own wounds, and see yours.
 [*]They are free: told who they are and what their world is, never forced. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first - you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
@@ -31,6 +31,8 @@ If one of these searches brought you here - yes, this is that mod:
 [*][b]Companion brides and grooms[/b] - vanilla forbids them; here they are the point. Wed the wanderer riding at your side and she keeps her place and duties.
 [*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself. They open at their worth and never volunteer their lowest price.
 [*]Nothing is sealed by words alone - every bargain, betrothal and wedding takes your confirming click, and the wedding is the real game marriage.
+[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her own month decides what may come of it - a child is begun on a night you chose, not by a hidden daily roll.
+[*]Bring wine or a jewel and the night is written down and named. The grander it was, the likelier your other wives are to hear of it - and of its name.
 [/list]
 
 [b]And useful - stop googling stuff:[/b]
@@ -57,9 +59,9 @@ You bring [b]your own API key[/b]. Pick a row:
 [*][b]Also fine[/b] - OpenAI, Anthropic (Claude), a local model, or any OpenAI-compatible service via the Custom endpoint option.
 [/list]
 
-[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default - $10 covers many thousands of messages, shown as you play, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b] or the NPCs go duller.
+[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default - $10 covers many thousands of messages, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b] or the NPCs go duller.
 
-[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup (models, VRAM, thinking OFF, context): [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own the setup; I don't debug them. For a free taste of the idea first, try the ChatAI mod - it's good; it inspired this one.
+[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own the setup; I don't debug them.
 
 [b][size=4]Installation[/size][/b]
 
@@ -87,8 +89,8 @@ You bring [b]your own API key[/b]. Pick a row:
 [list]
 [*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered - it coexists with overhauls, War Sails, Marry Anyone and Training Battles. MCM optional; without it, everything is in config.json.
 [*][b]Safe to remove mid-campaign.[/b] Saves load fine without the mod (just the usual "different modules" warning), and memories live outside them - reinstall later and every character remembers you.
-[*]A clean-room rewrite inspired by the ChatAi mod (studied via decompilation only - no code copied). Fully original source.
-[*]Under Documents\...\Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world, and each character's folder holds their own prompt (in their own voice - "I stutter when I am nervous"), memories, self-image, battles and letters as readable text.
+[*]A clean-room rewrite inspired by the ChatAi mod - no code copied, fully original source.
+[*]Under Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world, and each character's folder holds their own prompt (in their own voice - "I stutter when I am nervous"), memories, battles, nights and letters as readable text.
 [/list]
 
 [b][size=4]Final thoughts[/size][/b]

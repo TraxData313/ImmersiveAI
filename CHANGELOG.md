@@ -15,6 +15,21 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v2.1.0 — 2026.08.10
+
+The wedding's morning after: the nights of a marriage, and one plain line for everything the two
+of you have not sat down to yet.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Choose which wife you sleep with, each evening
+* A child comes from a night you picked, not a hidden roll
+* Pay for a night and it gets written - and talked about
+* Wives track your nights, and what you have not discussed
+* New hearth window (H)
+```
+
 - **New: the nights of your marriage are yours to spend.** A child is now begun on a night you actually chose, not by a coin the game flips behind your back.
 - Each evening a notice waits on the right of the map — the same place a companion's knock or an arriving letter waits — asking where you will sleep.
 - A woman's body keeps its own month, and you can see where hers stands in plain words. The nights near its crest are the ones that may quicken; through the days of the custom her door is closed and no one is asked anything.

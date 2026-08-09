@@ -427,49 +427,9 @@
                             <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Clear their marriage misgivings" />
                           </Children>
                         </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevRerollSpark" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Reroll their spark" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevReachOut" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Trigger them to reach out to you" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevLetter" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Trigger them to write you a letter" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevBattle" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Forge a shared battle record" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevNight" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Spend a night with them now (if wed)" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevWedding" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Write your wedding day anew (if wed)" />
-                          </Children>
-                        </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevChild" IsEnabled="@HasSelection">
                           <Children>
                             <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Begin a child with them now (if wed)" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevRename" IsEnabled="@HasSelection">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Rename them" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="470" SuggestedHeight="44" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevOdds">
-                          <Children>
-                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Center" Text="Who might seek you out (the odds)" />
                           </Children>
                         </ButtonWidget>
                       </Children>
