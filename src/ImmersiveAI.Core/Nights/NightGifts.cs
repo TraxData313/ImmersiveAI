@@ -38,6 +38,22 @@ namespace ImmersiveAI.Core.Nights
             public double Multiplier { get; }
 
             /// <summary>
+            /// How long an account this night earns, in sentences (2026.08.10, Anton's design —
+            /// "по-скъпо организирана нощ, по-дълго описание за нея, по-специална"). The coin has
+            /// always bought the odds and the fact of a writing; now it buys the LENGTH of that
+            /// writing too, and length here is not padding: the prompt spends the room evenly on
+            /// the two halves of a night, so a grander evening simply has more of both — more of
+            /// what was made ready, and more of what followed.
+            ///
+            /// Anton's own rails are ten denars → three or four sentences, a hundred → five or
+            /// six, a thousand → seven or eight; the three-hundred tier interpolates between its
+            /// neighbours. The ceiling deliberately stays under the wedding night's twelve: that
+            /// one is the once, and nothing after it should ever read as long.
+            /// </summary>
+            public int MinSentences { get; }
+            public int MaxSentences { get; }
+
+            /// <summary>
             /// What it does to the odds that the OTHER wives hear of it (2026.08.09, Anton's rule —
             /// and it is the sharpest edge in the whole feature). A night of nothing but yourselves
             /// halves the talk; a jug of wine is already noticed; and a thousand-denar jewel doubles
@@ -51,11 +67,13 @@ namespace ImmersiveAI.Core.Nights
             public bool WritesStory => Price > 0;
 
             internal Tier(int price, string name, string playerDescription, string chroniclerNote,
-                double multiplier, double awarenessMultiplier)
+                double multiplier, double awarenessMultiplier,
+                int minSentences = 3, int maxSentences = 4)
             {
                 Price = price; Name = name; PlayerDescription = playerDescription;
                 ChroniclerNote = chroniclerNote; Multiplier = multiplier;
                 AwarenessMultiplier = awarenessMultiplier;
+                MinSentences = minSentences; MaxSentences = maxSentences;
             }
         }
 
@@ -71,24 +89,28 @@ namespace ImmersiveAI.Core.Nights
             Plain,
 
             new Tier(10, "A cup of wine",
-                "A jug of decent wine and bread set aside for the two of you. Small, but chosen — and somebody fetched it.",
+                "A jug of decent wine and bread set aside for the two of you. Small, but chosen — and somebody fetched it. She will keep a few lines of it.",
                 "wine and bread set aside beforehand; ten denars' worth — small, and chosen",
-                1.10, 0.75),
+                1.10, 0.75, minSentences: 3, maxSentences: 4),
 
             new Tier(100, "Hot water, oil, and a table for two",
-                "Water carried up and heated, oil for her hair, and a supper laid for two with no one else at the table. Half the household is involved.",
+                "Water carried up and heated, oil for her hair, and a supper laid for two with no one else at the table. Half the household is involved, and she will remember it at length.",
                 "water carried and heated, oil for her hair, a supper laid for two only; a hundred denars — an evening made, not stumbled into",
-                1.35, 1.10),
+                1.35, 1.10, minSentences: 5, maxSentences: 6),
 
             new Tier(300, "Cloth for a new gown",
                 "Good cloth, dyed, and a seamstress paid to have it ready — a thing she will wear where others see her, and they will ask.",
                 "good dyed cloth and a seamstress already paid; three hundred denars — a gift meant to be worn where others will see it",
-                1.60, 1.50),
+                1.60, 1.50, minSentences: 6, maxSentences: 7),
 
             new Tier(1000, "A jewel",
-                "A jewel chosen for her — the kind a woman wears once and is remembered in. A thousand denars, and everyone will know what it cost, including your other wives.",
-                "a jewel, chosen; a thousand denars — the kind a woman is remembered wearing, and it was laid down before anything else",
-                2.00, 2.00),
+                "A jewel chosen for her — the kind a woman wears once and is remembered in. A thousand denars, and everyone will know what it cost, including your other wives. Of all the nights, this is the one she writes down fullest.",
+                // NOT "a thousand denars laid down before anything else" — live-probed three times
+                // on luna and all three put a PURSE OF COINS on the table beside the jewel, which
+                // is a merchant's gesture and not a husband's. The price is a MEASURE of the gift
+                // here, never a prop in the room.
+                "a jewel chosen for her, worth a thousand denars — the kind a woman is remembered wearing; it was waiting where she would see it first",
+                2.00, 2.00, minSentences: 7, maxSentences: 8),
         };
 
         public static Tier? Of(int price) => All.FirstOrDefault(t => t.Price == price);

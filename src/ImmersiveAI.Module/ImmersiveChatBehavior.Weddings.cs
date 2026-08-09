@@ -223,215 +223,29 @@ namespace ImmersiveAI
             return name!;
         }
 
-        // Who truly stood there: the player's own company first (they were unquestionably present),
-        // then the souls of the settlement the player is in. The bride and the player are not
-        // witnesses to their own wedding, and the count is capped so a crowded town does not hand
-        // the day to a dozen strangers who merely happened to be indoors.
+        // Who truly stood there. The gathering itself now lives in the Celebrations partial, shared
+        // with the birth chronicle — the bride and the player are simply excluded, since neither is
+        // a witness to their own wedding, and her house is handed over as the house this day joins.
         //
-        // WHO SURVIVES THE CAP IS THE POINT (Anton, 2026.08.09, seeing his own campaign's souls at
-        // the demo wedding — "харесва ми как са там тези с които сме имали история, дори да не са с
-        // нас в дружината"): the townsfolk are sorted by how much story the player truly shares
-        // with them, so the notable whose fields you saved and the wanderer you have talked with
-        // for hours stand at the front, and a hall full of strangers can never crowd them out.
-        //
-        // AND THE PURSE DECIDES HOW FAR THE INVITATION TRAVELS (2026.08.09, Anton's design): the
-        // coin does not buy adjectives in a paragraph, it buys MEMORY. A plain wedding is witnessed
-        // by whoever already stood there; from an invited wedding upward COURIERS GO OUT to the
-        // souls the player truly has a story with, wherever in the world they are — that was the
-        // explicit ask, and it is the point of the whole feature: the guests are the people who
-        // matter to you, not merely the people who happened to be indoors. Grander still calls the
-        // lords of the country round about, and grandest the great names of the realm.
-        private const int MaxWeddingWitnesses = WeddingTiers.DefaultWitnessCap;
-
+        // THE PURSE DECIDES HOW FAR THE INVITATION TRAVELS (2026.08.09, Anton's design): the coin
+        // does not buy adjectives in a paragraph, it buys MEMORY. A plain wedding is witnessed by
+        // whoever already stood there; an invited one by your own house and every soul you truly
+        // have a story with, wherever in the world they are, AND BY NOBODY ELSE (2026.08.10 — a
+        // guest list is a thing that excludes); grander still calls the lords of the country round
+        // about, and grandest the great names of the realm.
         private List<WeddingWitness> GatherWitnesses(Hero spouse, Settlement? settlement,
             WeddingScale scale = WeddingScale.Unpaid)
         {
-            var witnesses = new List<WeddingWitness>();
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            var player = Hero.MainHero;
-            var tier = WeddingTiers.Of(scale);
-            int cap = WeddingTiers.WitnessCap(scale);
-
-            bool Eligible(Hero? hero)
-            {
-                try
+            var rules = WeddingTiers.Guests(scale);
+            return GatherCelebrationWitnesses(settlement, rules,
+                    excluded: new[] { spouse }, otherHouse: Safe(() => spouse?.Clan, null))
+                .Select(hero => new WeddingWitness
                 {
-                    return hero != null && hero != player && hero != spouse
-                        && hero.IsAlive && !hero.IsPrisoner && !hero.IsChild
-                        && !seen.Contains(hero.StringId);
-                }
-                catch { return false; }
-            }
-
-            void Take(Hero hero)
-            {
-                try
-                {
-                    if (witnesses.Count >= cap || !seen.Add(hero.StringId)) return;
-                    witnesses.Add(new WeddingWitness
-                    {
-                        HeroId = hero.StringId,
-                        Name = hero.Name?.ToString() ?? "someone",
-                        Detail = WitnessDetail(hero),
-                    });
-                }
-                catch { /* one soul missed is not the day lost */ }
-            }
-
-            // The company that rides with them — never in doubt, never sorted away.
-            try
-            {
-                var party = MobileParty.MainParty;
-                if (party != null)
-                    foreach (var member in party.MemberRoster.GetTroopRoster().ToList())
-                    {
-                        var hero = member.Character != null && member.Character.IsHero
-                            ? member.Character.HeroObject : null;
-                        if (Eligible(hero)) Take(hero!);
-                    }
-            }
-            catch { }
-
-            // And the souls of the place, when there is a place — those the player could truly reach
-            // (the keep's closed doors keep their lords out of the hall, as everywhere else in the
-            // mod), richest shared story first.
-            try
-            {
-                if (settlement != null)
-                {
-                    var locals = new List<Hero>();
-                    foreach (var hero in settlement.HeroesWithoutParty.ToList())
-                        if (Eligible(hero) && !IsBehindClosedDoors(hero, settlement)) locals.Add(hero);
-                    foreach (var party in settlement.Parties.ToList())
-                    {
-                        var leader = party?.LeaderHero;
-                        if (Eligible(leader) && !IsBehindClosedDoors(leader!, settlement)) locals.Add(leader!);
-                    }
-
-                    foreach (var hero in locals.OrderByDescending(SharedStoryWeight).ThenBy(h => h.Name?.ToString(), StringComparer.OrdinalIgnoreCase))
-                        Take(hero);
-                }
-            }
-            catch { }
-
-            // THE COURIERS. From an invited wedding upward, the souls the player truly shares a
-            // story with are called wherever they stand — the friend three weeks' ride away comes.
-            // Richest story first, so the coin buys the people who actually matter.
-            try
-            {
-                if (tier != null && tier.InvitesRememberedBonds && witnesses.Count < cap)
-                {
-                    var invited = MemoryIndex.All(NpcPaths.CampaignRoot, NpcPaths.MemoryFileName, _memoryStore)
-                        .Where(k => k != null && k.Richness > 0)
-                        .OrderByDescending(k => k.Richness)
-                        .Select(k => FindAliveHero(k.NpcId))
-                        .Where(h => Eligible(h))
-                        .ToList();
-                    foreach (var hero in invited) Take(hero!);
-                }
-            }
-            catch { }
-
-            // The lords of the country round about, and of the houses this match joins.
-            try
-            {
-                if (tier != null && tier.InvitesLordsOfTheRealm && witnesses.Count < cap)
-                {
-                    var kin = new List<Hero>();
-                    foreach (var clan in new[] { spouse.Clan, Clan.PlayerClan })
-                        if (clan != null)
-                            foreach (var hero in clan.Heroes.ToList())
-                                if (Eligible(hero)) kin.Add(hero!);
-                    foreach (var hero in kin.OrderByDescending(SharedStoryWeight)) Take(hero);
-
-                    if (witnesses.Count < cap && settlement != null)
-                    {
-                        var near = Clan.All.SelectMany(c => (IEnumerable<Hero>?)c?.AliveLords ?? Enumerable.Empty<Hero>())
-                            .Where(h => Eligible(h))
-                            .Select(h => new { Hero = h, Distance = DistanceToWedding(h, settlement) })
-                            .Where(x => x.Distance < 120f)
-                            .OrderBy(x => x.Distance)
-                            .Select(x => x.Hero)
-                            .ToList();
-                        foreach (var hero in near) Take(hero);
-                    }
-                }
-            }
-            catch { }
-
-            // And the great names: those who rule, and those who head a house.
-            try
-            {
-                if (tier != null && tier.InvitesGreatNames && witnesses.Count < cap)
-                {
-                    var great = Kingdom.All.Select(k => k?.Leader).Where(h => Eligible(h)).ToList();
-                    great.AddRange(Clan.All.Select(c => c?.Leader).Where(h => Eligible(h))!);
-                    foreach (var hero in great.OrderByDescending(h => Safe(() => h!.Clan?.Renown ?? 0f, 0f)))
-                        Take(hero!);
-                }
-            }
-            catch { }
-
-            return witnesses;
-        }
-
-        // How far a soul stands from the wedding, in the map's own units; huge when it cannot be told.
-        private static float DistanceToWedding(Hero hero, Settlement settlement)
-        {
-            try
-            {
-                var where = hero.CurrentSettlement?.Position ?? hero.PartyBelongedTo?.Position;
-                if (where == null) return float.MaxValue;
-                return settlement.Position.Distance(where.Value);
-            }
-            catch { return float.MaxValue; }
-        }
-
-        // How much story the player truly shares with this soul — the cheap cached read the hourly
-        // rolls use, so ordering a crowded hall costs nothing.
-        private int SharedStoryWeight(Hero hero)
-        {
-            try
-            {
-                var known = MemoryIndex.Get(NpcPaths.MemoryFile(hero), _memoryStore);
-                return known?.Richness ?? 0;
-            }
-            catch { return 0; }
-        }
-
-        // A word about who this soul was on that day, for the chronicler to name them as a person.
-        private string WitnessDetail(Hero hero)
-        {
-            try
-            {
-                if (hero.PartyBelongedTo == MobileParty.MainParty)
-                {
-                    var duty = Safe(() => PartyDutyWord(hero), string.Empty);
-                    if (!string.IsNullOrWhiteSpace(duty)) return $"who rides with them as their {duty}";
-                    return hero.CompanionOf == Clan.PlayerClan ? "who rides with them as their companion" : "of their own company";
-                }
-                if (hero.Clan == Clan.PlayerClan) return "of their own house";
-                if (hero.IsNotable) return Safe(() => $"a notable of {hero.CurrentSettlement?.Name}", "a notable of the place");
-                if (hero.IsLord) return Safe(() => hero.Clan == null ? "a lord" : $"of the house of {hero.Clan.Name}", "a lord");
-                return "of the place";
-            }
-            catch { return string.Empty; }
-        }
-
-        // The duty they hold in the player's party, in a plain word ("scout", "surgeon"), or empty.
-        private static string PartyDutyWord(Hero hero)
-        {
-            try
-            {
-                var party = MobileParty.MainParty;
-                if (party == null) return string.Empty;
-                if (party.EffectiveScout == hero) return "scout";
-                if (party.EffectiveSurgeon == hero) return "surgeon";
-                if (party.EffectiveQuartermaster == hero) return "quartermaster";
-                if (party.EffectiveEngineer == hero) return "engineer";
-                return string.Empty;
-            }
-            catch { return string.Empty; }
+                    HeroId = hero.StringId,
+                    Name = Safe(() => hero.Name?.ToString(), "someone") ?? "someone",
+                    Detail = Safe(() => WitnessDetail(hero), string.Empty),
+                })
+                .ToList();
         }
 
         // Everything the chronicler is told, gathered on the game thread before any await.
@@ -893,19 +707,53 @@ namespace ImmersiveAI
         /// <summary>The chat window's own page for this soul once you are wed: the wedding replaces
         /// the misgivings there, since the doubts are answered and the day is what remains. False
         /// when no written wedding of theirs exists.</summary>
-        internal static bool TryGetWeddingView(Hero npc, out string buttonLabel, out string title, out string body)
+        internal static bool TryGetWeddingView(Hero npc, out string buttonLabel, out string title, out string body) =>
+            TryGetWeddingView(npc, out buttonLabel, out title, out body, out _);
+
+        /// <param name="hint">The hover text, which MUST come from here rather than from the caller:
+        /// the page is sometimes a wedding, sometimes a wedding and its children, and sometimes only
+        /// children — and a hardcoded "your wedding day, kept whole" over a childless couple's
+        /// children page is a small lie the player reads every time they hover (2026.08.10 review).</param>
+        internal static bool TryGetWeddingView(Hero npc, out string buttonLabel, out string title,
+            out string body, out string hint)
         {
-            buttonLabel = title = body = string.Empty;
+            buttonLabel = title = body = hint = string.Empty;
             try
             {
                 var self = Current;
-                if (self == null || npc == null || !self._config.EnableWeddingChronicle) return false;
-                var record = self._weddingLedger?.OwnWeddingOf(npc.StringId);
-                if (record == null || IsUnwritten(record)) return false;   // null is "no page", not "written"
+                if (self == null || npc == null) return false;
 
-                buttonLabel = "Our wedding day";
-                title = WeddingKeepsakeTitle(record!);
-                body = WeddingKeepsakeBody(record!, opened: true);
+                var record = self._config.EnableWeddingChronicle
+                    ? self._weddingLedger?.OwnWeddingOf(npc.StringId) : null;
+                bool hasWedding = record != null && !IsUnwritten(record);
+
+                // The children born of this bond ride on the SAME page (2026.08.10): one door per
+                // soul, holding the whole household — and it is also the only door a couple who
+                // never had a wedding of ours have to their children's days.
+                var children = Safe(() => ChildrenPageFor(npc), string.Empty);
+                bool hasChildren = !string.IsNullOrWhiteSpace(children);
+                if (!hasWedding && !hasChildren) return false;
+
+                if (hasWedding)
+                {
+                    // The label stays SHORT and unchanged — it has to fit a button whose width is
+                    // set in the prefab, and the children's own front door is the hearth window.
+                    // Here they ride as an appendix to the day that began the household.
+                    buttonLabel = "Our wedding day";
+                    title = WeddingKeepsakeTitle(record!);
+                    body = WeddingKeepsakeBody(record!, opened: true)
+                         + (hasChildren ? Environment.NewLine + children : string.Empty);
+                    hint = "Your wedding day, kept whole — the day itself, and the night that is yours and theirs alone. "
+                         + "Opening it plays the wedding once more, and the account follows it."
+                         + (hasChildren ? " Your children of this marriage are kept with it." : string.Empty);
+                    return true;
+                }
+
+                buttonLabel = "Our children";
+                title = $"{Safe(() => Hero.MainHero?.Name?.ToString(), "You")} and {npc.Name} — your children";
+                body = children.TrimStart();
+                hint = "The children you have of this bond, kept whole: the hour each of them came into the world, "
+                     + "in their mother's own words, and the feast that welcomed them.";
                 return true;
             }
             catch { return false; }
@@ -920,8 +768,14 @@ namespace ImmersiveAI
             try
             {
                 if (!TryGetWeddingView(npc, out _, out var title, out var body)) return;
-                var day = Safe(() => Current?._weddingLedger?.OwnWeddingOf(npc.StringId)?.GameDay ?? 0d, 0d);
-                if (!UI.WeddingSceneReplay.TryPlay(npc, day, () => ShowScrollPopup(title, body, pause: true)))
+                // The scene is a WEDDING scene: it is replayed only where there truly was one, or a
+                // couple who merely have children would be shown a wedding they never had.
+                // CONTENT, not existence — the wedding chronicle's own standing rule: a record
+                // saved at the seal whose account never arrived is not a wedding to replay, and a
+                // couple who merely have children never had one at all.
+                var wedding = Safe(() => Current?._weddingLedger?.OwnWeddingOf(npc.StringId), null);
+                if (wedding == null || IsUnwritten(wedding)
+                    || !UI.WeddingSceneReplay.TryPlay(npc, wedding.GameDay, () => ShowScrollPopup(title, body, pause: true)))
                     ShowScrollPopup(title, body, pause: true);
             }
             catch (Exception ex) { ModLog.Error("opening the wedding keepsake", ex); }

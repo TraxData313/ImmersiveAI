@@ -182,6 +182,12 @@ namespace ImmersiveAI
         /// loaded from before the wedding un-writes it along with the memories of it.</summary>
         public static string WeddingsFolder => Path.Combine(CampaignRoot, Core.Weddings.WeddingLedger.FolderName);
 
+        /// <summary>The campaign's book of children (see Core's BirthLedger): one JSON per child born
+        /// to the player — the hour of it, written in the mother's own voice and belonging to the two
+        /// parents, and the feast that welcomed it, which everyone who stood there carries — plus a
+        /// readable births.txt. Same campaign scoping, same snapshot-rewind ride.</summary>
+        public static string BirthsFolder => Path.Combine(CampaignRoot, Core.Births.BirthLedger.FolderName);
+
         /// <summary>The campaign's book of nights (see Core's NightLedger): every wife's rolling
         /// fortnight of them. Same campaign scoping and the same snapshot-rewind ride, so reloading
         /// an older save un-spends the nights along with the memories of them.</summary>
@@ -428,6 +434,13 @@ wed and everyone who stood there remembers ever after, and THE NIGHT that follow
 in your beloved's own voice — that part is theirs and yours alone, and no one else can ever
 be told it, not even a guest who asks. Both are kept whole here forever, so either of you
 can call that day back and tell it in full long after the memory of it has softened.
+
+A _births folder keeps every child born to you, one file each, and a readable births.txt
+beside them. Each is written in two parts as well: THE HOUR of the birth, set down in the
+mother's own voice, which belongs to the two of you and is never given to anyone else, not
+even to a guest who asks — and THE FEAST you kept for the child, if you kept one, which
+everyone who stood at it remembers ever after. Either parent can call that day back in
+conversation years later.
 
 A _snapshots folder holds a photograph of this campaign's memories taken at each of your
 saves, so that loading a save also rewinds the NPCs' memories to that moment (a reload can

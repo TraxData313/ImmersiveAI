@@ -1024,7 +1024,9 @@ namespace ImmersiveAI
                     ChatMessage.User(NightText.BuildStoryPrompt(facts)),
                 }).ConfigureAwait(false);
 
-                if (!NightText.TryParseStory(raw, out var title, out var story))
+                // The tamer's cut must sit ABOVE what this tier was asked for, or a grand night is
+                // silently shortened back to a plain one's length.
+                if (!NightText.TryParseStory(raw, out var title, out var story, facts.MaxSentences))
                 {
                     ModLog.Info("the nights: no usable account came back; the night waits, unwritten.");
                     return;
@@ -1094,7 +1096,9 @@ namespace ImmersiveAI
         // fact of it, so the chronicler can be asked again on a later hour, a bounded few times.
         private void RetryUnwrittenNights()
         {
-            if (!NightsOn || LlmGate.AutonomyQuiet || _nightsWriting.Count > 0) return;
+            if (!NightsOn) return;
+            SweepNightsThatNeverGotTheirBeat();
+            if (LlmGate.AutonomyQuiet || _nightsWriting.Count > 0) return;
             foreach (var record in _nightLedger!.AwaitingStories())
             {
                 var wife = FindAliveHero(record.WifeId);
@@ -1104,8 +1108,50 @@ namespace ImmersiveAI
             }
         }
 
+        /// <summary>
+        /// A night the chronicler has finally given up on still gets its plain mark in her memory
+        /// (2026.08.10). <see cref="NightLedger.AwaitingBeats"/> had been written for exactly this
+        /// and never called, so a paid night whose three attempts all failed left NO trace at all:
+        /// the gold was spent, the odds were rolled, and she remembered nothing of the evening.
+        /// An unwritten night is a disappointment; an unremembered one is a bug.
+        /// </summary>
+        private void SweepNightsThatNeverGotTheirBeat()
+        {
+            try
+            {
+                if (_nightLedger == null) return;
+                bool changed = false;
+                foreach (var record in _nightLedger.AwaitingBeats())
+                {
+                    // ONLY nights that were owed a writing. A plain night gets its beat the instant
+                    // it is spent, so anything else without one is bookkeeping rather than a lived
+                    // evening — the DevMode conception lever forges exactly such a row, and without
+                    // this the sweep would have set down "he came to me" for a night nobody had
+                    // (2026.08.10 review).
+                    if (!record.StoryWanted) continue;
+                    // Still owed an account and still worth asking for: leave it to the retry, or
+                    // she would keep the plain mark and then be given the named one as well.
+                    if (record.NeedsStory(NightLedger.MaxStoryAttempts)) continue;
+                    if (_nightsWriting.Contains(record.Id)) continue;
+
+                    var wife = FindAliveHero(record.WifeId);
+                    if (wife == null) continue;
+
+                    WriteNightBeat(wife, NightText.PlainBeat(PlayerName(), record.PlaceName));
+                    record.BeatDone = true;
+                    changed = true;
+                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: false);
+                }
+                if (changed) SaveNightLedger();
+            }
+            catch (Exception ex) { ModLog.Error("sweeping the nights that were never written", ex); }
+        }
+
         private NightText.Facts GatherNightFacts(Hero wife, NightRecord record)
         {
+            // The gift decides how much room this night's account gets (2026.08.10): the coin has
+            // always bought the odds and the fact of a writing, and now it buys the length too.
+            var gift = NightGifts.Resolve(record.GiftPrice);
             var facts = new NightText.Facts
             {
                 WifeName = record.WifeName,
@@ -1114,7 +1160,12 @@ namespace ImmersiveAI
                 DateText = record.DateText,
                 PlacePhrase = record.PlaceKind == "camp" ? string.Empty : record.PlaceName,
                 PlaceKind = record.PlaceKind,
-                GiftNote = NightGifts.Resolve(record.GiftPrice).ChroniclerNote,
+                GiftNote = gift.ChroniclerNote,
+                MinSentences = gift.MinSentences,
+                MaxSentences = gift.MaxSentences,
+                // The night's own id, so a retry an hour later is dealt the same images and stays
+                // the same night rather than becoming a different one.
+                ImageSeed = record.Id ?? string.Empty,
             };
 
             try { facts.WifeAge = (int)wife.Age; } catch { }
@@ -1607,6 +1658,7 @@ namespace ImmersiveAI
                         .Take(Math.Max(0, self._config.MaxNightsToldInFull)).Select(n => n.Id),
                     StringComparer.Ordinal);
 
+                int nightsDrawn = 0;
                 foreach (var night in hers)
                 {
                     bool inFull = night.IsStoried && inFullIds.Contains(night.Id);
@@ -1619,8 +1671,11 @@ namespace ImmersiveAI
                         Body = body,
                         IsNarration = night.Kind != NightKind.Together,
                     });
+                    nightsDrawn++;
                 }
-                if (view.Entries.Count == 0)
+                // The empty line is about the NIGHTS, so it is judged on the nights alone — a wife
+                // with a child and no nights yet must still be told the nights will stand here.
+                if (nightsDrawn == 0)
                     view.Entries.Add(new NightEntryLine
                     {
                         Body = "Nothing yet. What passes between you from tonight on will stand here.",
@@ -1640,6 +1695,14 @@ namespace ImmersiveAI
                             HeaderColor = SeasonPlainColor,
                         });
                 }
+
+                // THE CHILDREN LAST, and that is deliberate (2026.08.10, Anton: "като го цъкна да
+                // виждам раждането после историята"). The panel is bottom-anchored — the window
+                // opens on the freshest night — so children put at the TOP would sit off-screen
+                // until he scrolled up for them. At the foot they are the first thing he sees, and
+                // within each child the hour still comes before the feast, which is the order he
+                // asked for.
+                view.Entries.AddRange(BirthEntriesFor(wife));
             }
             catch (Exception ex) { ModLog.Error("drawing a wife's nights", ex); }
             return view;

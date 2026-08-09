@@ -461,6 +461,165 @@ public class NightsTests
                   > prompt.IndexOf("TITLE:", StringComparison.Ordinal));
     }
 
+    // ------------------------------ what the coin buys the writing (2026.08.10) ------------------------------
+
+    [Fact]
+    public void GiftTiers_BuyRoomAsWellAsOdds_OnAntonsOwnRails()
+    {
+        // His three rails, exactly: ten denars is three or four sentences, a hundred is five or
+        // six, a thousand is seven or eight. The three-hundred tier interpolates between them.
+        Assert.Equal(3, NightGifts.Resolve(10).MinSentences);
+        Assert.Equal(4, NightGifts.Resolve(10).MaxSentences);
+        Assert.Equal(5, NightGifts.Resolve(100).MinSentences);
+        Assert.Equal(6, NightGifts.Resolve(100).MaxSentences);
+        Assert.Equal(7, NightGifts.Resolve(1000).MinSentences);
+        Assert.Equal(8, NightGifts.Resolve(1000).MaxSentences);
+
+        var paid = NightGifts.Paid;
+        for (int i = 1; i < paid.Count; i++)
+        {
+            Assert.True(paid[i].MinSentences >= paid[i - 1].MinSentences,
+                $"{paid[i].Name} should never buy less room than {paid[i - 1].Name}");
+            Assert.True(paid[i].MaxSentences > paid[i - 1].MaxSentences,
+                $"{paid[i].Name} should buy more room than {paid[i - 1].Name}");
+            Assert.True(paid[i].MinSentences <= paid[i].MaxSentences);
+        }
+
+        // And the grandest night of a marriage still stays under the wedding night's own twelve:
+        // that one is the once, and nothing after it may read as long.
+        Assert.True(paid[paid.Count - 1].MaxSentences < 12);
+    }
+
+    [Fact]
+    public void StoryPrompt_AsksForBothHalvesOfTheNight_AndForThisTiersRoom()
+    {
+        var facts = SomeFacts();
+        var jewel = NightGifts.Resolve(1000);
+        facts.GiftNote = jewel.ChroniclerNote;
+        facts.MinSentences = jewel.MinSentences;
+        facts.MaxSentences = jewel.MaxSentences;
+        var prompt = NightText.BuildStoryPrompt(facts);
+
+        Assert.Contains("SEVEN TO EIGHT sentences", prompt);
+        Assert.Contains("two roughly even halves", prompt);
+
+        // Half one is the surprise and the setting; half two is the act, and the whole point of
+        // naming it is that it may NOT be a door politely closed.
+        Assert.Contains("THE FIRST HALF", prompt);
+        Assert.Contains("THE SECOND HALF", prompt);
+        Assert.Contains("NOT a door politely closed", prompt);
+        Assert.Contains("Stay in the room with them", prompt);
+
+        // The register still binds both halves.
+        Assert.Contains("NOTHING coarse", prompt);
+        Assert.Contains("NOTHING coy", prompt);
+
+        // And the named images must stay images, never a checklist — the same lesson the gift
+        // notes were cut back for. Finished prose handed to a model comes back word for word.
+        Assert.Contains("not a list to work through", prompt);
+        Assert.Contains("not wording to lift", prompt);
+
+        // A ten-denar night is told the smaller truth about its own length.
+        var small = SomeFacts();
+        small.MinSentences = NightGifts.Resolve(10).MinSentences;
+        small.MaxSentences = NightGifts.Resolve(10).MaxSentences;
+        Assert.Contains("THREE TO FOUR sentences", NightText.BuildStoryPrompt(small));
+    }
+
+    [Fact]
+    public void TheImageDeck_DealsAStableHand_AndADifferentOneEachNight()
+    {
+        // WHY THE DECK EXISTS, live-probed on gpt-5.6-luna: an image NAMED in the prompt comes back
+        // in the answer near enough word for word — the bird startled in the brush turned up in two
+        // nights running. Naming none loses the register; naming the same three forever turns a
+        // marriage into one evening repeated. So a hand is dealt per night instead.
+        var hand = NightText.DrawImages("d1131");
+        Assert.Equal(3, hand.Count);
+        Assert.Equal(hand.Count, hand.Distinct().Count());
+        foreach (var card in hand) Assert.Contains(card, NightText.ImageDeck);
+
+        // STABLE: a night retried an hour later must reach for the same images, or it becomes a
+        // different night the second time it is written.
+        Assert.Equal(hand, NightText.DrawImages("d1131"));
+
+        // And a marriage's nights must not all be dealt the same hand. Neighbouring ids are the
+        // real case (they are minted a day apart), so those are what is checked.
+        var seeds = Enumerable.Range(1100, 40).Select(d => "d" + d).ToList();
+        var hands = seeds.Select(s => string.Join("|", NightText.DrawImages(s))).ToList();
+        Assert.True(hands.Distinct().Count() >= seeds.Count * 3 / 4,
+            "consecutive nights are collapsing onto the same hand");
+
+        // The second-of-a-day id shape must not shadow the first's.
+        Assert.NotEqual(string.Join("|", NightText.DrawImages("d1120")),
+                        string.Join("|", NightText.DrawImages("d1120-2")));
+    }
+
+    [Fact]
+    public void TheImageDeck_SurvivesEveryDegenerateAsk()
+    {
+        Assert.Empty(NightText.DrawImages("d1", 0));
+        Assert.Empty(NightText.DrawImages("d1", -3));
+        Assert.Equal(NightText.ImageDeck.Count, NightText.DrawImages("d1", 999).Count);
+        Assert.Equal(NightText.ImageDeck.Count, NightText.DrawImages("d1", 999).Distinct().Count());
+
+        // A caller with no id to give still gets a usable hand rather than an exception.
+        Assert.Equal(3, NightText.DrawImages(null).Count);
+        Assert.Equal(3, NightText.DrawImages(string.Empty).Count);
+
+        // The deck is worth keeping long — that is the whole defence against repetition.
+        Assert.True(NightText.ImageDeck.Count >= 12);
+        Assert.Equal(NightText.ImageDeck.Count, NightText.ImageDeck.Distinct().Count());
+    }
+
+    [Fact]
+    public void StoryPrompt_CarriesTonightsHand_AndTellsItNotToWorkThroughIt()
+    {
+        var facts = SomeFacts();
+        facts.ImageSeed = "d1131";
+        var prompt = NightText.BuildStoryPrompt(facts);
+
+        foreach (var card in NightText.DrawImages("d1131"))
+            Assert.Contains(card, prompt);
+        Assert.Contains("Take ONE, perhaps two", prompt);
+        Assert.Contains("must not work through them like a list", prompt);
+        Assert.Contains("Another night will have other images", prompt);
+
+        // The one fixed image that used to be hardcoded into the second half is gone from it, so
+        // the deck is the ONLY place images come from.
+        Assert.DoesNotContain("like a small bird startled in the brush, out to her fingertips", prompt);
+
+        // And whole sentences, because at three sentences it packed the whole act into one
+        // run-on chain of clauses (live probe, 2026.08.10).
+        Assert.Contains("Whole sentences", prompt);
+        Assert.Contains("Do not pack half the night into one long chain of clauses", prompt);
+    }
+
+    [Fact]
+    public void ARicherNightIsNotSilentlyCutBackToAPlainOnesLength()
+    {
+        // The failure this guards against is the quietest kind: the ceiling is raised, the model
+        // answers at the new length, and the tamer's old flat cut takes the last third off — a bug
+        // the player would read as the chronicler trailing away, and would never think to report.
+        // Cyrillic makes it certain rather than likely: these sentences run ~250 characters each.
+        var eight = string.Join(" ", Enumerable.Repeat(
+            "В стаята лампата гореше ниско, а той остави плаща си на стола и ми подаде чашата, "
+          + "сякаш ми поднасяше нещо много по-скъпо от вино, и аз се засмях тихо на това, защото "
+          + "знаех колко път е изминал заради тази вечер и колко малко думи ще намери за нея.", 8));
+        var raw = "TITLE: Пръстенът на възглавницата\n\n" + eight;
+
+        Assert.True(NightText.TryParseStory(raw, out _, out var whole, maxSentences: 8));
+        Assert.True(whole.Length > 1600, "the test's own sample must be longer than the old flat cap");
+        Assert.EndsWith("за нея.", whole);
+
+        // The same answer asked for at a plain night's length IS cut — which is what makes the
+        // budget load-bearing rather than decorative.
+        Assert.True(NightText.TryParseStory(raw, out _, out var cut, maxSentences: 4));
+        Assert.True(cut.Length < whole.Length);
+
+        Assert.True(NightText.AccountCharBudget(8) > NightText.AccountCharBudget(4));
+        Assert.True(NightText.AccountCharBudget(2) >= 1600, "no tier may buy LESS room than we always gave");
+    }
+
     [Fact]
     public void WhatTheChroniclerIsToldOfAGift_StaysFactsAndNeverBecomesProse()
     {

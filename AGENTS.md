@@ -206,6 +206,13 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   accounts — the public day (beat into the spouse and every witness, recallable by `recall_wedding`)
   and the night, which belongs to the couple alone and is never handed to a witness in memory or by
   tool. Toggle: `EnableWeddingChronicle`.
+- `NPCs\campaign_<id>\_births\` — the birth chronicle (Core `BirthLedger`): one JSON per child born
+  to the player plus a readable `births.txt`. Each holds the day's facts, the children, the
+  witnesses and TWO written accounts — THE HOUR (the mother's own first person; it reaches HER
+  memory alone, the father is given only the fact and his own presence, and `recall_birth` refuses
+  it to any witness) and THE FEAST, bought at a tier and carried by everyone who stood there. The
+  feast may be bought days after the birth, when a father who was away finally rides in.
+  Toggle: `EnableBirthChronicle`.
 - `NPCs\_README.txt` — auto-written blurb explaining the layout to the user.
 
 The folder layout, path resolution, and the one-time migration from the old flat

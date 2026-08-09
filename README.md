@@ -161,6 +161,9 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
   a running `chronicle.txt` telling the whole war in order.
 - `NPCs\campaign_*\_weddings\` — your wedding days, kept whole: the account of the day itself and,
   with it, the night that is yours and theirs alone.
+- `NPCs\campaign_*\_births\` — every child born to you: the hour of it in the mother's own words,
+  which stays between the two of you, and the feast you kept for the child, which everyone who
+  stood there remembers.
 
 That config folder is *yours* and survives everything: uninstall, resubscribe, update — every
 character still remembers you. (It doesn't sync between PCs; copy it yourself, and mind the API

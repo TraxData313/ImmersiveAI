@@ -29,6 +29,9 @@ namespace ImmersiveAI.UI.ChatWindow
         // that story rather than as one more exchange.
         private static readonly Color WeddingHeaderColor = new Color(0.93f, 0.62f, 0.72f, 1f);
 
+        // A child's day gets a warmer, older gold of its own, so a cradle never reads as a wedding.
+        private static readonly Color CradleHeaderColor = new Color(0.96f, 0.84f, 0.48f, 1f);
+
         private readonly ModConfig _config;
         private readonly string _letterHotkey;
         private readonly string _chatHotkey;
@@ -332,6 +335,31 @@ namespace ImmersiveAI.UI.ChatWindow
                                 messages.Add(new ChatMessageVM(
                                     isNight ? $"❦ {npcName} — that night" : "❦ The wedding day",
                                     weddingAccount, isNarration: false, WeddingHeaderColor));
+                            continue;
+                        }
+
+                        // A child's day wears the cradle's own card (2026.08.10) — the hour in the
+                        // mother's voice, the feast the hall carries. A father's plain mark and a
+                        // grief mark carry no account and stay soft narration, which is exactly
+                        // what they are: facts, not writings.
+                        if (Core.Births.BirthText.IsBirthBeat(turn.PlayerLine))
+                        {
+                            if (Core.Births.BirthText.TrySplitBeat(turn.PlayerLine, out var birthFrame, out var birthAccount))
+                            {
+                                bool isHour = Core.Births.BirthText.IsHourBeat(turn.PlayerLine);
+                                if (!string.IsNullOrWhiteSpace(birthFrame))
+                                    messages.Add(new ChatMessageVM(string.Empty, WithStamp(stamp, "❧ " + birthFrame),
+                                        isNarration: true, Colors.White));
+                                if (!string.IsNullOrWhiteSpace(birthAccount))
+                                    messages.Add(new ChatMessageVM(
+                                        isHour ? $"❧ {npcName} — that hour" : "❧ The feast for the child",
+                                        birthAccount, isNarration: false, CradleHeaderColor));
+                            }
+                            else
+                            {
+                                messages.Add(new ChatMessageVM(string.Empty,
+                                    WithStamp(stamp, "❧ " + turn.PlayerLine), isNarration: true, Colors.White));
+                            }
                             continue;
                         }
 

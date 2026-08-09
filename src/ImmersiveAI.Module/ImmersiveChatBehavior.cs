@@ -187,6 +187,7 @@ namespace ImmersiveAI
             if (CanRecallChronicle(npc)) tools.Add(Tools.ChronicleTool.Tool);
             // The wedding's hand, on the same rule: only for a soul who truly stood at one.
             if (CanRecallWedding(npc)) tools.Add(Tools.NuptialTool.Tool);
+            if (CanRecallBirth(npc)) tools.Add(Tools.CradleTool.Tool);
             // The bargain's hand rides only where the caller passed a tally — the live reply trunk
             // with an unhired sellsword facing the player (see CanStrikeBargain); never greetings,
             // letters, or reach-out beats, where "we agreed on terms just now" cannot be true.
@@ -259,6 +260,8 @@ namespace ImmersiveAI
                 return Tools.ChronicleTool.ResolveAsync(call, npc, () => _battleLedger);
             if (call.Name == Tools.NuptialTool.RecallWedding)
                 return Tools.NuptialTool.ResolveAsync(call, npc, () => _weddingLedger);
+            if (call.Name == Tools.CradleTool.RecallBirth)
+                return Tools.CradleTool.ResolveAsync(call, npc, () => _birthLedger);
             return Tools.WorldRecall.ResolveAsync(call, npc);
         }
 
@@ -665,6 +668,7 @@ namespace ImmersiveAI
                     case Tools.WorldRecall.RecallMarket: doing = $"{name} minds the market prices…{detail}"; break;
                     case Tools.ChronicleTool.RecallBattle: doing = $"{name} turns the chronicle's pages…{detail}"; break;
                     case Tools.NuptialTool.RecallWedding: doing = $"{name} remembers the wedding day…{detail}"; break;
+                    case Tools.CradleTool.RecallBirth: doing = $"{name} remembers the child's coming…{detail}"; break;
                     case Tools.WorldRecall.RecallPerson:
                     case Tools.WorldRecall.RecallPlace:
                     case Tools.WorldRecall.RecallClan:
@@ -786,6 +790,7 @@ namespace ImmersiveAI
         {
             FoldPendingBlessing(npc, memory);
             FoldPendingWeddingBeats(npc, memory);
+            FoldPendingBirthBeats(npc, memory);
             _memoryStore.SaveTo(NpcPaths.MemoryFile(npc), memory);
         }
 
@@ -849,6 +854,12 @@ namespace ImmersiveAI
             // synchronously. Hooking the game's own event also chronicles a wedding arranged
             // through vanilla's barter, not only one sealed through our own road.
             CampaignEvents.BeforeHeroesMarried.AddNonSerializedListener(this, OnHeroesMarriedForChronicle);
+
+            // The birth chronicle (see the Births partial). OnGivenBirth fires ONCE per birth, after
+            // every newborn is fully built and named by the game — and immediately BEFORE vanilla's
+            // death-in-labour roll, so the day's facts are captured there, synchronously, while the
+            // mother is still certainly alive to have them.
+            CampaignEvents.OnGivenBirthEvent.AddNonSerializedListener(this, OnGivenBirthForChronicle);
 
             // The road journal (see the Journey partial): the witness log of the player's everyday
             // life — stops, trade, men taken on or left behind, captives, and the tasks carried —
@@ -1009,6 +1020,7 @@ namespace ImmersiveAI
             LoadBattleLedger();
             LoadJourneyLog();
             LoadWeddingLedger();
+            LoadBirthLedger();
             LoadNightLedger();
 
             // The world's nightly roll steps aside for the player's own marriages only while this
@@ -1157,6 +1169,14 @@ namespace ImmersiveAI
                 starter.AddPlayerLine("immersiveai_test_battle", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestBattle}Let us part now. [Immersive AI • test — forge a shared battle record]",
                     () => _config.EnableBattleChronicle, () => { OnDebugForgeBattle(); RequestLeaveFromPartyEncounter(); }, 88);
+
+                // Birth-chronicle lever: write the day of a child you already share with this soul
+                // — the hour, the feast question, the JSON, births.txt, the beats and recall_birth,
+                // all testable without waiting nine in-game months for one.
+                starter.AddPlayerLine("immersiveai_test_birth", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestBirth}Let us part now. [Immersive AI • test — write a child's day anew]",
+                    () => _config.EnableBirthChronicle,
+                    () => { DevForgeBirth(_currentNpc); RequestLeaveFromPartyEncounter(); }, 87);
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.
@@ -1913,6 +1933,11 @@ namespace ImmersiveAI
             // came back to fold it in.
             try { FlushParkedWeddingBeats(); }
             catch { /* a late beat is still a beat */ }
+
+            // The book of children: an hour or a feast the chronicler still owes, the beats parked
+            // mid-exchange, and the feast question waiting for a father who was away when it came.
+            try { TendTheBirthChronicle(); }
+            catch { /* the cradle must never take down the hour */ }
 
             // The evening's own question, the day a conception becomes known, and any night's
             // account the chronicler still owes.

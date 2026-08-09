@@ -1556,14 +1556,16 @@ namespace ImmersiveAI
                 if (self == null || npc == null) return null;
 
                 // Wed already — the day itself takes the button, forever.
-                if (TryGetWeddingView(npc, out var wLabel, out var wTitle, out var wBody))
+                // The hint comes FROM the page, because the page is sometimes a wedding day, and
+                // sometimes only the children of a bond that never had one.
+                if (TryGetWeddingView(npc, out var wLabel, out var wTitle, out var wBody, out var wHint))
                     return new RoadPage
                     {
                         Kind = RoadPageKind.WeddingDay,
                         Label = wLabel,
                         Title = wTitle,
                         Body = wBody,
-                        Hint = "Your wedding day, kept whole — the day itself, and the night that is yours and theirs alone. Opening it plays the wedding once more, and the account follows it.",
+                        Hint = wHint,
                     };
 
                 if (!self._config.EnableConversationMarriage) return self.MisgivingsPage(npc);

@@ -44,6 +44,51 @@ public class WeddingTests
         Assert.False(WeddingTiers.Of(WeddingScale.Regal)!.RequiresOwnTown);
     }
 
+    [Fact]
+    public void TheInvitedWedding_IsAGuestList_AndAGuestListExcludes()
+    {
+        // Anton, 2026.08.10, reading his own chronicle back and finding five townsfolk of
+        // Baltakhand he had never spoken a word to standing in his hall: at the thousand-denar
+        // rung the guests are the couple's own people and NOBODY else.
+        var invited = WeddingTiers.Of(WeddingScale.Invited)!;
+        Assert.False(invited.AdmitsLocalStrangers);
+        Assert.True(invited.InvitesRememberedBonds);
+        Assert.True(invited.InvitesKin);
+        Assert.False(invited.InvitesLordsOfTheRealm);
+        Assert.False(invited.InvitesGreatNames);
+
+        // The rung BELOW called nobody, so whoever happened to stand there did — which is honest,
+        // and is exactly why this one flag does not climb monotonically up the ladder.
+        Assert.True(WeddingTiers.Of(WeddingScale.Modest)!.AdmitsLocalStrangers);
+        Assert.True(WeddingTiers.Of(WeddingScale.Great)!.AdmitsLocalStrangers);
+
+        // The chronicler must be TOLD there were no strangers, or it will furnish the hall itself.
+        Assert.Contains("NO ONE ELSE", invited.ChroniclerNote);
+        Assert.DoesNotContain("notables of the place", invited.ChroniclerNote);
+        Assert.DoesNotContain("notables of the place", invited.PlayerDescription);
+    }
+
+    [Fact]
+    public void GuestRules_SurviveTheTripIntoTheSharedShape()
+    {
+        var invited = WeddingTiers.Of(WeddingScale.Invited)!;
+        var rules = WeddingTiers.Guests(WeddingScale.Invited);
+        Assert.Equal(invited.WitnessCap, rules.Cap);
+        Assert.False(rules.LocalsPresent);
+        Assert.True(rules.RememberedBonds);
+        Assert.True(rules.Kin);
+        Assert.False(rules.LordsOfTheRealm);
+        Assert.False(rules.GreatNames);
+
+        // A wedding sealed outside our own door knows nothing of any purse, so it gathers whoever
+        // truly stood there — which is what every wedding before the tiers was written with.
+        var unpaid = WeddingTiers.Guests(WeddingScale.Unpaid);
+        Assert.True(unpaid.LocalsPresent);
+        Assert.False(unpaid.RememberedBonds);
+        Assert.False(unpaid.GreatNames);
+        Assert.Equal(WeddingTiers.DefaultWitnessCap, unpaid.Cap);
+    }
+
     [Theory]
     [InlineData(WeddingScale.Modest, WeddingVenue.OpenField, true)]
     [InlineData(WeddingScale.Invited, WeddingVenue.OpenField, false)]

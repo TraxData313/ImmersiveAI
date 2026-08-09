@@ -32,6 +32,13 @@ You usually only need to open:
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self). NOTE two subsystems were RETIRED 2026.08.08 — the distilled `KnownFacts` (the `hold_truth` tool + the reflection `FACTS:` section) and `NpcGoals`/`goals.txt` (the `tend_goals` tool + the `GOALS:` section): both cramped what the rolling memory already held and read it back to her twice, and each cost a tool slot in every reply. Do not reintroduce either; the deep memory carries it all now.
 - **NPC tool-use ("the gift of recall")** → `WorldRecall` (Module, the seven recall tools: person/place/clan/realm/troop/market lookups + `recall_company`, one's own warband — now with the surgeon's healing rates and, on `recall_person`, the looked-up soul's strongest crafts) + `FieldCraft` (Module, 2026.07.12: `survey_surroundings` + `weigh_battle`, the outward eyes and the scales of battle — ride ONLY for souls with a party on the map, counts coarsened by the asker's Scouting/Tactics; 2026.07.22: both also see the SPOTTED hideouts — the survey lists nearby dens named by their brigands' clan with lurker counts, and the scales weigh a den's lurking parties, "hideout"/"den"/"lair" resolving to the nearest spotted one) + `WebWisdom` (Module, `seek_wisdom` — web search framed as "all I have read and heard", queries sharpened by a small refining LLM call) + `ToolLoopRunner` (Core, the loop) + the two chat clients (native tool calling).
 - **Letters** → `LetterBag` / `LetterCourier` / `CorrespondenceLog` (Core: queue + travel math + letters.txt parser) + `ImmersiveChatBehavior.Letters.cs` (Module, all flows + the window's view accessors) + `UI\LetterWindow\` (the letter window).
+- **The birth chronicle** → Core `Births\` (`BirthRecord`/`BirthLedger` JSON-per-birth + `births.txt`,
+  `BirthTiers` — the wedding's own ladder at a third of its renown, `BirthText` — the two prompts, the
+  permanent marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Births.cs` partial (hooks
+  `OnGivenBirthEvent`, captures BEFORE vanilla's death-in-labour roll, the hour written at once and the
+  feast whenever it is bought) + `Tools\CradleTool` (`recall_birth`; the hour is refused to anyone but
+  the two parents). Witness gathering is SHARED with the wedding — Core `Celebrations\GuestRules` +
+  `ImmersiveChatBehavior.Celebrations.cs`.
 - **The wedding chronicle** → Core `Weddings\` (`WeddingRecord`/`WeddingLedger` JSON-per-wedding + `weddings.txt`, `WeddingText` — the two chronicler prompts, the permanent beat marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Weddings.cs` partial (hooks `BeforeHeroesMarried`, captures the day BEFORE the clan change scatters it, two story calls off-thread, beats to the spouse + every witness) + `Tools\NuptialTool` (`recall_wedding`; the night is refused to anyone but the spouse).
 - **The battle chronicle** → Core `Battles\` (`BattleRecord` data, `BattleLedger` JSON-per-battle + loose find-by-name, `BattleText` — titles/tales/beats/accounts, all unit-tested) + the `ImmersiveChatBehavior.Battles.cs` partial (capture at `OnPlayerBattleEnd` BEFORE the game commits gains, enrich one dispatcher tick later, per-hero downs via `OnHeroCombatHitEvent`) + `Tools\ChronicleTool` (`recall_battle`).
 - **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
@@ -72,6 +79,13 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
   Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
   Battles/                BattleRecord (+side stats/participants/loot summary), BattleLedger (JSON
                           per battle + loose find-by-name), BattleText (titles/tales/beats/accounts)
+  Births/                 BirthRecord (the day's facts, the children, the two written accounts),
+                          BirthLedger (JSON per birth + births.txt, loose find, what still owes us a
+                          part), BirthTiers (the wedding's ladder, a third of its renown), BirthText
+                          (the two prompts — Scripture's own birth narratives for the hour, the
+                          wedding day's register for the feast — the permanent beat marks, the accounts)
+  Celebrations/           GuestRules — who is called to a day of the player's, shared by the wedding
+                          and the birth (and the one flag that deliberately does not climb the ladder)
   Weddings/               WeddingRecord (the day's facts + the two written accounts), WeddingLedger
                           (JSON per wedding + weddings.txt, loose find), WeddingText (the chronicler's
                           two prompts — Scripture for the day, the Song of Songs for the night — the
@@ -87,6 +101,10 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
+  ImmersiveChatBehavior.Births.cs   partial: the birth chronicle (the hook, the hour, the feast and
+                          its deferred offer, the beats, the keepsake, the retries)
+  ImmersiveChatBehavior.Celebrations.cs  partial: who stands at a day of the player's — the ONE
+                          gathering shared by the wedding and the birth
   ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
   ImmersiveChatBehavior.Thoughts.cs partial: "Think" (Shift+Enter) — the PLAYER's own next line, thought
                           out on the NPC's own sheet (plain call, nothing recorded) + the intents file
@@ -419,6 +437,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `EnableJourneyLog` (2026.08.08 — THE ROAD JOURNAL, see its own section below: the witness log of
   stops/trade/men/captives/tasks in `_journey.json`, seen only by souls riding in the player's
   party; default on),
+  `EnableBirthChronicle` (2026.08.10 — THE BIRTH CHRONICLE, see its own section below: every child
+  born to the player written in two parts — THE HOUR in the mother's own voice, kept between the two
+  parents, and THE FEAST if one is bought — kept forever in `_births`, recallable by `recall_birth`;
+  one writing call for the hour, one more if it is feasted; default on),
   `EnableWeddingChronicle` (2026.08.09 — THE WEDDING CHRONICLE, see its own section below: the
   player's wedding written in two parts by the chronicler — the public day and the couple's own
   night — kept forever in `_weddings`, beat into the spouse and every witness, recallable by
@@ -703,6 +725,11 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   every allied hero's downs and fate) plus an append-only `chronicle.txt` of the full accounts.
   Lives inside the campaign folder ON PURPOSE: the save-scoped memory snapshots photograph it, so
   reloading rewinds the war together with the memories of it. Toggle `EnableBattleChronicle`.
+- `NPCs\campaign_<id>\_births\` — the BIRTH CHRONICLE (Core `BirthLedger`, 2026.08.10): one JSON per
+  child born to the player (`d1120_ira.json` — the day's facts, the children, the witnesses, and both
+  written accounts) plus an append-only `births.txt`. The hour lives in the file but is handed only to
+  the two parents — never to a witness, in memory or by tool. Same snapshot-rewind ride. Toggle
+  `EnableBirthChronicle`.
 - `NPCs\campaign_<id>\_nights.json` + `nights.txt` — the NIGHTS (Core `NightLedger`, 2026.08.09):
   every wife's rolling fortnight of them (who came to her, whose door was closed, what she learned of
   the rest) plus the append-only keepsake of every written night, in full, never pruned. Same
@@ -1314,6 +1341,44 @@ Config `EnableWeddingChronicle` (default on); DevMode lever in the chat window's
 your wedding day anew"). Decision record + the review round's eight fixes:
 docs/wedding-chronicle-design.md.
 
+**The birth chronicle (2026.08.10) — the next day of a life.** The wedding's own shape, turned on a
+cradle, and reusing its machinery down to the guest list (Anton's ask: "може да се преизползва много
+от същата логика"). Every child born to the player is written in TWO PARTS, and here they are split
+IN TIME as well as in register. **THE HOUR** — the mother's own first person, written the moment the
+child comes, in the register of Scripture's own birth narratives (Rachel, Hannah, Elizabeth, the
+stable): her hour came upon her, the women about her, FEAR NOT, the first cry, the child laid at her
+breast, and she called his name. It carries the nights' two-halves rule wearing different clothes —
+half the hour itself, half the child and the naming — and both halves of the register rule: *nothing
+clinical*, no anatomy and no physician's word, AND *nothing coy*, "do not skip past the pain and the
+fear to arrive at a clean, tidy joy". **THE FEAST** — the wedding day's register, third person,
+written only if one is bought. **THE PRIVACY LINE RUNS BETWEEN PARENTS AND WITNESSES, and it is code:**
+the hour reaches the mother's memory alone; the father gets the FACT and his own presence or absence
+but NEVER her first person (`BirthText.FatherBeat` carries no account body — planting her private "I"
+in his memory would be the small lie this mod exists not to tell); `CradleTool` hands a father the
+hour framed as *what she told him of it*, and refuses it to a witness outright. THE FEAST MAY BE
+BOUGHT DAYS LATER: a father away at war is asked when he next rides in (`AwaitingFeastOffer`, a
+30-day window, one question an hour, and a refusal is remembered so he is not asked again every hour
+he stands beside her) — so `SealTheDay` is what lays the day down once, into births.txt and before
+the player, whichever part completes it. A child who did not live is never sent to the chronicler,
+never feasted and never announced gladly: one mark, written by hand. THE HOOK is
+`CampaignEvents.OnGivenBirthEvent` and three decompiled facts made it safe: **the subscribe method is
+`AddNonSerializedListener`** — there is NO `AddListener` on `IMbEvent` in this version; **vanilla
+rolls a 1.5% death-in-labour for the mother immediately AFTER the event**, so every fact is captured
+synchronously (the wedding's clan-change lesson in a darker coat); and **this version never asks the
+player to name the newborn** (byte-verified — the "Naming Newborn" string is dead content), so the
+feast popup collides with nothing. The ladder is the WEDDING'S OWN, denar for denar (100 → 500 000),
+paying about a third of its renown, because a child is joy and not an alliance and children are far
+easier to come by than weddings. Config `EnableBirthChronicle` (default on); DevMode lever
+"[test — write a child's day anew]". WHERE THE PLAYER FINDS IT (Anton's ask, 2026.08.10 — "историите
+за децата може би да се пазят в H бутона, и като го цъкна да виждам раждането после историята"): the
+children's own front door is **the hearth window (H)**, where `BirthEntriesFor` draws them at the TOP
+of a wife's page, above the fortnight of nights — the hour first, then the feast, in the cradle's own
+gold. It needed no prefab: the window already draws that card shape for the nights. Beside it the
+chat window draws the beats as ❧ cards in the thread, and the couple's road-page button keeps the
+wedding day with the children appended (label deliberately left at "Our wedding day" so it still fits
+its widget; a couple with children and no wedding gets an "Our children" page of its own, with its
+own hover text — a hardcoded wedding hint over a children page was a review find).
+
 **The nights of a marriage (2026.08.09) — the wedding's morning after.** The game used to flip a
 coin every day behind the player's back; now the nights are his to spend. Each evening (hour
 `NightHour`, 21) he is asked where he will sleep; a woman's own month (`MoodTides.Fertility`, a curve
@@ -1331,8 +1396,31 @@ stands behind the model call; `MakePregnantAction` **fathers the child on whatev
 `mother.Spouse` at that instant** → `EnsureFatherSlot` sets it first, or a second wife's child is
 fathered by null and crashes at the delivery 36 days later; and vanilla **announces the pregnancy AT
 conception** → the "she comes to know" delay (`ConceptionRevealDelayDays`, 7) is achieved by
-deferring `Apply` itself, so the birth moves with it. The gift (`NightGifts`) buys three things —
-odds, a written memory, and TALK: its `AwarenessMultiplier` scales the other wives' chance of
+deferring `Apply` itself, so the birth moves with it. **THE COIN BUYS THE LENGTH AND THE SHAPE OF THE
+WRITING TOO (2026.08.10, Anton's ask):** `NightGifts.Tier` carries `MinSentences`/`MaxSentences` — 3-4
+at ten denars, 5-6 at a hundred, 6-7 at three, 7-8 at a thousand, the ceiling deliberately under the
+wedding night's twelve — and `BuildStoryPrompt` now asks for the account in TWO NAMED HALVES: the
+coming to it and the surprise of it, then the knowing itself, "and this half is NOT a door politely
+closed. Stay in the room with them." The second half names what a body does (breath caught, the
+trembling like a small bird startled in the brush, the whisper, the shiver, her own wanting) and then
+in the same breath forbids reusing any of it as WORDING — named images come back verbatim, the same
+lesson that cut `ChroniclerNote` back to bare nouns — AND THE PROOF CAME BACK THE SAME NIGHT: probed
+live on luna, the one image the prompt named (the bird startled in the brush) turned up in two
+consecutive nights word for word. Hence **`NightText.ImageDeck` + `DrawImages(seed)`**: ~18 of
+Scripture's own images (the sealed spring, myrrh on the handles of the lock, honey under the tongue,
+the young hart on the mountains of spices…), three DEALT per night, stably by FNV-1a from the night
+record's `Id` so a retry an hour later reaches for the same ones. Each card is its own hash — the
+first cut walked a fixed stride from one hashed start, which gave eighteen possible hands instead of
+eight hundred, and the unit test caught it immediately. Keep the deck long; that is the whole
+defence. TWO CAPS HAD TO MOVE WITH IT and neither is
+decorative: `TryParseStory`'s flat 1600-character cut became `AccountCharBudget(maxSentences)` (eight
+rich Cyrillic sentences run past 2000, so the tier that exists to be longest would have been silently
+shortened back), and `BuildRoll` gained `DefaultFullAccountBudget` (2600) — the roll rides WHOLE in
+her sheet on EVERY reply, so five grand nights told in full would have cost ~4k tokens per exchange
+for a fortnight; now the freshest are told whole until the room runs out, and the freshest always is.
+Also wired at last: `NightLedger.AwaitingBeats()`, written for this and never called, so a paid night
+whose three story attempts all failed no longer leaves her memory blank. The gift (`NightGifts`) buys
+three things — odds, a written memory, and TALK: its `AwarenessMultiplier` scales the other wives' chance of
 hearing (×0.5 plain → ×2 for the jewel) and a leaked night **leaks its NAME too**
 (`OtherNightTitle`, back-filled by `LeakTheNameOfTheNight` once the chronicler answers). A paid night
 also costs the morning (`SetDisorganized`). TWO plain switches, not four poetic modes (Anton killed the cycling

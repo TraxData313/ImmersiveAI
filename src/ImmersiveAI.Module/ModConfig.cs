@@ -445,6 +445,17 @@ namespace ImmersiveAI
         /// Costs two writing calls, once per wedding. Set false and a wedding passes unwritten.</summary>
         public bool EnableWeddingChronicle { get; set; } = true;
 
+        /// <summary>When true, every child born to you is written down the same way, in two parts:
+        /// THE HOUR — the birth itself, in the mother's own voice, which belongs to the two of you
+        /// and is never given to anyone else — and, if you keep one, THE FEAST that welcomed the
+        /// child, which everyone who stood there remembers ever after. You are asked what feast to
+        /// keep when the child comes, or when you next ride in to see it if you were away; what you
+        /// spend decides who is called, from bread and salt to a whole town rejoicing. Both parts
+        /// are kept forever in NPCs\campaign\_births and can be called back long after. Costs one
+        /// writing call for the hour and one more if you feast it. Set false and a child is born
+        /// unwritten.</summary>
+        public bool EnableBirthChronicle { get; set; } = true;
+
         // ------------------------------ the nights ------------------------------
 
         /// <summary>When true, the nights of your marriage are yours to spend: each evening you are

@@ -15,6 +15,15 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- New: every child born to you is written down — the hour of it in the mother's own voice, kept between the two of you, and it can be told back to you years later.
+- New: when a child comes you choose how to welcome it, from bread and salt to a whole town rejoicing — and if you were away, you are asked when you next ride in.
+- New: whoever stands at that feast remembers it for the rest of their life, and your house gains a name for it.
+- New: your children live in the hearth window (H) under their mother's name — the hour of the birth first, then the feast, kept there for good.
+- Changed: the more you lay out for a night with your wife, the longer and more particular the account she keeps of it — and every account now tells the whole of it, not only the evening before.
+- Changed: the account of a night reaches for different images each time, so a long marriage stops reading like one evening written over and over.
+- Changed: a wedding or a naming feast with invitations calls BOTH families — yours and theirs — and the friends you truly know, and nobody else. No more halls full of townsfolk you have never spoken to.
+- Fixed: a night you paid for whose account never arrived left no trace at all in her memory; she now keeps the night itself.
+
 ## v2.2.1 - 2026.08.10
 
 **The Nexus changelog (255 max - copy this verbatim):**

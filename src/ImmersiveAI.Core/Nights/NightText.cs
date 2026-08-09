@@ -94,23 +94,44 @@ namespace ImmersiveAI.Core.Nights
         /// "просто и ясно, без много чудене"). Callers pass only the nights up TO that line, so
         /// nothing is ever told twice.
         /// </summary>
+        /// <summary>
+        /// How much of her sheet the nights told WHOLE may take up, in characters (2026.08.10).
+        /// The roll rides in the situation on EVERY reply, so this is not a nicety — it is the
+        /// price of the feature, paid over and over. It became load-bearing the day the grand
+        /// tiers were allowed to run to eight sentences: five jewel nights told whole would have
+        /// put some eight thousand characters into every exchange she has for a fortnight, and in
+        /// Cyrillic that is nearer four thousand tokens. So the count ceiling gained a WEIGHT
+        /// ceiling beneath it — the freshest are told whole until the room runs out, and a
+        /// marriage of grand nights simply keeps fewer of them in full than a marriage of small
+        /// ones. The freshest is ALWAYS told whole, whatever it costs; a night she cannot
+        /// remember at all is worse than an expensive one.
+        /// </summary>
+        public const int DefaultFullAccountBudget = 2600;
+
         public static string BuildRoll(
             IReadOnlyList<NightRecord> nights,
             double today,
-            int storiesInFull = NightLedger.DefaultStoriesInFull)
+            int storiesInFull = NightLedger.DefaultStoriesInFull,
+            int fullAccountBudget = DefaultFullAccountBudget)
         {
             if (nights == null || nights.Count == 0) return string.Empty;
 
             var ordered = nights.Where(n => n != null).OrderBy(n => n.GameDay).ToList();
             if (ordered.Count == 0) return string.Empty;
 
-            // Which written nights are still given whole: the freshest few.
-            var fullSet = new HashSet<string>(
-                ordered.Where(n => n.IsStoried)
-                       .OrderByDescending(n => n.GameDay)
-                       .Take(Math.Max(0, storiesInFull))
-                       .Select(n => n.Id),
-                StringComparer.Ordinal);
+            // Which written nights are still given whole: the freshest few, and only while the
+            // room lasts.
+            var fullSet = new HashSet<string>(StringComparer.Ordinal);
+            int spent = 0;
+            foreach (var night in ordered.Where(n => n.IsStoried)
+                                         .OrderByDescending(n => n.GameDay)
+                                         .Take(Math.Max(0, storiesInFull)))
+            {
+                int cost = night.Story?.Length ?? 0;
+                if (fullSet.Count > 0 && fullAccountBudget > 0 && spent + cost > fullAccountBudget) break;
+                fullSet.Add(night.Id);
+                spent += cost;
+            }
 
             var lines = new List<string>();
             int unknownRun = 0;
@@ -304,7 +325,110 @@ namespace ImmersiveAI.Core.Nights
             /// over ONLY so this one does not repeat them or their shape — a marriage of thirty
             /// nights must not read as the same night thirty times.</summary>
             public List<string> PastNightNames = new List<string>();
+
+            /// <summary>How long an account this night earns (2026.08.10, Anton's design — the
+            /// coin buys the LENGTH now, see <see cref="NightGifts.Tier.MinSentences"/>). The
+            /// defaults are the old fixed three-to-five, so any caller that knows nothing of
+            /// tiers writes exactly what it always did.</summary>
+            public int MinSentences = 3;
+            public int MaxSentences = 5;
+
+            /// <summary>What this night's hand of images is dealt from — the night's own id, so a
+            /// retry an hour later reaches for the same ones. Empty deals the deck's first hand,
+            /// which is fine for a caller that has no id to give.</summary>
+            public string ImageSeed = string.Empty;
         }
+
+        /// <summary>
+        /// THE SONG'S OWN IMAGES, as a deck to be drawn from (2026.08.10). Live-probed on
+        /// gpt-5.6-luna, two nights in a row: an image NAMED in the prompt comes back in the
+        /// answer, near enough word for word — the bird startled in the brush turned up in both,
+        /// which is exactly the failure the gift notes were cut back to bare nouns for. Naming no
+        /// images at all loses the register Anton asked for; naming the same three forever turns a
+        /// marriage into one evening repeated. So a few are DRAWN per night instead, stably from
+        /// the night's own id, and the prompt says plainly that they are a place to start and not
+        /// a list to work through.
+        ///
+        /// Every card is Scripture's, and they are anchors rather than instructions: the point is
+        /// that night eleven reaches for the sealed spring where night four reached for the
+        /// vineyard. Add to the deck freely — a longer deck is strictly better here.
+        /// </summary>
+        public static readonly IReadOnlyList<string> ImageDeck = new[]
+        {
+            "a dove startled in the clefts of the rock, or a small bird in the brush",
+            "a garden shut, and its spices carried on the air the moment it opens",
+            "a vineyard in flower, and the tender grape giving its scent",
+            "honey and milk under the tongue",
+            "myrrh left on the hands, and on the handles of the lock",
+            "a spring shut up and a fountain sealed — and then unsealed",
+            "wine that goes down sweetly, moving the lips of those that are asleep",
+            "a lily among thorns, and the field of lilies where he feeds",
+            "the watchmen going about the city, and the walls left behind them",
+            "an apple tree among the trees of the wood, and the sitting down under its shadow",
+            "a seal set upon the heart, and a seal upon the arm",
+            "coals of fire, a most vehement flame, that many waters cannot quench",
+            "the north wind and the south wind, blowing upon a garden that its spices may flow out",
+            "the mandrakes giving their smell at the gates",
+            "pomegranates broken open",
+            "a young hart upon the mountains of spices",
+            "the morning looking forth, fair as the moon, clear as the sun",
+            "the threshing floor, and the heap of wheat set about with lilies",
+        };
+
+        /// <summary>
+        /// The cards this night is dealt — stable for a given seed, so a retried night an hour
+        /// later reaches for the same images and does not become a different night. FNV-1a, the
+        /// same hash the moods are drawn with, for the same reason: no state, no persistence, and
+        /// a reload rerolls nothing.
+        /// </summary>
+        public static IReadOnlyList<string> DrawImages(string? seed, int count = 3)
+        {
+            int n = Math.Max(0, Math.Min(count, ImageDeck.Count));
+            if (n == 0) return Array.Empty<string>();
+
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (var c in seed ?? string.Empty) { hash ^= c; hash *= 16777619; }
+
+                var drawn = new List<string>(n);
+                var taken = new HashSet<int>();
+                for (int i = 0; i < n; i++)
+                {
+                    // EACH CARD IS ITS OWN HASH. The first cut walked forward from one hashed start
+                    // by a fixed stride, which meant the second and third cards sat at a constant
+                    // distance from the first — eighteen possible hands out of eight hundred, and
+                    // neighbouring night ids collapsing onto the same one. The unit test caught it
+                    // the minute it was written; keep that test.
+                    uint h = hash;
+                    h ^= (uint)(i + 1); h *= 16777619;
+                    h ^= h >> 13; h *= 2246822519; h ^= h >> 16;
+
+                    int at = (int)(h % (uint)ImageDeck.Count);
+                    while (!taken.Add(at)) at = (at + 1) % ImageDeck.Count;
+                    drawn.Add(ImageDeck[at]);
+                }
+                return drawn;
+            }
+        }
+
+        /// <summary>The sentence range a night's account is asked for, in words ("seven to eight"),
+        /// clamped to something a chronicler can actually hold. Public for the tests, which guard
+        /// that the paid tiers really do buy more room.</summary>
+        public static string SentenceRange(int min, int max)
+        {
+            int lo = Math.Max(2, Math.Min(min, 12));
+            int hi = Math.Max(lo, Math.Min(max, 12));
+            return lo == hi ? $"exactly {Spell(lo).ToUpperInvariant()}" : $"{Spell(lo).ToUpperInvariant()} TO {Spell(hi).ToUpperInvariant()}";
+        }
+
+        /// <summary>How much room an account of this many sentences needs before the tamer would
+        /// start cutting into it. Non-ASCII costs roughly 1.6x the tokens and rather more of the
+        /// characters, and the mod is played in Bulgarian as often as in English — a night of
+        /// eight rich sentences runs past two thousand characters there, so the old flat 1600
+        /// would have severed exactly the nights this change exists to lengthen.</summary>
+        public static int AccountCharBudget(int maxSentences) =>
+            Math.Max(1600, Math.Min(12, Math.Max(2, maxSentences)) * 340);
 
         /// <summary>
         /// The chronicler's prompt for one night of a marriage. Short by design: this is an evening,
@@ -320,22 +444,50 @@ namespace ImmersiveAI.Core.Nights
             var sb = new StringBuilder();
             sb.AppendLine($"You are the chronicler of this house, and you set down one night of a marriage — not the wedding night, one night among the many that come after. You write it IN HER OWN VOICE: first person, \"I\", as {Name(facts.WifeName)} keeps it in her heart and would tell it to no one.");
             sb.AppendLine();
-            sb.AppendLine("THE REGISTER: the Song of Songs. Scripture speaks of the love between a wedded pair openly and without shame, and it speaks in images — wine and spices, the garden, the vineyard, the door, the lamp, the night and the morning after. Where it names the thing itself, it says simply that he knew her.");
-            sb.AppendLine("Hold both halves of that: NOTHING coarse, nothing clinical, no part of the body named as a physician or a tavern would name it — and equally NOTHING coy, no closing of the door in the reader's face. What passed between them is plainly there, said the way Scripture says it.");
+            sb.AppendLine("THE REGISTER: the Song of Songs. Scripture speaks of the love between a wedded pair openly and without shame, and it speaks in images — wine and spices, the garden and its fruit, the vineyard, the dove in the clefts of the rock, the door, the lamp, the night and the morning after. Where it names the thing itself, it says simply that he knew her.");
+            sb.AppendLine("Hold BOTH halves of that, and it is the second half that gets forgotten: NOTHING coarse, nothing clinical, no part of the body named as a physician or a tavern would name it, nothing that reads as the writing of our own coarse age — and equally NOTHING coy, no fading out, no closing of the door in the reader's face, no ending the account at the threshold. What passed between them is plainly and warmly there, said the way Scripture says it: in images, with tenderness, and without turning away.");
+            // THE METHOD, spelled out (2026.08.10, Anton: "тези образи, тези разказвания на детайли
+            // но скриването им за образи и загатвания... искам начина на писане да е вдъхновен от
+            // библията"). Naming the two halves bought the second one its room; this is what keeps
+            // that room from being filled the wrong way. Without it a model reads "not coy" as
+            // permission to be plain, and plain is the one register Scripture never uses here.
+            sb.AppendLine("AND THIS IS THE METHOD, which is the whole of it: the particular thing is always TOLD, and always told AS AN IMAGE. Scripture never says less than what happened and never says it flatly — it says a garden and its fruit, a sealed spring, a vineyard kept or unkept, wine and honey, myrrh left on the hands, the beloved's own name spoken in the dark. So do not soften the detail away, and do not state it plainly either: find the image that carries it whole, and let the reader arrive at the thing by walking through the picture.");
             sb.AppendLine();
-            sb.AppendLine("AND HOLD THE SCALE. This is one evening of a long marriage, not the wedding happening again. It is smaller, easier, more particular: two people who already know each other. Let it be the night it actually was and no grander.");
+            sb.AppendLine("AND HOLD THE SCALE. This is one evening of a long marriage, not the wedding happening again: two people who already know one another, and easier with each other for it. What was laid out for this night tells you how much of an occasion it was — make it that much, and no more.");
             sb.AppendLine();
 
             AppendFacts(sb, facts);
 
             sb.AppendLine();
             sb.AppendLine("Now write that night. First a line of exactly this shape:");
-            sb.AppendLine("TITLE: <the name she keeps this night by — three to six words, concrete, taken from something that was actually in the room; no punctuation at the end>");
-            sb.AppendLine("Then a blank line, then the account itself: THREE TO FIVE sentences, no more.");
+            sb.AppendLine("TITLE: <the name she keeps this night by — three to six words, concrete, taken from something that was actually there; no punctuation at the end>");
+            sb.AppendLine($"Then a blank line, then the account itself: {SentenceRange(facts.MinSentences, facts.MaxSentences)} sentences, and hold it in two roughly even halves.");
+            sb.AppendLine();
+            // THE TWO HALVES (2026.08.10, Anton's design). Before this the prompt asked only for
+            // "concrete and small", and what came back was true but shy: three sentences of the
+            // evening and one closing formula for the night itself, every time. Naming the halves
+            // is what buys the second one its room — and the closing warning is what keeps the
+            // named images from becoming the formula they replaced.
+            sb.AppendLine("THE FIRST HALF — the coming to it, and the surprise of it. What he had made ready and what she had not expected; the hour and the place; the thing prepared standing there in plain sight; the first look, the first word, the first touch; and what moved in her when she understood what the evening was for. A small gift is a small surprise told closely — a jug of wine chosen with care is its own tenderness — while a great one is an evening somebody has plainly been planning for days.");
+            sb.AppendLine("THE SECOND HALF — the knowing itself, and this half is NOT a door politely closed. Stay in the room with them. This is where breath catches and is held; where a whisper goes low and is answered; where something runs through her out to her fingertips until they are numb with it; where hunger and tenderness are the same motion; where a hand tightens and afterwards rests. Her own wanting is hers, and there is no shame in it. Every one of those things is told THROUGH AN IMAGE, as the Song tells them — never named the way our own age names them, and never left out. End inside that night, or in the first grey light after it.");
+            sb.AppendLine("Those are the KINDS of thing a body and a night do — not a list to work through, and above all not wording to lift. Take the two or three that were true of THIS night, in your own words, and let the rest go unsaid.");
+
+            // The hand of images, drawn per night. Naming a fixed few made them come back verbatim
+            // in every account (live-probed, 2026.08.10); naming none lost the register. See ImageDeck.
+            var hand = DrawImages(facts.ImageSeed).Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
+            if (hand.Count > 0)
+            {
+                sb.AppendLine("- The Song's own images are where you reach for the words. Tonight these are nearest to hand: "
+                            + string.Join("; ", hand) + ". "
+                            + "Take ONE, perhaps two, as a starting point and find the rest yourself — you are not obliged to use any of them, "
+                            + "and you must not work through them like a list. Another night will have other images; this one has these.");
+            }
+            sb.AppendLine("- Whole sentences, and let each one carry its own weight. Do not pack half the night into one long chain of clauses to meet the count — if there is more to say than the sentences allow, say less.");
+            sb.AppendLine();
             sb.AppendLine("- Her own \"I\", remembering it afterwards; name " + Name(facts.PartnerName) + " by name at least once.");
             sb.AppendLine(string.IsNullOrWhiteSpace(facts.PlacePhrase)
-                ? $"- Concrete and small, and every piece of it of the open country where they truly were — there was no room, no door, no bed, and you must not invent one: the fire or the dark, the cold and what they had against it, cloaks on the ground, {his} hands and her own, what was said and what was not."
-                : $"- Concrete and small: the room and its lamp, the cold or the warmth, a cup, a cloak laid aside, {his} hands and her own, what was said between them and what was not.");
+                ? $"- Where they truly were governs BOTH halves: the open country, and there was no room, no door, no bed — you must not invent one. The fire or the dark, the cold and what they had against it, cloaks on the ground, the horses standing near, the sky, {his} hands and her own."
+                : $"- Where they truly were governs BOTH halves: the room and its lamp, the cold or the warmth, a cup, a cloak laid aside, the door shut on the rest of the house, {his} hands and her own.");
             sb.AppendLine("- Let what she is carry into it — her humor this day, her body's season, whatever stands between them just now. A tired night is a tired night; a night after a quarrel is that.");
             sb.AppendLine("- No sermon, no moral, no prophecy, nothing from outside their world. Do not speak of a child unless she herself would be thinking of one.");
             sb.AppendLine("- Everything above is FACTS, not phrasing. Do not lift the wording of any of it into the account; say it your own way, or leave it unsaid.");
@@ -420,7 +572,7 @@ namespace ImmersiveAI.Core.Nights
             sb.AppendLine("\"\"\"");
             sb.AppendLine(Squeeze(facts.RecentWords, 1200));
             sb.AppendLine("\"\"\"");
-            sb.AppendLine("Write the TITLE and the account in the SAME TONGUE as those words — whatever tongue it is, match it exactly, and do not translate it into another. Take from them how these two speak to one another; take nothing else from them.");
+            sb.AppendLine("Write the TITLE and the account in the SAME TONGUE as those words — whatever tongue it is, match it exactly, and do not translate it into another. Take from them how these two speak to one another; take nothing else from them. Write the names of people and places in the LETTERS OF THAT TONGUE and spell each one the same way throughout — never half in one alphabet and half in another.");
         }
 
         // ------------------------- taming what comes back -------------------------
@@ -435,7 +587,11 @@ namespace ImmersiveAI.Core.Nights
         /// back to a plain name; an account too thin to be one yields false, and the night keeps
         /// its place in the roll without a writing.
         /// </summary>
-        public static bool TryParseStory(string? raw, out string title, out string story)
+        /// <param name="maxSentences">How long an account this night was asked for, so the tamer's
+        /// cut is set above what was ordered. A flat cap under a raised ceiling is a silent
+        /// truncation, which is the one failure a player would read as our bug and never report.</param>
+        public static bool TryParseStory(string? raw, out string title, out string story,
+            int maxSentences = 5)
         {
             title = string.Empty;
             story = string.Empty;
@@ -465,7 +621,8 @@ namespace ImmersiveAI.Core.Nights
                 break;
             }
 
-            story = WeddingText.CleanAccount(string.Join("\n", lines), maxChars: 1600);
+            story = WeddingText.CleanAccount(string.Join("\n", lines),
+                maxChars: AccountCharBudget(maxSentences));
             if (!LooksLikeANight(story)) return false;
 
             if (title.Length == 0) title = string.Empty; // the caller names it

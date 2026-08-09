@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ImmersiveAI.Core.Celebrations;
 
 namespace ImmersiveAI.Core.Weddings
 {
@@ -64,6 +65,18 @@ namespace ImmersiveAI.Core.Weddings
             public bool InvitesLordsOfTheRealm { get; }
             /// <summary>Whether the great names — rulers and heads of houses — are called.</summary>
             public bool InvitesGreatNames { get; }
+            /// <summary>Whether the souls who merely happen to stand in the place are counted as
+            /// witnesses. False exactly where the day has a GUEST LIST — see
+            /// <see cref="GuestRules.LocalsPresent"/> for why this one does not climb.</summary>
+            public bool AdmitsLocalStrangers { get; }
+            /// <summary>Whether couriers also ride to the kin of BOTH houses — the player's own,
+            /// and the house this day joins them to.</summary>
+            public bool InvitesKin { get; }
+
+            /// <summary>These same rules, in the shape the birth chronicle and anything else we
+            /// ever feast reads them.</summary>
+            public GuestRules Guests => new GuestRules(WitnessCap, AdmitsLocalStrangers,
+                InvitesRememberedBonds, InvitesKin, InvitesLordsOfTheRealm, InvitesGreatNames);
             /// <summary>The least place this wedding can honestly be held in. Gold cannot conjure a
             /// hall out of a hillside, and a crowd has to be housed and fed somewhere.</summary>
             public WeddingVenue MinVenue { get; }
@@ -93,7 +106,8 @@ namespace ImmersiveAI.Core.Weddings
 
             internal Tier(WeddingScale scale, int price, string name, string playerDescription,
                 string chroniclerNote, int witnessCap, bool remembered, bool lords, bool great,
-                WeddingVenue minVenue, int renown, bool requiresOwnTown = false)
+                WeddingVenue minVenue, int renown, bool requiresOwnTown = false,
+                bool admitsLocalStrangers = true, bool kin = false)
             {
                 RequiresOwnTown = requiresOwnTown;
                 Renown = renown;
@@ -103,6 +117,8 @@ namespace ImmersiveAI.Core.Weddings
                 InvitesRememberedBonds = remembered;
                 InvitesLordsOfTheRealm = lords;
                 InvitesGreatNames = great;
+                AdmitsLocalStrangers = admitsLocalStrangers;
+                InvitesKin = kin;
                 MinVenue = minVenue;
             }
 
@@ -129,25 +145,34 @@ namespace ImmersiveAI.Core.Weddings
                 "It was a plain wedding, paid for with a hundred denars: no couriers went out, and those who stood there were the company already at their side. Write it as the small, true thing it was — a poor feast is not a poor marriage, and the chronicler of a plain wedding writes of the vow, not of the table.",
                 8, remembered: false, lords: false, great: false, minVenue: WeddingVenue.OpenField, renown: 1),
 
+            // THE GUEST LIST (2026.08.10, Anton's ask, reading his own chronicle back): a called
+            // wedding is the ONE rung where no stranger stands. Couriers ride to your own house
+            // and to every soul you truly have a story with, however far — and to nobody else.
+            // Before this the notables of the town were swept in as well, and his hall held five
+            // people he had never spoken a word to.
             new Tier(WeddingScale.Invited, 1000, "A wedding with invitations",
-                "Couriers ride out to those you truly know — the friends, companions and folk you have a history with, even those far away — and the notables of the place are called.",
-                "A thousand denars were spent, and couriers went out: those the couple truly know were called to it, some riding days to be there, and the notables of the place came to the hall. Write the coming-in of the guests as part of the day.",
-                16, remembered: true, lords: false, great: false, minVenue: WeddingVenue.Village, renown: 5),
+                "Couriers ride out to BOTH your houses — yours and theirs — and to those you truly know: the friends, companions and folk you have a history with, even those weeks away. No one else: this is a guest list, and strangers are not on it.",
+                "A thousand denars were spent, and couriers went out: BOTH families were called — the bride's kin and the groom's — and with them every soul these two truly know, some riding days to be there. NO ONE ELSE stood in that hall: no strangers of the place, no lords come for the spectacle, only family and people these two could name. Write the coming-in of those guests as part of the day, and let the hall be the two houses and their own people.",
+                16, remembered: true, lords: false, great: false, minVenue: WeddingVenue.Village, renown: 5,
+                admitsLocalStrangers: false, kin: true),
 
             new Tier(WeddingScale.Great, 10000, "A great wedding",
                 "Ten thousand denars: everyone above, and the lords of the country round about and of their house come to the feast.",
                 "Ten thousand denars were spent — a great wedding. Beyond their own people and those they know, the lords of the country round about and of the houses concerned came to it, and the feast ran long. Write the scale of it plainly: many tables, many banners, a day the countryside will speak of.",
-                26, remembered: true, lords: true, great: false, minVenue: WeddingVenue.Castle, renown: 30),
+                26, remembered: true, lords: true, great: false, minVenue: WeddingVenue.Castle, renown: 30,
+                kin: true),
 
             new Tier(WeddingScale.Regal, 100000, "A wedding fit for kings",
                 "A hundred thousand denars: the great names of the realm are called — rulers and heads of houses — and the whole world hears of it.",
                 "A hundred thousand denars were spent: a wedding fit for kings. The great names of the realm were called to it — rulers and heads of houses among them — and word of the day travelled to every corner of the land. Write it as a wedding the chroniclers of the realm would themselves set down, without ever losing the two souls at the middle of it.",
-                40, remembered: true, lords: true, great: true, minVenue: WeddingVenue.Town, renown: 150),
+                40, remembered: true, lords: true, great: true, minVenue: WeddingVenue.Town, renown: 150,
+                kin: true),
 
             new Tier(WeddingScale.Legendary, 500000, "A legendary wedding",
                 "Half a million denars, and it can be given only in a town you hold yourself: the gates are thrown open and THE WHOLE TOWN feasts — your people, the great names of the realm, and everyone you have ever known. A day the world does not forget.",
                 "Half a million denars were spent, in a town the couple hold themselves, and the gates were thrown open: THE WHOLE TOWN feasted — its own folk first, and with them the great names of the realm and everyone the couple had ever known. Write this as the day a country remembers: the streets themselves keeping the wedding, common people and crowned heads at the same feast, and the two souls in the middle of it who are still only two souls.",
-                60, remembered: true, lords: true, great: true, minVenue: WeddingVenue.Town, renown: 500, requiresOwnTown: true),
+                60, remembered: true, lords: true, great: true, minVenue: WeddingVenue.Town, renown: 500,
+                requiresOwnTown: true, kin: true),
         };
 
         public static Tier? Of(WeddingScale scale) => All.FirstOrDefault(t => t.Scale == scale);
@@ -164,6 +189,12 @@ namespace ImmersiveAI.Core.Weddings
         public const int DefaultWitnessCap = 12;
 
         public static int WitnessCap(WeddingScale scale) => Of(scale)?.WitnessCap ?? DefaultWitnessCap;
+
+        /// <summary>Who is called to a wedding of this scale. A wedding sealed outside our own door
+        /// knows nothing of any purse, so it gathers whoever truly stood there — which is exactly
+        /// what every wedding before the tiers existed was written with.</summary>
+        public static GuestRules Guests(WeddingScale scale) =>
+            Of(scale)?.Guests ?? GuestRules.WhoeverWasThere(DefaultWitnessCap);
 
         /// <summary>What the day adds to the house's name; 0 for a wedding we sold them nothing of.</summary>
         public static int RenownOf(WeddingScale scale) => Of(scale)?.Renown ?? 0;
