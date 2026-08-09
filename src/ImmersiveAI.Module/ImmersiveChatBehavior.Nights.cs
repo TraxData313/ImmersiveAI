@@ -146,21 +146,42 @@ namespace ImmersiveAI
             try
             {
                 // LATE IN THE EVENING AND NOT BEFORE (Anton, 2026.08.10). The automatic night does
-                // not pounce the instant the hours are up — it waits for this hour, so the whole
-                // day between belongs to the player: he may come to the window at noon and go
-                // himself, with a gift and a written night, and the automatic one simply finds the
-                // clock running again and stands down. It is a floor under the marriage, never a
-                // ceiling on it.
-                int hour = (int)CampaignTime.Now.CurrentHourInDay;
-                if (hour != _config.NightHour) return;
+                // not pounce the instant the hours are up — it waits for dusk, so the whole day
+                // between belongs to the player: he may come to the window at noon and go himself,
+                // with a gift and a written night, and the automatic one simply finds the clock
+                // running again and stands down. A floor under the marriage, never a ceiling.
+                //
+                // BUT IT IS A WINDOW OF HOURS, NOT ONE HOUR (the sweep's find, 2026.08.10, and it
+                // was already costing whole days in play). A single-hour gate loses the evening to
+                // any passing reason: the cooldown thirty minutes short because last night was
+                // answered at 21:30, a conversation open at exactly 21:00, every door closed for
+                // one wife of two. Worse, the day was stamped as ASKED before any of that was
+                // weighed — which is why the question reappeared after a reload and only then
+                // (the field is not persisted). The stamp now goes down only when something has
+                // truly been put to the player, and dusk keeps knocking for a few hours.
+                if (!IsWithinEveningWindow()) return;
 
                 int today = (int)CampaignTime.Now.ToDays;
                 if (_nightAskedOnDay == today) return;
-                _nightAskedOnDay = today;
+                if (_nightLedger!.IsNightSettled(CampaignTime.Now.ToDays)) return;
 
                 HandleTheEvening();
             }
             catch (Exception ex) { ModLog.Error("the evening's question", ex); }
+        }
+
+        /// <summary>How many hours past <see cref="ModConfig.NightHour"/> the evening keeps asking.
+        /// Long enough to outlast a cooldown that ran a little over, short enough that it is still
+        /// plainly night.</summary>
+        private const int EveningWindowHours = 5;
+
+        private bool IsWithinEveningWindow()
+        {
+            int hour = (int)CampaignTime.Now.CurrentHourInDay;
+            int start = _config.NightHour;
+            for (int i = 0; i <= EveningWindowHours; i++)
+                if (hour == (start + i) % 24) return true;
+            return false;
         }
 
         // Why a given wife cannot be gone to tonight. Empty means she can.
@@ -249,9 +270,100 @@ namespace ImmersiveAI
 
             if (!_config.AskEachEvening) return;                       // the window's key is the only door
             if (CampaignTime.Now.ToDays < _dontAskNightsUntilDay) return;
-            if (!string.IsNullOrEmpty(InitiationBlockReason())) return; // not mid-battle, mid-talk, mid-inquiry
 
+            // THE QUESTION WAITS IN THE STACK, it does not seize the screen (Anton, 2026.08.10):
+            // a portrait notice on the right, beside the reach-outs and the arriving letters, that
+            // opens the evening's choice when clicked. X it and you are not asked for a week; leave
+            // it and it lapses at first light like any other. Only when that UI is unavailable does
+            // the old immediate popup stand in — and even then, never mid-battle or mid-talk.
+            _nightAskedOnDay = (int)CampaignTime.Now.ToDays;
+
+            if (UI.MapNoticePatch.Applied && _config.UseMapNoticeForInitiations)
+            {
+                RaiseNightNotice(wives);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(InitiationBlockReason())) { _nightAskedOnDay = int.MinValue; return; }
             AskWhereYouWillSleep(wives);
+        }
+
+        // ------------------------------ the evening's notice ------------------------------
+
+        // The campaign day a notice was raised on. A DAY and not a bool, so that a notice which
+        // simply lapsed at dawn cannot leave the flag stuck and silence every evening after it —
+        // the day turning clears it by itself, with nothing to remember to reset. Not persisted: a
+        // reloaded save just lets that evening pass, exactly as the reach-out notices do.
+        private int _nightNoticeDay = int.MinValue;
+
+        private bool NightNoticeUp => _nightNoticeDay == (int)CampaignTime.Now.ToDays;
+
+        private void RaiseNightNotice(List<Hero> wives)
+        {
+            try
+            {
+                if (NightNoticeUp) return;
+
+                var who = wives.Where(w => NightBlockFor(w, out _).Length == 0)
+                    .Select(w => w.Name?.ToString() ?? "she").ToList();
+                var line = who.Count == 1
+                    ? $"{who[0]} is here. Where will you sleep tonight?"
+                    : "Where will you sleep tonight?";
+
+                _nightNoticeDay = (int)CampaignTime.Now.ToDays;
+                Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
+                    new UI.ImmersiveNightMapNotification(new TextObject("{=!}" + line)));
+            }
+            catch (Exception ex)
+            {
+                _nightNoticeDay = int.MinValue;
+                ModLog.Error("raising the evening's notice", ex);
+            }
+        }
+
+        /// <summary>Whether the evening's notice still has anything to stand for. False the moment
+        /// the night is settled some other way, or dawn has come.</summary>
+        internal static bool IsNightNoticeStillAlive()
+        {
+            try
+            {
+                var self = Current;
+                if (self == null || !self.NightsOn || !self.NightNoticeUp) return false;
+                if (self._nightLedger!.IsNightSettled(CampaignTime.Now.ToDays)) return false;
+                return self.IsWithinEveningWindow();
+            }
+            catch { return false; }
+        }
+
+        /// <summary>Clicked: the evening's own choice opens.</summary>
+        internal static void OnNightNoticeInspected()
+        {
+            try
+            {
+                var self = Current;
+                if (self == null) return;
+                self._nightNoticeDay = int.MinValue;
+                var wives = SpousesOfPlayer();
+                if (wives.Count > 0) self.AskWhereYouWillSleep(wives);
+            }
+            catch (Exception ex) { ModLog.Error("opening the evening's choice", ex); }
+        }
+
+        /// <summary>Waved away by hand: that is an answer, and it stands for a week (Anton's rule).
+        /// A notice that merely LAPSED never reaches here — see the item VM.</summary>
+        internal static void OnNightNoticeDismissed()
+        {
+            try
+            {
+                var self = Current;
+                if (self == null) return;
+                self._nightNoticeDay = int.MinValue;
+                self._dontAskNightsUntilDay = CampaignTime.Now.ToDays + 7;
+                self.RecordTheRestOfTheNight(null);
+                self.NotifyNight("You wave the question away. You will not be asked at dusk for a week — "
+                               + "the window of the hearth is still there whenever you want it.");
+            }
+            catch (Exception ex) { ModLog.Error("waving the evening away", ex); }
         }
 
         // An evening that was asked about and never answered — the popup dismissed by a battle, a
@@ -406,7 +518,11 @@ namespace ImmersiveAI
                         var tier = picked?.FirstOrDefault()?.Identifier as NightGifts.Tier;
                         if (tier != null) SpendTheNightWith(wife, tier);
                     },
-                    _ => RecordTheRestOfTheNight(null),
+                    // Backing out of the GIFT question settles nothing. It used to close the whole
+                    // evening as a night alone, which is a harsh reading of "let me think about it"
+                    // — the day is still yours from the window, and the next dusk's sweep will
+                    // settle the night honestly if nothing comes of it (sweep, 2026.08.10).
+                    _ => { },
                     "", isSeachAvailable: false);
 
                 MBInformationManager.ShowMultiSelectionInquiry(data, true);
@@ -466,7 +582,12 @@ namespace ImmersiveAI
                 var record = BuildNightRecord(wife, chosen);
                 RollForAChild(wife, record, chosen);
 
-                _nightLedger!.Add(record, _config.MaxNightsRemembered);
+                // The evening may already have been settled as a night alone — the dusk question
+                // came and went, and only now, at midnight, does he open the window and go. Forget
+                // what was written of this night and write it again, or the other wives would keep
+                // remembering that he slept alone on the very night he did not (2026.08.10).
+                _nightLedger!.ClearNight(record.GameDay);
+                _nightLedger.Add(record, _config.MaxNightsRemembered);
                 RecordTheRestOfTheNight(wife, -1, chosen);  // what the other wives came to know
                 SaveNightLedger();
 
@@ -482,8 +603,7 @@ namespace ImmersiveAI
                 // The plain beat lands now; a written night's beat waits for its name.
                 if (!(tier?.WritesStory ?? false))
                 {
-                    WriteNightBeat(wife, NightText.PlainBeat(record.WifeName == wife.Name?.ToString()
-                        ? PlayerName() : PlayerName(), record.PlaceName));
+                    WriteNightBeat(wife, NightText.PlainBeat(PlayerName(), record.PlaceName));
                     record.BeatDone = true;
                     SaveNightLedger();
                     UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: false);
@@ -639,18 +759,38 @@ namespace ImmersiveAI
 
             foreach (var record in _nightLedger!.DueForReveal(today).ToList())
             {
-                record.Revealed = true;
+                // The mark goes down only once something has actually been DONE about it. Marking
+                // it first cost nothing on a good day and quietly killed a child on a bad one: a
+                // hero not resolvable this instant (mid-load, a prisoner exchange in flight) would
+                // have had the conception struck off and never looked at again (sweep, 2026.08.10).
                 var wife = FindAliveHero(record.WifeId);
                 var mother = wife == null ? null : MotherOf(wife);
-                if (mother == null || wife == null) { SaveNightLedger(); continue; }
+                if (wife == null || mother == null)
+                {
+                    // Dead is settled; merely not-found-right-now waits for the next hour.
+                    if (!Safe(() => Hero.AllAliveHeroes.Any(h => h.StringId == record.WifeId), true))
+                    {
+                        record.Revealed = true;
+                        SaveNightLedger();
+                    }
+                    continue;
+                }
 
                 try
                 {
-                    if (mother.IsPregnant) { SaveNightLedger(); continue; }
-                    if (Safe(() => CampaignOptions.IsLifeDeathCycleDisabled, false)) { SaveNightLedger(); continue; }
+                    if (mother.IsPregnant) { record.Revealed = true; SaveNightLedger(); continue; }
+                    if (Safe(() => CampaignOptions.IsLifeDeathCycleDisabled, false))
+                    {
+                        record.Revealed = true; SaveNightLedger(); continue;
+                    }
 
                     EnsureFatherSlot(mother);
                     MakePregnantAction.Apply(mother);   // vanilla's own door: its announcement, its due date
+
+                    // Only now is it truly done. An exception on the line above leaves the mark
+                    // down and the record waiting, so the next hour tries again.
+                    record.Revealed = true;
+                    ModLog.Info($"the nights: {record.WifeName} is with child (begun on day {(int)record.GameDay}).");
 
                     // And her own word of it, in her own memory, so the chat carries the moment too.
                     WriteNightBeat(wife, ChildKnownBeat(record), OutreachMark.None);
@@ -764,7 +904,7 @@ namespace ImmersiveAI
                     if (doorClosed && here)
                     {
                         learned.GameDay = now + 0.01;
-                        _nightLedger.Nights.Add(learned);
+                        _nightLedger.AddBeside(learned, _config.MaxNightsRemembered);
                     }
                     else _nightLedger.Add(learned, _config.MaxNightsRemembered);
                 }
@@ -1619,6 +1759,72 @@ namespace ImmersiveAI
         {
             try { if (npc != null) Current?.ForgeNightFor(npc); }
             catch (Exception ex) { ModLog.Error("dev: forging a night", ex); }
+        }
+
+        /// <summary>
+        /// Dev: bring the whole conception chain forward to right now — no week of waiting to find
+        /// out whether it works. If a child is already begun and merely unknown, its day of knowing
+        /// is pulled to today; if not, one is begun outright and revealed. Either way the next
+        /// hourly tick runs the REAL path (father slot, MakePregnantAction, vanilla's own
+        /// announcement, her beat, her coming to tell you), so this proves the machinery rather
+        /// than pretending to.
+        /// </summary>
+        internal void HastenConceptionFor(Hero npc)
+        {
+            try
+            {
+                if (npc == null) return;
+                if (!NightsOn)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        "The nights are turned off in the mod options.", SealGrey));
+                    return;
+                }
+                var mother = MotherOf(npc);
+                if (mother == null || !FamilyBuilder.AreWed(Hero.MainHero, npc))
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"{npc.Name} is not a wife of yours who could carry a child.", SealGrey));
+                    return;
+                }
+                if (mother.IsPregnant)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"{npc.Name} is already with child.", SealGrey));
+                    return;
+                }
+
+                double now = CampaignTime.Now.ToDays;
+                var pending = _nightLedger!.For(npc.StringId)
+                    .LastOrDefault(n => n.Conceived && !n.Revealed);
+
+                if (pending == null)
+                {
+                    pending = _nightLedger.For(npc.StringId).LastOrDefault(n => n.Kind == NightKind.Together);
+                    if (pending == null)
+                    {
+                        pending = BuildNightRecord(npc, NightGifts.Plain);
+                        _nightLedger.Add(pending, _config.MaxNightsRemembered);
+                    }
+                    pending.Conceived = true;
+                    pending.Revealed = false;
+                }
+                pending.RevealDay = now;
+                SaveNightLedger();
+
+                NotifyNight($"[test] a child of yours and {npc.Name}'s is begun, and the day of knowing is now — "
+                          + "the next hour will run the whole of it.", QuickenedColor);
+
+                // And run it at once rather than waiting for the hour to turn.
+                RevealDueConceptions();
+            }
+            catch (Exception ex) { ModLog.Error("dev: hastening a conception", ex); }
+        }
+
+        internal static void DevHastenConception(Hero npc)
+        {
+            try { if (npc != null) Current?.HastenConceptionFor(npc); }
+            catch (Exception ex) { ModLog.Error("dev: hastening a conception", ex); }
         }
     }
 }

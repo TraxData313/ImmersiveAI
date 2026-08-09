@@ -72,6 +72,24 @@ namespace ImmersiveAI.UI
         }
     }
 
+    /// <summary>
+    /// The evening's own notice (2026.08.10, Anton's ask — the dusk question used to seize the
+    /// screen the instant the hour turned). It waits in the right-side stack like a reach-out or an
+    /// arrived letter: click it and the evening's choice opens; X it and you are not asked again
+    /// for a week; leave it and it lapses at first light, and the night settles as one slept alone.
+    /// Same save rules as its two siblings — registered forever once shipped.
+    /// </summary>
+    public class ImmersiveNightMapNotification : InformationData
+    {
+        public override TextObject TitleText => new TextObject("{=ImmersiveAI_NightNoticeTitle}Where will you sleep?");
+
+        public override string SoundEventPath => "event:/ui/notification/ransom_offer";
+
+        public ImmersiveNightMapNotification(TextObject descriptionText) : base(descriptionText) { }
+
+        public override bool IsValid() => ImmersiveChatBehavior.IsNightNoticeStillAlive();
+    }
+
     /// <summary>Registers the mod's saveable types. The base id is a large, arbitrary number to
     /// keep clear of other mods; never change it once saves exist with it.</summary>
     public class ImmersiveAISaveDefiner : SaveableTypeDefiner
@@ -82,6 +100,7 @@ namespace ImmersiveAI.UI
         {
             AddClassDefinition(typeof(ImmersiveChatMapNotification), 1);
             AddClassDefinition(typeof(ImmersiveLetterMapNotification), 2);
+            AddClassDefinition(typeof(ImmersiveNightMapNotification), 3);
         }
     }
 }

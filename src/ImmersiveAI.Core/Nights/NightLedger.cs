@@ -70,6 +70,34 @@ namespace ImmersiveAI.Core.Nights
             return record;
         }
 
+        /// <summary>
+        /// Sets down a SECOND record for a wife on a night that already has one — her door being
+        /// closed AND what she then saw of where he slept are two true things about one evening.
+        /// It goes through the same door as any other so it gets an id and obeys the cap; adding
+        /// straight to the list (as this once did) left it id-less, which quietly broke the
+        /// "which written nights are told in full" grouping, and unpruned, so a woman in her
+        /// custom days every month grew past her fortnight forever.
+        /// </summary>
+        public NightRecord AddBeside(NightRecord record, int maxPerWife = DefaultMaxPerWife)
+        {
+            if (record == null) throw new ArgumentNullException(nameof(record));
+            if (string.IsNullOrWhiteSpace(record.Id)) record.Id = MakeId(record) + "_b";
+            Nights.Add(record);
+            PruneFor(record.WifeId, maxPerWife);
+            return record;
+        }
+
+        /// <summary>
+        /// Forgets everything set down about one evening. The evening can be settled twice — the
+        /// dusk question passes and every wife notes a night alone, and then the player opens the
+        /// window at midnight and actually goes to one of them. Without this the others would still
+        /// be remembering that he slept alone on the very night he did not (2026.08.10).
+        /// </summary>
+        public void ClearNight(double gameDay)
+        {
+            Nights.RemoveAll(n => n != null && SameNight(n.GameDay, gameDay));
+        }
+
         /// <summary>Whether this wife already has a night set down for this evening.</summary>
         public bool HasNightOn(string wifeId, double gameDay) =>
             Nights.Any(n => n != null

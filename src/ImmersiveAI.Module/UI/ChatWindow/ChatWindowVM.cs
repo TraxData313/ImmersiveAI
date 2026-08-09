@@ -648,6 +648,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public void ExecuteDevBattle() => RunDev(ImmersiveChatBehavior.DevForgeBattle);
         public void ExecuteDevWedding() => RunDev(ImmersiveChatBehavior.DevForgeWedding);
         public void ExecuteDevNight() => RunDev(ImmersiveChatBehavior.DevForgeNight);
+        public void ExecuteDevChild() => RunDev(ImmersiveChatBehavior.DevHastenConception);
         public void ExecuteDevRename() => RunDev(ImmersiveChatBehavior.DevRenameNpc);
 
         public void ExecuteDevOdds()

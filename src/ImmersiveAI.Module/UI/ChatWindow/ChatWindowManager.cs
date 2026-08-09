@@ -199,6 +199,7 @@ namespace ImmersiveAI.UI.ChatWindow
             {
                 if (_config == null || !_config.EnableChatWindow) return false;
                 if (LetterWindow.LetterWindowManager.IsOpen) return false;   // one window at a time
+                if (NightWindow.NightWindowManager.IsOpen) return false;    // the hearth is the third
                 if (Campaign.Current == null) return false;
                 if (Mission.Current != null) return false;
                 if (!(Game.Current?.GameStateManager?.ActiveState is MapState mapState)) return false;

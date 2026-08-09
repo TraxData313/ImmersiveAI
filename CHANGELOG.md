@@ -15,7 +15,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-- **New: the nights of your marriage are yours to spend.** Each evening you are asked where you will sleep — a child is now begun on a night you actually chose, not by a coin the game flips behind your back.
+- **New: the nights of your marriage are yours to spend.** Each evening a notice waits on the right of the map — the same place a companion knocks or a letter arrives — asking where you will sleep — a child is now begun on a night you actually chose, not by a coin the game flips behind your back.
 - A woman's body keeps its own month, and you can see where hers stands in plain words. The nights near its crest are the ones that may quicken; through the days of the custom her door is closed and no one is asked anything.
 - Take every night of her season and a child is about as likely over a month as the game would have made it anyway — miss the season and you have missed the month. The old odds are still the odds; you just have to be there.
 - **What you lay out for a night buys three things.** Wine (10 denars) up to a jewel (1,000): better chances, a WRITTEN account of that night in her own voice with a name she keeps it by — and talk. The grander the night, the more surely your other wives hear of it, and they hear its name too.
@@ -23,6 +23,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Every wife keeps a rolling fortnight of nights — the ones you came to her, the ones her door was closed, the ones she learned you were elsewhere, and the ones she simply never saw you come in. Nothing tells her how to feel about any of it. That has always been her own.
 - A wife far away keeps no watch on your nights — but word of another woman travels.
 - **New window, on H:** your own hearth. Every wife, where she stands, how her season runs, when the next night is yours, and the fortnight she keeps.
+- Click the notice and the choice opens; wave it away with the X and you are not asked at dusk for a week; leave it and it lapses at first light, and that night you slept alone.
 - Two plain switches in the window: **Visiting — Manual or Auto**, and **Try to prevent a child — On or Off**. Manual asks you at dusk and lets you go at any hour from the window; Auto goes on its own once the hours are up, late in the evening, with nothing asked, bought or written.
 - Auto never takes the day away from you: it waits for the evening, and a night you chose yourself resets the clock. It is a floor under your marriage, not a ceiling — want more than it gives, or want a night written, go yourself in the afternoon.
 - Taking care means you go to whoever rather than to whoever is nearest her season, and any night's chance of a child falls to a tenth. Small, never nothing.

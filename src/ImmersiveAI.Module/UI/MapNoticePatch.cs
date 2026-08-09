@@ -46,6 +46,8 @@ namespace ImmersiveAI.UI
                     typeof(ImmersiveChatMapNotification), typeof(ImmersiveChatNotificationItemVM));
                 __instance.RegisterMapNotificationType(
                     typeof(ImmersiveLetterMapNotification), typeof(ImmersiveLetterNotificationItemVM));
+                __instance.RegisterMapNotificationType(
+                    typeof(ImmersiveNightMapNotification), typeof(ImmersiveNightNotificationItemVM));
             }
             catch { /* a failed registration only means the fallback inquiry path is used */ }
         }
