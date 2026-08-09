@@ -25,8 +25,14 @@ namespace ImmersiveAI.Core.Nights
             public string Name { get; }
             /// <summary>What the player is told the coin buys, in plain in-world words.</summary>
             public string PlayerDescription { get; }
-            /// <summary>How the chronicler is told of it, in the register of the account. Empty for
-            /// the night that buys nothing — there the chronicler is never called at all.</summary>
+            /// <summary>
+            /// What the chronicler is TOLD was there — bare facts, never a written sentence
+            /// (2026.08.10, Anton: "да не стане репетитив след време"). These used to be finished
+            /// prose, and finished prose handed to a model comes back almost word for word: every
+            /// ten-denar night in a marriage would have read the same by the tenth one. A handful
+            /// of nouns leaves the writing to the writer, and the prompt says plainly that these
+            /// are the facts and not the phrasing.
+            /// </summary>
             public string ChroniclerNote { get; }
             /// <summary>What it does to the night's odds.</summary>
             public double Multiplier { get; }
@@ -58,28 +64,30 @@ namespace ImmersiveAI.Core.Nights
             "You go to her as you are. No wine, no gift, nothing prepared — only the two of you and the night. It is remembered, but not written, and it draws no eyes.",
             string.Empty, 1.00, 0.50);
 
+        // The chronicler's notes below are FACTS, deliberately terse. See Tier.ChroniclerNote.
+
         public static readonly IReadOnlyList<Tier> All = new[]
         {
             Plain,
 
             new Tier(10, "A cup of wine",
                 "A jug of decent wine and bread set aside for the two of you. Small, but chosen — and somebody fetched it.",
-                "He had brought wine — a jug of it, and bread, set aside for the two of them. A small thing, and a chosen one: this was not a night he simply fell into.",
+                "wine and bread set aside beforehand; ten denars' worth — small, and chosen",
                 1.10, 0.75),
 
             new Tier(100, "Hot water, oil, and a table for two",
                 "Water carried up and heated, oil for her hair, and a supper laid for two with no one else at the table. Half the household is involved.",
-                "He had gone to some trouble: water carried up and heated for her, oil for her hair, and a supper laid for two with no one else at the table. An evening made, not merely arrived at.",
+                "water carried and heated, oil for her hair, a supper laid for two only; a hundred denars — an evening made, not stumbled into",
                 1.35, 1.10),
 
             new Tier(300, "Cloth for a new gown",
                 "Good cloth, dyed, and a seamstress paid to have it ready — a thing she will wear where others see her, and they will ask.",
-                "He had brought her good cloth, dyed and costly, with a seamstress already paid to cut it — a gift she will wear where the world can see it, which is its own kind of saying.",
+                "good dyed cloth and a seamstress already paid; three hundred denars — a gift meant to be worn where others will see it",
                 1.60, 1.50),
 
             new Tier(1000, "A jewel",
                 "A jewel chosen for her — the kind a woman wears once and is remembered in. A thousand denars, and everyone will know what it cost, including your other wives.",
-                "He had brought her a jewel. A thousand denars of it, chosen and not merely bought, the kind a woman is remembered wearing. Whatever else passed between them that night, this was laid down first.",
+                "a jewel, chosen; a thousand denars — the kind a woman is remembered wearing, and it was laid down before anything else",
                 2.00, 2.00),
         };
 

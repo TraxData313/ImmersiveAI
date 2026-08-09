@@ -299,6 +299,11 @@ namespace ImmersiveAI.Core.Nights
             public string WorldText = string.Empty;
             /// <summary>The last words that truly passed between them — the tongue's evidence.</summary>
             public string RecentWords = string.Empty;
+
+            /// <summary>The names the last few written nights already carry (2026.08.10). Handed
+            /// over ONLY so this one does not repeat them or their shape — a marriage of thirty
+            /// nights must not read as the same night thirty times.</summary>
+            public List<string> PastNightNames = new List<string>();
         }
 
         /// <summary>
@@ -333,6 +338,20 @@ namespace ImmersiveAI.Core.Nights
                 : $"- Concrete and small: the room and its lamp, the cold or the warmth, a cup, a cloak laid aside, {his} hands and her own, what was said between them and what was not.");
             sb.AppendLine("- Let what she is carry into it — her humor this day, her body's season, whatever stands between them just now. A tired night is a tired night; a night after a quarrel is that.");
             sb.AppendLine("- No sermon, no moral, no prophecy, nothing from outside their world. Do not speak of a child unless she herself would be thinking of one.");
+            sb.AppendLine("- Everything above is FACTS, not phrasing. Do not lift the wording of any of it into the account; say it your own way, or leave it unsaid.");
+
+            // The one real defence against a marriage that reads as the same night over and over:
+            // show it what it has already called the last few, and let it steer away (2026.08.10).
+            var past = facts.PastNightNames?.Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim()).Take(6).ToList() ?? new List<string>();
+            if (past.Count > 0)
+            {
+                sb.AppendLine("- Nights before this one already carry these names: "
+                            + string.Join("; ", past.Select(n => "\"" + n + "\"")) + ". "
+                            + "Do not reuse them, and do not write the same night again in different words "
+                            + "— a marriage is many different evenings, not one evening repeated. Take a "
+                            + "different hour of it, a different small thing, a different thing left unsaid.");
+            }
             sb.AppendLine("Output only the TITLE line and the account. No heading, no quotation marks around the whole, no note before or after.");
 
             AppendTongueRule(sb, facts);
@@ -373,7 +392,8 @@ namespace ImmersiveAI.Core.Nights
                 : $"- The place: {facts.PlacePhrase.Trim().TrimEnd('.')}.");
 
             if (!string.IsNullOrWhiteSpace(facts.GiftNote))
-                sb.AppendLine("- What he brought to it: " + facts.GiftNote.Trim());
+                sb.AppendLine("- What he brought to it (the bare facts of it, not words to reuse): "
+                            + facts.GiftNote.Trim());
             if (!string.IsNullOrWhiteSpace(facts.SinceLastPhrase))
                 sb.AppendLine($"- Since he last came to her: {facts.SinceLastPhrase.Trim().TrimEnd('.')}.");
             if (!string.IsNullOrWhiteSpace(facts.MarriedPhrase))

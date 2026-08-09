@@ -99,6 +99,15 @@ The wedding tiers' little brother. 0 / 10 / 100 / 300 / 1000 denars.
 | cloth for a gown (300) | 1.60 | 1.50 | yes |
 | a jewel (1000) | 2.00 | **2.00** | yes |
 
+**What the chronicler is TOLD of a gift is a handful of nouns, never a written sentence**
+(2026.08.10). They began as finished prose — *"He had brought wine, a jug of it, and bread, set aside
+for the two of them…"* — and finished prose handed to a model comes back almost word for word: every
+ten-denar night in a marriage would have read the same by the tenth. Three rails now: the notes are
+terse facts (a test fails if one grows back past 160 characters or starts writing sentences), the
+prompt says out loud that everything it was given is **facts, not phrasing**, and it is handed the
+NAMES of the last six written nights with one instruction — do not reuse them, and do not write the
+same evening again in different words.
+
 **The talk column is the sharpest edge in the feature** (Anton, 2026.08.09). A grand night is grand
 precisely because people talk about it: servants carry water up the stairs, a woman wears a jewel
 where everyone can see it. So the coin buys better odds *and* a written memory *and* your other
@@ -274,9 +283,14 @@ C, N, K, Q and E). MCM carries the ones worth a dial, all live.
 
 The letter window's leaner twin: wives on the left with her season **in words** (a number only when
 `ShowConceptionOdds` is on), her fortnight on the right, one "Go to her tonight" button that walks
-the same road the dusk question walks, a live button cycling the four modes, and a "?" page. Yields
-to the other two windows; only one stands at a time. The dusk question offers "Let me look at my own
-house first", which opens it.
+the same road the dusk question walks, the two live switches, and a "?" page. Yields to the other two
+windows; only one stands at a time. The dusk question offers "Let me look at my own house first",
+which opens it.
+
+**Its "?" page is the one place in the mod written for an operator, not a reader** (Anton, 2026.08.10:
+"не бих чел, по-скоро бих експериментирал направо"). Short headed blocks, one fact to a line, and the
+real numbers read live from the config — a page that says 24 hours is telling the truth about *that*
+save. The immersive voice belongs to the souls; a help page nobody finishes helps nobody.
 
 ## Not built, deliberately
 

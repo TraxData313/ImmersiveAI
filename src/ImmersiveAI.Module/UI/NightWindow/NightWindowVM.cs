@@ -335,33 +335,55 @@ namespace ImmersiveAI.UI.NightWindow
         {
             get
             {
-                var key = string.IsNullOrWhiteSpace(_config?.NightWindowHotkey) ? "H" : _config!.NightWindowHotkey;
+                // PLAIN AND SCANNABLE, on purpose (Anton, 2026.08.10 — "не бих чел, по-скоро бих
+                // експериментирал направо"). This is the one page in the mod written for the player
+                // as an OPERATOR rather than as a reader: short headed blocks, one fact to a line,
+                // the real numbers stated instead of described. The immersive voice belongs to the
+                // souls, not to a help page nobody finishes. Every figure below is read from the
+                // live config, so a page that says 24 hours is telling the truth about YOUR game.
+                var key = string.IsNullOrWhiteSpace(_config?.NightWindowHotkey) ? "H" : _config!.NightWindowHotkey.Trim();
+                int hours = _config?.NightCooldownHours ?? 24;
+                int reveal = _config?.ConceptionRevealDelayDays ?? 7;
+                int kept = _config?.MaxNightsRemembered ?? 14;
+                int tenth = (int)Math.Round(Math.Max(0.0, Math.Min(1.0, _config?.CarefulNightChanceFactor ?? 0.1)) * 100);
+
                 return
-                    "This is your own hearth. Every wife you have is here, with where her season stands and "
-                    + "when the next night is yours to spend.\n\n"
-                    + "WHAT THE NIGHTS ARE FOR. A child is no longer begun by a coin the world flips behind "
-                    + "your back — it is begun on a night you chose. A woman's body keeps its own month, and the "
-                    + "nights near the crest of it are the ones that may quicken; through the days of the custom "
-                    + "her door is closed and no one is asked anything.\n\n"
-                    + "THE TWO SWITCHES on the left. VISITING: Manual means you are asked at dusk and can also "
-                    + "come here at any hour of the day and go then; Auto means that once the hours between "
-                    + "nights are up you go to one of them on your own, late in the evening, with nothing asked "
-                    + "of you, nothing bought and nothing written. PREVENT A CHILD: On means the two of you take "
-                    + "care — on Auto you go to whoever rather than to whoever is nearest her season, and any "
-                    + "night's chance falls to a tenth. Either switch can stand either way.\n\n"
-                    + "A visit of any kind resets the clock, so an automatic night never lands on a day you "
-                    + "already chose one. Auto is a floor under your marriage, not a ceiling on it: want more "
-                    + "than it gives, or want a night written — come here in the afternoon and go yourself.\n\n"
-                    + "WHAT COIN BUYS. Nothing, and it is still a true night. Ten denars buys wine; a thousand "
-                    + "buys a jewel. What the coin actually buys is three things: better odds, a WRITTEN account "
-                    + "of the night with a name she will keep it by — and talk. The grander the night, the more "
-                    + "likely your other wives hear of it, and they hear its name too. That is the trade.\n\n"
-                    + "AND THE MORNING. A night you paid for costs you the morning: the company breaks camp slow "
-                    + "and disorganized after it. She is told of the lingering, since it was for her.\n\n"
-                    + "WHAT SHE SEES. Each of them keeps her own fortnight — the nights you came, the nights her "
-                    + "door was closed, and whatever she came to learn of the rest. Nothing tells her how to feel "
-                    + "about any of it. That has always been her own.\n\n"
-                    + $"Open and close this window with \"{key}\". Escape closes it too.";
+                    "WHAT THIS IS\n"
+                    + "Your marriage, night by night. A child is begun on a night you choose — not by a hidden daily roll.\n\n"
+
+                    + "THE TWO SWITCHES (left)\n"
+                    + "Visiting = MANUAL — you are asked at dusk, and you can come here any hour and go.\n"
+                    + "Visiting = AUTO — goes on its own once the hours are up, late evening. Nothing asked, nothing bought, nothing written.\n"
+                    + "Prevent a child = OFF — on Auto, goes to whoever is nearest her season.\n"
+                    + $"Prevent a child = ON — on Auto, goes to whoever; any night's chance drops to {tenth}% of normal.\n\n"
+
+                    + "HER MONTH\n"
+                    + "Shown in words beside her name. \"At the crest\" = her best nights.\n"
+                    + "Days of the custom — her door is closed. No visit, and you are not asked.\n"
+                    + "Take her whole fertile stretch and a child is about as likely over a month as the game's own rate. Miss it and you missed the month.\n\n"
+
+                    + "WHAT A GIFT BUYS (10–1000 denars)\n"
+                    + "1. Odds — ×1.1 for wine, up to ×2 for a jewel.\n"
+                    + "2. A written account of that night, with a name she keeps it by.\n"
+                    + "3. Talk — your OTHER wives are likelier to hear of it (×0.5 with no gift, ×2 with the jewel), and they hear its name too.\n"
+                    + "Cost: the company breaks camp disorganized next morning. A free night costs nothing and is not written.\n\n"
+
+                    + "TIMING\n"
+                    + $"One night per {hours} hours. Any visit resets the clock.\n"
+                    + "Auto waits for the evening, so the whole day before it is yours to use.\n\n"
+
+                    + "A CHILD\n"
+                    + $"Not announced at once — she learns about {reveal} days later, and may then come or write to tell you.\n"
+                    + "Optional line in the log after each night: the chance that stood, and whether it took.\n\n"
+
+                    + "WHAT SHE SEES\n"
+                    + $"Her last {kept} nights: when you came, when her door was closed, when she learned you were elsewhere, when she saw nothing.\n"
+                    + "A wife who is not with you learns only that you were with another — and only sometimes.\n"
+                    + "Nothing tells her how to feel about any of it.\n\n"
+
+                    + "KEYS\n"
+                    + $"{key} opens and closes this window. Escape closes it.\n"
+                    + "More dials in the mod options, under \"Life of the NPCs\".";
             }
         }
     }

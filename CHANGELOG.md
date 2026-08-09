@@ -28,6 +28,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Taking care means you go to whoever rather than to whoever is nearest her season, and any night's chance of a child falls to a tenth. Small, never nothing.
 - A child begun is not a child known: the announcement now waits a sensible week, and when she learns of it she may come and tell you herself — or write, if you are apart. Even if she would never otherwise reach out.
 - Optional line in the log after each night: the chance that stood, and whether a child was begun.
+- The written nights should keep surprising you: the storyteller is handed the bare facts of what you brought rather than a ready-made sentence, and it is shown what the last few nights were already called so it does not write the same evening twice.
+- The hearth window's "?" page is a quick reference now — short blocks, one fact a line, your own actual numbers — instead of a wall of prose.
 - Toggle: EnableNights (on by default). A night costs one writing call only if you paid for it.
 - **New: characters now know what has NOT been talked about yet.** One plain divider in their sense of you, at the last moment the two of you had time to yourselves — and after it a dated list of everything since: the markets, the battles, the nights. So the morning after you went to another wife, she knows it happened and knows the two of you have not sat down to it.
 - Only time alone moves that divider: a talk that ended, a night together, your wedding night. A battle does not, a market does not, hearing where you slept does not. And it stays put while you are talking, so what she meant to raise cannot vanish from under her mid-sentence.

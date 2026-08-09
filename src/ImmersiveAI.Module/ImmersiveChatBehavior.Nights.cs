@@ -1007,6 +1007,17 @@ namespace ImmersiveAI
             }
             catch { }
             try { facts.SinceLastPhrase = SinceLastNightPhrase(wife); } catch { }
+            try
+            {
+                // What the last few nights are already called, so this one steers away from them.
+                facts.PastNightNames = _nightLedger!.For(wife.StringId)
+                    .Where(n => n.IsStoried && n.Id != record.Id && !string.IsNullOrWhiteSpace(n.Title))
+                    .OrderByDescending(n => n.GameDay)
+                    .Take(6)
+                    .Select(n => n.Title.Trim())
+                    .ToList();
+            }
+            catch { }
             try { facts.CircumstancePhrase = CircumstancePhrase(); } catch { }
             try
             {

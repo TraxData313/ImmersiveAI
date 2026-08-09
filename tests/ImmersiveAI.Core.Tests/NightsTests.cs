@@ -462,6 +462,41 @@ public class NightsTests
     }
 
     [Fact]
+    public void WhatTheChroniclerIsToldOfAGift_StaysFactsAndNeverBecomesProse()
+    {
+        // Finished prose handed to a model comes back almost word for word, and every ten-denar
+        // night in a marriage would read the same by the tenth (Anton, 2026.08.10). These are a
+        // handful of nouns, and the prompt says so out loud.
+        foreach (var tier in NightGifts.Paid)
+        {
+            var note = tier.ChroniclerNote;
+            Assert.True(note.Length < 160, $"{tier.Name}'s note is growing back into prose");
+            Assert.False(note.Contains("He had "), $"{tier.Name}'s note is a written sentence again");
+            Assert.Equal(note.TrimStart(), note);
+        }
+
+        var prompt = NightText.BuildStoryPrompt(SomeFacts());
+        Assert.Contains("the bare facts of it, not words to reuse", prompt);
+        Assert.Contains("FACTS, not phrasing", prompt);
+    }
+
+    [Fact]
+    public void StoryPrompt_SteersAwayFromTheNightsAlreadyWritten()
+    {
+        var facts = SomeFacts();
+        facts.PastNightNames = new List<string> { "Чашата кехлибарено вино", "The Lamp Burned Down" };
+        var prompt = NightText.BuildStoryPrompt(facts);
+
+        Assert.Contains("already carry these names", prompt);
+        Assert.Contains("Чашата кехлибарено вино", prompt);
+        Assert.Contains("The Lamp Burned Down", prompt);
+        Assert.Contains("not one evening repeated", prompt);
+
+        // A first night has nothing to steer away from, and must not be told it has.
+        Assert.DoesNotContain("already carry these names", NightText.BuildStoryPrompt(SomeFacts()));
+    }
+
+    [Fact]
     public void StoryPrompt_WillNotFurnishARoomOntoAnOpenRoad()
     {
         var facts = SomeFacts();
