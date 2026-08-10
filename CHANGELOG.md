@@ -15,17 +15,36 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-- New: every child born to you is written down — the hour of it in the mother's own voice, kept between the two of you, and it can be told back to you years later.
-- New: when a child comes you choose how to welcome it, from bread and salt to a whole town rejoicing — and if you were away, you are asked when you next ride in.
-- New: whoever stands at that feast remembers it for the rest of their life, and your house gains a name for it.
-- New: your children live in the hearth window (H) under their mother's name — the hour of the birth first, then the feast, kept there for good.
+**DRAFT Nexus changelog — re-check the 255-character cap before shipping:**
+
+```
+* New: every child you father is written down - the hour, in her own voice
+* Choose the feast: bread and salt, or a whole town rejoicing
+* Pay more for a night, get a longer, franker account
+* Invited weddings call both families - no strangers
+```
+
+### The birth chronicle
+- New: every child born to you is written down in two parts — the hour of it, set down in the mother's own voice and belonging to the two of you, and the feast that welcomed the child, which everyone who stood at it remembers ever after.
+- New: when a child comes you choose how to welcome it, from bread and salt at a campfire to a whole town of your own thrown open. What you spend decides who is called.
+- New: if you were away when it happened, you are asked when you next ride in to see the child — you have a month.
+- New: whoever stands at that feast carries the day for the rest of their life, and your house gains a name for it.
+- New: ask an NPC about that day and they will tell it back to you — the parents get the hour as well, and nobody else ever does.
+- New: your children live in the hearth window (H) under their mother's name — the hour first, then the feast, kept there for good.
+- A child who does not live is recorded and grieved, never feasted and never written up.
+
+### The nights
 - Changed: the more you lay out for a night with your wife, the longer and more particular the account she keeps of it — and every account now tells the whole of it, not only the evening before.
-- Changed: the long wedding and birth accounts now fade in an NPC's mind as any memory does — whole while fresh, then their opening, then just the day itself. They can still tell you the whole of it if you ask.
-- Changed: everyday happenings (battles, roads, nights) can no longer crowd real conversation out of what an NPC remembers word for word.
-- Changed: a wife's roll of nights now keeps the SPECIAL ones whole however old they are — the night a child began on no longer scrolls away in four days — and a run of ordinary nights gathers into one line instead of ten.
-- Changed: the account of a night reaches for different images each time, so a long marriage stops reading like one evening written over and over.
-- Changed: a wedding or a naming feast with invitations calls BOTH families — yours and theirs — and the friends you truly know, and nobody else. No more halls full of townsfolk you have never spoken to.
+- Changed: the account reaches for different images each time, so a long marriage stops reading like one evening written over and over.
+- Changed: her roll of nights keeps the SPECIAL ones whole however old they are — the night a child began on no longer scrolls away in four days — and a run of ordinary nights gathers into one line instead of ten.
 - Fixed: a night you paid for whose account never arrived left no trace at all in her memory; she now keeps the night itself.
+
+### Weddings
+- Changed: a wedding with invitations is now a guest list, and a guest list excludes. Couriers ride to BOTH families and to the people you truly know, and to nobody else — no more halls full of townsfolk you have never spoken to.
+
+### What they remember, and what it costs you
+- Changed: the long wedding and birth accounts fade in an NPC's mind as any memory does — whole while fresh, then their opening, then just the day itself. They can still tell you the whole of it if you ask.
+- Changed: everyday happenings — battles, roads, nights — can no longer crowd real conversation out of what an NPC remembers word for word.
 
 ## v2.2.1 - 2026.08.10
 
