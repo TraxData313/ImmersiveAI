@@ -60,6 +60,12 @@ namespace ImmersiveAI.Core.Nights
         /// because people talk about it, and what they repeat is its name. Filled in after the fact,
         /// when the chronicler hands the name back.</summary>
         public string OtherNightTitle { get; set; } = string.Empty;
+
+        /// <summary>What HE laid out for that other night — nothing to do with her own purse, and
+        /// the measure of how much of it reached her (2026.08.11, Anton: "с повече детайли колкото
+        /// по грандиозна е била"). A jug of wine passes almost unremarked; a jewel is worn where
+        /// the world can see it, and the whole house has an opinion about it by morning.</summary>
+        public int OtherNightPrice { get; set; }
         /// <summary>Whether she learned it by hearsay rather than by seeing it — a wife a few days'
         /// ride away hears things, and says so plainly when she does.</summary>
         public bool ByHearsay { get; set; }

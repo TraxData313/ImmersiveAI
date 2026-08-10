@@ -38,6 +38,10 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Changed: the account reaches for different images each time, so a long marriage stops reading like one evening written over and over.
 - Changed: her roll of nights keeps the SPECIAL ones whole however old they are — the night a child began on no longer scrolls away in four days — and a run of ordinary nights gathers into one line instead of ten.
 - Fixed: a night you paid for whose account never arrived left no trace at all in her memory; she now keeps the night itself.
+- New: under her roll of nights a wife now keeps the reckoning of the last thirty days — how often you came, how many of those you made something of, how often she heard you slept alone, and how often, and with whom, she heard you were elsewhere.
+- New: the grander the night you gave another woman, the more of it reaches the rest of the house — a cup of wine passes almost unremarked, a jewel is talked about for weeks and named.
+- New: when a child becomes known, everyone with you learns it that same day — and your other wives learn it wherever they are.
+- Changed: the special night is now named as such in her mind — "the dearest of them all, the one I keep as…".
 
 ### Weddings
 - Changed: a wedding with invitations is now a guest list, and a guest list excludes. Couriers ride to BOTH families and to the people you truly know, and to nobody else — no more halls full of townsfolk you have never spoken to.

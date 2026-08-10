@@ -34,6 +34,15 @@ namespace ImmersiveAI.Core.Nights
 
         public List<NightRecord> Nights { get; set; } = new List<NightRecord>();
 
+        /// <summary>How many DAYS of thin marks are kept beside the records. Generous on purpose —
+        /// they cost almost nothing and the reckoning wants a month of them (see NightMark).</summary>
+        public const int DefaultMarkDays = 90;
+
+        /// <summary>The thin trace of every evening, outliving the records it was made beside.
+        /// A file written before this existed simply has none, and is seeded from what it does
+        /// have the first time it is loaded.</summary>
+        public List<NightMark> Marks { get; set; } = new List<NightMark>();
+
         /// <summary>The last evening that was actually settled one way or the other — chosen, spent,
         /// or honestly slept through alone. It is a NIGHT-level mark and not a per-wife one on
         /// purpose: a night where nobody happened to notice anything writes no records at all, and
@@ -66,6 +75,7 @@ namespace ImmersiveAI.Core.Nights
             if (existing != null) Nights.Remove(existing);
 
             Nights.Add(record);
+            Mark(record);
             PruneFor(record.WifeId, maxPerWife);
             return record;
         }
@@ -83,6 +93,7 @@ namespace ImmersiveAI.Core.Nights
             if (record == null) throw new ArgumentNullException(nameof(record));
             if (string.IsNullOrWhiteSpace(record.Id)) record.Id = MakeId(record) + "_b";
             Nights.Add(record);
+            Mark(record);
             PruneFor(record.WifeId, maxPerWife);
             return record;
         }
@@ -96,7 +107,43 @@ namespace ImmersiveAI.Core.Nights
         public void ClearNight(double gameDay)
         {
             Nights.RemoveAll(n => n != null && SameNight(n.GameDay, gameDay));
+            Marks.RemoveAll(m => m != null && SameNight(m.GameDay, gameDay));
         }
+
+        /// <summary>Leaves the thin trace of an evening, replacing the one already there for that
+        /// wife and that kind of night — an evening settled twice must not be counted twice.</summary>
+        private void Mark(NightRecord record)
+        {
+            if (record == null) return;
+            Marks.RemoveAll(m => m != null && m.IsSameEveningAs(record));
+            Marks.Add(NightMark.From(record));
+            PruneMarks(record.GameDay);
+        }
+
+        /// <summary>Lets go of marks older than <see cref="DefaultMarkDays"/>. Pruned by DAYS and
+        /// never by count, because the reckoning asks "these last thirty days" and a busy month
+        /// must not push a quiet one out of reach.</summary>
+        public void PruneMarks(double today, int keepDays = DefaultMarkDays)
+        {
+            if (keepDays <= 0) return;
+            double cutoff = today - keepDays;
+            Marks.RemoveAll(m => m == null || m.GameDay < cutoff);
+        }
+
+        /// <summary>Re-leaves the trace of an evening whose record has since learned something —
+        /// the name and the price of the other night reach us MINUTES after the mark was made, when
+        /// the chronicler finally answers, so without this the reckoning would never hear of them.</summary>
+        public void RefreshMark(NightRecord record)
+        {
+            if (record == null) return;
+            Marks.RemoveAll(m => m != null && m.IsSameEveningAs(record));
+            Marks.Add(NightMark.From(record));
+        }
+
+        /// <summary>Her thin marks, oldest first — what the reckoning counts.</summary>
+        public IReadOnlyList<NightMark> MarksFor(string wifeId) =>
+            Marks.Where(m => m != null && string.Equals(m.WifeId, wifeId, StringComparison.Ordinal))
+                .OrderBy(m => m.GameDay).ToList();
 
         /// <summary>Whether this wife already has a night set down for this evening.</summary>
         public bool HasNightOn(string wifeId, double gameDay) =>
@@ -169,6 +216,15 @@ namespace ImmersiveAI.Core.Nights
                 var ledger = JsonConvert.DeserializeObject<NightLedger>(File.ReadAllText(filePath));
                 if (ledger == null) return new NightLedger();
                 ledger.Nights = ledger.Nights?.Where(n => n != null).ToList() ?? new List<NightRecord>();
+                ledger.Marks = ledger.Marks?.Where(m => m != null).ToList() ?? new List<NightMark>();
+
+                // A book written before the marks existed still has its records: seed the trace
+                // from them once, so a marriage already under way does not start its reckoning at
+                // zero. What was already pruned is simply gone, and honestly so.
+                if (ledger.Marks.Count == 0 && ledger.Nights.Count > 0)
+                    foreach (var night in ledger.Nights.OrderBy(n => n.GameDay))
+                        ledger.Marks.Add(NightMark.From(night));
+
                 return ledger;
             }
             catch { return new NightLedger(); }

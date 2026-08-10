@@ -128,7 +128,8 @@ namespace ImmersiveAI.Core.Nights
             IReadOnlyList<NightRecord> nights,
             double today,
             int storiesInFull = NightLedger.DefaultStoriesInFull,
-            int fullAccountBudget = DefaultFullAccountBudget)
+            int fullAccountBudget = DefaultFullAccountBudget,
+            IReadOnlyList<NightMark>? marks = null)
         {
             if (nights == null || nights.Count == 0) return string.Empty;
 
@@ -143,6 +144,7 @@ namespace ImmersiveAI.Core.Nights
             // she keeps them by.
             var storied = ordered.Where(n => n.IsStoried).ToList();
             var fullSet = new HashSet<string>(StringComparer.Ordinal);
+            string dearestId = string.Empty;
             if (storied.Count > 0 && storiesInFull > 0)
             {
                 var privileged = new List<NightRecord>();
@@ -150,6 +152,8 @@ namespace ImmersiveAI.Core.Nights
                 privileged.Add(newest);
                 var dearest = storied.OrderByDescending(Specialness).ThenByDescending(n => n.GameDay).First();
                 if (!string.Equals(dearest.Id, newest.Id, StringComparison.Ordinal)) privileged.Add(dearest);
+                // Only worth naming as the dearest when there is something to be dearest THAN.
+                if (storied.Count > 1 && Specialness(dearest) > 0) dearestId = dearest.Id;
 
                 int spent = 0;
                 foreach (var night in privileged.Take(storiesInFull))
@@ -197,7 +201,8 @@ namespace ImmersiveAI.Core.Nights
                 if (night.IsStoried)
                 {
                     FlushRun();
-                    lines.Add(LineFor(night, today, fullSet.Contains(night.Id)));
+                    lines.Add(LineFor(night, today, fullSet.Contains(night.Id),
+                        isDearest: string.Equals(night.Id, dearestId, StringComparison.Ordinal)));
                     continue;
                 }
 
@@ -222,6 +227,14 @@ namespace ImmersiveAI.Core.Nights
             var sb = new StringBuilder();
             sb.AppendLine(RollHeader);
             foreach (var line in kept) sb.AppendLine("· " + line);
+
+            // And under them, the month she can no longer recite (2026.08.11).
+            var reckoning = BuildReckoning(marks, today);
+            if (!string.IsNullOrWhiteSpace(reckoning))
+            {
+                sb.AppendLine();
+                sb.AppendLine(reckoning);
+            }
             return sb.ToString().TrimEnd();
         }
 
@@ -278,8 +291,121 @@ namespace ImmersiveAI.Core.Nights
             }
         }
 
+        /// <summary>Opens the mark left in everyone ELSE when a child becomes known. Never reword.</summary>
+        public const string ChildNewsMark = "Word went round the company:";
+
+        public static bool IsChildNewsBeat(string? line) =>
+            !string.IsNullOrEmpty(line) && line!.IndexOf(ChildNewsMark, StringComparison.Ordinal) >= 0;
+
+        /// <summary>
+        /// What the rest of the household learns the day a child becomes known (2026.08.11, Anton:
+        /// "като някоя забременее да разберат всички с мене, включително ако имам други жени").
+        /// Written by hand and never by a model — it is one fact, it costs nothing, and the whole
+        /// point is that everyone gets it on the same day. Another WIFE is told plainly that it is
+        /// her husband's doing, because that is the version of this news that actually matters to
+        /// her; nothing here tells her how to feel about it.
+        /// </summary>
+        public static string ChildNewsBeat(string motherName, string fatherName, bool toAnotherWife)
+        {
+            var mother = Name(motherName);
+            var father = Name(fatherName);
+            return toAnotherWife
+                ? $"{ChildNewsMark} {mother} is with child, and it is {father}'s."
+                : $"{ChildNewsMark} {mother} is with child by {father}.";
+        }
+
+        /// <summary>How far back the reckoning counts, in days.</summary>
+        public const int ReckoningDays = 30;
+
+        /// <summary>
+        /// THE RECKONING OF A MONTH (2026.08.11, Anton's design). Under the roll of the nights she
+        /// can still recite, the plain arithmetic of the ones she cannot: how often he came, how
+        /// often he made something of it, how often she heard he slept alone, and how often — and
+        /// with whom — she heard he was elsewhere, down to the NAME they gave that night if it
+        /// reached her.
+        ///
+        /// It is what a wife actually has of a month: not the evenings, which blur, but the SHAPE
+        /// of them. And it is nearly free — it counts thin marks (see <see cref="NightMark"/>),
+        /// which outlive the records, so a fortnight's worth of prose buys a month's worth of
+        /// knowing. Nothing here tells her how to feel about any of it; that has always been hers.
+        /// </summary>
+        public static string BuildReckoning(IReadOnlyList<NightMark> marks, double today,
+            int days = ReckoningDays)
+        {
+            if (marks == null || marks.Count == 0 || days <= 0) return string.Empty;
+            var window = marks.Where(m => m != null && m.GameDay > today - days)
+                              .OrderBy(m => m.GameDay).ToList();
+            if (window.Count == 0) return string.Empty;
+
+            var together = window.Where(m => m.Kind == NightKind.Together).ToList();
+            int made = together.Count(m => m.GiftPrice > 0);
+            int alone = window.Count(m => m.Kind == NightKind.Alone);
+            var elsewhere = window.Where(m => m.Kind == NightKind.Elsewhere).ToList();
+
+            // Nothing at all is nothing to reckon — an empty month says itself in the roll above.
+            if (together.Count == 0 && alone == 0 && elsewhere.Count == 0) return string.Empty;
+
+            var sb = new StringBuilder();
+            sb.Append("Reckoning the last ").Append(Spell(days)).Append(" days as I have known them: ");
+
+            if (together.Count == 0) sb.Append("he did not come to me at all");
+            else sb.Append("he came to me ").Append(Times(together.Count));
+            if (made > 0)
+                sb.Append(", and ").Append(Spell(made))
+                  .Append(made == 1 ? " of those he made something of" : " of those he made something of");
+            sb.Append('.');
+
+            if (alone > 0)
+                sb.Append(" I heard he slept alone ").Append(Times(alone)).Append('.');
+
+            foreach (var group in elsewhere
+                .GroupBy(m => string.IsNullOrWhiteSpace(m.OtherName) ? "another of his wives" : m.OtherName.Trim())
+                .OrderByDescending(g => g.Count()))
+            {
+                sb.Append(" I heard he was with ").Append(group.Key).Append(' ').Append(Times(group.Count()));
+
+                // HOW MUCH OF IT REACHED HER SCALES WITH WHAT HE SPENT ON IT (Anton, 2026.08.11 —
+                // "с повече детайли колкото по грандиозна е била"). A jug of wine passes almost
+                // unremarked; a jewel is worn where the world can see it and the whole house has an
+                // opinion by morning. She always hears the LOUDEST of them, never a list.
+                var loudest = group.Where(m => m.OtherNightPrice > 0 || !string.IsNullOrWhiteSpace(m.Title))
+                    .OrderByDescending(m => m.OtherNightPrice).ThenByDescending(m => m.GameDay)
+                    .FirstOrDefault();
+                if (loudest != null)
+                {
+                    var name = string.IsNullOrWhiteSpace(loudest.Title) ? string.Empty
+                        : " — the one they call \"" + loudest.Title.Trim() + "\"";
+                    bool many = group.Count() > 1;
+                    if (loudest.OtherNightPrice >= 1000)
+                        sb.Append(" — and for her he made a night the whole house is still talking about, and she has worn it since")
+                          .Append(name);
+                    else if (loudest.OtherNightPrice >= 300)
+                        sb.Append(" — and for her he found the time to make a night of it, and it was seen on her")
+                          .Append(name);
+                    else if (loudest.OtherNightPrice > 0)
+                        sb.Append(many ? " — and one of those he had made a little something of"
+                                       : " — and he had made a little something of it")
+                          .Append(name);
+                    else if (name.Length > 0)
+                        sb.Append(many ? " — and one of those has a name to it"
+                                       : " — and it has a name to it").Append(name);
+                }
+                sb.Append('.');
+            }
+
+            var begun = window.FirstOrDefault(m => m.Conceived && m.Kind == NightKind.Together);
+            if (begun != null)
+                sb.Append(" And on one of those nights our child was begun.");
+
+            return sb.ToString();
+        }
+
+        private static string Times(int n) =>
+            n == 1 ? "once" : n == 2 ? "twice" : Spell(n) + " times";
+
         /// <summary>One night of the roll, in her voice.</summary>
-        public static string LineFor(NightRecord night, double today, bool inFull)
+        public static string LineFor(NightRecord night, double today, bool inFull,
+            bool isDearest = false)
         {
             if (night == null) return string.Empty;
             var when = WhenPhrase(night.GameDay, today);
@@ -290,7 +416,10 @@ namespace ImmersiveAI.Core.Nights
                 case NightKind.Together:
                     if (night.IsStoried && inFull)
                     {
-                        var name = string.IsNullOrWhiteSpace(night.Title) ? string.Empty : $" — I call it to myself \"{night.Title.Trim()}\"";
+                        var name = string.IsNullOrWhiteSpace(night.Title) ? string.Empty
+                            : isDearest
+                                ? $" — the dearest of them all, the one I keep as \"{night.Title.Trim()}\""
+                                : $" — I call it to myself \"{night.Title.Trim()}\"";
                         return $"{Upper(when)}{where}, he came to me{name}. {night.Story!.Trim()}";
                     }
                     if (night.IsStoried)

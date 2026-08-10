@@ -707,6 +707,51 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("reckoning the night", ex); }
         }
 
+        /// <summary>
+        /// THE NEWS OF A CHILD TRAVELS (2026.08.11, Anton's ask — "като някоя забременее да
+        /// разберат всички с мене, включително ако имам други жени"). A pregnancy is not a private
+        /// fact for long: the company sees it, and the other women of the house are told whether
+        /// they are standing there or three weeks away, because in a household this is the news.
+        ///
+        /// Written by hand, no LLM call, one silent beat each, and `OutreachMark.None` — hearing
+        /// something is not the player engaging them. The MOTHER is skipped (she has her own,
+        /// better beat) and so is the player.
+        /// </summary>
+        private void SpreadTheNews(Hero mother, NightRecord record)
+        {
+            try
+            {
+                var player = Hero.MainHero;
+                if (mother == null || player == null) return;
+
+                var motherName = Safe(() => mother.Name?.ToString() ?? record.WifeName, record.WifeName);
+                var fatherName = PlayerName();
+                var told = new HashSet<string>(StringComparer.Ordinal) { mother.StringId, player.StringId };
+
+                // His other wives first, wherever they are — for them this is not gossip.
+                foreach (var other in SpousesOfPlayer())
+                {
+                    if (other == null || !told.Add(other.StringId)) continue;
+                    WriteNightBeat(other, NightText.ChildNewsBeat(motherName, fatherName, toAnotherWife: true),
+                        OutreachMark.None);
+                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(other, markUnread: false);
+                }
+
+                // And whoever is with him — they have eyes, and a camp has no secrets.
+                var nearby = Safe(() => Hero.AllAliveHeroes
+                    .Where(h => h != null && h.IsAlive && !h.IsPrisoner && !h.IsChild && IsCoLocated(h))
+                    .ToList(), new List<Hero>());
+                foreach (var soul in nearby)
+                {
+                    if (soul == null || !told.Add(soul.StringId)) continue;
+                    WriteNightBeat(soul, NightText.ChildNewsBeat(motherName, fatherName, toAnotherWife: false),
+                        OutreachMark.None);
+                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(soul, markUnread: false);
+                }
+            }
+            catch (Exception ex) { ModLog.Error("spreading the news of a child", ex); }
+        }
+
         private void WarnConceptionNotOurs()
         {
             if (_nightPatchWarned) return;
@@ -795,6 +840,10 @@ namespace ImmersiveAI
                     // And her own word of it, in her own memory, so the chat carries the moment too.
                     WriteNightBeat(wife, ChildKnownBeat(record), OutreachMark.None);
                     UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: true);
+
+                    // And the news travels: everyone riding or standing with the player learns it
+                    // the same day, and his other wives learn it whether they are there or not.
+                    SpreadTheNews(wife, record);
 
                     // She may want to tell the player herself — and this once, the world's quiet
                     // does not hold her back: no damping, no socialness, no waiting her turn.
@@ -1083,6 +1132,10 @@ namespace ImmersiveAI
                     if (Math.Floor(other.GameDay) != Math.Floor(record.GameDay)) continue;
                     if (!string.Equals(other.OtherName, record.WifeName, StringComparison.Ordinal)) continue;
                     other.OtherNightTitle = record.Title;
+                    other.OtherNightPrice = record.GiftPrice;
+                    // The mark was left the evening it happened, minutes before the chronicler
+                    // answered — refresh it, or the month's reckoning never hears the name.
+                    _nightLedger.RefreshMark(other);
                 }
             }
             catch { /* gossip that fails to travel is only gossip */ }
@@ -1287,7 +1340,9 @@ namespace ImmersiveAI
                 var nights = _nightLedger!.For(npc.StringId)
                     .Where(n => line < 0 || n.GameDay <= line).ToList();
                 if (nights.Count == 0) return string.Empty;
-                return NightText.BuildRoll(nights, CampaignTime.Now.ToDays, _config.MaxNightsToldInFull);
+                return NightText.BuildRoll(nights, CampaignTime.Now.ToDays, _config.MaxNightsToldInFull,
+                    NightText.DefaultFullAccountBudget,
+                    Safe(() => _nightLedger!.MarksFor(npc.StringId), null));
             }
             catch { return string.Empty; }
         }

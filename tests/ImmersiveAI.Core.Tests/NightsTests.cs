@@ -335,6 +335,101 @@ public class NightsTests
         Assert.Equal(2, mixedRoll.Split(new[] { "nearly every night" }, StringSplitOptions.None).Length - 1);
     }
 
+    // ------------------------------ the reckoning of a month (2026.08.11) ------------------------------
+
+    private static NightMark Mark(double day, NightKind kind, int gift = 0, string other = "",
+        string title = "", int otherPrice = 0, bool conceived = false) => new NightMark
+        {
+            GameDay = day, WifeId = "w", Kind = kind, GiftPrice = gift,
+            OtherName = other, Title = title, OtherNightPrice = otherPrice, Conceived = conceived,
+        };
+
+    [Fact]
+    public void TheReckoning_CountsTheMonthSheCanNoLongerRecite()
+    {
+        var marks = new List<NightMark>();
+        for (int d = 70; d < 82; d++) marks.Add(Mark(d, NightKind.Together));
+        marks.Add(Mark(82, NightKind.Together, gift: 100, title: "Топлата вода"));
+        for (int d = 83; d < 86; d++) marks.Add(Mark(d, NightKind.Elsewhere, other: "Тирсиф"));
+        marks.Add(Mark(86, NightKind.Elsewhere, other: "Тирсиф", title: "Гривната", otherPrice: 1000));
+        marks.Add(Mark(87, NightKind.Alone));
+        marks.Add(Mark(88, NightKind.Alone));
+        for (int d = 91; d < 96; d++) marks.Add(Mark(d, NightKind.Together));
+        marks.Add(Mark(96, NightKind.Together, gift: 1000, title: "Пръстенът", conceived: true));
+
+        var said = NightText.BuildReckoning(marks, today: 99);
+
+        Assert.Contains("he came to me", said);
+        Assert.Contains("two of those he made something of", said);   // the 100 and the 1000
+        Assert.Contains("slept alone twice", said);
+        Assert.Contains("Тирсиф four times", said);
+        Assert.Contains("our child was begun", said);
+
+        // What lies OUTSIDE the window is outside it — this is a month, not a lifetime.
+        Assert.DoesNotContain("Тирсиф", NightText.BuildReckoning(marks, today: 99, days: 5));
+    }
+
+    [Fact]
+    public void TheReckoning_HearsMoreOfAGrandNightThanOfASmallOne()
+    {
+        // Anton, 2026.08.11: "с повече детайли колкото по грандиозна е била". A jug of wine passes
+        // almost unremarked; a jewel is worn where the world can see it.
+        var jewel = NightText.BuildReckoning(new List<NightMark>
+        { Mark(90, NightKind.Elsewhere, other: "Тирсиф", title: "Гривната", otherPrice: 1000) }, today: 91);
+        Assert.Contains("the whole house is still talking about", jewel);
+        Assert.Contains("\"Гривната\"", jewel);
+
+        var gown = NightText.BuildReckoning(new List<NightMark>
+        { Mark(90, NightKind.Elsewhere, other: "Тирсиф", title: "Роклята", otherPrice: 300) }, today: 91);
+        Assert.Contains("it was seen on her", gown);
+        Assert.DoesNotContain("still talking about", gown);
+
+        var wine = NightText.BuildReckoning(new List<NightMark>
+        { Mark(90, NightKind.Elsewhere, other: "Тирсиф", title: "Чашата", otherPrice: 10) }, today: 91);
+        Assert.Contains("a little something of it", wine);
+        Assert.DoesNotContain("seen on her", wine);
+
+        // A night she merely heard about, with nothing spent on it, stays a bare fact.
+        var plain = NightText.BuildReckoning(new List<NightMark>
+        { Mark(90, NightKind.Elsewhere, other: "Тирсиф") }, today: 91);
+        Assert.Contains("he was with Тирсиф once", plain);
+        Assert.DoesNotContain("—", plain);
+
+        // And an empty month reckons nothing at all rather than saying so at length.
+        Assert.Equal(string.Empty, NightText.BuildReckoning(new List<NightMark>(), today: 91));
+        Assert.Equal(string.Empty, NightText.BuildReckoning(null, today: 91));
+    }
+
+    [Fact]
+    public void TheThinMarksOutliveTheRecordsTheyWereMadeBeside()
+    {
+        // The whole point: a fortnight of prose buys a month of knowing.
+        var ledger = new NightLedger();
+        for (int day = 70; day <= 99; day++)
+            ledger.Add(new NightRecord { WifeId = "w", GameDay = day, Kind = NightKind.Together }, maxPerWife: 14);
+
+        Assert.Equal(14, ledger.For("w").Count);          // the records are pruned by count…
+        Assert.Equal(30, ledger.MarksFor("w").Count);     // …and the marks are not.
+
+        // Twenty-nine, not thirty: the window is the last 30 days, so the night 30 days ago is
+        // already outside it. The point is that the count comes from far past the fourteen records.
+        var said = NightText.BuildReckoning(ledger.MarksFor("w"), today: 100);
+        Assert.Contains("he came to me 29 times", said);
+
+        // An evening settled twice leaves ONE mark, not two.
+        ledger.Add(new NightRecord { WifeId = "w", GameDay = 99, Kind = NightKind.Together }, maxPerWife: 14);
+        Assert.Equal(30, ledger.MarksFor("w").Count);
+
+        // And a night the chronicler names minutes later can be re-marked, or the reckoning would
+        // never hear the name.
+        var heard = ledger.Add(new NightRecord { WifeId = "w", GameDay = 100, Kind = NightKind.Elsewhere,
+            OtherName = "Тирсиф" }, maxPerWife: 14);
+        heard.OtherNightTitle = "Гривната";
+        heard.OtherNightPrice = 1000;
+        ledger.RefreshMark(heard);
+        Assert.Contains("\"Гривната\"", NightText.BuildReckoning(ledger.MarksFor("w"), today: 101));
+    }
+
     [Fact]
     public void Roll_CollapsesARunOfNightsSheNeverLearnedOf()
     {
