@@ -55,9 +55,15 @@ namespace ImmersiveAI.Core.Prompts
         private static string AppendRememberedTurns(List<ChatMessage> messages, NpcMemory memory, string voice)
         {
             var pending = new StringBuilder();
-            foreach (var turn in memory.RecentTurns)
+            int total = memory.RecentTurns.Count;
+            for (int at = 0; at < total; at++)
             {
-                var incoming = FormatRememberedIncomingLine(turn, voice);
+                var turn = memory.RecentTurns[at];
+                // A great day thins with distance (see BeatFade): whole while it is fresh, then its
+                // opening, then only the day itself. The record is untouched — this is what the
+                // PROMPT carries — and the recall tools read the ledgers, so she can still tell the
+                // whole of it at any distance.
+                var incoming = FormatRememberedIncomingLine(turn, voice, total - 1 - at);
                 if (string.IsNullOrWhiteSpace(turn.NpcLine))
                 {
                     pending.AppendLine(incoming);
@@ -71,13 +77,16 @@ namespace ImmersiveAI.Core.Prompts
             return pending.ToString();
         }
 
-        private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice)
+        private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice,
+            int turnsBack = 0)
         {
+            var recorded = BeatFade.Fade(turn.PlayerLine, turnsBack);
+
             // Angel turns carry the same "[place, time]" tag as player lines, so the NPC can see WHEN
             // she was reached for, wrote a letter, or was come to — the full picture of her own story.
-            var line = turn.IsFromAngel ? AngelFrame(voice, turn.PlayerLine.Trim())
-                : turn.IsInnerThought ? InnerFrame(turn.PlayerLine.Trim())
-                : turn.PlayerLine;
+            var line = turn.IsFromAngel ? AngelFrame(voice, recorded.Trim())
+                : turn.IsInnerThought ? InnerFrame(recorded.Trim())
+                : recorded;
 
             var parts = new List<string>();
             if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());

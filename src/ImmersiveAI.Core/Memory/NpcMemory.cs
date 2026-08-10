@@ -164,11 +164,28 @@ namespace ImmersiveAI.Core.Memory
                 || MemoryTokenEstimator.EstimateRecentTurnsTokens(RecentTurns) > maxRecentMemoryTokens;
         }
 
+        /// <summary>
+        /// The most of the verbatim window that may be BEATS rather than words actually exchanged
+        /// (2026.08.11, Anton's call — "случките да не могат да заемат повече от една трета").
+        /// Battles, roads, nights, weddings and children all leave silent marks, and on a hard
+        /// campaign they arrive far faster than conversations do; measured across one of Anton's
+        /// own campaigns they were already 41% of every recorded turn. Nothing is lost when they
+        /// go — a folded beat is in the rolling memory, which is where it was always headed — but
+        /// what she has WORD FOR WORD should be the talking, not the bookkeeping.
+        /// </summary>
+        public const double DefaultMaxBeatShare = 1.0 / 3.0;
+
+        /// <summary>Whether this turn is a silent mark rather than something either of them said.</summary>
+        private static bool IsBeat(ConversationTurn turn) =>
+            turn != null && string.IsNullOrWhiteSpace(turn.NpcLine)
+            && (turn.IsInnerThought || turn.IsFromAngel);
+
         public int GetKeepMostRecentForCompression(
             int keepRecentTurns,
             double currentGameDay,
             int keepRecentDays,
-            int minRecentMemoryTokensAfterCompression)
+            int minRecentMemoryTokensAfterCompression,
+            double maxBeatShare = DefaultMaxBeatShare)
         {
             if (keepRecentTurns < 0) throw new ArgumentOutOfRangeException(nameof(keepRecentTurns));
             if (keepRecentDays < 0) throw new ArgumentOutOfRangeException(nameof(keepRecentDays));
@@ -187,6 +204,21 @@ namespace ImmersiveAI.Core.Memory
             {
                 while (keepCount > 0 && MemoryTokenEstimator.EstimateRecentTurnsTokens(RecentTurns.Skip(RecentTurns.Count - keepCount)) > minRecentMemoryTokensAfterCompression)
                     keepCount--;
+            }
+
+            // And the bookkeeping does not get to hold the window (see DefaultMaxBeatShare). The
+            // kept slice is a suffix, so shrinking it lets go of its OLDEST entry first — which is
+            // exactly "the oldest happening settles deeper, sooner". A window that is ALL beats can
+            // still shrink to nothing here, and that is right: there was no conversation in it.
+            if (maxBeatShare > 0 && maxBeatShare < 1)
+            {
+                while (keepCount > 1)
+                {
+                    var kept = RecentTurns.Skip(RecentTurns.Count - keepCount).ToList();
+                    int beats = kept.Count(IsBeat);
+                    if (beats <= Math.Max(1, (int)Math.Floor(keepCount * maxBeatShare))) break;
+                    keepCount--;
+                }
             }
 
             return keepCount;
