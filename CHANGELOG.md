@@ -20,6 +20,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: whoever stands at that feast remembers it for the rest of their life, and your house gains a name for it.
 - New: your children live in the hearth window (H) under their mother's name — the hour of the birth first, then the feast, kept there for good.
 - Changed: the more you lay out for a night with your wife, the longer and more particular the account she keeps of it — and every account now tells the whole of it, not only the evening before.
+- Changed: a wife's roll of nights now keeps the SPECIAL ones whole however old they are — the night a child began on no longer scrolls away in four days — and a run of ordinary nights gathers into one line instead of ten.
 - Changed: the account of a night reaches for different images each time, so a long marriage stops reading like one evening written over and over.
 - Changed: a wedding or a naming feast with invitations calls BOTH families — yours and theirs — and the friends you truly know, and nobody else. No more halls full of townsfolk you have never spoken to.
 - Fixed: a night you paid for whose account never arrived left no trace at all in her memory; she now keeps the night itself.

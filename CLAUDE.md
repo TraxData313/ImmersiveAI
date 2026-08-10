@@ -1417,7 +1417,7 @@ decorative: `TryParseStory`'s flat 1600-character cut became `AccountCharBudget(
 rich Cyrillic sentences run past 2000, so the tier that exists to be longest would have been silently
 shortened back), and `BuildRoll` gained `DefaultFullAccountBudget` (2600) — the roll rides WHOLE in
 her sheet on EVERY reply, so five grand nights told in full would have cost ~4k tokens per exchange
-for a fortnight; now the freshest are told whole until the room runs out, and the freshest always is.
+for a fortnight; now the freshest are told whole until the room runs out. AND WHICH ONES, reworked 2026.08.11 (Anton: the roll chose by RECENCY alone, so the night a child was begun on scrolled out of her sheet in four days while two ordinary evenings sat there in full): TWO are privileged and always survive — the freshest written night, and the MOST SPECIAL one however old (`NightText.Specialness`: a conception outranks any purse, and beneath it the gift's own price IS the ranking). The rest are added best-first while the room lasts. Beside that, RUNS OF LIKE NIGHTS gather into one line (`RunLine`) — "from nine nights ago to last night he came to me nearly every night" — at a threshold of THREE, never two, because a pair is still two evenings and each keeps its own nuance (whether she saw him go or only heard of it); a written night is never swallowed by a run, and "nearly every night" is claimed only when the run truly covered its own span.
 Also wired at last: `NightLedger.AwaitingBeats()`, written for this and never called, so a paid night
 whose three story attempts all failed no longer leaves her memory blank. The gift (`NightGifts`) buys
 three things — odds, a written memory, and TALK: its `AwarenessMultiplier` scales the other wives' chance of

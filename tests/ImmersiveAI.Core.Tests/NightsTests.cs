@@ -244,6 +244,98 @@ public class NightsTests
     }
 
     [Fact]
+    public void Roll_KeepsTheDEAREST_NightWhole_HoweverOldItIs()
+    {
+        // Anton, 2026.08.11: "искам най-специалните нощи да вижда дори по-стари". Until now the
+        // roll chose by recency alone, so the night a child was begun on scrolled out of her sheet
+        // in four days while two ordinary evenings sat there in full.
+        var jewel = Night(100, NightKind.Together, "jewel");
+        jewel.GiftPrice = 1000;
+        jewel.Conceived = true;
+        jewel.Title = "Пръстенът на възглавницата";
+        jewel.Story = "И тази нощ той ме позна, и от нея започна дете. " + new string('щ', 400);
+
+        var nights = new List<NightRecord> { jewel };
+        for (int day = 101; day <= 108; day++)
+        {
+            var small = Night(day, NightKind.Together, "n" + day);
+            small.GiftPrice = 10;
+            small.Title = "Виното " + day;
+            small.Story = "Дребна вечер, и той дойде при мен. " + new string('я', 300);
+            nights.Add(small);
+        }
+
+        var roll = NightText.BuildRoll(nights, today: 109, storiesInFull: 3);
+
+        // The dearest night is told WHOLE though it is the oldest of the nine…
+        Assert.Contains("от нея започна дете", roll);
+        // …and so is the freshest, because the newest thing is what she has nearest her.
+        Assert.Contains("Дребна вечер", roll);
+        // The rest fold to the names she keeps them by, and no more than the three asked for are
+        // ever told whole — eight ordinary evenings in full is the bloat this exists to prevent.
+        Assert.Contains("\"Виното 104\"", roll);
+        int told = roll.Split(new[] { "Дребна вечер" }, StringSplitOptions.None).Length - 1;
+        Assert.InRange(told, 1, 2);
+
+        // And the ranking itself: a child outranks any purse, and a purse outranks a cup of wine.
+        Assert.True(NightText.Specialness(jewel) > NightText.Specialness(nights[1]));
+        var plainJewel = Night(100, NightKind.Together, "x");
+        plainJewel.GiftPrice = 1000;
+        Assert.True(NightText.Specialness(jewel) > NightText.Specialness(plainJewel));
+    }
+
+    [Fact]
+    public void Roll_GathersARunOfLikeNightsIntoOneLine()
+    {
+        // "ако влизам при нея всяка нощ авто, обикновенно... от тогава до тогава той беше с мене
+        // почти всяка нощ" — ten lines saying one thing is ten lines saying one thing.
+        var nights = new List<NightRecord>();
+        for (int day = 100; day <= 108; day++) nights.Add(Night(day, NightKind.Together, "n" + day));
+        var roll = NightText.BuildRoll(nights, today: 109);
+
+        Assert.Contains("nearly every night", roll);
+        Assert.Equal(1, roll.Split(new[] { "he came to me" }, StringSplitOptions.None).Length - 1);
+
+        // A run that did NOT cover its own span must not claim it did.
+        var sparse = new List<NightRecord>
+        {
+            Night(100, NightKind.Together, "a"), Night(104, NightKind.Together, "b"),
+            Night(108, NightKind.Together, "c"),
+        };
+        var sparseRoll = NightText.BuildRoll(sparse, today: 109);
+        Assert.Contains("on three of those nights", sparseRoll);
+        Assert.DoesNotContain("nearly every night", sparseRoll);
+
+        // A PAIR is still two evenings and keeps every word of its own nuance — she saw him go on
+        // one of them and only heard of the other, and that difference is the whole point.
+        var seen = Night(100, NightKind.Elsewhere, "a"); seen.OtherName = "Thyrsif";
+        var heard = Night(101, NightKind.Elsewhere, "b"); heard.OtherName = "Thyrsif"; heard.ByHearsay = true;
+        var pair = NightText.BuildRoll(new[] { seen, heard }, today: 102);
+        Assert.Contains("he went to Thyrsif", pair);
+        Assert.Contains("word reached me", pair);
+
+        // But three of them gather, and the gathering names her.
+        var three = NightText.BuildRoll(new[] { seen, heard, Night(102, NightKind.Elsewhere, "c") }, today: 103);
+        Assert.Contains("Thyrsif", three);
+        Assert.Contains("and not with me", three);
+
+        // A written night is NEVER swallowed by a run — it always stands alone.
+        var storied = Night(104, NightKind.Together, "s");
+        storied.GiftPrice = 100; storied.Title = "Хлябът до лампата";
+        storied.Story = "И той дойде, и лампата гореше ниско.";
+        var mixed = new List<NightRecord>
+        {
+            Night(100, NightKind.Together, "a"), Night(101, NightKind.Together, "b"),
+            Night(102, NightKind.Together, "c"), storied,
+            Night(105, NightKind.Together, "d"), Night(106, NightKind.Together, "e"),
+            Night(107, NightKind.Together, "f"),
+        };
+        var mixedRoll = NightText.BuildRoll(mixed, today: 108);
+        Assert.Contains("лампата гореше ниско", mixedRoll);
+        Assert.Equal(2, mixedRoll.Split(new[] { "nearly every night" }, StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
     public void Roll_CollapsesARunOfNightsSheNeverLearnedOf()
     {
         // Three "I don't know" lines in a row read as an accusation and are nothing of the kind.

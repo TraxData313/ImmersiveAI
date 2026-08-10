@@ -108,6 +108,22 @@ namespace ImmersiveAI.Core.Nights
         /// </summary>
         public const int DefaultFullAccountBudget = 2600;
 
+        /// <summary>
+        /// HOW MUCH A NIGHT IS WORTH REMEMBERING WHOLE (2026.08.11, Anton's ask — "искам най-
+        /// специалните нощи да вижда дори по-стари"). Until now the roll chose by RECENCY alone, so
+        /// the night a child was begun on scrolled out of her sheet in four days while two ordinary
+        /// evenings sat there in full. Recency is a tiebreak now, not the rule.
+        ///
+        /// The night a child began is in a class of its own and always outranks any purse. Beneath
+        /// that the gift's own price IS the ranking, which is what the tiers were built to mean.
+        /// </summary>
+        public static int Specialness(NightRecord night)
+        {
+            if (night == null) return 0;
+            int score = night.Conceived ? 10000 : 0;
+            return score + Math.Max(0, night.GiftPrice);
+        }
+
         public static string BuildRoll(
             IReadOnlyList<NightRecord> nights,
             double today,
@@ -119,39 +135,86 @@ namespace ImmersiveAI.Core.Nights
             var ordered = nights.Where(n => n != null).OrderBy(n => n.GameDay).ToList();
             if (ordered.Count == 0) return string.Empty;
 
-            // Which written nights are still given whole: the freshest few, and only while the
-            // room lasts.
+            // WHICH WRITTEN NIGHTS ARE GIVEN WHOLE (reworked 2026.08.11). Two are privileged and
+            // always survive: the FRESHEST written night, because the newest thing is what she
+            // would have nearest her, and the MOST SPECIAL one however old, because the night a
+            // child began on is not something a wife stops carrying after four days. Everything
+            // after those two is added best-first while the room lasts; the rest fold to the names
+            // she keeps them by.
+            var storied = ordered.Where(n => n.IsStoried).ToList();
             var fullSet = new HashSet<string>(StringComparer.Ordinal);
-            int spent = 0;
-            foreach (var night in ordered.Where(n => n.IsStoried)
-                                         .OrderByDescending(n => n.GameDay)
-                                         .Take(Math.Max(0, storiesInFull)))
+            if (storied.Count > 0 && storiesInFull > 0)
             {
-                int cost = night.Story?.Length ?? 0;
-                if (fullSet.Count > 0 && fullAccountBudget > 0 && spent + cost > fullAccountBudget) break;
-                fullSet.Add(night.Id);
-                spent += cost;
+                var privileged = new List<NightRecord>();
+                var newest = storied.OrderByDescending(n => n.GameDay).First();
+                privileged.Add(newest);
+                var dearest = storied.OrderByDescending(Specialness).ThenByDescending(n => n.GameDay).First();
+                if (!string.Equals(dearest.Id, newest.Id, StringComparison.Ordinal)) privileged.Add(dearest);
+
+                int spent = 0;
+                foreach (var night in privileged.Take(storiesInFull))
+                {
+                    fullSet.Add(night.Id);
+                    spent += night.Story?.Length ?? 0;
+                }
+                foreach (var night in storied.OrderByDescending(Specialness).ThenByDescending(n => n.GameDay))
+                {
+                    if (fullSet.Count >= storiesInFull) break;
+                    if (fullSet.Contains(night.Id)) continue;
+                    int cost = night.Story?.Length ?? 0;
+                    if (fullAccountBudget > 0 && spent + cost > fullAccountBudget) break;
+                    fullSet.Add(night.Id);
+                    spent += cost;
+                }
             }
 
             var lines = new List<string>();
-            int unknownRun = 0;
 
-            void FlushUnknowns()
+            // AND THE ORDINARY NIGHTS COME IN RUNS (Anton, 2026.08.11 — "ако влизам при нея всяка
+            // нощ... с другите да са от тогава до тогава той беше с мене почти всяка нощ"). Ten
+            // separate lines saying he came to her is ten lines saying one thing; a written night
+            // always breaks a run and always stands alone, which is exactly the point.
+            var run = new List<NightRecord>();
+            NightKind runKind = NightKind.Unknown;
+
+            // THREE, not two. A pair of nights is still two distinct evenings and each keeps its
+            // own full wording — which is where the nuance lives (whether she SAW him go or only
+            // heard of it, what they are calling his other night, whether there was fighting). A
+            // run is what Anton actually described: night after night after night, all the same.
+            const int RunThreshold = 3;
+
+            void FlushRun()
             {
-                if (unknownRun == 0) return;
-                lines.Add(unknownRun == 1
-                    ? "One night in there I never saw him come in at all, and never learned where he slept."
-                    : $"For {Spell(unknownRun)} of those nights I never saw him come in, nor learned where he slept.");
-                unknownRun = 0;
+                if (run.Count == 0) return;
+                if (run.Count >= RunThreshold) lines.Add(RunLine(runKind, run, today));
+                else foreach (var one in run) lines.Add(LineFor(one, today, inFull: false));
+                run = new List<NightRecord>();
             }
 
             foreach (var night in ordered)
             {
-                if (night.Kind == NightKind.Unknown && !night.AtWar) { unknownRun++; continue; }
-                FlushUnknowns();
-                lines.Add(LineFor(night, today, fullSet.Contains(night.Id)));
+                // A night that carries a writing is never swallowed by a run.
+                if (night.IsStoried)
+                {
+                    FlushRun();
+                    lines.Add(LineFor(night, today, fullSet.Contains(night.Id)));
+                    continue;
+                }
+
+                var kind = night.Kind == NightKind.Unknown && night.AtWar ? NightKind.Together : night.Kind;
+                if (night.Kind == NightKind.Unknown && night.AtWar)
+                {
+                    // A war night is its own honest thing, and there is nothing to group it with.
+                    FlushRun();
+                    lines.Add(LineFor(night, today, inFull: false));
+                    continue;
+                }
+
+                if (run.Count > 0 && kind != runKind) FlushRun();
+                runKind = kind;
+                run.Add(night);
             }
-            FlushUnknowns();
+            FlushRun();
 
             var kept = lines.Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
             if (kept.Count == 0) return string.Empty;
@@ -160,6 +223,59 @@ namespace ImmersiveAI.Core.Nights
             sb.AppendLine(RollHeader);
             foreach (var line in kept) sb.AppendLine("· " + line);
             return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// A RUN OF LIKE NIGHTS in one line, in her voice — "from nine nights ago to last night he
+        /// came to me nearly every night". Two or more of a kind only; a lone night keeps its own
+        /// full wording, which is where all the nuance lives (hearsay, the name of his other night,
+        /// the fighting). "Nearly every night" is claimed only when the run really did cover its
+        /// own span, so the phrase never overstates what she actually saw.
+        /// </summary>
+        public static string RunLine(NightKind kind, IReadOnlyList<NightRecord> run, double today)
+        {
+            if (run == null || run.Count == 0) return string.Empty;
+            if (run.Count == 1) return LineFor(run[0], today, inFull: false);
+
+            int n = run.Count;
+            var first = run[0];
+            var last = run[run.Count - 1];
+            var from = WhenPhrase(first.GameDay, today);
+            var to = WhenPhrase(last.GameDay, today);
+            var span = string.Equals(from, to, StringComparison.Ordinal)
+                ? Upper(from)
+                : $"From {from} to {to}";
+
+            int days = (int)Math.Round(last.GameDay - first.GameDay) + 1;
+            bool nearlyEvery = n >= days - 1;
+            var howOften = nearlyEvery ? "nearly every night" : $"on {Spell(n)} of those nights";
+
+            switch (kind)
+            {
+                case NightKind.Together:
+                    return $"{span} he came to me {howOften}, plainly and without ceremony.";
+
+                case NightKind.DoorClosed:
+                    return $"{span} my door was closed to him, for the custom of women was upon me.";
+
+                case NightKind.Alone:
+                    return $"{span} he slept alone {howOften}.";
+
+                case NightKind.Elsewhere:
+                    var names = run.Select(r => r?.OtherName?.Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct(StringComparer.Ordinal).ToList();
+                    if (names.Count == 1)
+                        return $"{span} he was with {names[0]}, and not with me, {howOften}.";
+                    if (names.Count > 1)
+                        return $"{span} he was with others {howOften} — {JoinNames(names!)}.";
+                    return $"{span} he was with another of his wives {howOften}.";
+
+                default:
+                    return n == 2
+                        ? $"{span} I never saw him come in at all, nor learned where he slept."
+                        : $"{span} I never saw him come in on {Spell(n)} of those nights, nor learned where he slept.";
+            }
         }
 
         /// <summary>One night of the roll, in her voice.</summary>
