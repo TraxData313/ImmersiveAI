@@ -62,6 +62,9 @@ namespace ImmersiveAI.Core.Voices
         /// its first second.</summary>
         public const string FieldChunk = "chunk";
 
+        /// <summary>Asks the host to write a reply as one file instead of as pieces.</summary>
+        public const string FieldWhole = "whole";
+
         public const string OpSynthesize = "synthesize";
         public const string OpCancel = "cancel";
         public const string OpPing = "ping";
@@ -119,6 +122,7 @@ namespace ImmersiveAI.Core.Voices
                         OutPath = Str(o, FieldOut),
                         Voice = VoiceSource.FromToken(o[FieldVoice]),
                         LanguageId = (int)Num(o, FieldLanguageId, NoLanguage),
+                        Whole = Bool(o, FieldWhole, false),
                     };
 
                 case OpCancel:
@@ -491,6 +495,12 @@ namespace ImmersiveAI.Core.Voices
 
         public int LanguageId { get; set; } = VoiceHostProtocol.NoLanguage;
 
+        /// <summary>Ask for the reply as ONE file rather than as pieces. The host still streams the
+        /// generation — one reading, one voice, and fast — but writes it once at the end. Worth the
+        /// wait when a seam would be worse: playing N files means chaining them on the game's tick,
+        /// and a frame of silence between every second of speech is heard as the voice breaking up.</summary>
+        public bool Whole { get; set; }
+
         /// <summary>
         /// Whether this request can actually be served, and if not, in what words to say so.
         /// <para>
@@ -525,6 +535,7 @@ namespace ImmersiveAI.Core.Voices
             o[VoiceHostProtocol.FieldOut] = OutPath ?? string.Empty;
             o[VoiceHostProtocol.FieldVoice] = (Voice ?? new VoiceSource()).ToJson();
             o[VoiceHostProtocol.FieldLanguageId] = LanguageId;
+            o[VoiceHostProtocol.FieldWhole] = Whole;
             return o;
         }
     }

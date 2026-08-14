@@ -17,9 +17,16 @@ public sealed class SynthRequest
     public string? Speaker;
     public int LanguageId = -1;
 
+    /// <summary>True: hand the reply back as ONE file, not as pieces. The generation is streamed
+    /// either way — that is what keeps the voice one person and makes it fast — but the audio is
+    /// accumulated and written once at the end. The game asks for this when it would rather wait
+    /// than risk a seam: playing N files means chaining them on the game's tick, and a frame of
+    /// silence between every second of speech is heard as the voice breaking up.</summary>
+    public bool Whole;
+
     public override string ToString() =>
         $"id={Id} kind={Kind} voice={(VoicePath is null ? Speaker ?? "-" : Path.GetFileName(VoicePath))} " +
-        $"lang={LanguageId} chars={Text.Length} out={OutPath}";
+        $"lang={LanguageId} whole={Whole} chars={Text.Length} out={OutPath}";
 }
 
 /// <summary>
@@ -151,6 +158,19 @@ public static class Wire
             JsonValueKind.String => v.GetString(),
             JsonValueKind.Number => v.ToString(),
             _ => null,
+        };
+    }
+
+    public static bool Bool(JsonElement o, string name, bool fallback)
+    {
+        if (!o.TryGetProperty(name, out var v)) return fallback;
+        return v.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Number => v.TryGetInt32(out var n) && n != 0,
+            JsonValueKind.String => bool.TryParse(v.GetString(), out var b) ? b : fallback,
+            _ => fallback,
         };
     }
 

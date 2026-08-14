@@ -321,7 +321,8 @@ namespace ImmersiveAI.Voice
             int languageId,
             VoiceEngineSetup setup,
             CancellationToken cancel = default,
-            Action<int, string, long>? onChunk = null)
+            Action<int, string, long>? onChunk = null,
+            bool whole = false)
         {
             if (string.IsNullOrWhiteSpace(id)) return VoiceHostReply.Failed("no id");
             if (string.IsNullOrWhiteSpace(text)) return VoiceHostReply.Failed("nothing to say");
@@ -348,6 +349,7 @@ namespace ImmersiveAI.Voice
                         Speaker = speaker ?? string.Empty,
                     },
                     LanguageId = languageId,
+                    Whole = whole,
                 };
 
                 // Caught here rather than at the far end of a pipe: the host would answer the same

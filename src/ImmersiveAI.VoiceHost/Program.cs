@@ -186,6 +186,7 @@ public static class Program
             Text = text!,
             OutPath = outPath!,
             LanguageId = Wire.Int(root, "languageId", -1),
+            Whole = Wire.Bool(root, "whole", false),
         };
 
         if (root.TryGetProperty("voice", out var voice) && voice.ValueKind == JsonValueKind.Object)

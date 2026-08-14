@@ -74,8 +74,38 @@ public class VoiceHostProtocolTests
 
         Assert.Equal(
             @"{""op"":""synthesize"",""id"":""a1b2"",""text"":""Well met again."",""out"":""C:\\cache\\a1b2\\000.wav"","
-            + @"""voice"":{""kind"":""icl"",""path"":""C:\\voices\\sibylla\\icl-prompt.json""},""languageId"":-1}",
+            + @"""voice"":{""kind"":""icl"",""path"":""C:\\voices\\sibylla\\icl-prompt.json""},""languageId"":-1,""whole"":false}",
             line);
+    }
+
+    [Fact]
+    public void Synthesize_CanAskForTheReplyWhole()
+    {
+        // "whole" is what makes Full read gapless: the host joins the pieces and writes ONE file, so
+        // playback is a single sound instead of N chained on the game's tick — a frame of silence
+        // inside every second of speech is heard as the voice breaking up.
+        var line = new VoiceSynthesizeRequest
+        {
+            Id = "a1b2",
+            Text = "Well met again.",
+            OutPath = @"C:\cache\a1b2\000.wav",
+            Voice = VoiceSource.FromEmbedding(@"C:\voices\sibylla\embedding.json"),
+            Whole = true,
+        }.Serialize();
+
+        Assert.Contains(@"""whole"":true", line);
+
+        var back = Assert.IsType<VoiceSynthesizeRequest>(VoiceHostProtocol.ParseRequest(line));
+        Assert.True(back.Whole);
+    }
+
+    [Fact]
+    public void Synthesize_WholeDefaultsToFalseWhenAbsent()
+    {
+        var back = Assert.IsType<VoiceSynthesizeRequest>(VoiceHostProtocol.ParseRequest(
+            @"{""op"":""synthesize"",""id"":""x"",""text"":""hi"",""out"":""o.wav"","
+            + @"""voice"":{""kind"":""embedding"",""path"":""e.json""}}"));
+        Assert.False(back.Whole);
     }
 
     [Fact]

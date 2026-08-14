@@ -338,6 +338,7 @@ public sealed class TtsEngine : IDisposable
 
         int index = 0, totalSamples = 0, rate = Rate;
         float gain = 0f;            // decided by the first chunk, then held for the whole reply
+        var whole = req.Whole ? new List<float>(24000 * 20) : null;
         Exception? inCallback = null;
         var sw = Stopwatch.StartNew();
 
@@ -359,9 +360,19 @@ public sealed class TtsEngine : IDisposable
                 if (gain <= 0f) gain = Wav.GainFor(buf);
                 Wav.ApplyGain(buf, gain);
 
+                totalSamples += buf.Length;
+
+                if (whole != null)
+                {
+                    // Asked for in one piece: keep it and write nothing yet. Nobody is listening
+                    // until the last sample exists, so there is no seam to hear.
+                    whole.AddRange(buf);
+                    index++;
+                    return 1;
+                }
+
                 string path = Path.Combine(dir, $"{baseIndex + index:000}.wav");
                 Wav.WritePcm16Atomic(path, buf, rate);
-                totalSamples += buf.Length;
                 onChunk(index, path, buf.Length);
                 index++;
                 return 1;
@@ -404,6 +415,16 @@ public sealed class TtsEngine : IDisposable
             }
             if (index == 0) { outcome.Error = "the engine produced no audio"; return outcome; }
 
+            if (whole != null)
+            {
+                // One file, one sound, no chaining: the whole reply plays as a single event, which
+                // is the only way to be certain there is not a frame of silence inside a sentence.
+                var all = whole.ToArray();
+                string onePath = Path.Combine(dir, $"{baseIndex:000}.wav");
+                Wav.WritePcm16Atomic(onePath, all, rate);
+                onChunk(0, onePath, all.Length);
+            }
+
             outcome.Ok = true;
             outcome.Path = Path.Combine(dir, $"{baseIndex:000}.wav");
             outcome.Ms = sw.ElapsedMilliseconds;
@@ -413,7 +434,7 @@ public sealed class TtsEngine : IDisposable
             double secs = (double)totalSamples / Math.Max(1, rate);
             double rtf = sw.Elapsed.TotalSeconds > 0 ? secs / sw.Elapsed.TotalSeconds : 0;
             HostLog.Info($"streamed {req.Id}: {secs:F2}s of audio in {sw.ElapsedMilliseconds} ms ({rtf:F2}x) " +
-                         $"in {index} pieces, gain={gain:F2}");
+                         $"in {index} pieces{(req.Whole ? ", joined into one" : "")}, gain={gain:F2}");
             return outcome;
         }
         catch (Exception ex)

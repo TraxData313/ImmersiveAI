@@ -691,7 +691,16 @@ namespace ImmersiveAI.Voice
                     //               card too busy to keep ahead leaves audible gaps.
                     //   FullRead  — not until every piece exists, so there can be no gap at all,
                     //               paid for by a longer wait before the first word.
-                    var held = road == Delivery.FullRead ? new List<string>() : null;
+                    // FullRead asks the host to JOIN it: one file, one sound, no chaining.
+                    //
+                    // Holding the pieces back and releasing them together was not enough, and this
+                    // is the correction (playtest, 2026.08.14 — "she is still streaming"). Playing N
+                    // files means starting each one from the game's tick after the last reports it
+                    // has finished, so there is a frame of silence inside every second of speech —
+                    // heard as the voice breaking up, identically whether the pieces arrived early
+                    // or late. The Qwen GUI does not do this because its non-streaming mode hands
+                    // over a single file, which is exactly what we now ask for.
+                    var joined = road == Delivery.FullRead;
 
                     var reply = await client.SynthesizeAsync(
                         id: plan.Key,
@@ -702,13 +711,15 @@ namespace ImmersiveAI.Voice
                         speaker: plan.SpeakerName,
                         languageId: AutoLanguage,
                         setup: setup,
+                        whole: joined,
                         onChunk: (index, path, samples) =>
                         {
+                            // Streaming: a piece per second. Joined: this fires ONCE, at the end,
+                            // naming the single finished file.
                             if (job.Abandoned) return;
                             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
                             made++;
-                            if (held != null) held.Add(path);      // FullRead: keep it back
-                            else job.Publish(path);                // Streaming: straight out
+                            job.Publish(path);
                         }).ConfigureAwait(false);
 
                     if (!reply.Ok) { VoiceEngineGate.ReportFailure(reply.Error); return; }
@@ -725,10 +736,6 @@ namespace ImmersiveAI.Voice
                     }
                     VoiceEngineGate.ReportSuccess();
 
-                    // Everything exists; let it all out at once, in order. Playback chains them, so
-                    // from here it sounds exactly like the streamed road — it simply never waits.
-                    if (held != null && !job.Abandoned)
-                        foreach (var path in held) job.Publish(path);
                 }
 
                 if (made == 0) return;
