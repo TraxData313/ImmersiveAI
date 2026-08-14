@@ -1,4 +1,4 @@
-<!-- DRAFT while the feature is being built (started 2026.08.14). The hardware numbers, the folder
+﻿<!-- DRAFT while the feature is being built (started 2026.08.14). The hardware numbers, the folder
      layout and the cloning rules are measured/decided and safe. Anything marked (coming) is not
      shipped yet — hotkey names, exact option labels and the hosted rung firm up as they land, and
      the markers come out before this is linked from the store pages. Keep this URL path stable:
@@ -71,27 +71,86 @@ never blocks, delays or loses a reply** — the words always arrive, whatever th
 
 ## Making a voice
 
-You need **a few seconds of clean speech** — one person, no music, no background noise. Ten to
-thirty seconds is plenty.
+Voices are cloned in **Qwen-TTS Studio** and then brought across. (Cloning from inside the game is
+planned; until then this is the road — and it is the one most people will keep using anyway.)
 
-Drop the `.wav` into `Configs\ImmersiveAI\Voices\_incoming\`, open the Voice panel, choose **New
-voice**, name it, and **preview it before you commit** — you hear the clone immediately, and only
-save it if you like it. *(coming)*
+### What you need
 
-Already made voices in Qwen-TTS Studio? **Import from Studio** brings them all across in one click,
-copies and all. Your Studio presets are left exactly as they were.
+**A few seconds of clean speech** — one person, no music, no background noise, no second voice.
+Ten to thirty seconds is plenty; more is not better. A `.wav` file.
+
+**The clip decides everything.** Nine times out of ten, a clone that "sounds nothing like it" is a
+clip with a soundtrack under it, two people talking over each other, or four seconds of material.
+
+### In Qwen-TTS Studio
+
+1. Load the **`qwen-talker-1.7b-base`** model. This is the one that clones — the `customvoice` model
+   carries nine ready-made speakers instead and cannot learn a new voice.
+2. Go to **Voices**.
+3. Under **Create Speaker Preset**: give it a **Preset Name**, **Browse** to your `.wav`, and write a
+   short **Reference Transcript** describing the voice. Optional, but it is what you will see later
+   when choosing between six presets all called "Sibylla".
+4. **Create Preset.** It will show `D1024 ready` / `D2048 ready`.
+5. **Try it before you trust it** — go to **Studio**, pick the preset, speak a line. If it is not
+   right, the fix is nearly always a better clip.
+
+### Bringing it into the game
+
+**Soon:** one **"Import from Qwen-TTS Studio"** button in the game's Voice panel that brings every
+preset across at once. Until that lands, by hand:
+
+Studio keeps its voices under `C:\Users\<you>\.qwen-tts-studio\` :
+
+```
+.qwen-tts-studio\
+    voice-presets.tsv                         the index - your preset names are in here
+    embeddings\voice-<number>-d2048.json      THE VOICE ITSELF - this is the file you want
+    icl-prompts\voice-<number>-d2048.json     a richer form, deliberately unused (see the note)
+```
+
+Open `voice-presets.tsv` in a text editor. Each line starts with the preset's id and its name, so you
+can tell which `voice-<number>` is which.
+
+Then make a folder for it under the game's config. The folder name is the voice's id — lowercase, no
+spaces:
+
+```
+Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\Voices\
+    sibylla\
+        voice.json          you write this - see below
+        embedding.json      a copy of embeddings\voice-<number>-d2048.json, RENAMED
+        reference.wav       optional: the clip it came from, so it can be re-cloned or shared honestly
+```
+
+`voice.json` needs four things:
+
+```json
+{
+  "Name": "Sibylla",
+  "Gender": 1,
+  "Dimension": 2048,
+  "ReferenceText": "Warm young woman, American, carries a smile in it."
+}
+```
+
+`Gender` is `1` female, `2` male, `0` neither. It is used **only** to decide who gets this voice by
+default before you have assigned anyone by hand — put any voice on anybody you like.
+
+Start the game, open the talk screen: it is in the list.
+
+> **Use the `d2048` embedding, not the `icl-prompt`.** On the base model the ICL road returns a
+> fraction of a second of audio about one time in five, and the failure looks like success. The mod
+> prefers the embedding for exactly that reason.
 
 ### One rule, and it matters
 
-**Clone only voices you have the right to use.** Your own voice, a friend's with their blessing,
-or audio that is genuinely free to reuse. Not a celebrity, not an actor, not someone off YouTube —
-and never a real person without their permission.
+**Clone only voices you have the right to use.** Your own voice, a friend's with their blessing, or
+audio that is genuinely free to reuse. Not a celebrity, not an actor, not someone off YouTube — and
+never a real person without their permission.
 
-On your own PC, for yourself, this is your business and the mod will not stop you. But a voice
-folder carries the original clip inside it, so the moment you **share** one you are handing someone
-else a copy of a real person's voice. That is a different thing, and it can land on you.
-
----
+On your own PC, for yourself, this is your business and the mod will not stop you. But a voice folder
+carries the original clip inside it, so the moment you **share** one you are handing someone else a
+copy of a real person's voice. That is a different thing, and it can land on you.
 
 ## Sharing voices
 
