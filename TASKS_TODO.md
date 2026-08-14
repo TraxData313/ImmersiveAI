@@ -170,6 +170,25 @@ POST V1 or NOT FULLY DECIDED:
     note (the Local backend → LM Studio/Ollama works, but small models are shaky with our eleven tools —
     point at RelationshipChangesViaTool:false as the fallback). Cheap words, preempts the loudest
     complaint threads on the competitor's page.
+- [ ] Voice-over: the rest of it (2026.08.14, Anton's own list after the first working playtest)
+    The pipeline works — one generation, one file, three delivery roads live in MCM. What is left:
+    1. A PLAY MARK ON EVERY MESSAGE in the talk screen, and not only on spoken replies: her own
+       narration beats (the inner-mind lines) and LETTERS want it too. He asked for this partly to
+       test faster, which is reason enough on its own.
+    2. REACH-OUTS AND LETTERS SPEAK when they arrive — the "when they reach me out with chat or
+       letter, play their line" half of the original ask, still unwired. Mind the presentation
+       point: a letter must speak when it is OPENED, never when it was composed days of travel ago.
+    3. THE VOICE PANEL: pick, preview, assign, open the folder, and create a voice from a .wav in
+       game (zero-shot preview first via synthesize_with_voice, extract only on "keep").
+    4. Sibylla 5 as the default female, all the Sibyllas imported, and the male/female defaults
+       switchable in MCM rather than only in assignments.json.
+    5. The player's OWN voice for their own lines, switchable.
+    6. STREAMING'S SEAM: that mode still chains its pieces on the game tick, which is the defect
+       Full read exists to dodge. A real double-buffer (create the next SoundEvent and start it the
+       instant the last ends, off the tick) would let Streaming be gapless too — and then it, not
+       Full read, is the right default.
+    7. The hosted rung (see the entry below) so the feature exists for players without a GPU.
+
 - [ ] Voice-over: THE PANIC STOP (Anton, 2026.08.14, from experience with TTS elsewhere)
     "sometimes the voice can glitch and start making crazy sounds and it wont stop." This is the
     known failure of autoregressive TTS: if the model never emits its end-of-speech token it keeps
