@@ -35,21 +35,21 @@ namespace ImmersiveAI.Tools
         public static readonly IReadOnlyList<ToolDefinition> Tools = new[]
         {
             new ToolDefinition(SurveySurroundings,
-                "Cast my eyes over the country about my company — every band, caravan, and army moving " +
-                "within sight: whose they are, which way they lie, their strength as well as my eyes can " +
-                "count it, whether they are friend or foe, what they are about, and whether I or they are " +
-                "the swifter. Also the villages, towns and castles within sight and how they fare — whether " +
-                "one burns under a raid, lies under siege, or was lately plundered — any den of brigands my " +
-                "company has spotted nearby, and my own company's pace and what slows it. Reach for this " +
-                "before ever speaking of who or what is near, of a place that burns or is beset, of hideouts " +
-                "and lairs, of pursuit, of escape, or of the speed of the march."),
+                "From where my company stands I cast my eyes over the country about — every band, caravan, " +
+                "and army moving within sight: whose they are, which way they lie, how strong as well as my " +
+                "eyes can count, friend or foe, what they are about, and whether I or they are the swifter. " +
+                "Also the villages, towns and castles within sight and how they fare — burning under a raid, " +
+                "lying under siege, lately plundered — any den of brigands my company has spotted nearby, " +
+                "and my own pace and what weighs on it. I always look before I speak of who or what is near, " +
+                "of a place that burns or is beset, of hideouts and lairs, of pursuit, of escape, or of the " +
+                "speed of the march: my judgment is only as good as what my eyes have truly seen."),
 
             new ToolDefinition(WeighBattle,
-                "Set a foe upon the scales against my own company: their numbers and kinds of fighters " +
-                "against mine, and how the day would likely go. Works against a band or army moving in the " +
-                "country, against the garrison of a named town or castle, against a village and whoever is " +
-                "putting it to the torch, or against a spotted den of brigands. Reach for this before ever " +
-                "counselling battle or retreat.",
+                "I set any foe upon the scales against my own company before a fight is joined: their " +
+                "numbers and kinds of fighters against mine, and how the day would likely go. Works against " +
+                "a band or army moving in the country, against the garrison of a named town or castle, " +
+                "against a village and whoever is putting it to the torch, or against a spotted den of " +
+                "brigands. I always weigh before I speak of the odds of battle, or counsel battle or retreat.",
                 new[] { new ToolParameter("name",
                     "Who to weigh against: a war party or army by its leader's or its own name, or a town, " +
                     "castle, village, or brigands' den by name. Leave it out to weigh the nearest hostile " +

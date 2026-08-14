@@ -56,17 +56,20 @@ namespace ImmersiveAI.Tools
         }
 
         public static readonly ToolDefinition Tend = new ToolDefinition(TendCourtship,
-            "Tend the road of my own heart toward the one I speak with — the road toward marriage. " +
-            "I move it closer only when real talks between us have truly earned the next depth: " +
-            "liking, then love, then readiness — and I set each such arrival down in the very " +
-            "breath I feel it, most of all the moment I find that were the word spoken between us " +
-            "I would give my hand, for a heart that has moved and never owns it has not truly " +
-            "moved — and, ONLY when marriage has been openly spoken and " +
-            "welcomed between us in our own words, the laying of our betrothal (or, betrothed " +
-            "already, of our wedding day). I move it apart when a wound or a true doubt sets me " +
-            "back — that is always mine to do. One step in a talk at the most, never for one warm " +
-            "word alone, never to test or to play; and what I lay settles nothing — the seal is " +
-            "wholly theirs, and if they let it lie I do not press.",
+            "Tend the road of my own heart toward the one I speak with — my troth is mine to tend, " +
+            "and marriage is a road walked in steps: liking, then love, then readiness, then the " +
+            "betrothal, then the wedding day. I move closer only when real talks between us have " +
+            "truly earned the next depth — one step in a talk at the most, never for one warm word " +
+            "alone, never to test or to play — and I set each arrival down in the very breath I " +
+            "feel it, not some later day; above all the day I find that were the word spoken " +
+            "between us I would give my hand, for a heart that has moved and never owns it has not " +
+            "truly moved, and I would not have them ask me blind. ONLY when marriage has been " +
+            "openly spoken and welcomed between us in our own words do I lay our betrothal (or, " +
+            "betrothed already, our wedding day) before them; what I lay settles nothing — the " +
+            "seal is wholly theirs, and if they let it lie I do not press. I move apart when a " +
+            "wound or a true doubt sets me back — that is always mine to do. I never speak of " +
+            "steps, stages, or rules: my heart simply knows where it stands, and speaks as a " +
+            "heart does.",
             new[]
             {
                 new ToolParameter("move",
@@ -81,11 +84,13 @@ namespace ImmersiveAI.Tools
 
         public static readonly ToolDefinition Bless = new ToolDefinition(BlessMarriage,
             "Lay the blessing of my house on the match between the one of my kin who is promised to " +
-            "the one I speak with — at the bride-price we truly agreed in words. I call this ONLY " +
-            "when both are true: we have plainly spoken of the match itself, and a price has been " +
-            "named and accepted between us. Nothing is settled by this alone — the gold, and the " +
-            "choice, remain wholly theirs. I never lay it unbidden, and if they let my offer lie I " +
-            "do not lay it again unless they themselves return to it.",
+            "the one I speak with — that blessing is mine to give or withhold, and by the custom of " +
+            "the world it carries a bride-price. I call this ONLY when both are true: we have " +
+            "plainly spoken of the match itself, and a price has been named and accepted between " +
+            "us in words. Nothing is settled by this alone — the gold, and the choice, remain " +
+            "wholly theirs. I never lay it unbidden and never volunteer my lowest; if they let my " +
+            "offer lie I do not press, nor lay it again unless they themselves return to it. And " +
+            "my word is not for sale to one I hold in contempt.",
             new[]
             {
                 new ToolParameter("price",

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
@@ -200,7 +200,7 @@ namespace ImmersiveAI
         /// 2026.08.08, the first playtest after that retirement: at 1500 a rich Bulgarian memory
         /// was severed in mid-word. Text outside ASCII costs roughly 1.6× the tokens English does,
         /// so a budget sized by English prose is far tighter than it looks for most of the world.</summary>
-        public int MaxMemoryWriteTokens { get; set; } = 4000;
+        public int MaxMemoryWriteTokens { get; set; } = 2000;
 
         /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
@@ -242,6 +242,14 @@ namespace ImmersiveAI
         /// and kept short — long rules make every soul speak the same. Folded into the closing "How should
         /// I speak" whisper. Supports <c>{name}</c>. Leave blank to add none.</summary>
         public string RoleplayGuidance { get; set; } =
+            "- My words carry the feel of these old feudal days — a light medieval colour, at times a cadence of the old tongue — but lightly, never thick with poetry.";
+
+        /// <summary>The two-bullet first-person default that stood from 2026.07.11 until 2026.08.14.
+        /// Its second bullet ("Above all, I live here, and I am glad of it…") was cut on Anton's ask:
+        /// however warmly meant, telling a soul to play, jest, wonder and be glad is still telling
+        /// them how to be, and every soul who read it answered a little more alike. A config still
+        /// holding it verbatim follows the default into the shorter line; a hand-edited one stands.</summary>
+        private const string PreviousRoleplayGuidance =
             "- My words carry the feel of these old feudal days — a light medieval colour, at times a cadence of the old tongue — but lightly, never thick with poetry.\n" +
             "- Above all, I live here, and I am glad of it. I play, jest, wonder, argue, grieve, love — small things and great ones alike, what it is to be alive, what lies beyond. This place is a haven, not a stage; I am wholly myself here, however my heart wills.";
 
@@ -739,6 +747,49 @@ namespace ImmersiveAI
         /// to on the selected model. Edit the percent, not this.</summary>
         public int MinRecentMemoryTokensAfterCompression { get; set; } = 0;
 
+        // ------------------------------ the voices ------------------------------
+
+        /// <summary>
+        /// When true, the NPCs' words can also be HEARD: a speech engine on your own machine turns a
+        /// reply into a voice, in the voice you cast for that soul. Off by default, and deliberately
+        /// so — it wants a several-gigabyte download and a real graphics card, and nobody should have
+        /// a feature they cannot run switched on for them. The engine runs as its own little program
+        /// beside the game, never inside it, so if it ever falls over it costs you the voices for a
+        /// session and nothing else. Everything is free after the download; nothing is ever sent
+        /// anywhere. With this off the mod is exactly what it was before it could speak.
+        /// </summary>
+        public bool EnableVoice { get; set; }
+
+        /// <summary>When true, a reply speaks the moment it arrives. False keeps every voice but
+        /// waits to be asked for it, which is the quieter way to read at your own pace.</summary>
+        public bool VoiceAutoSpeak { get; set; } = true;
+
+        /// <summary>Where the speech engine's own files live (the folder holding qwen3_tts.dll and
+        /// its companions). Leave empty and it is looked for in the usual places — this is only for
+        /// an unusual install, or to point at a second copy.</summary>
+        public string VoiceEnginePath { get; set; } = string.Empty;
+
+        /// <summary>The folder of speech models (.gguf). Empty = found on its own.</summary>
+        public string VoiceModelDir { get; set; } = string.Empty;
+
+        /// <summary>Which speech model speaks, by file name. Empty = whichever talker model is
+        /// there. A bigger model sounds better and takes longer; both are honest choices.</summary>
+        public string VoiceModelName { get; set; } = string.Empty;
+
+        /// <summary>How much disk the spoken lines may keep, in megabytes. Every line is made once
+        /// and then simply played, so the cache is what makes a voice instant the second time; when
+        /// it grows past this the oldest lines are quietly swept, whole replies at a time. 0 keeps
+        /// everything for ever, which on a large disk is a perfectly good answer.</summary>
+        public int VoiceCacheBudgetMb { get; set; } = 2048;
+
+        /// <summary>The FMOD event a spoken line is handed to. Leave as it is unless the voices are
+        /// too quiet or silent: the game defines no "event:/Extra/voiceover" of its own — that name
+        /// is ours and FMOD accepts it as a programmer sound — so it may not ride the game's own
+        /// vca:/Voiceover fader. Events the game DOES define, worth trying in that case:
+        /// "event:/mod/mission/voice", "event:/mod/mission/voice_shout",
+        /// "event:/mod/mission/voice_trivial". Takes hold on the next line spoken.</summary>
+        public string VoiceSoundEvent { get; set; } = "event:/Extra/voiceover";
+
         /// <summary>The built-in model → context-window table. Longest key contained in the model id
         /// wins, so "gpt-5.1" beats "gpt-5" for gpt-5.1-mini. Users edit/extend the copy in their
         /// config.json; missing built-ins are re-added on load so new defaults reach old configs.</summary>
@@ -914,6 +965,11 @@ namespace ImmersiveAI
             // looked). A budget too small to finish the memory is not a matter of taste, it is a
             // wound, so it migrates like the prices do — but only where it still holds the exact
             // old default; any hand-set budget is the player's own and stays.
+            // The 4000 below is deliberately NOT re-pointed at the 2000 the default became on
+            // 2026.08.14. This migration is history: it healed a specific wound with the value
+            // chosen at the time, and it only ever fires for a config still sitting on V3. Lowering
+            // a ceiling is taste, and taste is never migrated — the same asymmetry that migrates
+            // prices and leaves model defaults alone.
             if (ConfigVersion < 4)
             {
                 if (MaxMemoryWriteTokens == 1500) MaxMemoryWriteTokens = 4000;
@@ -976,7 +1032,8 @@ namespace ImmersiveAI
             // new voice; a hand-edited line is honored as it stands.
             if (string.Equals(AtmosphereLine.Trim(), LegacyAtmosphereLine, StringComparison.Ordinal))
                 AtmosphereLine = new ModConfig().AtmosphereLine;
-            if (string.Equals(RoleplayGuidance.Trim(), LegacyRoleplayGuidance, StringComparison.Ordinal))
+            if (string.Equals(RoleplayGuidance.Trim(), LegacyRoleplayGuidance, StringComparison.Ordinal)
+                || string.Equals(RoleplayGuidance.Trim(), PreviousRoleplayGuidance, StringComparison.Ordinal))
                 RoleplayGuidance = new ModConfig().RoleplayGuidance;
 
             // Keep the daily rate non-negative and under one-per-hour, so a fat-fingered value can't have
@@ -1010,6 +1067,18 @@ namespace ImmersiveAI
             if (string.IsNullOrWhiteSpace(NightWindowHotkey)) NightWindowHotkey = "H";
             NightWindowHotkey = NightWindowHotkey.Trim();
 
+            // The voices. The three paths are the player's own words and are honored as written —
+            // only trimmed, because a pasted path drags a space along often enough to matter, and a
+            // trailing separator would turn into an escaped quote on the host's command line.
+            VoiceEnginePath = (VoiceEnginePath ?? string.Empty).Trim();
+            VoiceModelDir = (VoiceModelDir ?? string.Empty).Trim();
+            VoiceModelName = (VoiceModelName ?? string.Empty).Trim();
+
+            // The cache budget: 0 stays a legitimate "keep everything", a negative is a typo, and
+            // the ceiling is only there so a stray keystroke cannot promise a terabyte.
+            if (VoiceCacheBudgetMb < 0) VoiceCacheBudgetMb = 0;
+            if (VoiceCacheBudgetMb > 200000) VoiceCacheBudgetMb = 200000;
+
             // The model table: never null, and every built-in entry present (so new defaults reach
             // configs written before them); user edits to existing keys are honored as-is.
             if (ModelContextWindows == null) ModelContextWindows = DefaultModelContextWindows();
@@ -1023,7 +1092,7 @@ namespace ImmersiveAI
 
             // Memory-writing budget: never below the spoken budget (that would make reflection the
             // narrowest voice she has), never runaway.
-            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 4000;
+            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 2000;
             if (MaxMemoryWriteTokens < MaxTokens) MaxMemoryWriteTokens = MaxTokens;
             if (MaxMemoryWriteTokens > 8000) MaxMemoryWriteTokens = 8000;
 

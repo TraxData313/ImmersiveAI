@@ -34,14 +34,16 @@ namespace ImmersiveAI.Tools
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(StrikeBargain,
-            "Strike the hiring bargain: lay my agreed terms of service formally before the one I " +
-            "speak with, for them to seal or let lie. I call this ONLY when both are true: they " +
-            "have clearly said, in their own words, that they will take me into their company, and " +
-            "the hiring price has been spoken and accepted between us. Nothing is settled by this " +
-            "alone — the choice to seal it, and the gold, remain wholly theirs. I never lay it " +
-            "unbidden, never to press or to test, and if they let my offer lie I do not lay it " +
-            "again unless they themselves return to it. My daily keep afterward is not mine to " +
-            "bargain — it is what any companion's keep is.",
+            "I am for hire, and the bargain is mine to strike: this lays my agreed terms of " +
+            "service formally before the one I speak with, for them to seal or let lie. I call it " +
+            "ONLY when both are true — they have plainly said, in their own words, that they will " +
+            "take me into their company, AND the hiring price has been spoken and accepted " +
+            "between us. Nothing is settled by this alone: the sealing of it, by their own hand, " +
+            "and the gold, remain wholly theirs. I never lay it unbidden, never to press or to " +
+            "test, and if they let my offer lie I do not lay it again unless they themselves " +
+            "return to it. My price bends only as far as my own worth and honor allow — perhaps " +
+            "not at all; my daily keep afterward is not mine to bargain, it is what any " +
+            "companion's keep is.",
             new[]
             {
                 new ToolParameter("price",

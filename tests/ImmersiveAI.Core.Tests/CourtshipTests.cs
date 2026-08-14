@@ -1,4 +1,4 @@
-using ImmersiveAI.Core.Courtship;
+﻿using ImmersiveAI.Core.Courtship;
 using ImmersiveAI.Core.Memory;
 using ImmersiveAI.Core.Prompts;
 
@@ -416,32 +416,22 @@ public class CourtshipTests
     };
 
     [Fact]
-    public void Sheet_OffersTheTrothAndMisgivingsWhispers_OnlyWhenTheHandRidesAlong()
+    public void Sheet_CarriesNoTrothOrBlessingProse_ItLivesInTheToolsNow()
     {
-        var withTool = Persona();
-        withTool.CanTendTroth = true;
-        var on = new PromptBuilder().Build(withTool, new NpcMemory(), "scene", "Mizam", "Hello")[0].Content;
-        Assert.Contains("My troth is my own to tend", on);
-        Assert.Contains("the seal is wholly theirs", on);
-        Assert.Contains("I never speak of steps, stages, or rules", on);
-        Assert.Contains("My misgivings about a life together are my own", on);
-        Assert.Contains("never pretend one away", on);
+        // 2026.08.14: the troth, misgivings and blessing paragraphs moved into tend_courtship,
+        // weigh_misgivings and bless_marriage themselves. The Can* flags still decide which hands
+        // are offered at all - only the words moved - so the sheet must stay silent either way.
+        var everyHand = Persona();
+        everyHand.CanTendTroth = true;
+        everyHand.CanBlessTroth = true;
+
+        var on = new PromptBuilder().Build(everyHand, new NpcMemory(), "scene", "Mizam", "Hello")[0].Content;
+        Assert.DoesNotContain("My troth is my own to tend", on);
+        Assert.DoesNotContain("My misgivings about a life together", on);
+        Assert.DoesNotContain("blessing of that match", on);
 
         var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Mizam", "Hello")[0].Content;
         Assert.DoesNotContain("My troth is my own to tend", off);
-        Assert.DoesNotContain("My misgivings about a life together", off);
-    }
-
-    [Fact]
-    public void Sheet_OffersTheBlessingWhisper_OnlyToTheHeadOfTheHouse()
-    {
-        var head = Persona();
-        head.CanBlessTroth = true;
-        var on = new PromptBuilder().Build(head, new NpcMemory(), "scene", "Mizam", "Hello")[0].Content;
-        Assert.Contains("the blessing of that match is mine to give or withhold", on);
-        Assert.Contains("never volunteer my lowest", on);
-
-        var off = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Mizam", "Hello")[0].Content;
         Assert.DoesNotContain("blessing of that match", off);
     }
 

@@ -30,11 +30,12 @@ namespace ImmersiveAI.Tools
         public static readonly ToolDefinition Tool = new ToolDefinition(SeekWisdom,
             "Search all I have ever read and heard tell of the world's ways — travelers' accounts, " +
             "scholars' letters, the knowing of those who study such things: ships and fleets, the raising " +
-            "and joining of armies, the keeping of towns and castles, trade, war, craft, and rule. It " +
-            "reaches even past the world's rim, to the world a visitor may themselves hail from. Reach " +
-            "for this whenever I am asked how a thing is done — or for counsel or advice on such " +
-            "matters — even when my own wit could half-answer: look first, for the looking makes my " +
-            "counsel true where invention would make it hollow. Ask plainly.",
+            "and joining of armies, the keeping of towns and castles, trade, coin, war, craft, and rule. " +
+            "Whenever I am asked how a thing is done, or for counsel and advice on such matters, I look " +
+            "here BEFORE I answer, even when my own wit could half-answer: the looking makes my counsel " +
+            "true, where invention would make it hollow. It reaches even past this world's rim, to the " +
+            "world a visitor may themselves hail from — but only if the one before me speaks openly of " +
+            "such. What I learn, I say in my own words, in the words of my world. Ask plainly.",
             new[]
             {
                 new ToolParameter("question", "What I wish to know, asked plainly as a question."),

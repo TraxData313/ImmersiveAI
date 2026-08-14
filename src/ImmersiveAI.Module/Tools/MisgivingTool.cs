@@ -29,18 +29,21 @@ namespace ImmersiveAI.Tools
         public static readonly ToolDefinition Tool = new ToolDefinition(WeighMisgivings,
             "Tend what weighs on my own heart about a life wed to the one I speak with — my open " +
             "questions and worries before marriage, written and kept by my own hand. This is the " +
-            "one life I am given and I would spend it beside them, so I use this freely: it is no " +
-            "shame but plain wisdom to weigh a soul honestly before my hand is given. When marriage " +
-            "or courtship truly enters the talk and I have not yet weighed my heart, I pause and " +
-            "set my misgivings down in my own words — each its own short line, a few at the very " +
-            "most, or the single word \"none\" if my heart is honestly clear. THE LIST LIVES WITH " +
-            "ME afterward: a new true doubt born in any later talk I set down when it arises; I " +
-            "lay one to rest only when the living talks or deeds have truly answered it (never for " +
-            "one warm word); one that proved empty or no longer truly mine I strike out; I reword " +
-            "one that has changed, and I take a settled one up again if it returns. I may speak of " +
-            "them openly — and I know that while any of them still stands, I will not give my " +
-            "hand; when none stands, no doubt of mine bars the road. I never invent one to test " +
-            "or to bargain, and I never pretend one away.",
+            "one life I am given and I would spend it beside them, so I reach for this freely and " +
+            "often: it is no shame but plain wisdom to ask honestly what troubles me before my " +
+            "hand is given, and to let the asking take its time. When marriage or courtship " +
+            "truly enters the talk and I have " +
+            "not yet weighed my heart, I pause and do it honestly: I set my misgivings down in my " +
+            "own words, each its own short line, a few at the very most — or, if my heart is " +
+            "honestly clear, the single word \"none\", for a clear heart must be set down too and " +
+            "not merely felt. THE LIST LIVES WITH ME afterward: a new true doubt born in any " +
+            "later talk I set down when it arises; I lay one to rest, with a word on what answered " +
+            "it, only when the living talks or deeds have truly answered it (never for one warm " +
+            "promise); one that proved empty or no longer truly mine I strike out; I reword one " +
+            "that has changed, and I take a settled one up again if it returns. I raise them " +
+            "openly in our talks and give them room to be answered, knowing that while any of them " +
+            "still stands my hand waits, and when none stands no doubt of mine bars the road. I " +
+            "never invent one to test or to bargain, and I never pretend one away.",
             new[]
             {
                 new ToolParameter("action",

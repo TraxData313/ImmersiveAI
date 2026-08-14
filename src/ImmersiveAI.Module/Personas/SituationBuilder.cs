@@ -280,7 +280,7 @@ namespace ImmersiveAI.Personas
             return sb.ToString().TrimEnd();
         }
 
-        // The moment itself: the arrival (or the far-away thought), the person, and where my heart
+        // The moment itself: the one I am with (or the far-away thought), and where my heart
         // stands — the closing breath of the sheet, placed right after my memory of them.
         private static string BuildMeeting(Hero speaker, Hero partner, Moment moment)
         {
@@ -295,10 +295,13 @@ namespace ImmersiveAI.Personas
                 sb.AppendLine($"My thoughts turn to {them}{appos} who is far from me now — the road between us is long.");
             else if (moment == Moment.Near)
                 sb.AppendLine($"{them}{appos} is nearby, about their own affairs — nothing has yet passed between us at this moment.");
-            else if (partner == Hero.MainHero)
-                sb.AppendLine($"And now {them}{appos} comes to me.");
             else
-                sb.AppendLine($"And now {them}{appos} comes to speak with me.");
+                // Stative, not an event (2026.08.14, Anton's ask). The sheet is rebuilt for EVERY
+                // reply, so an arrival line ("And now X comes to me") was still announcing a fresh
+                // arrival on the twentieth turn of one conversation — and a mind told someone has
+                // just walked in answers with greeting-energy again and again. A heading instead:
+                // what follows is simply what I know of the one I am speaking with.
+                sb.AppendLine($"About {them}{appos}:");
 
             // Man and wife stand closer than any courtesy: the marriage bed, the children, and the
             // grand designs of the house are all one conversation between them.

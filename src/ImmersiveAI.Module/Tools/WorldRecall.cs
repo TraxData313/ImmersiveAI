@@ -39,44 +39,47 @@ namespace ImmersiveAI.Tools
             new ToolDefinition(RecallPerson,
                 "Call to mind what is truly known of a person of the world — who they are, their kin and house, " +
                 "their standing, where word last placed them, and, if they stand before my eyes, what I see " +
-                "of their garb and arms. Reach for this whenever a person is spoken of and my memory of them " +
-                "is dim, rather than guessing.",
+                "of their garb and arms. When a person is dim in my memory I call them to mind rather than " +
+                "invent — or unbidden, at the one before me, to open with something real; where nothing " +
+                "surfaces, I say so.",
                 new[] { new ToolParameter("name", "The person's name, as best I know it.") }),
 
             new ToolDefinition(RecallCompany,
                 "Take stock of my own company — the warband I lead or ride with: how many souls it counts, " +
                 "the kinds of fighters among them, the hale and the wounded, prisoners in my train, the food " +
-                "in the wagons, the men's spirits, their wages, and what the company is presently about. Reach " +
-                "for this before ever speaking in numbers of my own men."),
+                "in the wagons, the men's spirits, their wages, and what the company is presently about. I " +
+                "always look before speaking in numbers of my own men, and unbidden too, to open with " +
+                "something real; where nothing surfaces, I say so."),
 
             new ToolDefinition(RecallPlace,
                 "Call to mind what is known of a town, castle, or village — who holds it, whose realm it lies " +
-                "in, its walls and garrison, and how it fares. Reach for this when a place is spoken of and " +
-                "my memory of it is dim, and always before speaking in numbers of its defenses.",
+                "in, its walls and garrison, and how it fares. When a place is dim in my memory I call it to " +
+                "mind rather than invent, and always before speaking in numbers of its defenses; where " +
+                "nothing surfaces, I say so.",
                 new[] { new ToolParameter("name", "The place's name, as best I know it.") }),
 
             new ToolDefinition(RecallClan,
                 "Call to mind what is known of a clan or noble house — who leads it, whom it serves, its people " +
-                "and its holdings.",
+                "and its holdings — whenever a house is dim in my memory; where nothing surfaces, I say so.",
                 new[] { new ToolParameter("name", "The clan's name, as best I know it.") }),
 
             new ToolDefinition(RecallRealm,
                 "Call to mind what is known of a realm or kingdom — who rules it, its great houses, its lands, " +
-                "and the wars it wages.",
+                "and the wars it wages — whenever a realm is dim in my memory; where nothing surfaces, I say so.",
                 new[] { new ToolParameter("name", "The realm's name, as best I know it.") }),
 
             new ToolDefinition(RecallTroop,
                 "Call to mind what is known of a kind of soldier — recruit, warrior, knight, of any people: " +
                 "how seasoned they are, their skill at arms, the gear they carry, and what they may become " +
-                "with training. Reach for this when soldiers or their worth are spoken of — and when weighing " +
-                "one kind against another, call each to mind in turn before I judge.",
+                "with training. When soldiers or their worth are spoken of I call each kind to mind in turn " +
+                "before I judge, rather than invent; where nothing surfaces, I say so.",
                 new[] { new ToolParameter("name", "The soldier kind's name, e.g. \"Vlandian Recruit\" or \"Battanian Fian\".") }),
 
             new ToolDefinition(RecallMarket,
                 "Call to mind the day's trade in the market about me — what goods truly fetch here, this " +
-                "day, in the place where I stand. Reach for this before ever quoting a price or speaking " +
-                "of what the market bears; prices shift with the seasons and the wars, and yesterday's " +
-                "figure is a lie by morning.",
+                "day, in the place where I stand. I always look before quoting a price or speaking of what " +
+                "the market bears; prices shift with the seasons and the wars, and yesterday's figure is " +
+                "a lie by morning. Where nothing surfaces, I say so.",
                 new[] { new ToolParameter("item", "One good to price — grain, tools, wine, a horse. Leave it out to survey the market's staples.", required: false) }),
         };
 

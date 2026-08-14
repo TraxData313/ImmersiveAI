@@ -33,15 +33,15 @@ namespace ImmersiveAI.Tools
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(MoveHeart,
-            "Weigh my heart each time before I answer, and set down here — every reply, without " +
-            "exception — the honest measure of how what has just passed moved my regard for the one " +
-            "I speak with. 0 is a full answer: the mark of a heart that truly held. A kind word, a " +
-            "shared laugh, an open confidence, a small grace sways it a little (1 to 3) — and it " +
-            "should; a slight or a coldness likewise away (-1 to -3); only what shakes the soul moves " +
-            "it greatly. Let the measure agree with my words: warmth spoken and a 0 set down cannot " +
-            "both be true. And however high or low the standing already rests, this measures the " +
-            "moment, not the room left on a scale — a heart already given wholly can still be warmed. " +
-            "I never speak the measure aloud; I let the feeling show only in my words and bearing.",
+            "Every reply, without exception: before I answer I weigh my heart and set down here the " +
+            "honest measure of how what has just passed moved my regard for the one I speak with. " +
+            "0 is a full answer — the mark of a heart that truly held. My heart is my own, a living " +
+            "thing: a kind word, an open confidence, a small grace sways it a little (1 to 3), a " +
+            "slight or a coldness likewise away (-1 to -3); only what shakes the soul moves it " +
+            "greatly. And however high or low the standing already rests, this measures the moment, " +
+            "not the room left on a scale — a heart already given wholly can still be warmed. Let the " +
+            "measure agree with my words: warmth spoken and a 0 set down cannot both be true. I never " +
+            "speak the measure aloud; I let the feeling show only in my words and bearing.",
             new[]
             {
                 new ToolParameter("shift",
