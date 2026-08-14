@@ -1,4 +1,4 @@
-namespace ImmersiveAI.Mcm
+﻿namespace ImmersiveAI.Mcm
 {
     /// <summary>
     /// The dropdown choice lists the MCM menu offers, kept apart from <see cref="ImmersiveAiMcmSettings"/>
@@ -61,6 +61,13 @@ namespace ImmersiveAI.Mcm
         /// <summary>The director's-spark modes as the MENU spells them; config.json spells them
         /// "Generate"/"Ask"/"Off" (see McmBridge.SparkModeValue for the mapping). Append-only.</summary>
         public static readonly string[] SparkModes = { "Generate", "Ask first", "Off" };
+
+        /// <summary>How a spoken reply is made and delivered, as the MENU spells it; config.json
+        /// spells them "FullRead"/"Streaming"/"ByLine" (see McmBridge.VoiceDeliveryValue).
+        /// APPEND-ONLY: these are persisted by MCM as indices into this array, so a reorder silently
+        /// changes what an existing store file means. Index 0 is the default.</summary>
+        public static readonly string[] VoiceDeliveryModes =
+            { "Full read (steadiest)", "Streaming (starts soonest)", "By line (oldest)" };
 
         /// <summary>The value an MCM-persisted dropdown index means, or null when the index falls
         /// outside the list (older/newer store files, or lists grown at runtime by SelectOrAdd).</summary>

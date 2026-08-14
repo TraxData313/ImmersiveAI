@@ -191,6 +191,13 @@ namespace ImmersiveAI
         /// until the day turns or the cap is raised. 0 (the default) means no cap.</summary>
         public int MaxDailyRequests { get; set; } = 0;
 
+        /// <summary>Frames per second while the talk screen is open. Nothing moves there but one
+        /// person breathing, so there is little sense in the machine working as hard as it does on a
+        /// battlefield — the game's own frame limiter is borrowed while the screen is up and handed
+        /// straight back when it closes. 0 leaves the player's own limit alone; anything else is
+        /// clamped to the range the game itself allows (30..360).</summary>
+        public int TalkScreenFpsLimit { get; set; } = 60;
+
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
         /// compression: the rolling memory of a person, and her sense of self). Kept apart from
         /// <see cref="MaxTokens"/> — which paces spoken replies — so deep memory has room to be rich:
@@ -790,6 +797,24 @@ namespace ImmersiveAI
         /// "event:/mod/mission/voice_trivial". Takes hold on the next line spoken.</summary>
         public string VoiceSoundEvent { get; set; } = "event:/Extra/voiceover";
 
+        /// <summary>
+        /// How a spoken reply is made and delivered. Three roads, and which one is best depends on
+        /// how hard the graphics card is already working:
+        /// <list type="bullet">
+        /// <item><c>FullRead</c> (default) - one generation for the whole reply, and not a word is
+        /// heard until all of it exists. The steadiest voice and no gaps ever, at the cost of
+        /// waiting longer before she starts.</item>
+        /// <item><c>Streaming</c> - the same single generation, but each second of it is played the
+        /// moment it is made. She starts speaking in well under a second; if the card is busy
+        /// enough that making the audio falls behind playing it, the reply breaks into gaps.</item>
+        /// <item><c>ByLine</c> - a separate generation per sentence. The oldest road, kept for
+        /// comparison: it starts quickly on a loaded card but the voice audibly changes person at
+        /// every sentence, because each generation rolls its own prosody.</item>
+        /// </list>
+        /// Takes hold on the next line spoken; no restart.
+        /// </summary>
+        public string VoiceDelivery { get; set; } = "FullRead";
+
         /// <summary>The built-in model → context-window table. Longest key contained in the model id
         /// wins, so "gpt-5.1" beats "gpt-5" for gpt-5.1-mini. Users edit/extend the copy in their
         /// config.json; missing built-ins are re-added on load so new defaults reach old configs.</summary>
@@ -1017,6 +1042,12 @@ namespace ImmersiveAI
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;
 
+            // 0 is a real answer here ("do not touch my limiter"); anything else must land inside
+            // what the engine's own limiter accepts, or it is quietly ignored.
+            if (TalkScreenFpsLimit < 0) TalkScreenFpsLimit = 0;
+            else if (TalkScreenFpsLimit > 0 && TalkScreenFpsLimit < 30) TalkScreenFpsLimit = 30;
+            else if (TalkScreenFpsLimit > 360) TalkScreenFpsLimit = 360;
+
             // The hotkeys must name real keys; anything unparseable falls back to the defaults.
             if (string.IsNullOrWhiteSpace(ChatWindowHotkey)) ChatWindowHotkey = "O";
             ChatWindowHotkey = ChatWindowHotkey.Trim();
@@ -1076,6 +1107,18 @@ namespace ImmersiveAI
 
             // The cache budget: 0 stays a legitimate "keep everything", a negative is a typo, and
             // the ceiling is only there so a stray keystroke cannot promise a terabyte.
+            // The delivery road knows exactly three spellings; a typo or an old hand edit becomes
+            // the default rather than silently meaning nothing.
+            var road = (VoiceDelivery ?? string.Empty).Trim();
+            if (!road.Equals("FullRead", StringComparison.OrdinalIgnoreCase)
+                && !road.Equals("Streaming", StringComparison.OrdinalIgnoreCase)
+                && !road.Equals("ByLine", StringComparison.OrdinalIgnoreCase))
+                VoiceDelivery = "FullRead";
+            else
+                VoiceDelivery = road.Equals("FullRead", StringComparison.OrdinalIgnoreCase) ? "FullRead"
+                              : road.Equals("Streaming", StringComparison.OrdinalIgnoreCase) ? "Streaming"
+                              : "ByLine";
+
             if (VoiceCacheBudgetMb < 0) VoiceCacheBudgetMb = 0;
             if (VoiceCacheBudgetMb > 200000) VoiceCacheBudgetMb = 200000;
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -211,6 +211,7 @@ namespace ImmersiveAI.Mcm
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
             if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
+            if (s.VoiceDelivery == null) { s.VoiceDelivery = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 0); repaired = true; }
             if (s.NightWindowHotkey == null) { s.NightWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 9); repaired = true; }
             if (repaired)
                 ModLog.Warn("MCM served an uninitialized settings instance — dropdowns rebuilt by hand " +
@@ -246,6 +247,7 @@ namespace ImmersiveAI.Mcm
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 SelectedOf(s.PersonaSparkMode),
+                s.EnableVoice, s.VoiceAutoSpeak, SelectedOf(s.VoiceDelivery),
                 s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightCooldownHours,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
                 s.EnableNightWindow, SelectedOf(s.NightWindowHotkey),
@@ -254,7 +256,7 @@ namespace ImmersiveAI.Mcm
                 s.MaxRecentTurns, s.KeepRecentTurnsAfterCompression,
                 s.MaxRecentDays, s.KeepRecentDaysAfterCompression,
                 s.MaxMemoryWriteTokens, s.NotifyOnMemoryRefactor,
-                s.ShowCostNotices, s.MaxDailyRequests, s.DevMode);
+                s.ShowCostNotices, s.MaxDailyRequests, s.TalkScreenFpsLimit, s.DevMode);
         }
 
         /// <summary>The config side of the same fields — raw values; any change means "push to menu".</summary>
@@ -274,6 +276,7 @@ namespace ImmersiveAI.Mcm
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.PersonaSparkMode,
+                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceDelivery,
                 c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightCooldownHours,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
                 c.EnableNightWindow, c.NightWindowHotkey,
@@ -282,7 +285,7 @@ namespace ImmersiveAI.Mcm
                 c.MaxRecentTurns, c.KeepRecentTurnsAfterCompression,
                 c.MaxRecentDays, c.KeepRecentDaysAfterCompression,
                 c.MaxMemoryWriteTokens, c.NotifyOnMemoryRefactor,
-                c.ShowCostNotices, c.MaxDailyRequests, c.DevMode);
+                c.ShowCostNotices, c.MaxDailyRequests, c.TalkScreenFpsLimit, c.DevMode);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -331,6 +334,9 @@ namespace ImmersiveAI.Mcm
             s.CourtshipCharmSlack = Clamp(c.CourtshipCharmSlack, 0, 4);
             s.MinBetrothalDays = Clamp(c.MinBetrothalDays, 0, 30);
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
+            s.EnableVoice = c.EnableVoice;
+            s.VoiceAutoSpeak = c.VoiceAutoSpeak;
+            Select(s.VoiceDelivery, VoiceDeliveryLabel(c.VoiceDelivery));
             s.EnableNights = c.EnableNights;
             s.NightsAutoVisit = c.NightsAutoVisit;
             s.NightsPreventChild = c.NightsPreventChild;
@@ -346,6 +352,7 @@ namespace ImmersiveAI.Mcm
 
             s.ShowCostNotices = c.ShowCostNotices;
             s.MaxDailyRequests = Clamp(c.MaxDailyRequests, 0, 2000);
+            s.TalkScreenFpsLimit = Clamp(c.TalkScreenFpsLimit, 0, 360);
 
             s.DevMode = c.DevMode;
         }
@@ -425,6 +432,9 @@ namespace ImmersiveAI.Mcm
             c.CourtshipCharmSlack = s.CourtshipCharmSlack;
             c.MinBetrothalDays = s.MinBetrothalDays;
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
+            c.EnableVoice = s.EnableVoice;
+            c.VoiceAutoSpeak = s.VoiceAutoSpeak;
+            c.VoiceDelivery = VoiceDeliveryValue(SelectedOf(s.VoiceDelivery)) ?? c.VoiceDelivery;
             c.EnableNights = s.EnableNights;
             c.NightsAutoVisit = s.NightsAutoVisit;
             c.NightsPreventChild = s.NightsPreventChild;
@@ -452,6 +462,8 @@ namespace ImmersiveAI.Mcm
             c.ShowCostNotices = s.ShowCostNotices;
             if (s.MaxDailyRequests != Clamp(c.MaxDailyRequests, 0, 2000))
                 c.MaxDailyRequests = s.MaxDailyRequests;
+            if (s.TalkScreenFpsLimit != Clamp(c.TalkScreenFpsLimit, 0, 360))
+                c.TalkScreenFpsLimit = s.TalkScreenFpsLimit;
 
             c.DevMode = s.DevMode;
         }
@@ -665,6 +677,25 @@ namespace ImmersiveAI.Mcm
 
         private static string? SparkModeValue(string? menuLabel) =>
             menuLabel == null ? null : (menuLabel == "Ask first" ? "Ask" : menuLabel);
+
+        // The menu spells the roads for a reader; config.json spells them for a parser. Matched on
+        // the leading word so the parenthetical hints can be reworded without breaking stored files.
+        private static string VoiceDeliveryLabel(string configValue)
+        {
+            if (string.Equals(configValue, "Streaming", StringComparison.OrdinalIgnoreCase))
+                return McmChoiceLists.VoiceDeliveryModes[1];
+            if (string.Equals(configValue, "ByLine", StringComparison.OrdinalIgnoreCase))
+                return McmChoiceLists.VoiceDeliveryModes[2];
+            return McmChoiceLists.VoiceDeliveryModes[0];
+        }
+
+        private static string? VoiceDeliveryValue(string? menuLabel)
+        {
+            if (menuLabel == null) return null;
+            if (menuLabel.StartsWith("Streaming", StringComparison.OrdinalIgnoreCase)) return "Streaming";
+            if (menuLabel.StartsWith("By line", StringComparison.OrdinalIgnoreCase)) return "ByLine";
+            return "FullRead";
+        }
 
         private static int Clamp(int value, int min, int max) =>
             value < min ? min : (value > max ? max : value);

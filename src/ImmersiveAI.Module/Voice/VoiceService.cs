@@ -113,6 +113,19 @@ namespace ImmersiveAI.Voice
             }
         }
 
+        /// <summary>The three ways a reply can be made and handed over. See ModConfig.VoiceDelivery.</summary>
+        internal enum Delivery { FullRead, Streaming, ByLine }
+
+        /// <summary>Read fresh every time, never cached, so the setting takes hold on the very next
+        /// line without a restart — which is the point of it being a dial rather than a constant.</summary>
+        internal static Delivery DeliveryRoad()
+        {
+            var road = Config?.VoiceDelivery;
+            if (string.Equals(road, "Streaming", StringComparison.OrdinalIgnoreCase)) return Delivery.Streaming;
+            if (string.Equals(road, "ByLine", StringComparison.OrdinalIgnoreCase)) return Delivery.ByLine;
+            return Delivery.FullRead;
+        }
+
         /// <summary>Whether a reply should speak of its own accord, or wait to be asked. Read by
         /// whoever wires the conversation up; this service always speaks when told to.</summary>
         public static bool AutoSpeakEnabled => Config?.VoiceAutoSpeak ?? true;
@@ -620,61 +633,105 @@ namespace ImmersiveAI.Voice
                 var setup = VoiceEngineDiscovery.Resolve(Config);
                 if (!setup.IsComplete) { VoiceEngineGate.ReportDown(setup.Missing); return; }
 
-                // ONE request for the whole reply, streamed back in pieces.
-                //
-                // It used to be one request per sentence, and that was wrong twice. The engine rolls
-                // its prosody afresh for every generation, so the voice audibly became a different
-                // person at each seam — "definitely an immersion breaker", and the right verdict. And
-                // it re-paid the prefill and the speaker encode per sentence: measured on the same
-                // card with the game running, 3.60x realtime streamed against 0.34x cut up. The
-                // faithful road turned out to be the fast one.
-                //
-                // The pieces still land as 000.wav, 001.wav … in the same cache folder, so nothing
-                // downstream changed: playback chains them, and a replay from cache is identical.
+                // THREE ROADS, and which is best depends on how busy the graphics card is. All
+                // three end with the same thing on disk — 000.wav, 001.wav … in this folder — so a
+                // replay from cache is identical whichever made it.
+                var road = DeliveryRoad();
                 var made = 0;
-                var reply = await client.SynthesizeAsync(
-                    id: plan.Key,
-                    text: plan.Text,
-                    outPath: VoiceCache.ChunkPath(folder, 0),
-                    voiceKind: plan.Kind,
-                    voicePath: plan.VoicePath,
-                    speaker: plan.SpeakerName,
-                    languageId: AutoLanguage,
-                    setup: setup,
-                    onChunk: (index, path, samples) =>
+
+                if (road == Delivery.ByLine)
+                {
+                    // The oldest road, kept for comparison. A separate generation per sentence: it
+                    // begins quickly even on a loaded card, but the model rolls its prosody afresh
+                    // each time, so the voice changes person at every seam. The host continues its
+                    // numbering from the file we name, which is what keeps the sentences from
+                    // overwriting one another.
+                    foreach (var bite in plan.Bites)
                     {
-                        // Straight from the host's reader thread: hand it to playback the moment it
-                        // exists. Abandoned means the player has moved on — stop publishing, but let
-                        // the generation finish into the cache; it is paid for either way.
                         if (job.Abandoned) return;
-                        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
-                        made++;
-                        job.Publish(path);
-                    }).ConfigureAwait(false);
 
-                if (!reply.Ok)
+                        var atIndex = made;
+                        var reply = await client.SynthesizeAsync(
+                            id: plan.Key + "#" + atIndex.ToString(),
+                            text: bite,
+                            outPath: VoiceCache.ChunkPath(folder, atIndex),
+                            voiceKind: plan.Kind,
+                            voicePath: plan.VoicePath,
+                            speaker: plan.SpeakerName,
+                            languageId: AutoLanguage,
+                            setup: setup,
+                            onChunk: (_, path, __) =>
+                            {
+                                if (job.Abandoned) return;
+                                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+                                made++;
+                                job.Publish(path);
+                            }).ConfigureAwait(false);
+
+                        if (!reply.Ok) { VoiceEngineGate.ReportFailure(reply.Error); return; }
+                        if (IsTooShortToBeReal(reply, bite))
+                        {
+                            VoiceEngineGate.ReportFailure(
+                                $"the engine answered with {reply.Samples} samples for {bite.Length} characters");
+                            return;
+                        }
+                        VoiceEngineGate.ReportSuccess();
+                    }
+                }
+                else
                 {
-                    VoiceEngineGate.ReportFailure(reply.Error);
-                    return;
+                    // ONE generation for the whole reply. This is what keeps the voice the same
+                    // person from first word to last — the model's own state carries across the
+                    // sentences instead of being thrown away between them — and it is far faster
+                    // besides, because the prefill and the speaker encode are paid once rather than
+                    // per sentence (3.60x realtime against 0.34x, same card, game running).
+                    //
+                    // The two differ only in WHEN the pieces are handed to playback:
+                    //   Streaming — as each lands, so she begins speaking in under a second, and a
+                    //               card too busy to keep ahead leaves audible gaps.
+                    //   FullRead  — not until every piece exists, so there can be no gap at all,
+                    //               paid for by a longer wait before the first word.
+                    var held = road == Delivery.FullRead ? new List<string>() : null;
+
+                    var reply = await client.SynthesizeAsync(
+                        id: plan.Key,
+                        text: plan.Text,
+                        outPath: VoiceCache.ChunkPath(folder, 0),
+                        voiceKind: plan.Kind,
+                        voicePath: plan.VoicePath,
+                        speaker: plan.SpeakerName,
+                        languageId: AutoLanguage,
+                        setup: setup,
+                        onChunk: (index, path, samples) =>
+                        {
+                            if (job.Abandoned) return;
+                            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+                            made++;
+                            if (held != null) held.Add(path);      // FullRead: keep it back
+                            else job.Publish(path);                // Streaming: straight out
+                        }).ConfigureAwait(false);
+
+                    if (!reply.Ok) { VoiceEngineGate.ReportFailure(reply.Error); return; }
+                    if (made == 0)
+                    {
+                        VoiceEngineGate.ReportFailure("the engine reported a reply it did not write");
+                        return;
+                    }
+                    if (IsTooShortToBeReal(reply, plan.Text))
+                    {
+                        VoiceEngineGate.ReportFailure(
+                            $"the engine answered with {reply.Samples} samples for {plan.Text.Length} characters");
+                        return;
+                    }
+                    VoiceEngineGate.ReportSuccess();
+
+                    // Everything exists; let it all out at once, in order. Playback chains them, so
+                    // from here it sounds exactly like the streamed road — it simply never waits.
+                    if (held != null && !job.Abandoned)
+                        foreach (var path in held) job.Publish(path);
                 }
 
-                if (made == 0)
-                {
-                    VoiceEngineGate.ReportFailure("the engine reported a reply it did not write");
-                    return;
-                }
-
-                // The same too-short guard as before, now against the WHOLE reply: on a voice road
-                // the model cannot travel it answers ok:true having made a fraction of a second, and
-                // sealed, that blip would be this line's voice for ever.
-                if (IsTooShortToBeReal(reply, plan.Text))
-                {
-                    VoiceEngineGate.ReportFailure(
-                        $"the engine answered with {reply.Samples} samples for {plan.Text.Length} characters");
-                    return;
-                }
-
-                VoiceEngineGate.ReportSuccess();
+                if (made == 0) return;
 
                 VoiceCache.Seal(folder, new VoiceCacheManifest
                 {

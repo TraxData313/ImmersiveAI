@@ -319,6 +319,16 @@ public sealed class TtsEngine : IDisposable
         catch (Exception ex) { outcome.Error = "the request could not be made sense of: " + ex.Message; return outcome; }
 
         string dir = Path.GetDirectoryName(firstPath) ?? ".";
+
+        // Pieces continue from the number we were HANDED, not from zero. When the game asks for a
+        // whole reply it asks for 000.wav and we write 000, 001, 002...; when it asks sentence by
+        // sentence it asks for 003.wav next, and we carry on from three. Without this every request
+        // would begin at 000 again and each sentence would overwrite the one before it.
+        int baseIndex = 0;
+        {
+            var stem = Path.GetFileNameWithoutExtension(firstPath);
+            if (!int.TryParse(stem, out baseIndex) || baseIndex < 0) baseIndex = 0;
+        }
         var p = QwenParams.StudioDefaults(req.LanguageId, _maxAudioTokens);
         p.Temperature = 0.55f;      // see Synthesize: cooler sampling holds the timbre steady
         p.TopP = 0.85f;
@@ -349,7 +359,7 @@ public sealed class TtsEngine : IDisposable
                 if (gain <= 0f) gain = Wav.GainFor(buf);
                 Wav.ApplyGain(buf, gain);
 
-                string path = Path.Combine(dir, $"{index:000}.wav");
+                string path = Path.Combine(dir, $"{baseIndex + index:000}.wav");
                 Wav.WritePcm16Atomic(path, buf, rate);
                 totalSamples += buf.Length;
                 onChunk(index, path, buf.Length);
@@ -395,7 +405,7 @@ public sealed class TtsEngine : IDisposable
             if (index == 0) { outcome.Error = "the engine produced no audio"; return outcome; }
 
             outcome.Ok = true;
-            outcome.Path = Path.Combine(dir, "000.wav");
+            outcome.Path = Path.Combine(dir, $"{baseIndex:000}.wav");
             outcome.Ms = sw.ElapsedMilliseconds;
             outcome.Samples = totalSamples;
             outcome.Rate = rate;

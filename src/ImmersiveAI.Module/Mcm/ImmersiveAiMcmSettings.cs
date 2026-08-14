@@ -1,4 +1,4 @@
-using MCM.Abstractions.Attributes;
+﻿using MCM.Abstractions.Attributes;
 using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
 using MCM.Common;
@@ -147,6 +147,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
         public Dropdown<string> LetterWindowHotkey { get; set; } = HotkeyChoices("Y");
 
+        [SettingPropertyInteger("Talk screen frame limit (0 = leave mine)", 0, 360, "0 fps", Order = 3, RequireRestart = false,
+            HintText = "Frames per second while the talk screen is open. Nothing moves there but one person breathing, so the machine need not work as it does in a battle. Your own frame limit is borrowed while the screen is up and handed straight back when it closes. 0 leaves it untouched; anything else is held to the 30-360 the game allows.")]
+        [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
+        public int TalkScreenFpsLimit { get; set; } = 60;
+
         [SettingPropertyBool("Window of the hearth", Order = 4, RequireRestart = false,
             HintText = "A small window of your own marriage: your wives, where each of them stands and how her season runs, when the next night is yours to spend, and the fortnight of nights each of them keeps.")]
         [SettingPropertyGroup("Windows & Hotkeys", GroupOrder = 1)]
@@ -207,6 +212,23 @@ namespace ImmersiveAI.Mcm
             HintText = "How far words can move a hiring price from the game's own reckoning, either way. 0 = no haggling (the reckoned price or nothing); 30 = up to 30% above or below. A hard rule the mod enforces, whatever is said. The daily wage is never negotiable.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int ConversationHiringHagglePercent { get; set; } = 30;
+
+        // ---------------------------- Voices ----------------------------
+
+        [SettingPropertyBool("Speak their words aloud", Order = 0, RequireRestart = false,
+            HintText = "Characters read their replies out loud in a voice you choose, made on your own machine. Needs Qwen-TTS Studio installed with a model downloaded, and a graphics card with a few GB to spare. Off costs nothing and changes nothing else.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public bool EnableVoice { get; set; }
+
+        [SettingPropertyBool("Speak without being asked", Order = 1, RequireRestart = false,
+            HintText = "A reply speaks itself the moment it appears. Off, nothing is ever spoken until you ask for it.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public bool VoiceAutoSpeak { get; set; } = true;
+
+        [SettingPropertyDropdown("How a reply is spoken", Order = 2, RequireRestart = false,
+            HintText = "Full read: the whole reply is made before a word is heard - steadiest voice, no gaps, longest wait. Streaming: the same single reading, played as it is made - starts in under a second, but a busy graphics card leaves gaps. By line: a separate reading per sentence - starts quickly under load, but the voice changes character at every sentence.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public Dropdown<string> VoiceDelivery { get; set; } = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 0);
 
         [SettingPropertyDropdown("Starting personality (the director's spark)", Order = 11, RequireRestart = false,
             HintText = "At a character's first interaction, one small AI call writes them a private starting truth (1-3 sentences - a wound, a habit, a vanity) into their editable prompt file, grown from their real story, traits and your world prompt. 'Ask first' shows a popup per new face; Off leaves souls to begin plain.")]

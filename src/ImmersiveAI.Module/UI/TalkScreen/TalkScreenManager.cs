@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.GameState;
 using TaleWorlds.Core;
 using TaleWorlds.Engine.GauntletUI;
+using TaleWorlds.Engine.Options;
 using TaleWorlds.GauntletUI.BaseTypes;
 using TaleWorlds.InputSystem;
 using TaleWorlds.Library;
@@ -157,32 +158,30 @@ namespace ImmersiveAI.UI.TalkScreen
 
         // ------------------------------ holding the world still ------------------------------
         //
-        // While this screen is up the campaign map STOPS BEING DRAWN, and the clock stops with it.
+        // While this screen is up the clock stops, and the game draws no more frames than it needs
+        // to — because behind our picture there is nothing moving that anyone can see.
         //
-        // Both halves are copied from what the game itself does for its own Talk, and the first one
-        // is the whole answer to "why is vanilla Talk twice as fast as your screen?" (Anton,
-        // 2026.08.14, 200 fps against ~95). MapScreen decides every frame:
+        // WHAT WAS TRIED AND MUST NOT BE TRIED AGAIN LIGHTLY (2026.08.14, it crashed Anton's game on
+        // every close). Vanilla's own Talk stops drawing the campaign map — MapScreen computes
+        // `isSceneViewEnabled = !isConversationActive && (TopScreen == this)` — and that, not the
+        // pause, is why it runs at twice our framerate. Doing the same by hand
+        // (`MapScreen.Instance.SceneLayer.SceneView` → `SetEnable(false)`) works and is fast, but
+        // turning it back on is NOT one call: MapScreen follows it with `MapScene.CheckResources`
+        // and, if the scene ever had one, a full re-creation of the water-wake renderer. Skip those
+        // and the map comes back to life holding freed resources — a hard native crash, at sea most
+        // of all, which is where Anton plays. Worse, MapScreen keeps its own private cache of the
+        // flag, so it cannot be told what we did and will not repair it for us.
         //
-        //     isSceneViewEnabled = !isConversationActive && (ScreenManager.TopScreen == this)
-        //
-        // — so a real conversation shuts the entire campaign-map scene off. Ours is a LAYER on that
-        // same screen, so none of that fires by itself and the map goes on being rendered in full
-        // behind a picture that completely covers it. We simply do it ourselves.
-        //
-        // Turning it back on is MapScreen's own business as much as ours: it only calls SetEnable
-        // when its private cache disagrees with the line above, so our disable is left alone in the
-        // ordinary case — but something that briefly takes the top screen (an inventory, the escape
-        // menu) will flip it back on underneath us, which is why the tick keeps re-asserting it.
+        // If this is ever revisited: mirror the whole enable sequence, and TEST IT ON WATER. Until
+        // then the frame limiter below buys most of the same quiet for none of the risk.
 
         private static bool _worldHeld;
         private static CampaignTimeControlMode _timeBefore;
-        private static int _reassertIn;
 
         private static void HoldTheWorld()
         {
             if (_worldHeld) return;
             _worldHeld = true;
-            _reassertIn = 0;
 
             try
             {
@@ -191,17 +190,7 @@ namespace ImmersiveAI.UI.TalkScreen
             }
             catch { /* a world that will not hold still is not worth a crash */ }
 
-            StopDrawingTheMap(true);
-        }
-
-        private static void StopDrawingTheMap(bool stop)
-        {
-            try
-            {
-                var sceneView = SandBox.View.Map.MapScreen.Instance?.SceneLayer?.SceneView;
-                if (sceneView != null) ((TaleWorlds.Engine.View)sceneView).SetEnable(!stop);
-            }
-            catch { /* the frames are a courtesy; never let them cost a word */ }
+            CapTheFrames();
         }
 
         private static void ReleaseTheWorld()
@@ -209,13 +198,51 @@ namespace ImmersiveAI.UI.TalkScreen
             if (!_worldHeld) return;
             _worldHeld = false;
 
-            StopDrawingTheMap(false);
+            ReleaseTheFrames();
 
             try
             {
                 if (Campaign.Current != null) Campaign.Current.TimeControlMode = _timeBefore;
             }
             catch { /* the player's own pause key is one press away either way */ }
+        }
+
+        // ------------------------------ the frame limiter ------------------------------
+        //
+        // A still picture of one person does not need two hundred frames a second (Anton, 2026.08.14).
+        // The game has its own limiter — the "Frame limiter" video option, in real frames per second,
+        // 30..360 — so we borrow it while the screen is up and hand it back on the way out. Nothing
+        // here is written to the player's own options file, so even a crash costs at most a restart.
+
+        private static float _frameLimitBefore;
+        private static bool _framesCapped;
+
+        private static void CapTheFrames()
+        {
+            var wanted = _config?.TalkScreenFpsLimit ?? 0;
+            if (wanted <= 0) return;    // 0 means "leave my own limit alone"
+
+            try
+            {
+                _frameLimitBefore = NativeOptions.GetConfig(NativeOptions.NativeOptionsType.FrameLimiter);
+                NativeOptions.SetConfig(NativeOptions.NativeOptionsType.FrameLimiter, wanted);
+                NativeOptions.ApplyConfigChanges(false);
+                _framesCapped = true;
+            }
+            catch { /* a limiter that will not budge costs nothing but heat */ }
+        }
+
+        private static void ReleaseTheFrames()
+        {
+            if (!_framesCapped) return;
+            _framesCapped = false;
+
+            try
+            {
+                NativeOptions.SetConfig(NativeOptions.NativeOptionsType.FrameLimiter, _frameLimitBefore);
+                NativeOptions.ApplyConfigChanges(false);
+            }
+            catch { /* the player's own video options are one restart away */ }
         }
 
         // ------------------------------ the one on stage ------------------------------
@@ -347,9 +374,18 @@ namespace ImmersiveAI.UI.TalkScreen
             // bug; a world left frozen and black is a broken game.
             ReleaseTheWorld();
 
-            // Closing the screen silences whoever was speaking, for the same reason walking out of a
-            // conversation does: the words are gone from the page, so the voice should go with them.
-            Voice.VoiceService.Stop();
+            // DELIBERATELY NOT stopping the voice here (2026.08.14, Anton's ask AND a crash).
+            //
+            // Two reasons, pulling the same way. He wants a line to finish even if he steps out of
+            // the screen — "let her continue speaking" — which is also the kinder behaviour: her
+            // words are already said, and cutting them off mid-sentence because a window closed is
+            // the mod deciding she did not mean it. And the game CRASHED twice on exactly this path
+            // (Escape, and the X while she was mid-sentence), while the speech host exited cleanly
+            // both times — so the fault is on this side, in stopping a playing sound during
+            // teardown, not in the engine. Leaving the sound alone removes the call that crashed and
+            // gives him the behaviour he wanted, at once.
+            //
+            // Barge-in still happens where it belongs: sending the NEXT line cuts off the last one.
 
             // Walking away from the screen ends that talk, the way closing a conversation does — and
             // only then does what was said in it count as said (the line, 2026.08.09). A screen that
@@ -485,11 +521,6 @@ namespace ImmersiveAI.UI.TalkScreen
                 }
             }
 
-            // Re-asserted rather than set once: anything that briefly becomes the top screen makes
-            // MapScreen turn its own scene back on underneath us. Every tenth frame, not every one —
-            // this exists to SAVE work, and a few frames of the map drawing behind a picture that
-            // hides it completely is nothing anyone can see.
-            if (++_reassertIn >= 10) { _reassertIn = 0; StopDrawingTheMap(true); }
 
             if (_scrollCountdown > 0 && --_scrollCountdown == 0)
                 ScrollMessagesToBottom();

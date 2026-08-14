@@ -175,18 +175,22 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           six every stance carries (positive/very_positive/unsure/negative/
                           very_negative/trivial) because the lookup behind them is a raw indexer.
                           Idle/breathing/blinking come free.
-                          THE MAP MUST STOP BEING DRAWN (playtest, 2026.08.14 — Anton: vanilla Talk
-                          hit his 200fps cap while our screen sat at map framerate ~95). MapScreen
-                          decides every frame `isSceneViewEnabled = !isConversationActive &&
-                          (ScreenManager.TopScreen == this)`, so a REAL conversation shuts the whole
-                          campaign-map scene off — but ours is a LAYER on that same screen, so
-                          nothing fires and the map keeps rendering in full behind a picture that
-                          hides it completely. `HoldTheWorld`/`ReleaseTheWorld` do it by hand
-                          (`MapScreen.Instance.SceneLayer.SceneView` → `View.SetEnable`) and stop the
-                          clock beside it. Re-asserted every 10th tick, because anything that briefly
-                          takes the top screen makes MapScreen turn its own scene back on underneath
-                          us; released FIRST in TearDown, outside every other try — a world left
-                          frozen and black is worse than any failure to close.
+                          THE WORLD IS HELD STILL while the screen is up (`HoldTheWorld`/
+                          `ReleaseTheWorld`): the campaign clock stops and the game's own frame
+                          limiter is borrowed (`NativeOptions` FrameLimiter, real fps, 30..360;
+                          config `TalkScreenFpsLimit`, default 60, 0 = leave the player's alone; MCM
+                          slider, live). `SaveConfig()` is never called, so a crash costs the player
+                          nothing but a restart. Released FIRST in TearDown, outside every other try.
+                          DO NOT DISABLE THE MAP'S SCENE VIEW TO GAIN FRAMES — tried 2026.08.14 and
+                          it CRASHED the game on every close. Vanilla's Talk does exactly that
+                          (`isSceneViewEnabled = !isConversationActive && (TopScreen == this)`) and
+                          it is why vanilla runs at twice our framerate, but re-enabling is not one
+                          call: MapScreen follows it with `MapScene.CheckResources` and a full
+                          re-creation of the water-wake renderer, and skipping those brings the map
+                          back holding freed resources — a hard native crash, worst at sea, which is
+                          where Anton plays. MapScreen also caches the flag privately, so it cannot
+                          be told what we did. If ever revisited: mirror the WHOLE enable sequence
+                          and test it on water.
                           THE WIDGET GETS THE WHOLE SCREEN, ALWAYS (playtest, 2026.08.14): the tableau
                           renders through a camera whose shape follows its widget, and vanilla only
                           ever hands it a full-screen parent — penned into a narrow column it draws
