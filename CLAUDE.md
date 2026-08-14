@@ -26,7 +26,16 @@ calls the LLM → reply shown in the conversation panel, memory saved and compre
 You usually only need to open:
 - **Tone / voice / prompts** → `PromptBuilder` (Core), `SituationBuilder` + `FamilyBuilder` + `CraftsBuilder` (real skills → honest craft-words, on every sheet) + `TidingsBuilder` + `TroubleBuilder` (Module), `MemoryCompressor` (Core).
 - **In-game dialog flow & menu options** → `ImmersiveChatBehavior` (Module); the letter flows live in its partial `ImmersiveChatBehavior.Letters.cs`.
-- **The chat window** → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
+- **THE TALK SCREEN** (2026.08.14 — the one place words happen now) → `UI\TalkScreen\` +
+  `module\GUI\Prefabs\ImmersiveTalkScreen.xml` + the bridges in `ImmersiveChatBehavior.Talk.cs`.
+  It MERGED the chat window and the letter window: one list of everyone you know (here / away /
+  gone), the chosen one drawn alive in the middle by the game's own map-conversation tableau, and
+  one thread where letters sit among the spoken words. Scrolling UP past the oldest word shows the
+  real next prompt (sheet + tool list), for every player, no button. Everything reaches it through
+  the `UI\TalkUI.cs` façade — notices fan out to all shapes, opening goes to the chosen one — so
+  retiring the old windows later is a ONE-FILE change. The old windows are kept whole behind
+  `UseClassicChatWindow` (default false) and an automatic session fallback.
+- **The old chat window** (fallback only) → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **"Think" (the player's own next line)** → Core `Prompts\PlayerThought` (the aside + the answer-taming) + `Prompts\ConversationPresets` (the presets file model) + the `ImmersiveChatBehavior.Thoughts.cs` partial + both windows' VMs/prefabs.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
 - **What each NPC carries** → `NpcMemory` (per-person memory of the player) + `NpcSelf` (`self.txt`, their general self). NOTE two subsystems were RETIRED 2026.08.08 — the distilled `KnownFacts` (the `hold_truth` tool + the reflection `FACTS:` section) and `NpcGoals`/`goals.txt` (the `tend_goals` tool + the `GOALS:` section): both cramped what the rolling memory already held and read it back to her twice, and each cost a tool slot in every reply. Do not reintroduce either; the deep memory carries it all now.
@@ -76,6 +85,11 @@ booting up.
 src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-tested
   Llm/                    IChatClient/IToolChatClient + ChatMessage/ChatResult, ToolDefinition/
                           ToolCall, ToolLoopRunner (the recall loop; no HTTP, no game deps)
+  Prompts/PromptPack.cs   (2026.08.14) the player-owned prompts.txt: key = "one-liner" or a """block""",
+                          # and // comments, {slot} placeholders. Laws, all unit-tested: a broken key
+                          never costs more than itself (the compiled-in default stands), an EMPTIED
+                          key stays empty (that is the off switch), unknown keys are kept not dropped,
+                          render->parse round-trips. The registry over it is Phase 3, not yet built
   Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
   Battles/                BattleRecord (+side stats/participants/loot summary), BattleLedger (JSON
                           per battle + loose find-by-name), BattleText (titles/tales/beats/accounts)
@@ -101,6 +115,13 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
 src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
+  ImmersiveChatBehavior.Talk.cs     partial: the talk screen's bridges — ContactsForTalk (ONE circle:
+                          co-located, remembered-and-away, and the dead whose letters remain), ReachOf
+                          (Spoken / Letter / Closed — the single place presence, couriers and death are
+                          reasoned about), and PromptPreviewFor (the scrollback). The preview shares its
+                          tool list with the real call via GatherSpokenTools, factored out of
+                          CompleteSpokenAsync precisely so a preview can never drift into a fiction,
+                          and builds its situation FRESH so no stale captured moment stands in
   ImmersiveChatBehavior.Births.cs   partial: the birth chronicle (the hook, the hour, the feast and
                           its deferred offer, the beats, the keepsake, the retries)
   ImmersiveChatBehavior.Celebrations.cs  partial: who stands at a day of the player's — the ONE
@@ -113,6 +134,58 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   Tools/FieldCraft.cs     the field-craft (2026.07.12): survey_surroundings + weigh_battle — the country
                           about and the scales of battle, only for souls with a party on the map
   Tools/HeartTool.cs      the heart's own hand (move_heart), weighed every reply
+  UI/TalkScreen/          (2026.08.14) THE TALK SCREEN — TalkScreenVM/TalkContactVM/TalkScreenManager,
+                          plus ConversationTableauController + ConversationSceneBuilder, which host
+                          the game's OWN map-conversation tableau in our layer (it is a render-to-
+                          texture tableau, not a mission, and every type on the path is public).
+                          FOUR TRAPS, all decompile-verified, all in ConversationSceneBuilder: the
+                          MapConversationMission stub must be planted or the tableau NREs on its first
+                          tick; its ctor sets CampaignMission.Current and that MUST be nulled again or
+                          the game believes the player is in a mission (army management refuses,
+                          tournament gear changes); the conversation scene is ONE shared cached scene,
+                          so never build while IsConversationActive and always release on close; and
+                          the hall interiors ship for the six base cultures only — War Sails' nord/
+                          vakken have none, so an unknown culture is drawn by its LAND instead.
+                          Teardown order is layer-down THEN scene-release. Gestures deliberately not
+                          Arrived at in THREE goes on 2026.08.14 — read this before touching it. The
+                          answer is in the game's own OnConversationPlay, which branches: a non-empty
+                          reactionId plays Reactions[id] (a one-off GESTURE), an empty one with a set
+                          idleActionId plays IdleAnimStart (they TAKE THAT STANCE). Gestures were
+                          rejected twice ("странно изглежда, overdoing it", then "просто правят едно
+                          и също движение… не съм го виждал преди"); what vanilla actually does — and
+                          what Anton remembered — is CHANGE OF POSE: "веднъж стои с ръка на кръста,
+                          веднъж нещо друго" (a hand on the hip IS the "hip" idle, not a reaction).
+                          So `ShiftStance` sends reaction and reaction-face EMPTY and hands them a
+                          DIFFERENT idle each time the player speaks. The set is relation-banded
+                          (fond/easy/guarded/hostile — all ids real entries of the game's own
+                          conversation_animations.xml), the position WITHIN the set walks one step per
+                          message, and each soul starts at their own offset (FNV of their id) so two
+                          companions are never mirrors. NOTE the engine's
+                          DoesActionContinueWithCurrentAction: handing the SAME idle twice does
+                          nothing visible, which is why a stable stance looked frozen.
+                          DO NOT map feelings onto the body — the words carry them, and the body
+                          saying it too reads as pantomime.
+                          THE ONE PIECE OF REFLECTION on the whole path lives here and is
+                          unavoidable: OnConversationPlay keeps its entire animation body behind
+                          ConversationManager.SpeakerAgent.Character.IsPlayerCharacter, and
+                          SpeakerAgent is set ONLY by a live dialogue flow — hosting the tableau
+                          leaves it null, so a try/catch would hide the throw and the gestures would
+                          simply never fire. One private field (_speakerAgent), planted while the
+                          screen is up, put back to null on close. Reaction ids are limited to the
+                          six every stance carries (positive/very_positive/unsure/negative/
+                          very_negative/trivial) because the lookup behind them is a raw indexer.
+                          Idle/breathing/blinking come free.
+                          THE WIDGET GETS THE WHOLE SCREEN, ALWAYS (playtest, 2026.08.14): the tableau
+                          renders through a camera whose shape follows its widget, and vanilla only
+                          ever hands it a full-screen parent — penned into a narrow column it draws
+                          the same picture into a different shape and the person comes out SQUEEZED,
+                          differently after each re-measure. So it is a full-screen sibling and the
+                          side panels lie on top of it. Bodyguards: `party: null` is the ONLY thing
+                          that suppresses the hangers-on behind a soul (no other flag is read), and
+                          the player's own company is drawn without them
+  UI/TalkUI.cs            the façade the whole mod knocks on: notices fan out to every window shape
+                          (each a no-op when closed), opening goes to whichever shape is in use.
+                          Retiring the two old windows is a one-file change here
   UI/                     MapNoticePatch (the one Harmony patch), ImmersiveChatMapNotification (+ save
                           definer — never remove), ImmersiveChatNotificationItemVM (portrait notice VM),
                           Portraits (shared dark-backdrop portrait codes), ChatWindow\ (the chat window:
@@ -161,7 +234,9 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           memories.json for the hourly rolls and the odds view
 tests/ImmersiveAI.Core.Tests/  xUnit tests for Core (net8.0)
 module/SubModule.xml      Bannerlord module manifest (module ID: ImmersiveAI)
-module/GUI/               Gauntlet prefab overrides (MapNotificationItem.xml — the portrait notice)
+module/GUI/               Gauntlet prefabs: ImmersiveTalkScreen.xml (the talk screen), the two older
+                          windows it replaced, the hearth window, the socialness stepper, and the one
+                          override (Map\MapNotificationItem.xml — the portrait notice)
 lib/0Harmony.dll          bundled Harmony 2.4.2 (MIT); ships in the module bin via deploy.ps1
 CHANGELOG.md              the PLAYER-FACING running list: every player-visible change lands under
                           [Unreleased] the day it ships, as a ONE-LINE PILL — never a paragraph
@@ -477,6 +552,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   point to a letter); the player writes first with no greeting ceremony; unsent drafts survive
   closing the window; the NPC's relation points show beside their name and move with each exchange;
   and NPC reach-outs land there as waiting spoken messages instead of accept/decline popups; all default on),
+  `UseClassicChatWindow` (2026.08.14 — go back to the two SMALL windows instead of the one TALK
+  SCREEN that replaced them. INSURANCE, not taste: the screen borrows the game's own conversation
+  visuals, and a game patch could move them out from under it — if that ever happens the screen bows
+  out by itself for the rest of the session and the old windows carry on, so this switch is only for
+  making that permanent or for anyone who preferred the old shape; default false. Both old hotkeys
+  open the one screen, and `EnableChatWindow` still gates the whole thing),
   `OpenInitiationsFaceToFace` (default on, takes precedence over `SendInitiationsToChatWindow` for what
   a reach-out notice CLICK does: opens the OLD-STYLE face-to-face conversation showing the greeting the
   NPC already spoke — no accept/decline; X'ing the notice just leaves that recorded greeting unanswered,

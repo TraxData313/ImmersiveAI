@@ -218,6 +218,7 @@ namespace ImmersiveAI.UI.ChatWindow
             try
             {
                 if (_config == null || !_config.EnableChatWindow) return false;
+                if (TalkScreen.TalkScreenManager.IsOpen) return false;        // the screen replaced us
                 if (LetterWindow.LetterWindowManager.IsOpen) return false;   // one window at a time
                 if (NightWindow.NightWindowManager.IsOpen) return false;    // the hearth is the third
                 if (Campaign.Current == null) return false;

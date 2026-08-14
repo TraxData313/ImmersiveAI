@@ -1,6 +1,26 @@
 BUGS:
 
 NEXT UPDATE:
+- [ ] THE ONE SCREEN REWORK (2026.08.14, Anton's big batch — THE PLAN LIVES IN docs/one-screen-plan.md,
+      read it first; research in docs/talk-screen-research.md + docs/prompt-text-inventory.md)
+    - [x] Phase 1 — THE SCREEN: built + deployed 2026.08.14, UNPLAYTESTED
+    - [x] Phase 2 — THE SCROLLBACK PROMPT: built + deployed 2026.08.14, UNPLAYTESTED
+    - [ ] PLAYTEST THE SCREEN (open with O or Y, or "Speak freely" from a map talk):
+          1. Everyone in ONE list — party, town, and the far-off you know. Tags (here)/(away)/(gone).
+          2. The chosen one STANDS THERE in the middle, alive, in their own place's air. Someone far
+             away should show against THEIR sky, not yours. If nobody appears, say so — the face is
+             the one part borrowed from the game's own Talk and the likeliest thing to have moved.
+          3. Pick someone away: the button becomes "Seal and send", Enter does NOT send, the seal
+             does. While any letter rides either way, the seal is grayed and says why.
+          4. SCROLL UP past the oldest words: their whole sheet, then the hands they may reach for,
+             then the conversation. That is exactly what they get when you write. Check it matches
+             what you expect — and tell me if the order or the cut into cards reads badly.
+          5. Letters sit in the thread among the spoken words with a ✉.
+          6. Escape folds overlays one at a time, then closes. Drafts survive closing.
+          7. If it ever fails to open it falls back to the old windows and says so — tell me if
+             that happens, with the log line.
+    - [ ] Phase 3 — THE PROMPT PACK: prompts.txt — every editable NPC-visible string (~530 keys) in
+          one commented hot-reloaded file; marks/recognizers stay in code
 - [ ] PLAYTEST: НОЩИТЕ, РАЖДАНЕТО, ПАМЕТТА (2026.08.11 — 463 теста зелени, два кръга ревю,
       промптите ЖИВО пробвани с luna върху Сибила; но НИЩО не е пипано в игра)
 

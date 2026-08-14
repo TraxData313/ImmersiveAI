@@ -152,8 +152,7 @@ namespace ImmersiveAI
         {
             Current = this;
             _config = config;
-            UI.ChatWindow.ChatWindowManager.Configure(config);
-            UI.LetterWindow.LetterWindowManager.Configure(config);
+            UI.TalkUI.Configure(config);
             UI.NightWindow.NightWindowManager.Configure(config);
             UI.Socialness.SocialnessManager.Configure(config);
             _client = ChatClientFactory.Create(config);
@@ -172,7 +171,15 @@ namespace ImmersiveAI
         // counsel of the far-seeing sages (a web search, resolved off-thread). Every spoken path
         // goes through here; short utility calls (the feeling number, the yes/no of a reaching-out)
         // stay on plain CompleteAsync, where a recall would only slow the answer down.
-        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc, Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null)
+        /// <summary>Exactly which hands ride along with a spoken reply to this soul. Factored out of
+        /// <see cref="CompleteSpokenAsync"/> so that the talk screen's scrollback can show the player
+        /// the SAME list the model is really given (2026.08.14) — a preview that drifts from the
+        /// truth is worse than no preview at all.</summary>
+        // No `heart` parameter on purpose: the heart's hand rides on CanMoveHeart(), never on whether
+        // a tally was handed in — so the preview can ask for the list without inventing one.
+        private List<ToolDefinition> GatherSpokenTools(Hero npc,
+            Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
+            Tools.TrothTool.BlessTally? bless = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
@@ -198,6 +205,15 @@ namespace ImmersiveAI
             // marriage, tended by her alone (the retired matchmaker's checkable asks, unrobotted).
             if (troth != null) { tools.Add(Tools.TrothTool.Tend); tools.Add(Tools.MisgivingTool.Tool); }
             if (bless != null) tools.Add(Tools.TrothTool.Bless);
+            return tools;
+        }
+
+        private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc,
+            Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null,
+            Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
+            Tools.TrothTool.BlessTally? bless = null)
+        {
+            var tools = GatherSpokenTools(npc, bargain, troth, bless);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
@@ -207,6 +223,7 @@ namespace ImmersiveAI
 
             // The heart's hand and the personal hands (the bargain, the troth) are not recalls:
             // they keep at least one round even when the recall budget is zeroed out.
+            bool heartRides = CanMoveHeart();
             int rounds = (heartRides || bargain != null || troth != null || bless != null) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
@@ -547,7 +564,7 @@ namespace ImmersiveAI
                     "I entered their service — a companion of their company now, my keep on their purse. " +
                     "They hired me; I ride with them.",
                     string.Empty, OutreachMark.PlayerEngaged);
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex)
             {
@@ -1052,13 +1069,25 @@ namespace ImmersiveAI
             // Enter the free-chat flow from the normal conversation hub. When recap is enabled we
             // pause on a greeting state first (and kick off the recap); otherwise we drop straight
             // into the say/leave menu.
+            // THE UNIFIED DOOR (Anton, 2026.08.14). From a conversation begun on the MAP, "Speak
+            // freely" no longer runs the talk inside the vanilla panel: it steps out of the dialog
+            // and into the talk screen, on this very soul — the same words and the same memory, but
+            // in the place where their whole story stands and everyone else is one click away.
+            //
+            // Only from the map. Inside a settlement's own scene the screen is a layer over a world
+            // the player is physically standing in and cannot cover it, so there the panel loop
+            // below still carries the talk, exactly as it always has.
+            starter.AddPlayerLine("immersiveai_start_screen", "hero_main_options", "close_window",
+                "{=ImmersiveAI_Speak}Speak freely with me.",
+                ShowsTalkScreenDoor, OnOpenTalkScreenFromDialog, 120);
+
             if (_config.EnableConversationRecap)
             {
                 // Priority 120: the door to the mod sits at the very top of the vanilla hub
                 // (Anton's ask, 2026.08.08 — the chat option first, the farewell last).
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_greet",
                     "{=ImmersiveAI_Speak}Speak freely with me.",
-                    () => Hero.OneToOneConversationHero != null, OnChatOpened, 120);
+                    () => Hero.OneToOneConversationHero != null && !ShowsTalkScreenDoor(), OnChatOpened, 120);
 
                 // Greet state, recap is in -> the NPC delivers it, then we fall into the menu.
                 // Registered before the "still recalling" line so it wins when the condition holds.
@@ -1077,7 +1106,7 @@ namespace ImmersiveAI
             {
                 starter.AddPlayerLine("immersiveai_start", "hero_main_options", "immersiveai_input",
                     "{=ImmersiveAI_Speak}Speak freely with me.",
-                    () => Hero.OneToOneConversationHero != null, OnChatOpenedNoRecap, 120);
+                    () => Hero.OneToOneConversationHero != null && !ShowsTalkScreenDoor(), OnChatOpenedNoRecap, 120);
             }
 
             // Menu option: say something -> shows the text box, then goes to the await state.
@@ -1242,6 +1271,33 @@ namespace ImmersiveAI
             var hint = new TextObject("{=ImmersiveAI_Thinking}(considers your words...)").ToString();
             var last = _lastNpcLine;
             return string.IsNullOrWhiteSpace(last) ? hint : last.Trim() + "\n\n" + hint;
+        }
+
+        /// <summary>Whether this conversation should hand the talk over to the TALK SCREEN rather
+        /// than run it in the vanilla panel (2026.08.14). True only for a talk begun on the map with
+        /// the screen in use: a mission is a place the player physically stands in, and a map layer
+        /// cannot cover it.</summary>
+        private bool ShowsTalkScreenDoor()
+        {
+            try
+            {
+                return Hero.OneToOneConversationHero != null
+                       && UI.TalkUI.UsesTalkScreen
+                       && Mission.Current == null;
+            }
+            catch { return false; }
+        }
+
+        // Leaves the vanilla dialog and raises the screen on this soul. Deliberately does NOT call
+        // PrepareChat: nothing was said in the panel, so this really was only a meeting, and the
+        // silent meeting note ConversationEnded records for it is the honest account. Whatever is
+        // then said on the screen records itself, as it always does.
+        private void OnOpenTalkScreenFromDialog()
+        {
+            var npc = Hero.OneToOneConversationHero;
+            if (npc == null) return;
+            // The dialog is closing this very frame; the screen waits for the map to be clear of it.
+            UI.TalkUI.OpenWhenClear(npc);
         }
 
         // Runs the moment the player picks "Speak freely" (before the greet state is shown), so the
@@ -2430,8 +2486,8 @@ namespace ImmersiveAI
             if (!IsCoLocated(npc))
             {
                 InformationManager.DisplayMessage(new InformationMessage(
-                    $"Immersive AI: {npc.Name} is no longer near — their words wait in the chat window."));
-                if (self._config?.EnableChatWindow == true) UI.ChatWindow.ChatWindowManager.Open(npc);
+                    $"Immersive AI: {npc.Name} is no longer near — their words wait for you."));
+                if (self._config?.EnableChatWindow == true) UI.TalkUI.Open(npc);
                 return;
             }
 
@@ -2444,7 +2500,7 @@ namespace ImmersiveAI
 
             if (self.UsesChatWindowInitiations)
             {
-                UI.ChatWindow.ChatWindowManager.Open(npc);
+                UI.TalkUI.Open(npc);
                 return;
             }
 
@@ -3131,8 +3187,8 @@ namespace ImmersiveAI
                     // If the player is reading this very thread the reply appears before their eyes and a
                     // toast would only state the obvious; otherwise the ready-ping and the unread mark
                     // point the way back.
-                    bool viewing = UI.ChatWindow.ChatWindowManager.IsViewing(npc);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: true);
+                    bool viewing = UI.TalkUI.IsViewing(npc);
+                    UI.TalkUI.OnThreadChanged(npc, markUnread: true);
                     if (!viewing) NotifyReplyReady(npc);
                     LogConversationLine(npc, outcome.Reply);
                     // A bargain laid in the window is presented the same way: after the words, the
@@ -3150,7 +3206,7 @@ namespace ImmersiveAI
                     _quickChatBusy.Remove(npc.StringId);
                     InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + message));
                     // The words were never recorded — give them back to the player's input box.
-                    UI.ChatWindow.ChatWindowManager.OnSendFailed(npc, playerInput);
+                    UI.TalkUI.OnSendFailed(npc, playerInput);
                 });
             }
         }
@@ -3184,14 +3240,14 @@ namespace ImmersiveAI
                     var opening = stranger ? $"{name} approaches you and says:" : $"{name} sees you and says:";
                     NotifyWithFace(npc, $"{opening} “{Snippet(words)}”");
 
-                    bool viewing = UI.ChatWindow.ChatWindowManager.IsViewing(npc);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: true);
+                    bool viewing = UI.TalkUI.IsViewing(npc);
+                    UI.TalkUI.OnThreadChanged(npc, markUnread: true);
 
                     // A knock in the notice stack: in the face-to-face shape it is the door to the
                     // conversation (so it is parked even with the chat window open); in the message shape
                     // it just points back to the window, so it is skipped when the window is already open.
                     bool messageMode = !UsesFaceToFaceInitiations && UsesChatWindowInitiations;
-                    bool skipForOpenWindow = messageMode && UI.ChatWindow.ChatWindowManager.IsOpen;
+                    bool skipForOpenWindow = messageMode && UI.TalkUI.IsOpen;
 
                     if (!viewing && !skipForOpenWindow
                         && _config.UseMapNoticeForInitiations && UI.MapNoticePatch.Applied)
@@ -3242,7 +3298,7 @@ namespace ImmersiveAI
             {
                 starter.AddGameMenuOption(menuId, "immersiveai_chat_window_" + menuId,
                     "{=ImmersiveAI_ChatWindow}Speak with those near you",
-                    OnChatWindowMenuCondition, _ => UI.ChatWindow.ChatWindowManager.Open(), false, -1, false, null);
+                    OnChatWindowMenuCondition, _ => UI.TalkUI.Open(), false, -1, false, null);
             }
         }
 

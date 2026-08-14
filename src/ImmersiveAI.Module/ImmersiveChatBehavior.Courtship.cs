@@ -1050,7 +1050,7 @@ namespace ImmersiveAI
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"You are betrothed to {npc?.Name}. The promise is given, both ways.", SealGreen));
                 MirrorRomance(npc, CourtshipStage.Betrothed);
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex) { ModLog.Error("sealing the betrothal", ex); }
         }
@@ -1062,7 +1062,7 @@ namespace ImmersiveAI
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
                 InformationManager.DisplayMessage(new InformationMessage("You let the promise lie.", SealGrey));
                 AppendRecordedTurn(npc, CourtshipText.BetrothalDeclinedBeat(playerName), string.Empty);
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex) { ModLog.Error("declining the betrothal", ex); }
         }
@@ -1273,7 +1273,7 @@ namespace ImmersiveAI
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"This day you and {npc.Name} are wed.", SealGreen));
                 NotifyWithFace(npc, $"{npc.Name} is wed to you this day — what was promised is fulfilled.");
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex)
             {
@@ -1290,7 +1290,7 @@ namespace ImmersiveAI
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
                 InformationManager.DisplayMessage(new InformationMessage("You let the wedding day lie.", SealGrey));
                 AppendRecordedTurn(npc, CourtshipText.WeddingDeclinedBeat(playerName), string.Empty);
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex) { ModLog.Error("declining the wedding", ex); }
         }
@@ -1381,7 +1381,7 @@ namespace ImmersiveAI
 
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"The blessing is sealed: {bless.Price} denars to {npc.Name}, and the road to your wedding with {brideName} lies open.", SealGreen));
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex) { ModLog.Error("sealing the blessing", ex); }
         }
@@ -1396,7 +1396,7 @@ namespace ImmersiveAI
                 AppendRecordedTurn(npc,
                     CourtshipText.BlessingDeclinedBeat(playerName, brideName, bless.Price),
                     string.Empty);
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npc, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
             }
             catch (Exception ex) { ModLog.Error("declining the blessing", ex); }
         }

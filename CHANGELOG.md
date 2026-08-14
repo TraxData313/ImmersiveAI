@@ -24,6 +24,16 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 * Invited weddings call both families - no strangers
 ```
 
+### One place for everyone you know
+- New: they change how they stand as you talk — a hand on the hip, arms folded, weight shifted — the way they do in a face-to-face conversation. Which poses you see depends on how they feel about you: an old friend stands easy with you, someone who cannot stand you keeps their guard up.
+- New: the chat window and the letter window are ONE screen now — everyone you know in a single list, near or far, with the person you chose standing before you in the middle.
+- New: the same writing box does both. They can hear you? Write and press Enter. They are a kingdom away? The button becomes "Seal and send" and the words ride out as a letter.
+- New: letters read as part of the same story, in their place among the spoken words, wearing a ✉ so you can see which words travelled.
+- New: one letter at a time between you and anyone — while a courier rides in either direction, the seal waits for word. A correspondence, not a shouting match.
+- Changed: "Speak freely with me." on the map now opens that screen on whoever you clicked, instead of running the talk in the old dialog box. Inside a town's own streets the old panel still carries the conversation.
+- Changed: both old keys (O and Y) open the one screen, so nobody's habits break.
+- Changed: someone who has died stays in the list, marked "(gone)" — their letters remain readable forever.
+
 ### The birth chronicle
 - New: every child born to you is written down in two parts — the hour of it, set down in the mother's own voice and belonging to the two of you, and the feast that welcomed the child, which everyone who stood at it remembers ever after.
 - New: when a child comes you choose how to welcome it, from bread and salt at a campfire to a whole town of your own thrown open. What you spend decides who is called.

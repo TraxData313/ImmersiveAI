@@ -105,6 +105,17 @@
       <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\TaleWorlds.Core.ViewModelCollection.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- The talk screen's face: the map-conversation tableau lives in SandBox.View, and MapScreen
+         (which owns the view we borrow it from) implements an interface out of MountAndBlade.View.
+         Both are declared LoadBeforeThis in SubModule.xml already. -->
+    <Reference Include="TaleWorlds.MountAndBlade.View">
+      <HintPath>$(GameFolder)\Modules\Native\bin\Win64_Shipping_Client\TaleWorlds.MountAndBlade.View.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SandBox.View">
+      <HintPath>$(GameFolder)\Modules\SandBox\bin\Win64_Shipping_Client\SandBox.View.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
 </Project>

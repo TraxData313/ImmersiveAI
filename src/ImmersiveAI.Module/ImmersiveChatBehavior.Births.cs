@@ -412,7 +412,7 @@ namespace ImmersiveAI
                             string.IsNullOrWhiteSpace(record.FatherName) ? PlayerName() : record.FatherName,
                             record.PlaceName, record.ChildWords(), record.ChildNames(), record.BirthAccount),
                             OutreachMark.PlayerEngaged);
-                        UI.ChatWindow.ChatWindowManager.OnThreadChanged(mother, markUnread: false);
+                        UI.TalkUI.OnThreadChanged(mother, markUnread: false);
                     }
                 }
 
@@ -427,7 +427,7 @@ namespace ImmersiveAI
                         WriteBirthBeat(father, BirthText.FatherBeat(record.MotherName, record.PlaceName,
                             record.ChildWords(), record.ChildNames(), record.FatherWasThere),
                             OutreachMark.PlayerEngaged);
-                        UI.ChatWindow.ChatWindowManager.OnThreadChanged(father, markUnread: false);
+                        UI.TalkUI.OnThreadChanged(father, markUnread: false);
                     }
                 }
 
@@ -451,7 +451,7 @@ namespace ImmersiveAI
                     record.PlaceName, twinLived: false), OutreachMark.None);
                 record.BirthBeatDone = true;
                 _birthLedger?.Save(record);
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(npcMother, markUnread: false);
+                UI.TalkUI.OnThreadChanged(npcMother, markUnread: false);
             }
             catch (Exception ex) { ModLog.Error("recording a child who did not live", ex); }
         }
@@ -797,7 +797,7 @@ namespace ImmersiveAI
                     WriteBirthBeat(npcParent,
                         BirthText.ParentFeastBeat(record.ChildNames(), record.PlaceName, record.FeastAccount),
                         OutreachMark.PlayerEngaged);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(npcParent, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(npcParent, markUnread: false);
                 }
 
                 foreach (var witness in record.Witnesses)
@@ -812,7 +812,7 @@ namespace ImmersiveAI
                     // Standing at a feast is not the player engaging THEM — the journey-beat rule.
                     WriteBirthBeat(hero, BirthText.WitnessFeastBeat(PlayerName(), record.ChildNames(),
                         record.PlaceName, record.FeastAccount), OutreachMark.None);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(hero, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(hero, markUnread: false);
                 }
 
                 record.FeastBeatDone = true;

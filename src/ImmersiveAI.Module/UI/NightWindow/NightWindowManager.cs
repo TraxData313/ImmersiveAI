@@ -149,6 +149,7 @@ namespace ImmersiveAI.UI.NightWindow
             try
             {
                 if (_config == null || !_config.EnableNights || !_config.EnableNightWindow) return false;
+                if (TalkScreen.TalkScreenManager.IsOpen) return false;       // one place at a time
                 if (ChatWindow.ChatWindowManager.IsOpen) return false;      // one window at a time
                 if (LetterWindow.LetterWindowManager.IsOpen) return false;
                 if (Campaign.Current == null) return false;

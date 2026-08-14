@@ -606,7 +606,7 @@ namespace ImmersiveAI
                     WriteNightBeat(wife, NightText.PlainBeat(PlayerName(), record.PlaceName));
                     record.BeatDone = true;
                     SaveNightLedger();
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(wife, markUnread: false);
                 }
                 else
                 {
@@ -734,7 +734,7 @@ namespace ImmersiveAI
                     if (other == null || !told.Add(other.StringId)) continue;
                     WriteNightBeat(other, NightText.ChildNewsBeat(motherName, fatherName, toAnotherWife: true),
                         OutreachMark.None);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(other, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(other, markUnread: false);
                 }
 
                 // And whoever is with him — they have eyes, and a camp has no secrets.
@@ -746,7 +746,7 @@ namespace ImmersiveAI
                     if (soul == null || !told.Add(soul.StringId)) continue;
                     WriteNightBeat(soul, NightText.ChildNewsBeat(motherName, fatherName, toAnotherWife: false),
                         OutreachMark.None);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(soul, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(soul, markUnread: false);
                 }
             }
             catch (Exception ex) { ModLog.Error("spreading the news of a child", ex); }
@@ -839,7 +839,7 @@ namespace ImmersiveAI
 
                     // And her own word of it, in her own memory, so the chat carries the moment too.
                     WriteNightBeat(wife, ChildKnownBeat(record), OutreachMark.None);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: true);
+                    UI.TalkUI.OnThreadChanged(wife, markUnread: true);
 
                     // And the news travels: everyone riding or standing with the player learns it
                     // the same day, and his other wives learn it whether they are there or not.
@@ -1111,7 +1111,7 @@ namespace ImmersiveAI
                 SaveNightLedger();
                 NightLedger.AppendReadable(NpcPaths.NightsKeepsakeFile, record);
 
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: false);
+                UI.TalkUI.OnThreadChanged(wife, markUnread: false);
                 NotifyNight($"☾ {record.WifeName} will remember this night — \"{record.Title}\".");
             }
             catch (Exception ex) { ModLog.Error("finishing a night's account", ex); }
@@ -1193,7 +1193,7 @@ namespace ImmersiveAI
                     WriteNightBeat(wife, NightText.PlainBeat(PlayerName(), record.PlaceName));
                     record.BeatDone = true;
                     changed = true;
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(wife, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(wife, markUnread: false);
                 }
                 if (changed) SaveNightLedger();
             }

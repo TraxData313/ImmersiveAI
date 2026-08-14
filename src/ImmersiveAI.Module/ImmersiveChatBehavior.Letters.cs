@@ -748,11 +748,12 @@ namespace ImmersiveAI
             }
         }
 
-        // The letter window is the letters' home (its own "?" already points here); the old
-        // recipient-picker popups only stand in when the window is off or cannot come up.
+        // The talk screen is the letters' home now (2026.08.14 — one place for spoken words and
+        // sealed ones alike); the letter window stands in when the player kept the old shape, and
+        // the recipient-picker popups only when neither can come up.
         private void OnLetterMenuChosen()
         {
-            if (_config.EnableLetterWindow && UI.LetterWindow.LetterWindowManager.Open()) return;
+            if (_config.EnableLetters && UI.TalkUI.OpenForLetters()) return;
             OnChooseLetterRecipient();
         }
 
@@ -1110,9 +1111,9 @@ namespace ImmersiveAI
         // popups only where the window truly cannot come up.
         private void OpenWriteBack(Hero npc)
         {
-            if (_config.EnableLetterWindow)
+            if (_config.EnableLetters)
             {
-                UI.LetterWindow.LetterWindowManager.OpenWhenClear(npc, OpenLetterComposer);
+                UI.TalkUI.OpenWhenClear(npc, OpenLetterComposer);
                 return;
             }
             OpenLetterComposer(npc);
@@ -1136,7 +1137,7 @@ namespace ImmersiveAI
             var self = Current;
             if (self == null || npc == null) return;
             self._pendingLetterNotices.Remove(npc.StringId);
-            UI.LetterWindow.LetterWindowManager.OpenWhenClear(npc, self.OpenLetterComposer);
+            UI.TalkUI.OpenWhenClear(npc, self.OpenLetterComposer);
         }
 
         /// <summary>The notice went away uninspected (dismissed with X, or invalidated) — set

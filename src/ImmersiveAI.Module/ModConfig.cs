@@ -352,6 +352,17 @@ namespace ImmersiveAI
         /// InputKey name (e.g. "O", "Y", "F10"). Chosen not to collide with the vanilla map keys.</summary>
         public string ChatWindowHotkey { get; set; } = "O";
 
+        /// <summary>Go back to the two small windows of old — the chat window and the letter window,
+        /// each in its own box in the middle of the map — instead of the one TALK SCREEN that
+        /// replaced them (2026.08.14), where everyone you know stands in one list, the chosen one
+        /// stands before you in their own place, and letters read as part of the same story.
+        ///
+        /// This is INSURANCE, not taste: the talk screen borrows the game's own conversation
+        /// visuals, and a future game patch could move them out from under it. If that ever happens
+        /// the screen bows out by itself for the rest of the session — this switch is for making the
+        /// choice permanent, or for anyone who simply preferred the old shape. Default false.</summary>
+        public bool UseClassicChatWindow { get; set; } = false;
+
         /// <summary>When true, the chat and letter windows carry a "Let me think…" button: your own
         /// character works out what to say (or write) next and puts it in your writing box, for you
         /// to keep, change, or throw away. It reads exactly what the one before you reads — who you

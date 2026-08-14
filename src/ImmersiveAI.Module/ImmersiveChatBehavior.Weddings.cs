@@ -516,7 +516,7 @@ namespace ImmersiveAI
                 if (!string.IsNullOrWhiteSpace(record.NightAccount))
                     WriteWeddingBeat(spouse, WeddingText.NightBeat(record.NightAccount), OutreachMark.None);
 
-                UI.ChatWindow.ChatWindowManager.OnThreadChanged(spouse, markUnread: false);
+                UI.TalkUI.OnThreadChanged(spouse, markUnread: false);
 
                 foreach (var witness in record.Witnesses)
                 {
@@ -528,7 +528,7 @@ namespace ImmersiveAI
                     WriteWeddingBeat(hero,
                         WeddingText.WitnessDayBeat(record.PlayerName, record.SpouseName, record.PlaceName, record.FeastAccount),
                         OutreachMark.None);
-                    UI.ChatWindow.ChatWindowManager.OnThreadChanged(hero, markUnread: false);
+                    UI.TalkUI.OnThreadChanged(hero, markUnread: false);
                 }
             }
             catch (Exception ex) { ModLog.Error("recording the wedding beats", ex); }

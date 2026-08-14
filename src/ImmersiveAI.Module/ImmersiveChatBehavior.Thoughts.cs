@@ -193,16 +193,10 @@ namespace ImmersiveAI
 
         // The words go to the window's draft store first and only then to the open view: a thought
         // asked for and then walked away from still waits in the writing box on the way back.
-        private static void DeliverThought(Hero npc, bool asLetter, string words)
-        {
-            if (asLetter) UI.LetterWindow.LetterWindowManager.OnThoughtReady(npc, words);
-            else UI.ChatWindow.ChatWindowManager.OnThoughtReady(npc, words);
-        }
+        private static void DeliverThought(Hero npc, bool asLetter, string words) =>
+            UI.TalkUI.OnThoughtReady(npc, asLetter, words);
 
-        private static void NotifyThoughtFailed(Hero npc, bool asLetter)
-        {
-            if (asLetter) UI.LetterWindow.LetterWindowManager.OnThoughtFailed(npc);
-            else UI.ChatWindow.ChatWindowManager.OnThoughtFailed(npc);
-        }
+        private static void NotifyThoughtFailed(Hero npc, bool asLetter) =>
+            UI.TalkUI.OnThoughtFailed(npc, asLetter);
     }
 }

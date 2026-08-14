@@ -91,10 +91,9 @@ namespace ImmersiveAI
             Mcm.McmBridge.TryBind(Config);
             // Drain UI updates queued by background LLM calls.
             MainThreadDispatcher.Drain();
-            // The chat window's little life: hotkey on the map, Enter/Escape while open.
-            UI.ChatWindow.ChatWindowManager.Tick();
-            // The letter window's, likewise (its own hotkey; Escape closes, Enter never sends).
-            UI.LetterWindow.LetterWindowManager.Tick();
+            // The talk screen's little life — hotkey on the map, Enter/Escape while open — and, in
+            // the same breath, the two older windows it replaced (idle unless the player kept them).
+            UI.TalkUI.Tick();
             // And the window of the hearth, the third of the three (only one stands at a time).
             UI.NightWindow.NightWindowManager.Tick();
             // The socialness control: appears with the map, folds away everywhere else.
