@@ -175,6 +175,18 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
                           six every stance carries (positive/very_positive/unsure/negative/
                           very_negative/trivial) because the lookup behind them is a raw indexer.
                           Idle/breathing/blinking come free.
+                          THE MAP MUST STOP BEING DRAWN (playtest, 2026.08.14 — Anton: vanilla Talk
+                          hit his 200fps cap while our screen sat at map framerate ~95). MapScreen
+                          decides every frame `isSceneViewEnabled = !isConversationActive &&
+                          (ScreenManager.TopScreen == this)`, so a REAL conversation shuts the whole
+                          campaign-map scene off — but ours is a LAYER on that same screen, so
+                          nothing fires and the map keeps rendering in full behind a picture that
+                          hides it completely. `HoldTheWorld`/`ReleaseTheWorld` do it by hand
+                          (`MapScreen.Instance.SceneLayer.SceneView` → `View.SetEnable`) and stop the
+                          clock beside it. Re-asserted every 10th tick, because anything that briefly
+                          takes the top screen makes MapScreen turn its own scene back on underneath
+                          us; released FIRST in TearDown, outside every other try — a world left
+                          frozen and black is worse than any failure to close.
                           THE WIDGET GETS THE WHOLE SCREEN, ALWAYS (playtest, 2026.08.14): the tableau
                           renders through a camera whose shape follows its widget, and vanilla only
                           ever hands it a full-screen parent — penned into a narrow column it draws

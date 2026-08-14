@@ -155,6 +155,69 @@ namespace ImmersiveAI.UI.TalkScreen
             catch { /* best-effort */ }
         }
 
+        // ------------------------------ holding the world still ------------------------------
+        //
+        // While this screen is up the campaign map STOPS BEING DRAWN, and the clock stops with it.
+        //
+        // Both halves are copied from what the game itself does for its own Talk, and the first one
+        // is the whole answer to "why is vanilla Talk twice as fast as your screen?" (Anton,
+        // 2026.08.14, 200 fps against ~95). MapScreen decides every frame:
+        //
+        //     isSceneViewEnabled = !isConversationActive && (ScreenManager.TopScreen == this)
+        //
+        // — so a real conversation shuts the entire campaign-map scene off. Ours is a LAYER on that
+        // same screen, so none of that fires by itself and the map goes on being rendered in full
+        // behind a picture that completely covers it. We simply do it ourselves.
+        //
+        // Turning it back on is MapScreen's own business as much as ours: it only calls SetEnable
+        // when its private cache disagrees with the line above, so our disable is left alone in the
+        // ordinary case — but something that briefly takes the top screen (an inventory, the escape
+        // menu) will flip it back on underneath us, which is why the tick keeps re-asserting it.
+
+        private static bool _worldHeld;
+        private static CampaignTimeControlMode _timeBefore;
+        private static int _reassertIn;
+
+        private static void HoldTheWorld()
+        {
+            if (_worldHeld) return;
+            _worldHeld = true;
+            _reassertIn = 0;
+
+            try
+            {
+                _timeBefore = Campaign.Current.TimeControlMode;
+                Campaign.Current.TimeControlMode = CampaignTimeControlMode.Stop;
+            }
+            catch { /* a world that will not hold still is not worth a crash */ }
+
+            StopDrawingTheMap(true);
+        }
+
+        private static void StopDrawingTheMap(bool stop)
+        {
+            try
+            {
+                var sceneView = SandBox.View.Map.MapScreen.Instance?.SceneLayer?.SceneView;
+                if (sceneView != null) ((TaleWorlds.Engine.View)sceneView).SetEnable(!stop);
+            }
+            catch { /* the frames are a courtesy; never let them cost a word */ }
+        }
+
+        private static void ReleaseTheWorld()
+        {
+            if (!_worldHeld) return;
+            _worldHeld = false;
+
+            StopDrawingTheMap(false);
+
+            try
+            {
+                if (Campaign.Current != null) Campaign.Current.TimeControlMode = _timeBefore;
+            }
+            catch { /* the player's own pause key is one press away either way */ }
+        }
+
         // ------------------------------ the one on stage ------------------------------
 
         /// <summary>Puts the chosen one before the player — their own face, in their own place. A
@@ -201,6 +264,7 @@ namespace ImmersiveAI.UI.TalkScreen
 
                 if (preselect != null) _vm.TrySelect(preselect);
                 RequestScrollToBottom();
+                HoldTheWorld();
             }
             catch (Exception ex)
             {
@@ -278,6 +342,11 @@ namespace ImmersiveAI.UI.TalkScreen
 
         private static void TearDown(bool talkHappened = true)
         {
+            // FIRST, and outside every other try: the map must start being drawn again and the clock
+            // must run, whatever else goes wrong on the way out. A screen that fails to close is a
+            // bug; a world left frozen and black is a broken game.
+            ReleaseTheWorld();
+
             // Closing the screen silences whoever was speaking, for the same reason walking out of a
             // conversation does: the words are gone from the page, so the voice should go with them.
             Voice.VoiceService.Stop();
@@ -415,6 +484,12 @@ namespace ImmersiveAI.UI.TalkScreen
                     else if (_vm?.IsAway != true) _vm?.ExecuteSend();
                 }
             }
+
+            // Re-asserted rather than set once: anything that briefly becomes the top screen makes
+            // MapScreen turn its own scene back on underneath us. Every tenth frame, not every one —
+            // this exists to SAVE work, and a few frames of the map drawing behind a picture that
+            // hides it completely is nothing anyone can see.
+            if (++_reassertIn >= 10) { _reassertIn = 0; StopDrawingTheMap(true); }
 
             if (_scrollCountdown > 0 && --_scrollCountdown == 0)
                 ScrollMessagesToBottom();

@@ -32,6 +32,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Changed: the room a character gets for writing their memories now starts at 2,000 words' worth instead of 4,000 — cheaper per exchange, and enough for the deep memory to finish its thought. Your own setting, if you changed it, is untouched.
 
 ### One place for everyone you know
+- Much smoother: the talk screen now runs at conversation framerates instead of map ones — the campaign map stops being drawn behind it, exactly as it does during a normal conversation, and the world holds still until you step away.
 - New: they change how they stand as you talk — a hand on the hip, arms folded, weight shifted — the way they do in a face-to-face conversation. Which poses you see depends on how they feel about you: an old friend stands easy with you, someone who cannot stand you keeps their guard up.
 - New: the chat window and the letter window are ONE screen now — everyone you know in a single list, near or far, with the person you chose standing before you in the middle.
 - New: the same writing box does both. They can hear you? Write and press Enter. They are a kingdom away? The button becomes "Seal and send" and the words ride out as a letter.
