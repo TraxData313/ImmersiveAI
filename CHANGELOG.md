@@ -24,6 +24,13 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 * Invited weddings call both families - no strangers
 ```
 
+### What they are told about themselves
+- Changed: your own words now have the LAST word. What you write in the world prompt and in a character's own prompt closes their mind instead of sitting in the middle of it, under a line saying plainly that where anything else they remember disagrees, your words stand. Edits there used to lose quietly to a long memory; now they bite.
+- Changed: the "how I speak" part of a character's mind is three short habits instead of a wall of rules. Everything about their gifts — recalling the world, weighing their heart, tending a courtship — now sits with the gift itself, so it reaches them only when they can actually use it. Less telling them who to be leaves more room to be someone.
+- Changed: a character is no longer told "and now so-and-so comes to me" on every single reply — it was announcing a fresh arrival on the twentieth turn of the same conversation, and they kept greeting you again. They are simply told who they are speaking with.
+- Changed: the built-in roleplay guidance lost its "live here and be glad of it" half. Warmly meant, but it was still telling every soul how to be, and they all answered a little more alike for it. If you had left that setting untouched it updates itself; if you wrote your own, yours stands.
+- Changed: the room a character gets for writing their memories now starts at 2,000 words' worth instead of 4,000 — cheaper per exchange, and enough for the deep memory to finish its thought. Your own setting, if you changed it, is untouched.
+
 ### One place for everyone you know
 - New: they change how they stand as you talk — a hand on the hip, arms folded, weight shifted — the way they do in a face-to-face conversation. Which poses you see depends on how they feel about you: an old friend stands easy with you, someone who cannot stand you keeps their guard up.
 - New: the chat window and the letter window are ONE screen now — everyone you know in a single list, near or far, with the person you chose standing before you in the middle.

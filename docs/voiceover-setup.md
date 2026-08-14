@@ -1,0 +1,171 @@
+<!-- DRAFT while the feature is being built (started 2026.08.14). The hardware numbers, the folder
+     layout and the cloning rules are measured/decided and safe. Anything marked (coming) is not
+     shipped yet — hotkey names, exact option labels and the hosted rung firm up as they land, and
+     the markers come out before this is linked from the store pages. Keep this URL path stable:
+     README and all three store pages point at it. -->
+
+# Hearing them speak
+
+Immersive AI can read every NPC's words aloud, in a voice you choose — including voices **you
+clone yourself** from a few seconds of audio. This page tells you how. It gets more detailed as
+you scroll: **read only as far as you need.**
+
+Voices are **off by default**, and turning them on is a real decision — it wants a few gigabytes
+and a graphics card. Everything below is about whether that trade is worth it to you.
+
+---
+
+## Just tell me what I need
+
+| If you want… | You need | Cost |
+|---|---|---|
+| **Any voice at all** | A graphics card and ~7 GB free | free, runs on your PC |
+| **Your own cloned voices** | The same, plus a clip of the voice | free |
+| **No download, no GPU** | The hosted option *(coming)* | pennies per line |
+| **No voices** | Nothing — leave it off | — |
+
+The local road is the good one: it is free forever, it never sends a word off your machine, and it
+is the only one that can clone a voice. The hosted road exists so people without a gaming PC still
+get spoken NPCs.
+
+---
+
+## What it actually costs you
+
+Not money — the local engine is free and unlimited. It costs **hardware**:
+
+| | |
+|---|---|
+| **Disk** | ~7 GB for the speech models |
+| **Video memory** | ~3–4 GB *on top of what Bannerlord is already using* |
+| **Speed** | About 4× faster than real time on a modern card — a four-second line takes about a second to make |
+| **First line after loading** | ~1.5 seconds extra, once, while the model wakes up |
+
+**The video memory is the part to think about.** If your card has 8 GB and you play at high
+settings, you are going to be tight. There is a smaller, faster model that sounds slightly worse
+and costs about half as much — switch to it if things get choppy.
+
+Speech is made **one line at a time, as it is needed**, and kept afterwards. Scroll back to
+something said an hour ago and it plays instantly; nothing is generated twice.
+
+---
+
+## Setting it up
+
+1. **Install Qwen-TTS Studio** *(free)*. <!-- TODO before shipping: the real download link. Anton
+   installed it from somewhere; the app itself only reveals where its MODELS come from. Do not
+   invent this URL. --> Immersive AI uses its speech engine and its models — you do not have to
+   keep the app open, it just needs to have been installed once so both exist on your disk.
+2. **Download a model in it.** `qwen-talker-1.7b-base` is the one to get; it will also fetch the
+   tokenizer that goes with it. Studio pulls these from
+   [Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF) on Hugging Face.
+3. **Turn voices on** in the mod's options *(coming — the exact label)*. Immersive AI finds the
+   engine and models by itself; if it cannot, it tells you plainly where it looked.
+4. **Pick who speaks.** Open the talk screen, hit the **Voice** button, and set a default voice for
+   women and one for men. That is enough to start.
+
+If anything is missing, voices simply stay quiet and one grey line tells you why. **A voice problem
+never blocks, delays or loses a reply** — the words always arrive, whatever the sound is doing.
+
+---
+
+## Making a voice
+
+You need **a few seconds of clean speech** — one person, no music, no background noise. Ten to
+thirty seconds is plenty.
+
+Drop the `.wav` into `Configs\ImmersiveAI\Voices\_incoming\`, open the Voice panel, choose **New
+voice**, name it, and **preview it before you commit** — you hear the clone immediately, and only
+save it if you like it. *(coming)*
+
+Already made voices in Qwen-TTS Studio? **Import from Studio** brings them all across in one click,
+copies and all. Your Studio presets are left exactly as they were.
+
+### One rule, and it matters
+
+**Clone only voices you have the right to use.** Your own voice, a friend's with their blessing,
+or audio that is genuinely free to reuse. Not a celebrity, not an actor, not someone off YouTube —
+and never a real person without their permission.
+
+On your own PC, for yourself, this is your business and the mod will not stop you. But a voice
+folder carries the original clip inside it, so the moment you **share** one you are handing someone
+else a copy of a real person's voice. That is a different thing, and it can land on you.
+
+---
+
+## Sharing voices
+
+A voice is **just a folder**:
+
+```
+Configs\ImmersiveAI\Voices\
+    sibylla\
+        voice.json          what it is called, and who it suits
+        embedding.json      the voice itself
+        icl-prompt.json     the voice itself, richer
+        reference.wav       the clip it came from
+```
+
+Zip that folder, send it to someone, tell them to unzip it into their own `Voices\` folder. Done —
+no settings to edit, no paths to fix. The **Open the voices folder** button in the Voice panel takes
+you straight there.
+
+---
+
+## When it goes wrong
+
+**She babbles, screeches, or will not stop.** Speech models occasionally lose their place partway
+through a line. Press the **panic key** *(coming)* and everything stops instantly. The mod also
+watches for it and usually catches a bad line before you ever hear it — it can tell, because a
+derailed line runs far longer than its words justify.
+
+**Nothing happens at all.** Check the options are on and the model downloaded. The mod says where
+it looked for the engine; the most common cause is that Qwen-TTS Studio was installed but no model
+was ever downloaded in it.
+
+**The game stutters while she talks.** Speech and Bannerlord are sharing your graphics card. Try
+the smaller model, or lower your graphics settings a notch.
+
+**It sounds nothing like the clip.** Almost always the clip: background music, two people talking,
+or too short. Try a cleaner ten seconds.
+
+---
+
+## Deeper: why it works this way
+
+### The speech engine runs beside the game, not inside it
+
+Voices are produced by a small separate program that Immersive AI starts and stops for you. This
+looks like extra machinery, and it is deliberate.
+
+The speech engine is a large AI model doing heavy work on your graphics card, at the same moment
+Bannerlord is drawing a battle on the same card. When that kind of code runs out of memory it does
+not politely return an error — it takes the whole process down with it. **Inside the game, that is
+your campaign.** Beside the game, the very same failure is one line saying the voices have stopped,
+while your battle carries on.
+
+It also means you can never be left with speech quietly eating your graphics card after you quit:
+the helper watches the game, and goes when it goes.
+
+### Why the words are cut into sentences
+
+A reply is spoken sentence by sentence rather than all at once. Two reasons: she starts talking
+much sooner, because only the first sentence has to exist before sound comes out — and if the model
+does derail, it costs one sentence rather than the whole answer.
+
+### Gestures are never read aloud
+
+When a character writes `*sets down her cup*`, that is something they **did**, not something they
+said. Spoken aloud it would sound like stage directions. The mod strips those out and speaks only
+the words — the gesture still appears in the conversation, as it always did.
+
+---
+
+## Turning it off
+
+Set voices off in the options. Nothing else changes — every word still arrives as text, exactly as
+it did before. Your voice folders stay where they are, so turning it back on costs nothing.
+
+To reclaim the disk space, delete the models from Qwen-TTS Studio's own folder; to clear just the
+generated speech, delete `Configs\ImmersiveAI\Voices\_cache\` — it is rebuilt as needed and safe to
+remove at any time.

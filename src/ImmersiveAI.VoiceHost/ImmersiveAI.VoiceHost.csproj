@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ImmersiveAI.VoiceHost</AssemblyName>
+    <RootNamespace>ImmersiveAI.VoiceHost</RootNamespace>
+
+    <!-- x64 ONLY. qwen3_tts.dll and its ggml/CUDA siblings are PE32+; an AnyCPU
+         or 32-bit host fails to load them with a bare DllNotFoundException. -->
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <Prefer32Bit>false</Prefer32Bit>
+
+    <!-- The repo root sets LangVersion 10.0 for the game projects; this is a
+         normal desktop app and may use the current language. -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <!-- This project must never reference ImmersiveAI.Module (net472 game glue)
+         and deliberately stands alone: no Core reference either. -->
+  </PropertyGroup>
+
+</Project>

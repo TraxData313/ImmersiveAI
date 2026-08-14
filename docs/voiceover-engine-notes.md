@@ -1,0 +1,152 @@
+# The speech engine: what we measured, and what will bite you
+
+The developer's record behind [voiceover-setup.md](voiceover-setup.md), which is the player-facing
+page. Everything here was measured or verified on 2026.08.14 against the real engine on the author's
+machine (RTX 5080 Laptop, 16 GB VRAM) — **nothing below is inferred from documentation**, because
+there is none.
+
+---
+
+## The engine
+
+`qwen3_tts.dll` ships with **Qwen-TTS Studio** and exports a clean C ABI beside its JNI wrappers, so
+it can be driven by anything, not only that app. Models are GGUF, pulled by Studio from
+[Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF).
+
+We do **not** redistribute the DLL, its ggml/CUDA siblings, or any model weights. Their location is
+discovered from `%USERPROFILE%\.qwen-tts-studio\settings.properties` (`appDir`, `modelDir`,
+`modelName`). Never hardcode those paths.
+
+Output is **16-bit mono PCM at 24000 Hz**, from a vocoder with 16 codebooks.
+
+## Measured, on CUDA, 1.7b talker
+
+| | |
+|---|---|
+| Model load (cold) | **1513 ms** — talker 992 ms, vocoder 364 ms, tokenizer 101 ms |
+| Throughput | **median 4.15× realtime** (RTF 0.235) |
+| Wall clock per line | p50 585 ms · p95 2327 ms · max 9129 ms |
+| Stability | **200 consecutive syntheses, 0 failures**, 754 s of audio |
+| Drift | none — the last quarter ran **14% faster** than the first |
+| Memory | RSS 395 → 835 MB; VRAM ~2.5–3.8 GB for the model, freed cleanly on release |
+
+4.15× is comfortably past the 1.5× threshold that makes sentence-by-sentence playback worthwhile,
+so chunked synthesis is the right shape. **Re-measure before assuming this holds on weaker cards** —
+the whole design of the playback layer keys off this number.
+
+## The two models are not interchangeable
+
+- `qwen-talker-1.7b-base` — the **cloning** road. Speaker embeddings and ICL prompts.
+- `qwen-talker-1.7b-customvoice` — carries **9 named built-in speakers**:
+  `aiden, dylan, eric, ono_anna, ryan, serena, sohee, uncle_fu, vivian`
+  (`get_available_speakers` returns them newline-separated, and `caps.speakers == 9`).
+  The base model reports none.
+
+The built-ins were auditioned as shippable defaults on 2026.08.14 and **rejected by the author** —
+"they are very stupid all of them". They remain a zero-asset fallback if that judgment ever changes.
+The tokenizer GGUF is auto-discovered from the same directory and is never named in a call.
+
+## The ABI, as confirmed by the M0 harness
+
+The struct is returned **by value** (hidden pointer in RCX on x64) and the layout below round-tripped
+against real audio 200 times.
+
+```c
+QwenResult { float* audio; int numSamples; int sampleRate; int success;
+             int _pad; const char* error; int64 timeMs; }   // 0x28 bytes
+```
+
+`QwenParams` is a **64-byte block for the plain calls and 80 for the streaming ones**; always pass 80
+zeroed bytes, which is safe for both. Two fields Studio leaves **uninitialised** (`0x24`, `0x3C`) —
+zero them, or you are passing whatever was on the stack. Studio's own values: `maxAudioTokens 4096`,
+`temperature 0.9`, `topP 1.0`, `topK 50`, `threads 4`, `languageId -1` (auto; `en = 2050`,
+`ru = 2069`).
+
+**`MaxAudioTokens` is at offset 0x00, and it is the anti-glitch knob** — see below.
+
+Strings cross as UTF-8 `byte[]`. `free_result` / `free_string` are the deallocators; the error string
+is owned by the result. `get_last_error` is the best oracle when a call fails.
+
+## The ICL road is broken on a base model — use embeddings
+
+**This one nearly made the whole feature look broken, so it is the first thing to know.** A voice
+imported from Studio carries BOTH an `icl-prompt.json` and an `embedding.json`, and ICL is on paper
+the better clone — so preferring it is the obvious choice and it is the wrong one.
+
+Measured 2026.08.14 on `qwen-talker-1.7b-base`, same voice, same words:
+
+| road | result |
+|---|---|
+| `embedding` | 12/12 clean, a five-second line in ~1.3 s, repeatable |
+| `icl` | ~1 in 5 returns `"No speech codes generated"`; most of the rest come back **truncated** — `ok:true` with 1920 samples, i.e. eight hundredths of a second |
+
+Note the failure shape: it mostly returns **success** with almost no audio. Anything that only checks
+`ok` will sail straight past it. The M0 harness's own `log-abi.txt` recorded this and it was missed —
+the "200 syntheses, zero failures" run used the embedding call.
+
+Likely cause: ICL wants its prompt encoder loaded separately
+(`qwen3_tts_load_icl_prompt_encoder_with_name`) and a base model has none. Untested. **If the ICL road
+is ever made to work, prove it live before turning the preference around.**
+
+The general lesson, which outlives this bug: **treat "far less audio than the text justifies" as a
+failure**, the same detector the derail guard uses from the other end.
+
+## Traps, each one paid for
+
+**A failed allocation aborts the process.** ggml's failure mode is `GGML_ASSERT` → `abort()`. On the
+game's runtime an access violation is fail-fast: a `try/catch` around a `DllImport` catches *nothing*,
+and `HandleProcessCorruptedStateExceptions` does not exist there. **This is the entire reason the
+engine runs in a sidecar** and not in the game process. Do not "simplify" it back in-process.
+
+**Bad input is handled cleanly, though.** A missing ICL file returns
+`success=0, error="Failed to load ICL prompt file"` rather than aborting — so validating paths before
+calling in is cheap insurance that actually works.
+
+**The engine is not re-entrant.** Serve one request at a time.
+
+**`TaleWorlds.Engine.Path` collides with `System.IO.Path`.** Never add `using TaleWorlds.Engine;` to a
+file that touches the filesystem; fully qualify `TaleWorlds.Engine.SoundEvent` instead.
+
+**A stranded host is the worst outcome this design can produce.** ~4 GB of VRAM held after the player
+quits. The watchdog (parent PID + stdin EOF) is not optional.
+
+## Playback, verified in game
+
+`SoundEvent.CreateEventFromExternalFile("event:/Extra/voiceover", wavPath, scene: null, is3d: false,
+isBlocking: false)` then `.Play()` — **confirmed working**, played aloud in a live campaign on
+2026.08.14 with a 9.76 s 24 kHz mono WAV. This rides FMOD's own voice-over bus, so the player's
+volume sliders, mute-on-alt-tab and the game's ducking all come free.
+
+`CreateEventFromSoundBuffer(..., byte[], ...)` **constructs successfully** but was never played (one
+at a time). It has zero callers in the shipped game, so TaleWorlds never tested it. If it ever proves
+to play, it would remove the disk-cache file-handle problem — but the cache is wanted anyway for
+reuse, and a sidecar can only hand over a path, so the file road is the right default.
+
+## The glitch, and why the cap is the real fix
+
+Autoregressive TTS derails: the model misses its end-of-speech token and generates until it hits its
+own ceiling, which comes out as babbling or screeching. The author reports (from experience elsewhere)
+that it happens **"in the middle or at the end, but not ever in the beginning."**
+
+That is *drift*, not bad conditioning, and three things follow:
+
+1. **Truncation is safe** — every word before the derail is good.
+2. **Sentence chunking is a reliability feature**, not only a latency one. A derail costs one
+   sentence instead of a whole reply. Do not later "optimise" it into whole-reply synthesis.
+3. **Detect and retry in the host, so the player never hears it.** A derailed line runs long by
+   definition, so *samples far beyond what the text justifies* is a sound detector. At 4.15× realtime
+   a 4 s sentence re-synthesizes in about a second: discard, retry once, truncate only if it derails
+   twice. **A suspect clip must never reach the cache**, or one bad synthesis is replayed every time
+   that line is scrolled back to, forever.
+
+Set `MaxAudioTokens` from the text's own length (roughly 3× the expected duration) so a runaway is
+guillotined at ten seconds rather than running to 4096 tokens.
+
+## Still unmeasured
+
+- **Streaming.** `synthesize_*_streaming` takes a chunk callback; the M0 spike hung before proving
+  time-to-first-chunk. That number decides whether a line can begin speaking before it is fully
+  generated. The harness's `Streaming.cs` is a starting point, not a result.
+- **Weaker hardware.** Every number above is one laptop with a 5080. An 8 GB card sharing VRAM with
+  Bannerlord is the case that decides whether the 0.6b model becomes the recommended default.
+- **Whether `CreateEventFromSoundBuffer` actually plays.**

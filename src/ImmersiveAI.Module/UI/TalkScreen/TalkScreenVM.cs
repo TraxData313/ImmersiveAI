@@ -989,6 +989,9 @@ namespace ImmersiveAI.UI.TalkScreen
         });
         public void ExecuteDevChild() => RunDev(ImmersiveChatBehavior.DevHastenConception);
 
+        // Voice-over milestone 1 — does the game's own audio engine play a WAV of ours? Temporary.
+        public void ExecuteDevTestSound() => RunDev(ImmersiveChatBehavior.DevTestSound);
+
         // ------------------------------ bound properties ------------------------------
 
         [DataSourceProperty]

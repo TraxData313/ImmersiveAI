@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -12,6 +12,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9E119AC2-E3EC-420A-9922-D02ADCAF130E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmersiveAI.Core.Tests", "tests\ImmersiveAI.Core.Tests\ImmersiveAI.Core.Tests.csproj", "{D9654D20-ABBE-410C-A5B6-2B89FB128F5B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmersiveAI.VoiceHost", "src\ImmersiveAI.VoiceHost\ImmersiveAI.VoiceHost.csproj", "{C3691B79-D377-4AA0-AFBA-6B44C4874B38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,10 +36,15 @@ Global
 		{D9654D20-ABBE-410C-A5B6-2B89FB128F5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9654D20-ABBE-410C-A5B6-2B89FB128F5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9654D20-ABBE-410C-A5B6-2B89FB128F5B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3691B79-D377-4AA0-AFBA-6B44C4874B38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3691B79-D377-4AA0-AFBA-6B44C4874B38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3691B79-D377-4AA0-AFBA-6B44C4874B38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3691B79-D377-4AA0-AFBA-6B44C4874B38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{340F478D-0B2C-44E8-A770-B5AE3C68FFC7} = {CDB8D8D4-0EFC-4393-BCD3-7CAA005147AF}
 		{E27F2493-984C-4AE8-9FA6-77F7A5B72614} = {CDB8D8D4-0EFC-4393-BCD3-7CAA005147AF}
 		{D9654D20-ABBE-410C-A5B6-2B89FB128F5B} = {9E119AC2-E3EC-420A-9922-D02ADCAF130E}
+		{C3691B79-D377-4AA0-AFBA-6B44C4874B38} = {CDB8D8D4-0EFC-4393-BCD3-7CAA005147AF}
 	EndGlobalSection
 EndGlobal

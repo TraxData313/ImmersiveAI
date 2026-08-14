@@ -1,0 +1,241 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using ImmersiveAI.Core.Prompts;
+
+namespace ImmersiveAI.Core.Voices
+{
+    /// <summary>
+    /// Turns a written message into what is actually SAID, and cuts it into bites a speech engine
+    /// can start on before the rest exists.
+    /// <para>
+    /// Two jobs, both load-bearing. First, gestures are acted, not spoken: the acting-out grammar
+    /// (<see cref="PromptBuilder.ActingOutGuidance"/>) means a reply can carry *sets down her cup*
+    /// beside its words, and a voice reading that aloud is instantly a robot reading stage
+    /// directions. Second, a whole reply handed to an engine in one piece means silence until the
+    /// last word of it is generated; cut at sentence ends and the first sentence can be in the
+    /// air while the third is still being made. That is the entire difference between "it speaks"
+    /// and "it speaks quickly".
+    /// </para>
+    /// </summary>
+    public static class SpeakableText
+    {
+        /// <summary>Below this a bite is not worth its own synthesis call — it is folded into its
+        /// neighbour. "Yes." on its own arrives as a bark with an audible seam after it.</summary>
+        public const int DefaultMinChars = 40;
+
+        /// <summary>Above this a bite is split at the last comfortable pause, so one runaway
+        /// sentence cannot hold the whole reply silent while it generates.</summary>
+        public const int DefaultMaxChars = 260;
+
+        /// <summary>The words of a message, with the gestures taken out. Returns empty when there
+        /// is nothing to say (a reply that was ALL gesture, or nothing at all).</summary>
+        public static string SpokenOnly(string? body)
+        {
+            var segments = EmoteText.Split(body);
+            if (segments.Count == 0) return string.Empty;
+
+            var spoken = segments.Where(s => !s.IsGesture).Select(s => s.Text);
+            return Collapse(string.Join(" ", spoken));
+        }
+
+        /// <summary>The whole message including its gestures, for a player who would rather hear
+        /// them read as narration than lose them. Kept as a deliberate option, never the default.</summary>
+        public static string SpokenWithGestures(string? body)
+        {
+            var segments = EmoteText.Split(body);
+            if (segments.Count == 0) return string.Empty;
+            return Collapse(string.Join(" ", segments.Select(s => s.Text)));
+        }
+
+        /// <summary>True when this body has words worth sending to an engine at all.</summary>
+        public static bool IsWorthSpeaking(string? body) => SpokenOnly(body).Length > 0;
+
+        /// <summary>
+        /// Cuts speakable text into bites at sentence ends. Runs of terminators stay whole ("…",
+        /// "?!"), a full stop followed by a lower-case letter is treated as an abbreviation rather
+        /// than an end, bites under <paramref name="minChars"/> keep growing, and anything still
+        /// over <paramref name="maxChars"/> is split at its last pause. A trailing scrap is folded
+        /// back into the bite before it, so a reply never ends on a two-word stub.
+        /// </summary>
+        public static IReadOnlyList<string> Chunk(
+            string? text,
+            int minChars = DefaultMinChars,
+            int maxChars = DefaultMaxChars)
+        {
+            var bites = new List<string>();
+            if (string.IsNullOrWhiteSpace(text)) return bites;
+            if (minChars < 1) minChars = 1;
+            if (maxChars < minChars) maxChars = minChars;
+
+            var s = text!;
+            var start = 0;
+            var i = 0;
+
+            while (i < s.Length)
+            {
+                var c = s[i];
+
+                if (c == '\n')
+                {
+                    // A hard line break is always an honest place to breathe.
+                    Flush(bites, s.Substring(start, i - start), minChars);
+                    i++;
+                    start = i;
+                    continue;
+                }
+
+                if (!IsTerminator(c)) { i++; continue; }
+
+                // Swallow the whole run: "..." and "?!" are one ending, not three.
+                var end = i;
+                while (end + 1 < s.Length && IsTerminator(s[end + 1])) end++;
+
+                // Closing quotes and brackets belong to the sentence they close.
+                var after = end + 1;
+                while (after < s.Length && IsClosingMark(s[after])) after++;
+
+                if (IsContinuation(s, i, end, after))
+                {
+                    i = after;
+                    continue;
+                }
+
+                var candidate = s.Substring(start, after - start);
+                if (candidate.Trim().Length < minChars)
+                {
+                    // Too short to stand alone — keep gathering rather than bark one word.
+                    i = after;
+                    continue;
+                }
+
+                Flush(bites, candidate, minChars);
+                start = after;
+                i = after;
+            }
+
+            if (start < s.Length)
+                Flush(bites, s.Substring(start), minChars);
+
+            // Fold a final scrap backwards; better a slightly long last bite than a stub.
+            if (bites.Count > 1 && bites[bites.Count - 1].Length < minChars)
+            {
+                bites[bites.Count - 2] = bites[bites.Count - 2] + " " + bites[bites.Count - 1];
+                bites.RemoveAt(bites.Count - 1);
+            }
+
+            return bites.SelectMany(b => SplitLong(b, maxChars)).ToList();
+        }
+
+        /// <summary>The usual road: a written message in, the bites to speak out.</summary>
+        public static IReadOnlyList<string> BitesFor(
+            string? body,
+            bool includeGestures = false,
+            int minChars = DefaultMinChars,
+            int maxChars = DefaultMaxChars)
+        {
+            var text = includeGestures ? SpokenWithGestures(body) : SpokenOnly(body);
+            return Chunk(text, minChars, maxChars);
+        }
+
+        // ------------------------------------------------------------------
+
+        private static void Flush(List<string> into, string piece, int minChars)
+        {
+            var trimmed = piece.Trim();
+            if (trimmed.Length == 0) return;
+
+            // Growing the previous bite is better than emitting a runt.
+            if (into.Count > 0 && trimmed.Length < minChars)
+            {
+                into[into.Count - 1] = into[into.Count - 1] + " " + trimmed;
+                return;
+            }
+            into.Add(trimmed);
+        }
+
+        private static IEnumerable<string> SplitLong(string bite, int maxChars)
+        {
+            while (bite.Length > maxChars)
+            {
+                var cut = LastPauseBefore(bite, maxChars);
+                if (cut <= 0)
+                {
+                    // No pause and no space to be found: hand it over whole rather than
+                    // slice a word in half. A long unbroken run is the engine's problem.
+                    break;
+                }
+                yield return bite.Substring(0, cut).Trim();
+                bite = bite.Substring(cut).Trim();
+            }
+            if (bite.Length > 0) yield return bite;
+        }
+
+        private static int LastPauseBefore(string s, int limit)
+        {
+            var ceiling = Math.Min(limit, s.Length - 1);
+            for (var i = ceiling; i > 0; i--)
+                if (s[i] == ',' || s[i] == ';' || s[i] == ':' || s[i] == '—' || s[i] == '–')
+                    return i + 1;
+            for (var i = ceiling; i > 0; i--)
+                if (char.IsWhiteSpace(s[i]))
+                    return i + 1;
+            return -1;
+        }
+
+        private static bool IsTerminator(char c)
+            => c == '.' || c == '!' || c == '?' || c == '…';
+
+        private static bool IsClosingMark(char c)
+            => c == '"' || c == '\'' || c == '»' || c == '”' || c == '’'
+               || c == ')' || c == ']' || c == '„' || c == '“';
+
+        /// <summary>
+        /// True when a run of stops is NOT the end of a thought, and so is no place to cut.
+        /// Two cases, both settled by what follows being lower-case:
+        /// a lone '.' is then an abbreviation ("e.g.", "св. Иван"), and an ellipsis is then a
+        /// trailing-off that the same breath picks up again ("I had not thought to see you
+        /// again... not after everything"). Cutting either one mid-thought puts an audible seam
+        /// exactly where the voice should have hesitated instead. '!' and '?' always end.
+        /// </summary>
+        private static bool IsContinuation(string s, int runStart, int runEnd, int after)
+        {
+            var loneStop = runEnd == runStart && s[runStart] == '.';
+            var ellipsis = s[runStart] == '…'
+                           || (runEnd > runStart && AllDots(s, runStart, runEnd));
+            if (!loneStop && !ellipsis) return false;
+
+            var j = after;
+            while (j < s.Length && s[j] == ' ') j++;
+            if (j >= s.Length) return false;
+            return char.IsLower(s[j]);
+        }
+
+        private static bool AllDots(string s, int from, int to)
+        {
+            for (var i = from; i <= to; i++)
+                if (s[i] != '.') return false;
+            return true;
+        }
+
+        private static string Collapse(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            var lastWasSpace = false;
+            foreach (var c in s)
+            {
+                var isSpace = c == ' ' || c == '\t';
+                if (isSpace)
+                {
+                    if (!lastWasSpace) sb.Append(' ');
+                    lastWasSpace = true;
+                    continue;
+                }
+                sb.Append(c);
+                lastWasSpace = false;
+            }
+            return sb.ToString().Trim();
+        }
+    }
+}

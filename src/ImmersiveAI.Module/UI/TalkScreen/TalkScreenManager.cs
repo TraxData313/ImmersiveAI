@@ -278,6 +278,10 @@ namespace ImmersiveAI.UI.TalkScreen
 
         private static void TearDown(bool talkHappened = true)
         {
+            // Closing the screen silences whoever was speaking, for the same reason walking out of a
+            // conversation does: the words are gone from the page, so the voice should go with them.
+            Voice.VoiceService.Stop();
+
             // Walking away from the screen ends that talk, the way closing a conversation does — and
             // only then does what was said in it count as said (the line, 2026.08.09). A screen that
             // never managed to RISE is not a talk, though: stamping it would move "since we were

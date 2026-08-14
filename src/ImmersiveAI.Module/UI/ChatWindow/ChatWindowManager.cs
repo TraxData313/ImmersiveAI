@@ -184,6 +184,12 @@ namespace ImmersiveAI.UI.ChatWindow
 
         private static void TearDown()
         {
+            // Closing the window silences whoever was speaking, exactly as the talk screen and a
+            // face-to-face conversation do. This shape still speaks — it shares the quick-chat trunk,
+            // and IsViewing answers for it — so without this a reply went on being spoken into an
+            // empty map after the window it belonged to was gone.
+            Voice.VoiceService.Stop();
+
             // Walking away from the window ends that talk, the way closing a conversation does —
             // and only then does what was said in it count as said (the line, 2026.08.09).
             try

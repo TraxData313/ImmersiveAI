@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -65,6 +65,15 @@ namespace ImmersiveAI
         // the player composes their next message the conversation panel can keep showing it — re-readable,
         // useful for long replies — instead of a bare "(considers your words...)". Updated on every line.
         private volatile string? _lastNpcLine;
+
+        // The one line the reply dialog's consequence is allowed to SPEAK, and whose it is. Armed only
+        // where real new words are put into the panel, and taken once by whoever speaks them. Deliberately
+        // not _lastNpcLine: the await loop also resolves with no new words at all — a cancelled "what do
+        // you say?" box, an empty send — and speaking _lastNpcLine there would put her PREVIOUS reply (or
+        // her opening greeting) into the room over a panel reading "(You decide to say nothing.)". The
+        // error road arms nothing on purpose, so a raw exception message is never read aloud in her voice.
+        private Hero? _lineToSpeakNpc;
+        private string? _lineToSpeak;
 
         // The environmental facts (when/where/who) captured when the player opened this chat. Written
         // to current_situation_info.txt and reused as the scene context for every turn of this
@@ -898,6 +907,15 @@ namespace ImmersiveAI
         // after a quest talk, a bargain, or words on the road.
         private void OnConversationEnded(IEnumerable<CharacterObject> characters)
         {
+            // Walking away ends the voice with the talk. Without this she goes on speaking into an
+            // empty room — or worse, over whatever the player turned to next. An armed line that was
+            // never shown dies with the talk too: a conversation cut short by something other than a
+            // click would otherwise leave it waiting for the NEXT talk's await loop to resolve, and
+            // one soul's words would come out of another's mouth.
+            Voice.VoiceService.Stop();
+            _lineToSpeakNpc = null;
+            _lineToSpeak = null;
+
             // A talk we forced onto the map may have spun up a PlayerEncounter just to host the
             // scene; finish it (next tick, once the conversation has fully unwound) or the player
             // lands in the engage-party menu against the very person they were chatting with.
@@ -1221,8 +1239,13 @@ namespace ImmersiveAI
 
             // Await state, reply is in -> show it and return to the menu.
             // Registered before the "still thinking" line so it wins when the condition holds.
+            // The fourth argument is the CONSEQUENCE, and it is the honest moment to speak: the line
+            // is set long before this, but the panel does not show it until the player clicks to
+            // advance. Speak at generation and the voice arrives while the box still reads "..." —
+            // for however long they pause. The audio is normally already cached by then (Prewarm ran
+            // off-thread the moment the reply landed), so this is a cache hit, not a wait.
             starter.AddDialogLine("immersiveai_reply", "immersiveai_await", "immersiveai_input",
-                "{=!}{" + ResponseVar + "}", () => _responseReady, null);
+                "{=!}{" + ResponseVar + "}", () => _responseReady, SpeakTheShownLine);
 
             // (RequestLeaveFromPartyEncounter lives below with the other encounter care —
             // every close_window line above must carry it, or a map-party talk ends in the
@@ -1271,6 +1294,30 @@ namespace ImmersiveAI
             var hint = new TextObject("{=ImmersiveAI_Thinking}(considers your words...)").ToString();
             var last = _lastNpcLine;
             return string.IsNullOrWhiteSpace(last) ? hint : last.Trim() + "\n\n" + hint;
+        }
+
+        /// <summary>Speaks the words the panel is showing this very moment, once, if a voice was cast
+        /// for them — the reply line's consequence. Everything about it is guarded: this runs inside
+        /// the engine's own conversation state machine, where a thrown exception is not a mute NPC but
+        /// a dialog that cannot advance.</summary>
+        private void SpeakTheShownLine()
+        {
+            try
+            {
+                var npc = _lineToSpeakNpc;
+                var line = _lineToSpeak;
+                _lineToSpeakNpc = null;
+                _lineToSpeak = null;
+
+                // The auto-speak switch binds here too, and that is a decision, not an oversight.
+                // There is no play mark in the vanilla panel, so with it off this road is simply
+                // silent — which is what the switch says on the tin. Letting the panel speak anyway
+                // because "the click is the ask" would mean turning voices off still left one place
+                // talking, and that is the kind of small lie a player never forgives a setting for.
+                if (npc != null && !string.IsNullOrWhiteSpace(line) && Voice.VoiceService.AutoSpeakEnabled)
+                    Voice.VoiceService.Speak(npc, line!);
+            }
+            catch (Exception ex) { ModLog.Error("voice: speaking the shown line", ex); }
         }
 
         /// <summary>Whether this conversation should hand the talk over to the TALK SCREEN rather
@@ -1604,9 +1651,19 @@ namespace ImmersiveAI
                 var feltShift = outcome.FeltShift;
                 _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
 
+                // Start making the sound while we are still off the game thread. Prewarm only fills
+                // the cache — nothing is heard yet, because in the face-to-face panel the words are
+                // not on screen until the player clicks to advance the line. Speaking here would put
+                // her voice in the room while the box still reads "...".
+                Voice.VoiceService.Prewarm(npc, reply);
+
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     MBTextManager.SetTextVariable(ResponseVar, reply, false);
+                    // Armed for the reply line's consequence, which fires when these very words go up
+                    // on the panel. Nothing else that resolves the await loop may take it.
+                    _lineToSpeakNpc = npc;
+                    _lineToSpeak = reply;
                     _responseReady = true;
 
                     // Fold the felt shift into the real standing on the game thread (state + UI), after
@@ -2957,6 +3014,78 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("dev: revealing the mind", ex); }
         }
 
+        /// <summary>
+        /// VOICEOVER MILESTONE 1 — the one thing no amount of reading settles: will the game's own
+        /// audio engine play a WAV we made ourselves, from a path of our choosing?
+        /// <para>
+        /// Vanilla only ever hands FMOD Ogg files out of its own banks, so this is genuinely unknown.
+        /// Both roads are tried in one click because they lead to very different designs: the file
+        /// road needs a disk cache with pruning and file handles, while the BUFFER road — if it works
+        /// — deletes that whole subsystem and hands audio straight from memory. Whichever answers,
+        /// answers for the voice-over bus too (the player's own volume slider, mute on alt-tab, the
+        /// game's ducking), which is the reason to want the engine rather than our own player.
+        /// </para>
+        /// <para>Drop any .wav into <c>Configs\ImmersiveAI\Voices\_test\</c> and click. Delete this
+        /// whole method once the answer is written down.</para>
+        /// </summary>
+        internal static void DevTestSound(Hero npc)
+        {
+            try
+            {
+                var folder = Path.Combine(ModConfig.ConfigDirectory, "Voices", "_test");
+                if (!Directory.Exists(folder))
+                {
+                    Directory.CreateDirectory(folder);
+                    Notify($"Put a .wav in {folder} and click again.");
+                    return;
+                }
+
+                var wav = Directory.GetFiles(folder, "*.wav").FirstOrDefault();
+                if (wav == null) { Notify($"No .wav found in {folder}."); return; }
+
+                Notify($"Trying: {Path.GetFileName(wav)}");
+                ModLog.Info($"voice M1: testing playback of {wav}");
+
+                // Road 1 — the external file. "event:/" names a programmer event on FMOD's own
+                // voice-over bus; if this plays, playback costs us nothing but a path.
+                try
+                {
+                    var byFile = TaleWorlds.Engine.SoundEvent.CreateEventFromExternalFile(
+                        "event:/Extra/voiceover", wav, scene: null, is3d: false, isBlocking: false);
+                    var madeFile = byFile != null && !byFile.IsNullSoundEvent();
+                    var playedFile = madeFile && byFile!.Play();
+                    Notify($"external file: created={madeFile} playing={playedFile}");
+                    ModLog.Info($"voice M1: external file created={madeFile} play={playedFile}");
+                }
+                catch (Exception ex)
+                {
+                    Notify("external file: threw — see log.");
+                    ModLog.Error("voice M1: external file", ex);
+                }
+
+                // Road 2 — straight from memory. Zero callers in the shipped game, so TaleWorlds
+                // never tested it; if it works anyway it is worth a great deal.
+                try
+                {
+                    var bytes = File.ReadAllBytes(wav);
+                    var byBuffer = TaleWorlds.Engine.SoundEvent.CreateEventFromSoundBuffer(
+                        "event:/Extra/voiceover", bytes, scene: null, is3d: false, isBlocking: false);
+                    var madeBuffer = byBuffer != null && !byBuffer.IsNullSoundEvent();
+                    Notify($"from memory: created={madeBuffer} (not played — one at a time)");
+                    ModLog.Info($"voice M1: sound buffer created={madeBuffer} bytes={bytes.Length}");
+                }
+                catch (Exception ex)
+                {
+                    Notify("from memory: threw — see log.");
+                    ModLog.Error("voice M1: sound buffer", ex);
+                }
+            }
+            catch (Exception ex) { ModLog.Error("dev: testing sound", ex); }
+
+            void Notify(string line) =>
+                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + line));
+        }
+
         internal static void DevRevealCourtship(Hero npc)
         {
             try { if (npc != null) Current?.RevealCourtshipFor(npc); }
@@ -3176,6 +3305,10 @@ namespace ImmersiveAI
             try
             {
                 var outcome = await ExecutePlayerTurnAsync(npc, playerInput, situation).ConfigureAwait(false);
+
+                // Still off the game thread — begin making the sound while the words travel.
+                Voice.VoiceService.Prewarm(npc, outcome.Reply);
+
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     _quickChatBusy.Remove(npc.StringId);
@@ -3191,6 +3324,13 @@ namespace ImmersiveAI
                     UI.TalkUI.OnThreadChanged(npc, markUnread: true);
                     if (!viewing) NotifyReplyReady(npc);
                     LogConversationLine(npc, outcome.Reply);
+
+                    // Here the words ARE on screen the moment they land, so this is the visible
+                    // moment. Only when the player is actually reading this thread: a voice from a
+                    // conversation they walked away from is a ghost in the room. They can always
+                    // play it themselves from the thread.
+                    if (viewing && Voice.VoiceService.AutoSpeakEnabled)
+                        Voice.VoiceService.Speak(npc, outcome.Reply);
                     // A bargain laid in the window is presented the same way: after the words, the
                     // seal — the native inquiry rides its own global layer (order 19501) above the
                     // window (4500), takes the keys while up, and returns them when it closes.

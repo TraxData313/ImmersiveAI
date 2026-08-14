@@ -1,4 +1,4 @@
-BUGS:
+﻿BUGS:
 
 NEXT UPDATE:
 - [ ] THE ONE SCREEN REWORK (2026.08.14, Anton's big batch — THE PLAN LIVES IN docs/one-screen-plan.md,
@@ -170,18 +170,50 @@ POST V1 or NOT FULLY DECIDED:
     note (the Local backend → LM Studio/Ollama works, but small models are shaky with our eleven tools —
     point at RelationshipChangesViaTool:false as the fallback). Cheap words, preempts the loudest
     complaint threads on the competitor's page.
-- [ ] Voice-over via OpenRouter audio (POST V1 — researched 2026.07.17, see memory chatai-comments-and-voice-backends)
-    NPCs speaking their replies aloud. Backend: OpenRouter's dedicated OpenAI-compatible endpoints —
-    `/api/v1/audio/speech` (TTS) and `/api/v1/audio/transcriptions` (STT) — the SAME sk-or- key the
-    mod already carries; models incl. Kokoro 82M (very cheap, 54 preset voices — enough to assign a
-    stable per-NPC voice from StringId like the speech styles) and gpt-4o-mini-tts / Gemini Flash TTS.
-    OpenAI backend works too (tts-1 $15/1M chars); Anthropic has no audio API. Request PCM/WAV output
-    so .NET 4.7.2 playback stays simple (System.Media.SoundPlayer handles WAV — no mp3 decoder).
-    Rails: OPTIONAL and default OFF, its own toggle + voice/model config, every synthesis billed
-    through UsageLedger with its own price line (ChatAi's users report TTS eats ~10x the text credits —
-    the cost story must stay boringly honest), fail-soft (a dead audio call never blocks the spoken
-    text), and off-thread synthesis marshaled like every other LLM call. STT (player speaking) is a
-    separate later step — TTS first.
+- [ ] Voice-over: THE PANIC STOP (Anton, 2026.08.14, from experience with TTS elsewhere)
+    "sometimes the voice can glitch and start making crazy sounds and it wont stop." This is the
+    known failure of autoregressive TTS: if the model never emits its end-of-speech token it keeps
+    producing codec tokens until it hits its own ceiling, and the result is babbling or screeching.
+    THREE LAYERS, and the third is the one that actually fixes it:
+    1. A PANIC HOTKEY that works anywhere — on the map, mid-battle, with every window shut. Kills
+       playback, empties the queue, cancels in-flight work. It must not live behind a screen: if she
+       is screaming while the player is on the map, a button they have to open a window to reach is
+       not a stop button. Own config key for the key; also stop on Escape-out-of-everything.
+    2. A stop control in the talk screen for the ordinary "I don't want to hear the rest of this".
+       Same call, gentler moment.
+    3. CAP THE GENERATION BY THE TEXT'S OWN LENGTH. QwenParams carries maxAudioTokens, and we know
+       the words we asked for: ~12 words is ~4 s of speech at 24 kHz. Cap at roughly 3x the expected
+       duration and a runaway is guillotined at ten seconds instead of running to the model's
+       ceiling. Do the same on the PLAYBACK side — refuse to play a cached clip wildly longer than
+       its text justifies, or one bad file gets cached and replayed for the rest of the campaign —
+       and have the host mark such a result suspect so it is never written to the cache at all.
+    Layers 1 and 2 are for what slips through 3.
+    WHERE IT DERAILS, asked and answered (Anton, 2026.08.14): "in the middle or at the end, but
+    I think not ever in the beginning." So it is autoregressive DRIFT, not bad conditioning — the
+    reference clip is fine and the model simply loses its stop token partway. Three consequences:
+    (a) truncation is safe, because every word before the derail is good;
+    (b) SpeakableText's sentence chunking is now a RELIABILITY feature, not only a latency one —
+        shorter utterances derail less often and cost one sentence instead of a whole reply when
+        they do, so do not "optimise" it away into whole-reply synthesis later;
+    (c) DETECT AND RETRY IN THE HOST, so the player never hears it: a derailed line runs long by
+        definition (the model is not stopping), so samples-far-beyond-what-the-text-justifies is a
+        sound detector. At the measured 4.15x realtime a 4 s sentence re-synthesizes in about a
+        second — so discard, retry ONCE, and only truncate if it derails twice. A suspect clip must
+        NEVER reach the cache, or one bad synthesis is replayed every time that line is scrolled
+        back to, for the rest of the campaign.
+
+- [ ] Voice-over: the hosted rung (OpenRouter / OpenAI audio — researched 2026.07.17, see memory
+    chatai-comments-and-voice-backends; Anton asked for it again 2026.08.14: "can we also use
+    OpenRouter too as an option, why not?")
+    The second IVoiceEngine behind the same seam as the local Qwen engine, so a player who will not
+    download 7 GB and a CUDA card still gets spoken NPCs. OpenRouter's /api/v1/audio/speech and
+    OpenAI's /v1/audio/speech both take the key the mod ALREADY holds; Kokoro 82M carries 54 preset
+    voices, enough to cast a stable voice per NPC the way speech styles already are. Ask for WAV/PCM
+    so playback stays the same SoundEvent call (no mp3 decoder on .NET 4.7.2). Rails: optional,
+    default off, every synthesis billed through UsageLedger with its own price line (TTS eats ~10x
+    the text credits — the cost story stays boringly honest), fail-soft, off-thread. It cannot clone
+    a voice, which is exactly why it is the STRANGER'S rung and Qwen is the author's.
+
 - [ ] Dramalord compatibility (asked on Nexus by coca1colax, 2026.07.25)
     Fold Dramalord's relationship state (lovers, affairs, friendships, its emotion values) into what
     each NPC knows of themselves and the player — so a Dramalord lover speaks AS a lover without the
