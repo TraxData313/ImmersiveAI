@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using TaleWorlds.CampaignSystem;
@@ -556,7 +556,18 @@ namespace ImmersiveAI.Personas
             {
                 if (h.IsPrisoner) { sentences.Add("I am held captive, a prisoner."); return; }
                 var party = h.PartyBelongedTo;
-                if (party == null) return;
+                if (party == null)
+                {
+                    // A gang leader's command is his ALLEY, not a warband, and it never becomes a
+                    // party on the map — so reading only PartyBelongedTo left his sheet silent about
+                    // the men who answer to him, and asked whether he leaves the fighting to them he
+                    // said he had none (Akadan the Widow-maker, Odokh, 2026.08.16). One sentence
+                    // only: the muster itself lives in the recall of one's company, as for any
+                    // other captain.
+                    var street = StreetFollowing(h);
+                    if (street.Length > 0) sentences.Add(street);
+                    return;
+                }
                 var leader = party.LeaderHero;
                 int men = 0;
                 Try(() => men = party.MemberRoster?.TotalManCount ?? 0);
@@ -894,6 +905,42 @@ namespace ImmersiveAI.Personas
         {
             if (string.IsNullOrEmpty(word)) return "a";
             return "aeiou".IndexOf(char.ToLowerInvariant(word[0])) >= 0 ? "an" : "a";
+        }
+
+        /// <summary>The one always-on line for a soul whose command is an alley rather than a
+        /// warband. Same two guards as the recall's: the alley model reads <c>Owner.Power</c>
+        /// unchecked, so only ever ask it about an alley this soul truly owns, and the player's own
+        /// alleys are another behaviour's business entirely.</summary>
+        private static string StreetFollowing(Hero h)
+        {
+            try
+            {
+                if (h == null || h == Hero.MainHero) return string.Empty;
+                var alleys = h.OwnedAlleys;
+                if (alleys == null || alleys.Count == 0) return string.Empty;
+
+                int total = 0;
+                var places = new System.Collections.Generic.List<string>();
+                foreach (var alley in alleys)
+                {
+                    if (alley == null || alley.Owner != h) continue;
+                    var where = alley.Name?.ToString();
+                    if (!string.IsNullOrWhiteSpace(where)) places.Add(where);
+                    Try(() =>
+                    {
+                        var roster = Campaign.Current?.Models?.AlleyModel?.GetTroopsOfAIOwnedAlley(alley);
+                        if (roster == null) return;
+                        foreach (var entry in roster.GetTroopRoster())
+                            if (entry.Number > 0) total += entry.Number;
+                    });
+                }
+                if (places.Count == 0) return string.Empty;
+
+                return total > 0
+                    ? $"I keep no warband upon the road, but {JoinAnd(places)} is my ground — some {total} knives hold it for me and answer when I call."
+                    : $"I keep no warband upon the road, but {JoinAnd(places)} is my ground.";
+            }
+            catch { return string.Empty; }
         }
 
         private static string JoinAnd(System.Collections.Generic.List<string> items)

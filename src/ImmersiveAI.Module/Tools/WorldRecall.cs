@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -851,6 +851,14 @@ namespace ImmersiveAI.Tools
             Try(() => party = asker.PartyBelongedTo);
             if (party == null)
             {
+                // NO WARBAND ON THE MAP IS NOT THE SAME AS NOBODY AT YOUR BACK (2026.08.16). A gang
+                // leader's command is his alley and the knives who hold it — real men, mustered by
+                // the game's own alley model, who never become a MobileParty. Reading only
+                // PartyBelongedTo told Akadan the Widow-maker, holding his own ground in Odokh,
+                // that "no company rides with me now", and he said so to the player's face.
+                var street = DescribeStreetCompany(asker);
+                if (street.Length > 0) return street;
+
                 string kept = null;
                 Try(() => kept = asker.GovernorOf?.Settlement?.Name?.ToString());
                 return kept != null
@@ -979,6 +987,83 @@ namespace ImmersiveAI.Tools
         }
 
         // What the company is presently about, read from its errand on the map.
+        /// <summary>
+        /// The following of one who keeps no warband: the alleys a gang leader holds and the knives
+        /// who hold them for him. Read from the game's own ledger — never guessed, and never rolled
+        /// afresh, so the count does not jitter between one reply and the next.
+        /// <para>
+        /// TWO GUARDS, both load-bearing. The alley model reads <c>alley.Owner.Power</c> unchecked,
+        /// so it may only ever be handed an alley whose owner IS the asker; and the player's own
+        /// alleys are kept by a different behaviour entirely, so the player is skipped outright.
+        /// </para>
+        /// </summary>
+        // "a, b and c" — the same courtesy the persona builders extend everywhere else.
+        private static string Listed(List<string> items)
+        {
+            if (items == null || items.Count == 0) return string.Empty;
+            if (items.Count == 1) return items[0];
+            return string.Join(", ", items.Take(items.Count - 1)) + " and " + items[items.Count - 1];
+        }
+
+        private static string DescribeStreetCompany(Hero asker)
+        {
+            try
+            {
+                if (asker == null || asker == Hero.MainHero) return string.Empty;
+                var alleys = asker.OwnedAlleys;
+                if (alleys == null || alleys.Count == 0) return string.Empty;
+
+                var places = new List<string>();
+                var counts = new Dictionary<string, int>();
+                int total = 0;
+
+                foreach (var alley in alleys)
+                {
+                    if (alley == null || alley.Owner != asker) continue;
+                    var where = alley.Name?.ToString();
+                    var town = alley.Settlement?.Name?.ToString();
+                    if (!string.IsNullOrWhiteSpace(where))
+                        places.Add(string.IsNullOrWhiteSpace(town) ? where : $"{where} in {town}");
+
+                    Try(() =>
+                    {
+                        var roster = Campaign.Current?.Models?.AlleyModel?.GetTroopsOfAIOwnedAlley(alley);
+                        if (roster == null) return;
+                        foreach (var entry in roster.GetTroopRoster())
+                        {
+                            var kind = entry.Character?.Name?.ToString();
+                            if (string.IsNullOrWhiteSpace(kind) || entry.Number <= 0) continue;
+                            counts.TryGetValue(kind, out int had);
+                            counts[kind] = had + entry.Number;
+                            total += entry.Number;
+                        }
+                    });
+                }
+
+                if (places.Count == 0) return string.Empty;
+
+                var lines = new List<string>
+                {
+                    $"No warband rides under me upon the road — my ground is {Listed(places)}, and it is held for me."
+                };
+                if (total > 0)
+                {
+                    lines.Add($"Some {total} answer to me there.");
+                    var ranks = counts.OrderByDescending(kv => kv.Value)
+                        .Take(4)
+                        .Select(kv => $"{kv.Value} {kv.Key}")
+                        .ToList();
+                    if (ranks.Count > 0) lines.Add("They are: " + Listed(ranks) + ".");
+                }
+                else
+                {
+                    lines.Add("What men hold it for me at this hour I could not swear to.");
+                }
+                return string.Join(" ", lines);
+            }
+            catch { return string.Empty; }
+        }
+
         private static string CompanyDoing(MobileParty party)
         {
             if (party.MapEvent != null)

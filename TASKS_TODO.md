@@ -76,6 +76,24 @@ BUGS:
       widened to say the eyes now cover this — a tool's contract lives in its schema and its
       description, and a capability nobody is told about is one nobody reaches for. UNPLAYTESTED.
 
+- [x] A BAND LEADER IN A TOWN BELIEVED HE HAD NO MEN — FIXED 2026.08.16. Akadan the Widow-maker, a
+      gang leader holding his own ground in Odokh, told the player "I've no men at my heel just now".
+      NOT a missing tool: `recall_company` is not party-gated and did ride that reply (only the
+      field-craft asks for `PartyBelongedTo`). The tool ANSWERED WRONGLY. A gang leader's command is
+      his ALLEY and the knives who hold it — real men, mustered by the game's own alley model, who
+      never become a `MobileParty` — and both `WorldRecall.DescribeCompany` and
+      `SituationBuilder`'s own-command line read `PartyBelongedTo` and nothing else, so one told him
+      he commanded nobody and the other left his sheet silent.
+      Both now ask for the alleys first (`Hero.OwnedAlleys` + `AlleyModel.GetTroopsOfAIOwnedAlley`,
+      counted from the game's ledger so the number does not jitter between replies); the sheet gets
+      ONE sentence and the muster stays in the tool, as for any other captain. TWO GUARDS ARE
+      LOAD-BEARING and are commented at both sites: the alley model reads `alley.Owner.Power`
+      unchecked, so it may only ever be handed an alley the asker truly owns, and the PLAYER's own
+      alleys belong to a different behaviour entirely, so the player is skipped outright.
+      Beside it, `PersonaBuilder.TradeKnowledge` gained its missing `GangLeader` case — every other
+      station carries one sentence of what its trade knows, which is the other reason his sheet had
+      nothing to say about the streets he runs. UNPLAYTESTED.
+
 NEXT UPDATE:
 - [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means

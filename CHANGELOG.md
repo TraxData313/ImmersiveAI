@@ -54,6 +54,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ### What they can see for you
 - Fixed: your scouts can now tell you how many of a band go wounded and whether it drags prisoners — naming captive lords among them — where before they could not report what you can read off the party's own nameplate. The same facts ride into weighing a battle, on both sides, since men too hurt to stand in a line are not men you are fighting.
 
+- Fixed: a gang leader no longer tells you he has nobody at his back. His men hold an alley rather than riding a warband, and the mod was only ever looking for a warband — so a man with a dozen knives answering to him described himself as alone. He now knows his own ground and who holds it, and can count them for you.
+
 ### The road journal
 - Fixed: a town stop no longer lists the same goods over and over ("Silver Ore ×6, Cow ×4, Salt ×19…" four times in one breath). The journal was writing an open stop into its file twice, and reading it back appended that stop's goods to themselves — so every save and load while you stood in a town doubled the list again. Journals already swollen this way tidy themselves the next time they are read.
 

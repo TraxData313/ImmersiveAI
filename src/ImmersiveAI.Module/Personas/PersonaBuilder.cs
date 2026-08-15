@@ -191,6 +191,9 @@ namespace ImmersiveAI.Personas
                                "ventures cost to mount and what they return when they are run well.";
                     case Occupation.ArenaMaster:
                         return "The arena is mine: the fighters, the wagers, the tourneys and their prizes.";
+                    case Occupation.GangLeader:
+                        return "The streets are my trade: the alleys and who holds which, protection and its " +
+                               "price, the goods that move by night, and which men in this town can be bought.";
                     case Occupation.Blacksmith:
                     case Occupation.Weaponsmith:
                     case Occupation.Armorer:
