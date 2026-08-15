@@ -181,6 +181,33 @@ public class WeddingTests
     }
 
     [Fact]
+    public void TheAccountHoldsTheDayAtTheAgeItHappened()
+    {
+        // 2026.08.15, Anton: "if I remember it when I'm 50 I don't see two old ppl merrying". The
+        // account is fixed prose written on the day, but everything around it when it is called back
+        // is TODAY — so the day has to carry its own ages, and say how far off it now is.
+        var record = Record();
+        record.SpouseAge = 24;
+        record.PlayerAge = 27;
+
+        var told = WeddingText.FullAccount(record, includeNight: true, yearsSince: 6.4);
+        Assert.Contains("Eren was about 27 and Sibylla about 24", told);
+        Assert.Contains("some 6 years ago", told);
+        Assert.Contains("younger then", told);
+
+        // The same day, told the week it happened: the ages stand, the distance does not.
+        var fresh = WeddingText.FullAccount(record, includeNight: true, yearsSince: 0.1);
+        Assert.Contains("was about 27", fresh);
+        Assert.DoesNotContain("years ago", fresh);
+
+        // A record from before we kept ages says nothing it does not know.
+        var old = Record();
+        var quiet = WeddingText.FullAccount(old, includeNight: true, yearsSince: -1);
+        Assert.DoesNotContain("about", quiet);
+        Assert.DoesNotContain("years ago", quiet);
+    }
+
+    [Fact]
     public void TheNightIsTheirsAlone_ARecallByAWitnessNeverCarriesIt()
     {
         var record = Record(witnessIds: new[] { "npc_2" });

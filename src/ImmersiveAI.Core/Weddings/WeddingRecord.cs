@@ -54,6 +54,14 @@ namespace ImmersiveAI.Core.Weddings
         public bool PlayerIsFemale { get; set; }
         public string PlayerClanName { get; set; } = string.Empty;
 
+        /// <summary>How old the two of them were ON THE DAY; 0 in records written before we kept it
+        /// (2026.08.15). A wedding is remembered for the rest of two lives and told back decades
+        /// later, so the only honest age is the one the day itself held — everything downstream, the
+        /// written account and the replayed scene alike, reads it from here rather than from whoever
+        /// these two have since become.</summary>
+        public int SpouseAge { get; set; }
+        public int PlayerAge { get; set; }
+
         public List<WeddingWitness> Witnesses { get; set; } = new List<WeddingWitness>();
 
         /// <summary>Days from the first step of the courtship road to this day; -1 when unknown.</summary>

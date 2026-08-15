@@ -58,6 +58,13 @@ namespace ImmersiveAI.Core.Births
         public string FatherName { get; set; } = string.Empty;
         public bool FatherIsPlayer { get; set; }
 
+        /// <summary>How old the parents were ON THE DAY; 0 in records written before we kept it
+        /// (2026.08.15, the wedding's own lesson). The account is fixed prose but the sheet around
+        /// it is always today's, so a day called back twenty years on has nothing in it to say the
+        /// two of them were young — unless the day itself said so.</summary>
+        public int MotherAge { get; set; }
+        public int FatherAge { get; set; }
+
         /// <summary>Whether the PLAYER was actually there when the child came — what the keepsake
         /// says to them, and nothing else.</summary>
         public bool PlayerWasThere { get; set; }

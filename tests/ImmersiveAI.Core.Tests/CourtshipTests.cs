@@ -549,6 +549,39 @@ public class CourtshipTests
     }
 
     [Fact]
+    public void RoadSection_AlwaysCarriesTheRailAgainstAWeddingMadeOfWords()
+    {
+        // The 2026.08.15 report: two open misgivings, so the road refused every step and every lay —
+        // and the pair went to a temple and said their vows anyway, in words, while nothing at all
+        // happened in the world. The rails held; the TALK simply walked around them. So every stage
+        // that is on the road carries the rail, wherever her heart stands.
+        foreach (var stage in new[] { CourtshipStage.Warmth, CourtshipStage.Devotion,
+                                      CourtshipStage.Ready, CourtshipStage.Betrothed })
+        {
+            var section = CourtshipText.RoadSection("Mizam", stage, null, true, false, false, "");
+            Assert.Contains("no words of ours make a marriage", section);
+            Assert.Contains("not a temple", section);
+        }
+
+        // And nowhere else: silence at both ends of the road stays silence.
+        Assert.Equal(string.Empty, CourtshipText.RoadSection("Mizam", CourtshipStage.None, null, true, false, false, ""));
+        Assert.Equal(string.Empty, CourtshipText.RoadSection("Mizam", CourtshipStage.Wed, null, true, false, false, ""));
+    }
+
+    [Fact]
+    public void ForwardRefusalForPlayer_SaysPlainlyWhatHerOwnWordsMayNot()
+    {
+        // Her side is numberless and vague on purpose; the PLAYER's side must name the cause, or a
+        // refused reach is indistinguishable from a broken mod.
+        Assert.Contains("misgiving", CourtshipText.ForwardRefusalForPlayer(CourtshipRoad.StepVerdict.MisgivingsRemain));
+        Assert.Contains("station", CourtshipText.ForwardRefusalForPlayer(CourtshipRoad.StepVerdict.StationTooFar));
+        Assert.Contains("seasoned", CourtshipText.ForwardRefusalForPlayer(CourtshipRoad.StepVerdict.TrothTooFresh));
+
+        foreach (CourtshipRoad.StepVerdict verdict in System.Enum.GetValues(typeof(CourtshipRoad.StepVerdict)))
+            Assert.False(string.IsNullOrWhiteSpace(CourtshipText.ForwardRefusalForPlayer(verdict)));
+    }
+
+    [Fact]
     public void HandsCameSwapped_CatchesTheMisgivingWrittenIntoItsOwnAnswer()
     {
         // Verbatim off the wire, gpt-5.6-terra, 2026.08.09: every settle it made came crossed —

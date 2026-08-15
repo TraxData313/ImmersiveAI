@@ -176,6 +176,29 @@ public class BirthsTests
     }
 
     [Fact]
+    public void TheDayIsToldAtTheAgeItHappened_AndSaysHowOldTheChildWouldBe()
+    {
+        var record = SomeBirth();
+        record.MotherAge = 24;
+        record.FatherAge = 27;
+
+        var told = BirthText.FullAccount(record, includeHour: true, asMother: true, yearsSince: 6.9);
+        Assert.Contains("Sibylla was about 24 and Mizam about 27", told);
+        Assert.Contains("some 6 years ago", told);
+        // "would be", never "is": the ledger knows what was born, not who is still living.
+        Assert.Contains("the child would be that old now", told);
+
+        var fresh = BirthText.FullAccount(record, includeHour: true, asMother: true, yearsSince: 0.2);
+        Assert.Contains("was about 24", fresh);
+        Assert.DoesNotContain("years ago", fresh);
+
+        // A record from before we kept ages claims nothing.
+        var quiet = BirthText.FullAccount(SomeBirth(), includeHour: true, asMother: true, yearsSince: -1);
+        Assert.DoesNotContain("was about", quiet);
+        Assert.DoesNotContain("years ago", quiet);
+    }
+
+    [Fact]
     public void TheFathersBeat_CarriesTheFactAndNeverHerVoice()
     {
         // He is a parent and may call the hour back through the tool — but her private "I" is

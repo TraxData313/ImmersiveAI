@@ -147,7 +147,10 @@ namespace ImmersiveAI.Core.Births
         /// mother reads her own memory back, while the father reads what she told him of it, which
         /// is the honest way a man comes to know an hour he may not even have been in the room for.
         /// </summary>
-        public static string FullAccount(BirthRecord record, bool includeHour, bool asMother)
+        /// <param name="yearsSince">Years between that day and today; negative when unknown. See
+        /// <see cref="TheirYearsThatDay"/> — a child's day is the one most likely of all to be told
+        /// back decades later, when everyone in it has become someone else.</param>
+        public static string FullAccount(BirthRecord record, bool includeHour, bool asMother, double yearsSince = -1)
         {
             if (record == null) return string.Empty;
             var sb = new StringBuilder();
@@ -158,6 +161,9 @@ namespace ImmersiveAI.Core.Births
             head.Append(" — ").Append(Name(record.MotherName)).Append(" bore ")
                 .Append(record.ChildWords()).Append(", ").Append(record.ChildNames()).Append('.');
             sb.AppendLine(head.ToString());
+
+            var then = TheirYearsThatDay(record, yearsSince);
+            if (then.Length > 0) sb.AppendLine(then);
 
             if (record.StillbornCount > 0)
                 sb.AppendLine(record.AnyLived
@@ -189,6 +195,44 @@ namespace ImmersiveAI.Core.Births
                 sb.AppendLine(record.FeastAccount.Trim());
             }
             return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// How old the parents were on the day, how long ago it was, and therefore how old the
+        /// child would be now — the anchor that keeps a birth told years later from being told
+        /// about the people they have since become. Empty when the record kept no ages and the day
+        /// is recent enough that nothing needs saying.
+        /// </summary>
+        public static string TheirYearsThatDay(BirthRecord record, double yearsSince)
+        {
+            if (record == null) return string.Empty;
+            var sb = new StringBuilder();
+
+            if (record.MotherAge > 0 || record.FatherAge > 0)
+            {
+                sb.Append("On that day ");
+                if (record.MotherAge > 0 && record.FatherAge > 0)
+                    sb.Append(Name(record.MotherName)).Append(" was about ").Append(record.MotherAge)
+                      .Append(" and ").Append(Name(record.FatherName)).Append(" about ").Append(record.FatherAge);
+                else if (record.MotherAge > 0)
+                    sb.Append(Name(record.MotherName)).Append(" was about ").Append(record.MotherAge);
+                else
+                    sb.Append(Name(record.FatherName)).Append(" was about ").Append(record.FatherAge);
+                sb.Append('.');
+            }
+
+            int years = (int)Math.Floor(yearsSince);
+            if (years >= 1)
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                // "would be" and not "is": the ledger knows what was born, never who is still living.
+                var child = record.AnyLived
+                    ? (record.Children.Count > 1 ? " — they would be that old now." : " — the child would be that old now.")
+                    : ".";
+                sb.Append(years == 1 ? "That was a year ago" : $"That was some {years} years ago")
+                  .Append(child == "." ? "." : child);
+            }
+            return sb.ToString();
         }
 
         /// <summary>One line of the roll, when a soul has seen more than one of these days.</summary>
@@ -247,6 +291,9 @@ namespace ImmersiveAI.Core.Births
             public string MotherSelfText = string.Empty;
 
             public string FatherName = string.Empty;
+            /// <summary>His age on the day. The mother's was always given and his never was (fixed
+            /// 2026.08.15) — the wedding's own oversight, wearing the other parent's clothes.</summary>
+            public int FatherAge;
             public string FatherStanding = string.Empty;
             /// <summary>Whether the father stood there when it happened.</summary>
             public bool FatherWasThere = true;
@@ -419,6 +466,7 @@ namespace ImmersiveAI.Core.Births
 
             var father = new StringBuilder("- ");
             father.Append(Name(facts.FatherName)).Append(" — the father");
+            if (facts.FatherAge > 0) father.Append(", about ").Append(facts.FatherAge);
             if (!string.IsNullOrWhiteSpace(facts.FatherStanding)) father.Append(", ").Append(facts.FatherStanding.Trim().TrimEnd('.'));
             father.Append('.');
             father.Append(facts.FatherWasThere

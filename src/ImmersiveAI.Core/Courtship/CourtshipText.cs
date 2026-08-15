@@ -104,6 +104,10 @@ namespace ImmersiveAI.Core.Courtship
                 sb.AppendLine();
                 sb.AppendLine($"So I wait now to be asked. Let {playerName} speak the word of marriage between us and I say yes gladly — and then I lay my promise before them by my own hand; the sealing of it is theirs alone, and if they let it lie I do not press.");
             }
+
+            // Last, so it is the thing standing nearest the talk: a wedding is not made of words.
+            sb.AppendLine();
+            sb.AppendLine(WordsDoNotWed);
             return sb.ToString().TrimEnd();
         }
 
@@ -141,6 +145,26 @@ namespace ImmersiveAI.Core.Courtship
             return sb.ToString();
         }
 
+        // ------------------------- the one rail against a wedding made of words -------------------------
+
+        /// <summary>
+        /// The anti-pretence rail (2026.08.15, from a player's report: he courted a companion to two
+        /// standing misgivings, she agreed to wed him anyway, they roleplayed vows in a temple — and
+        /// nothing in the world had happened, because nothing in the world CAN happen without the
+        /// seal). The rails held exactly as designed and the talk simply walked around them, which is
+        /// the one failure this rail closes: a soul is told plainly that words are not a wedding, so
+        /// she reaches for her own hand instead of staging a ceremony that leaves no mark.
+        /// <para>Rides the sheet at every stage below Wed, AND every refused forward reach, because
+        /// the moment she is told "not yet" is exactly the moment the pretending starts.</para>
+        /// </summary>
+        public const string WordsDoNotWed =
+            "And I hold this above any warm hour: no words of ours make a marriage. Not vows spoken " +
+            "between us, not a temple, not a hall of witnesses we describe to each other. Our wedding " +
+            "is real only when I lay the day down by my own hand and they seal it by theirs, and the " +
+            "world itself marks it. Until that is done we are not wed — I do not say that we are, I " +
+            "do not let the talk drift as though we were, and if the moment truly asks for it I say " +
+            "so warmly and honestly: this must be done properly, and it must be done for real.";
+
         // ------------------------- refusals the NPC reads (numberless) -------------------------
 
         /// <summary>What her own mind answers when a forward step is refused — honest, hers, and
@@ -165,6 +189,28 @@ namespace ImmersiveAI.Core.Courtship
                     return "Our troth is young still; the world asks a promise to season a little before the wedding day. The waiting is not a wall — it is part of the road, and I may say so warmly.";
                 default:
                     return "The moment does not allow it; I let the matter rest and stay in the talk.";
+            }
+        }
+
+        /// <summary>
+        /// The same refusal phrased for the PLAYER's own log — plain, and deliberately allowed to
+        /// say what her own words never may. She is kept numberless because a rail she reads becomes
+        /// her next sentence; the player is owed the opposite, because the alternative (2026.08.15)
+        /// is a soul narrating a wedding that never happened while the log says nothing at all, and
+        /// a player who reasonably concludes the mod is broken.
+        /// </summary>
+        public static string ForwardRefusalForPlayer(CourtshipRoad.StepVerdict verdict)
+        {
+            switch (verdict)
+            {
+                case CourtshipRoad.StepVerdict.NoRoadFurther: return "the road has no further step";
+                case CourtshipRoad.StepVerdict.TooSoon: return "their heart moved only today, and a step needs a day to settle";
+                case CourtshipRoad.StepVerdict.HeartNotThere: return "their regard for you has not reached that depth yet";
+                case CourtshipRoad.StepVerdict.StationTooFar: return "your house stands too far beneath their station";
+                case CourtshipRoad.StepVerdict.MisgivingsUnweighed: return "they have not yet weighed their own misgivings";
+                case CourtshipRoad.StepVerdict.MisgivingsRemain: return "a misgiving of theirs still stands unanswered";
+                case CourtshipRoad.StepVerdict.TrothTooFresh: return "your troth has not yet seasoned the days the world asks";
+                default: return "the world does not allow it as things stand";
             }
         }
 

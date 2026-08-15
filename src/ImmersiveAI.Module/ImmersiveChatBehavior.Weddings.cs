@@ -148,8 +148,10 @@ namespace ImmersiveAI
                 SpouseName = Safe(() => spouse.Name?.ToString() ?? "Unknown", "Unknown"),
                 SpouseIsFemale = Safe(() => spouse.IsFemale, true),
                 SpouseStation = Safe(() => PersonaBuilder.Build(spouse, _config)?.RoleDescription ?? string.Empty, string.Empty),
+                SpouseAge = Safe(() => (int)spouse.Age, 0),
                 PlayerName = Safe(() => player?.Name?.ToString() ?? "the traveler", "the traveler"),
                 PlayerIsFemale = Safe(() => player?.IsFemale ?? false, false),
+                PlayerAge = Safe(() => (int)(player?.Age ?? 0f), 0),
                 PlayerClanName = Safe(() => Clan.PlayerClan?.Name?.ToString() ?? string.Empty, string.Empty),
                 CourtshipDays = memory.CourtshipStepDay < 0 ? -1 : Math.Max(0, now - memory.CourtshipStepDay),
                 BetrothalDays = memory.BetrothedGameDay < 0 ? -1 : Math.Max(0, now - memory.BetrothedGameDay),
@@ -268,7 +270,10 @@ namespace ImmersiveAI
                     .ToList(),
             };
 
-            try { facts.SpouseAge = (int)spouse.Age; } catch { }
+            // Both ages come off the RECORD, not off the live heroes: a wedding whose account had to
+            // be retried, or one written from an older record, must still be the day it was.
+            facts.SpouseAge = record.SpouseAge > 0 ? record.SpouseAge : Safe(() => (int)spouse.Age, 0);
+            facts.PlayerAge = record.PlayerAge > 0 ? record.PlayerAge : Safe(() => (int)(Hero.MainHero?.Age ?? 0f), 0);
             try
             {
                 var persona = PersonaBuilder.Build(spouse, _config);
@@ -673,6 +678,8 @@ namespace ImmersiveAI
             head.Append(string.IsNullOrWhiteSpace(record.DateText) ? "That day" : record.DateText.Trim());
             if (!string.IsNullOrWhiteSpace(record.PlaceName)) head.Append(", in ").Append(record.PlaceName.Trim());
             sb.AppendLine(head.ToString());
+            var years = Safe(() => WeddingText.TheirYearsThatDay(record, CalradiaYears.Since(record.GameDay)), string.Empty);
+            if (!string.IsNullOrWhiteSpace(years)) sb.AppendLine(years);
             var standing = record.Witnesses?.Where(w => w != null && !string.IsNullOrWhiteSpace(w.Name))
                 .Select(w => w.Name.Trim()).ToList() ?? new List<string>();
             sb.AppendLine(standing.Count > 0
@@ -775,7 +782,9 @@ namespace ImmersiveAI
                 // couple who merely have children never had one at all.
                 var wedding = Safe(() => Current?._weddingLedger?.OwnWeddingOf(npc.StringId), null);
                 if (wedding == null || IsUnwritten(wedding)
-                    || !UI.WeddingSceneReplay.TryPlay(npc, wedding.GameDay, () => ShowScrollPopup(title, body, pause: true)))
+                    || !UI.WeddingSceneReplay.TryPlay(npc, wedding.GameDay,
+                        () => ShowScrollPopup(title, body, pause: true),
+                        wedding.SpouseAge, wedding.PlayerAge))
                     ShowScrollPopup(title, body, pause: true);
             }
             catch (Exception ex) { ModLog.Error("opening the wedding keepsake", ex); }

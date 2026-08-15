@@ -104,6 +104,10 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ### Weddings
 - Changed: a wedding with invitations is now a guest list, and a guest list excludes. Couriers ride to BOTH families and to the people you truly know, and to nobody else — no more halls full of townsfolk you have never spoken to.
+- Fixed: a courtship that cannot go forward yet now says so **in the log**, naming what was reached for and why nothing was sealed. Before, the refusal was told only to them — so if they went on to describe a wedding anyway, nothing on your screen said the world had not moved, and you could believe you were married when you were not.
+- Changed: they now know plainly that no words make a marriage — no vows between the two of you, no temple, no ceremony described to each other. Until they lay the day down and you seal it, they will say so warmly instead of playing along.
+- Fixed: opening your wedding day again draws the two of you at the age you were on the day, not the age you are now.
+- New: your wedding day and each child's day now say how old you both were, and how long ago it was — so a soul telling the story years later tells it about the people you were then.
 
 ### What they remember, and what it costs you
 - Changed: the long wedding and birth accounts fade in an NPC's mind as any memory does — whole while fresh, then their opening, then just the day itself. They can still tell you the whole of it if you ask.

@@ -70,7 +70,7 @@ namespace ImmersiveAI.Tools
             sb.AppendLine(mine
                 ? "It returns to me whole, as though I stood in it again — our own wedding day:"
                 : "It returns to me whole, as the day itself:");
-            sb.AppendLine(WeddingText.FullAccount(record, includeNight: mine));
+            sb.AppendLine(WeddingText.FullAccount(record, includeNight: mine, CalradiaYears.Since(record.GameDay)));
 
             if (stood.Count > 1)
             {

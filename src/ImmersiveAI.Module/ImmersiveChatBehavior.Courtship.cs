@@ -473,17 +473,35 @@ namespace ImmersiveAI
 
                 // closer —
                 var target = stage + 1;
+
+                // Every refusal below is answered TWICE over: to her, in her own numberless words
+                // plus the rail that words are not a wedding; and to the PLAYER, in a plain line
+                // saying what was reached for and why nothing was sealed. Before 2026.08.15 only
+                // the first half existed, and a refused reach was completely invisible — a player
+                // watched a soul narrate a wedding in a temple, saw no popup, and had no way at all
+                // to learn that the world had said no (Steam, rmanicky). A rail nobody can see is
+                // indistinguishable from a broken mod.
+                string Refused(string herWords, string playerReason)
+                {
+                    if (!troth.ByLetter) NotifyRoadRefused(npc, target, playerReason);
+                    return herWords + " " + CourtshipText.WordsDoNotWed;
+                }
+
                 var block = TrothBlockReason(npc, forWedding: target == CourtshipStage.Wed, _config);
                 if (block != TrothBlock.None)
-                    return "The world stands in the way: " + TrothBlockForNpc(block, npc);
+                    return Refused("The world stands in the way: " + TrothBlockForNpc(block, npc),
+                        TrothBlockForPlayer(block, npc));
                 if (target == CourtshipStage.Betrothed && PlayerPromisedToAnother(npc))
-                    return "The world stands in the way: " + TrothBlockForNpc(TrothBlock.PromisedElsewhere, npc);
+                    return Refused("The world stands in the way: " + TrothBlockForNpc(TrothBlock.PromisedElsewhere, npc),
+                        TrothBlockForPlayer(TrothBlock.PromisedElsewhere, npc));
                 if (target == CourtshipStage.Wed && BlessingRequired(npc) && memory.FamilyBlessingDay < 0)
-                    return "The world stands in the way: " + TrothBlockForNpc(TrothBlock.BlessingMissing, npc);
+                    return Refused("The world stands in the way: " + TrothBlockForNpc(TrothBlock.BlessingMissing, npc),
+                        TrothBlockForPlayer(TrothBlock.BlessingMissing, npc));
 
                 var verdict = CourtshipRoad.JudgeForward(RoadFactsOf(npc, memory));
                 if (verdict != CourtshipRoad.StepVerdict.Allowed)
-                    return CourtshipText.ForwardRefusal(verdict, playerName);
+                    return Refused(CourtshipText.ForwardRefusal(verdict, playerName),
+                        CourtshipText.ForwardRefusalForPlayer(verdict));
 
                 if (target == CourtshipStage.Betrothed)
                 {
@@ -798,6 +816,35 @@ namespace ImmersiveAI
                     InformationManager.DisplayMessage(new InformationMessage(line, color)));
             }
             catch { /* the notice is a nicety */ }
+        }
+
+        // A reach that the world turned back (2026.08.15). NOT gated on ShowNpcActivity: this is not
+        // a nicety like "remembering…", it is the only thing standing between "the mod refused, and
+        // here is why" and a player watching a wedding happen in words and nowhere else. Frost blue,
+        // with the rest of the road's weather.
+        private void NotifyRoadRefused(Hero npc, CourtshipStage target, string reason)
+        {
+            try
+            {
+                var name = npc?.Name?.ToString() ?? "They";
+                var why = string.IsNullOrWhiteSpace(reason) ? "the world does not allow it yet" : reason.Trim();
+                string line;
+                switch (target)
+                {
+                    case CourtshipStage.Betrothed:
+                        line = $"{name} would give you their promise, but it cannot stand yet — {why}. Nothing has been sealed.";
+                        break;
+                    case CourtshipStage.Wed:
+                        line = $"{name} reaches for your wedding day, but it cannot be sealed yet — {why}. Nothing has been sealed; whatever is said now, you are not wed.";
+                        break;
+                    default:
+                        line = $"{name}'s heart reaches further, but not yet — {why}.";
+                        break;
+                }
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage(line, FrostColor)));
+            }
+            catch { /* the notice is the point, but it may never cost a reply */ }
         }
 
         // The activity-voice sibling for the laid moments ("lays their promise…"), same gate as

@@ -718,7 +718,20 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   SEES them: bond line "misgivings 2/4", a "Misgivings n/m" button in the chat window opens the
   list (settled ones with her note), and EVERY movement leaves a log line in Anton's color language
   — ROSE when the heart clears (settle/release/clear heart), FROST-BLUE when something freezes
-  (set_down/reopen, and the road's own step-back; a broken troth alone stays red). Souls
+  (set_down/reopen, and the road's own step-back; a broken troth alone stays red).
+  **A REFUSED REACH IS ALSO A MOVEMENT AND MUST BE SEEN** (2026.08.15, Steam/rmanicky: courted to
+  2/4, so the road refused every step and every lay, so no seal popup could ever fire — and she
+  staged a temple wedding in words while the log said NOTHING, which reads exactly like a broken
+  mod): `NotifyRoadRefused` (frost blue, NOT gated on `ShowNpcActivity`, silent for letters) names
+  what was reached for and why nothing was sealed, from `CourtshipText.ForwardRefusalForPlayer` —
+  her side stays numberless, the PLAYER's side names the cause, and the wedding line says outright
+  "whatever is said now, you are not wed". Beside it `CourtshipText.WordsDoNotWed`, the anti-pretence
+  rail in her own voice (no vows between them, no temple, no ceremony described to each other makes
+  a marriage), riding the sheet at every stage below Wed, a short form in `tend_courtship`'s own
+  description, and the full one appended to EVERY refused forward reach — the moment she is told
+  "not yet" is the moment the pretending starts. The fix was never to loosen the misgivings: the
+  road behaved, and the gap was that a refusal was a private word between the mod and the model.
+  Souls
   with real history are SEEDED once from their lived story (Core `CourtshipSeed`, capped at
   Betrothed). Betrothal + wedding lay only; popups seal; both re-run everything
   (`TrothBlockReason`). The wedding is REAL: nobles `MarriageAction.Apply`; a companion bride is
@@ -1542,6 +1555,28 @@ exchange is in flight are parked and folded by `SaveMemory` (the `_pendingBlessi
 Config `EnableWeddingChronicle` (default on); DevMode lever in the chat window's Dev panel ("Write
 your wedding day anew"). Decision record + the review round's eight fixes:
 docs/wedding-chronicle-design.md.
+**A GREAT DAY IS TOLD AT THE AGE IT HAPPENED** (2026.08.15, Anton: "if I remember it when im 50 i
+dont see two old ppl merrying"), and this bites in two places at once. THE SCENE: the keepsake
+replays vanilla's own wedding cutscene, which builds its people from the LIVE heroes —
+`UI\WeddingSceneReplay` now overrides `GetSceneNotificationCharacters`, takes what the base built
+and REPLACES slots 0 and 1 (vanilla's order is groom, bride, monk, six audience) with the same
+people carrying an overridden `BodyProperties(new DynamicBodyProperties(ageThen, hero.Weight,
+hero.Build), hero.StaticBodyProperties)` — the exact move
+`HeirComingOfAgeSceneNotificationItem` makes to draw one child at six and again at fourteen.
+`SceneNotificationCharacter` is a readonly struct with PUBLIC fields, so vanilla's equipment (the
+bride's culture wedding dress), colours and flags ride across untouched; never reimplement the
+method, and leave the audience alone — it is whoever is alive and friendly TODAY and has no "then".
+THE WORDS: `WeddingRecord.SpouseAge`/`PlayerAge` + `BirthRecord.MotherAge`/`FatherAge` are captured
+at the hooks (the chronicler was given the bride's/mother's age and NEVER the groom's/father's —
+fixed with them), and `WeddingText`/`BirthText.TheirYearsThatDay` states the ages on the day, how
+long ago it was, and for a birth how old the child WOULD be now ("would", never "is" — the ledger
+knows what was born, not who still lives). It is a STATEMENT, never an instruction: the account is
+fixed prose, but every sheet around it at recall time is today's, which is the whole reason a
+fifty-year-old's wedding was being retold about fifty-year-olds. Records from before this say
+nothing; the SCENE still gets them right because `AgeOnThatDay` falls back to the calendar (now,
+less the years since), so there is nothing to migrate. Core keeps no calendar — `CalradiaYears.Since`
+(Module) hands it a plain number. Births have NO scene replay yet; vanilla ships
+`NewBornSceneNotificationItem` whenever that is wanted.
 
 **The birth chronicle (2026.08.10) — the next day of a life.** The wedding's own shape, turned on a
 cradle, and reusing its machinery down to the guest list (Anton's ask: "може да се преизползва много

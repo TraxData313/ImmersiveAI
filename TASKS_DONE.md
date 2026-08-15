@@ -477,3 +477,85 @@ wants her writing more too. The odds view carries the factor and names it ("wedd
 so "why is it quiet?" keeps telling the truth.
 
     2026.08.15 17.26.40
+
+---
+
+## A refused troth that nobody could see, and a day drawn at the age it happened
+
+Two unrelated reports, one evening.
+
+### 1. "I got married via the chat but ingame it doesn't seem to have actually made us married"
+
+Steam, rmanicky (2026.08.10): courted a companion, ground her misgivings down to **2/4**, and she
+"decided to wed my character anyway" — they rode to a city, roleplayed a temple, said vows, and she
+told him they were married. No cutscene. No popup. Nothing in the world.
+
+**The rails worked exactly as designed. That was the problem.** Two standing misgivings means
+`JudgeForward` answers `MisgivingsRemain`, so the step to Ready is refused, so the betrothal can
+never be laid, so no seal popup can ever fire. Every one of those refusals was returned **to her
+alone**, as a tool result. The talk then walked straight around them: she is a language model handed
+a warm scene and a soft "not yet", and she staged the wedding in words.
+
+And the player had **no signal whatsoever**. Every movement of the road leaves a coloured line in the
+log — every step, every misgiving set down or laid to rest, every laid promise. A REFUSAL left none.
+A rail nobody can see is indistinguishable from a broken mod, which is precisely the conclusion he
+reached, and a fair one.
+
+Three parts, none of which weakens the one law (words alone never wed):
+
+- **`CourtshipText.WordsDoNotWed`** — the rail in her own voice, saying plainly that no vows between
+  them, no temple, and no ceremony they describe to each other make a marriage; until she lays the
+  day by her own hand and he seals it by his, they are not wed, she does not say they are, and she
+  does not let the talk drift as though they were. It rides the sheet at **every** stage below Wed
+  (`RoadSection`), a short form rides `tend_courtship`'s own description (a tool's contract belongs
+  beside its schema — the 2026.08.14 rule), and the full one is appended to **every refused forward
+  reach**, because the moment she is told "not yet" is exactly the moment the pretending starts.
+- **`CourtshipText.ForwardRefusalForPlayer(verdict)`** — the same refusal in plain words, for the
+  log. Her side stays numberless (the Sibuga floor lesson, still tested); the player's side is
+  allowed to name the cause, and must, or we are back where we started.
+- **`NotifyRoadRefused`** — frost blue, with the rest of the road's weather, and deliberately NOT
+  gated on `ShowNpcActivity`: this is not "remembering…", it is the only thing standing between
+  "the world refused, and here is why" and a wedding that happens in words and nowhere else. The
+  wedding-target line says it outright: *"Nothing has been sealed; whatever is said now, you are not
+  wed."* Silent for letters, per the courier's seal law.
+
+Worth stating for whoever meets this next: the fix is NOT to loosen the misgivings. The road behaved.
+The gap was that a refusal was a private conversation between the mod and the model.
+
+### 2. "if I remember it when im 50 i dont see two old ppl merrying"
+
+Anton, same evening. Opening the wedding keepsake replays the game's own wedding scene, and that
+scene builds its people from the LIVE heroes — so a wedding replayed twenty years on showed two
+twenty-years-older faces at their own altar.
+
+Vanilla had already solved this for itself and we borrow the exact move (decompile-verified):
+`HeirComingOfAgeSceneNotificationItem` draws one child at six and again at fourteen by handing
+`CreateNotificationCharacterFromHero` an overridden `BodyProperties` whose `DynamicBodyProperties`
+carries the age wanted, over the hero's own `StaticBodyProperties`. So `WeddingSceneReplay` now
+overrides `GetSceneNotificationCharacters`, takes whatever the base built, and **replaces slots 0 and
+1** — vanilla's own order is groom, bride, monk, six audience. `SceneNotificationCharacter` is a
+readonly struct with public fields, so the equipment, colours and flags vanilla computed (the bride's
+culture wedding dress among them) ride across untouched. Never reimplement the method; the audience
+is left alone on purpose, since it is whoever is alive and friendly TODAY and has no "then" to be
+drawn at.
+
+Beside it, the same day told in words:
+
+- `WeddingRecord.SpouseAge`/`PlayerAge` and `BirthRecord.MotherAge`/`FatherAge`, captured at the
+  hooks. The chronicler was already given the bride's age and the mother's — and **never** the
+  groom's or the father's, which is fixed here too.
+- `WeddingText.TheirYearsThatDay` / `BirthText.TheirYearsThatDay`: how old they were on the day, how
+  long ago it is, and for a birth how old the child **would be** now ("would", never "is" — the
+  ledger knows what was born, not who still lives). Folded into both `FullAccount`s and into the
+  player's own keepsake page.
+- The line is a **statement, never an instruction** ("they were younger then than they are now").
+  The account is fixed prose, but every sheet around it when it is recalled is today's, and that is
+  the whole reason a fifty-year-old's wedding was being retold about fifty-year-olds.
+- Old records carry no ages and simply say nothing; the replayed SCENE still gets them right, because
+  `AgeOnThatDay` falls back to the calendar — what they are now, less the years since. Nothing to
+  migrate. Core keeps no calendar, so `CalradiaYears.Since` (Module) hands it a plain number.
+
+Births have **no scene replay yet** — vanilla ships `NewBornSceneNotificationItem`, so it is a small
+job whenever it is wanted.
+
+    2026.08.15 22.05.00

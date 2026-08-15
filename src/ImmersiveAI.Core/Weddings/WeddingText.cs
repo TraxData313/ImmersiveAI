@@ -94,7 +94,12 @@ namespace ImmersiveAI.Core.Weddings
         /// code: only the wedded soul is ever given the second part — a witness who asks receives
         /// the day and nothing more, and is told plainly that the rest was never theirs to see.
         /// </summary>
-        public static string FullAccount(WeddingRecord record, bool includeNight)
+        /// <param name="yearsSince">Years between that day and today, for a soul calling it back
+        /// long after (2026.08.15); negative when the caller does not know or does not care. The
+        /// account is fixed prose written on the day, but the sheet around it is always TODAY's —
+        /// so without this a soul retelling her wedding at fifty pictures two fifty-year-olds at
+        /// the altar. The years are computed by the game layer; Core keeps no calendar.</param>
+        public static string FullAccount(WeddingRecord record, bool includeNight, double yearsSince = -1)
         {
             if (record == null) return string.Empty;
             var sb = new StringBuilder();
@@ -105,6 +110,9 @@ namespace ImmersiveAI.Core.Weddings
             head.Append(" — ").Append(Name(record.PlayerName)).Append(" and ").Append(Name(record.SpouseName))
                 .Append(" were wed.");
             sb.AppendLine(head.ToString());
+
+            var then = TheirYearsThatDay(record, yearsSince);
+            if (then.Length > 0) sb.AppendLine(then);
 
             var standing = record.Witnesses?.Where(w => w != null && !string.IsNullOrWhiteSpace(w.Name))
                 .Select(w => w.Name.Trim()).ToList() ?? new List<string>();
@@ -129,6 +137,43 @@ namespace ImmersiveAI.Core.Weddings
                     : "Of the night that followed I know nothing, nor should I — that belongs to the two of them alone.");
             }
             return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// How old the two of them were on the day, and how long ago the day is — the anchor that
+        /// keeps a wedding told years later from being told about the people they are now. Empty
+        /// when the record kept no ages (written before 2026.08.15) and the day is recent enough
+        /// that nothing needs saying.
+        /// </summary>
+        public static string TheirYearsThatDay(WeddingRecord record, double yearsSince)
+        {
+            if (record == null) return string.Empty;
+            var sb = new StringBuilder();
+
+            if (record.SpouseAge > 0 || record.PlayerAge > 0)
+            {
+                sb.Append("On that day ");
+                if (record.PlayerAge > 0 && record.SpouseAge > 0)
+                    sb.Append(Name(record.PlayerName)).Append(" was about ").Append(record.PlayerAge)
+                      .Append(" and ").Append(Name(record.SpouseName)).Append(" about ").Append(record.SpouseAge);
+                else if (record.PlayerAge > 0)
+                    sb.Append(Name(record.PlayerName)).Append(" was about ").Append(record.PlayerAge);
+                else
+                    sb.Append(Name(record.SpouseName)).Append(" was about ").Append(record.SpouseAge);
+                sb.Append('.');
+            }
+
+            int years = (int)Math.Floor(yearsSince);
+            if (years >= 1)
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                // A statement, never an instruction: the fact that they were younger then is enough
+                // to keep a retelling from dressing the day in the faces they wear now.
+                sb.Append(years == 1
+                    ? "That was a year ago."
+                    : $"That was some {years} years ago, and they were younger then than they are now.");
+            }
+            return sb.ToString();
         }
 
         /// <summary>One line of the roll, when a soul has stood at more than one wedding.</summary>
@@ -188,6 +233,10 @@ namespace ImmersiveAI.Core.Weddings
             public string PlayerName = string.Empty;
             /// <summary>"woman" / "man".</summary>
             public string PlayerGenderWord = string.Empty;
+            /// <summary>Their age on the day. The bride's was always given and the groom's never was
+            /// (fixed 2026.08.15) — which left the chronicler free to imagine one, and an account
+            /// read back twenty years later had nothing in it to say otherwise.</summary>
+            public int PlayerAge;
             /// <summary>The player's standing in the world, in a phrase.</summary>
             public string PlayerStanding = string.Empty;
 
@@ -351,6 +400,7 @@ namespace ImmersiveAI.Core.Weddings
             var groom = new StringBuilder("- ");
             groom.Append(Name(facts.PlayerName));
             if (!string.IsNullOrWhiteSpace(facts.PlayerGenderWord)) groom.Append(" — ").Append(facts.PlayerGenderWord.Trim());
+            if (facts.PlayerAge > 0) groom.Append(", about ").Append(facts.PlayerAge);
             if (!string.IsNullOrWhiteSpace(facts.PlayerStanding)) groom.Append(", ").Append(facts.PlayerStanding.Trim().TrimEnd('.'));
             groom.Append(". They are the one being wed this day.");
             sb.AppendLine(groom.ToString());

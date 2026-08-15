@@ -166,10 +166,12 @@ namespace ImmersiveAI
                 MotherId = Safe(() => mother.StringId, string.Empty),
                 MotherName = Safe(() => mother.Name?.ToString() ?? "she", "she"),
                 MotherIsPlayer = playerIsMother,
+                MotherAge = Safe(() => (int)mother.Age, 0),
 
                 FatherId = Safe(() => father?.StringId ?? string.Empty, string.Empty),
                 FatherName = Safe(() => father?.Name?.ToString() ?? string.Empty, string.Empty),
                 FatherIsPlayer = father != null && father == player,
+                FatherAge = Safe(() => (int)(father?.Age ?? 0f), 0),
 
                 StillbornCount = Math.Max(0, stillbornCount),
                 PlayerWasThere = Safe(() => WasPresentAt(player, mother), false),
@@ -278,7 +280,12 @@ namespace ImmersiveAI
             }
             catch { }
 
-            try { facts.MotherAge = (int)mother.Age; } catch { }
+            // Both off the RECORD, not the live heroes: a feast bought a month later, or an account
+            // retried, must still be told at the age the day itself held.
+            facts.MotherAge = record.MotherAge > 0 ? record.MotherAge : Safe(() => (int)mother.Age, 0);
+            facts.FatherAge = record.FatherAge > 0
+                ? record.FatherAge
+                : Safe(() => (int)(FindAliveHero(record.FatherId)?.Age ?? 0f), 0);
             try
             {
                 // The persona sheet is the NPC parent's; when the player is the mother there is no

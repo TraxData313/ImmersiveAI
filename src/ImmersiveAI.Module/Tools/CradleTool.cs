@@ -80,7 +80,8 @@ namespace ImmersiveAI.Tools
             sb.AppendLine(mine
                 ? "It returns to me whole, as though it were happening again — my own child:"
                 : "It returns to me whole, as the day itself:");
-            sb.AppendLine(BirthText.FullAccount(record, includeHour: mine, asMother: hers));
+            sb.AppendLine(BirthText.FullAccount(record, includeHour: mine, asMother: hers,
+                CalradiaYears.Since(record.GameDay)));
 
             if (lived.Count > 1)
             {
