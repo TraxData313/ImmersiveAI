@@ -1,4 +1,6 @@
 using TaleWorlds.CampaignSystem.ViewModelCollection.Map.MapNotificationTypes;
+using TaleWorlds.Core;
+using TaleWorlds.Core.ViewModelCollection.ImageIdentifiers;
 using TaleWorlds.Library;
 
 namespace ImmersiveAI.UI
@@ -20,11 +22,55 @@ namespace ImmersiveAI.UI
     {
         private bool _inspected;
         private bool _lapsed;
+        private ImageIdentifierVM? _characterImage;
+        private bool _hasCharacterImage;
+
+        /// <summary>Her live portrait, drawn inside the notice's circle by the marked block in our
+        /// MapNotificationItem override — the same widget the reach-out and letter notices have
+        /// used since they shipped. Without it the circle drew bare (2026.08.15, Anton's
+        /// screenshot: a flat magenta disc where a face belongs).</summary>
+        [DataSourceProperty]
+        public ImageIdentifierVM? CharacterImage
+        {
+            get => _characterImage;
+            set
+            {
+                if (value != _characterImage)
+                {
+                    _characterImage = value;
+                    OnPropertyChangedWithValue(value, "CharacterImage");
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool HasCharacterImage
+        {
+            get => _hasCharacterImage;
+            set
+            {
+                if (value != _hasCharacterImage)
+                {
+                    _hasCharacterImage = value;
+                    OnPropertyChangedWithValue(value, "HasCharacterImage");
+                }
+            }
+        }
 
         public ImmersiveNightNotificationItemVM(ImmersiveNightMapNotification data)
             : base(data)
         {
             base.NotificationIdentifier = "quest";
+
+            try
+            {
+                if (data.Woman?.CharacterObject != null)
+                {
+                    CharacterImage = new CharacterImageIdentifierVM(Portraits.DarkCode(data.Woman.CharacterObject));
+                    HasCharacterImage = true;
+                }
+            }
+            catch { /* the quest-scroll base icon stands in, as it does for its siblings */ }
 
             _onInspect = () =>
             {

@@ -92,7 +92,45 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: your children live in the hearth window (H) under their mother's name — the hour first, then the feast, kept there for good.
 - A child who does not live is recorded and grieved, never feasted and never written up.
 
+### Doors, and what it costs to walk through one
+- New: a wife's or a lover's door can be **shut against you** — and when it is, she has written down why, in her own words, and what would answer it. You can read both.
+- Nothing opens it but her own judgment. There is no apology button, no price, and no timer: you talk to her, and if what you say truly reaches her she lays her own reason to rest — or she does not.
+- She can also strike one out that proved to be nothing, reword one that changed shape, or take back up one she thought was answered and was not.
+- Her body's own season is still her season, and is never treated as a grievance.
+- Sometimes there is nothing written at all and the door is simply shut. She will tell you that plainly rather than invent a reason, because she is not going to manufacture one to explain herself.
+- New: when a door is shut against you, the evening offers one more thing — **"Go to her anyway."** She will not refuse you. She will not welcome you either.
+- Nothing is ever written of such a night: no gift, no name, no account. There is nothing to tell, and that is the telling. She keeps one flat line about it and nothing else.
+- Each one makes the way back longer, in her own words, whether or not you ever speak to her again. It is never offered during her season, and you can turn the whole option out of your game in the settings.
+- New: when she learns something — that you were elsewhere, that another woman is yours now — it is the loudest thing in her for about a day and a half, and she will cross a room or write a letter to say something about it. Once. After that comes the quiet, which is worse.
+
+### Children, and whose they are
+- New: a child born to a woman who is not your wife asks you a question the day it comes — **own it before the world with a feast, own it quietly, or say nothing at all.**
+- The child is yours by blood either way; the game's own records never change. What changes is what the world is allowed to say — and in this age, a child a man has not owned is not counted his, whatever the whole town privately knows.
+- A child you have not owned is spoken of only as its mother's. That is what makes owning one late so heavy: it is not a name, it is a taking-in, in front of everyone who spent years not saying it.
+- New: **you can still give the name, at any age** — from the "Between us" page of the child's mother.
+- New: every child now keeps its **own memory from the day it is born** — where it was born, who its parents are, and whether anything was said of it. So when it grows up and first speaks to you, it already knows who it is. Nobody briefs it. And the silence is recorded too.
+- A child is never given its mother's own account of the hour. It gets the facts of its day; her voice stays hers.
+
+### One door, many rooms
+- Changed: the little button under someone's name no longer changes its name. It says **"Between us"**, always, and the page behind it holds everything that is between you: what stands unanswered, where you stand, the road, your wedding day, your children, and what is still owed to one of them.
+- Fixed: the evening's "where will you sleep tonight?" notice now wears her face, like every other notice in the mod. It was the only one carrying nobody at all, so the circle drew empty.
+- New: the town, castle and village menus now tell you the keys — "Speak with those you know (O)" — and carry a second door to your own hearth beside it.
+
+### The lover's road
+- New: a courtship can fork. A woman whose heart has gone deeper than any marriage asks may offer herself to you as your lover — no vow, no wedding, no house that takes her name, and no word of the two of you said before anyone. She offers it by her own hand; nothing at all is settled until you take it.
+- Your own marriage is no bar to it. A married man's acquaintance can still warm to him and come to love him — what a standing marriage now closes is the road toward a *second* wedding, not the road of a heart.
+- It asks more than a marriage does, on purpose. A wife has vows, a settlement and the world's approval holding her in place; a lover has nothing whatever but what she feels, so she has to feel a great deal more before she will say it.
+- New: a woman of another house stays under her father's roof until he is paid for losing her. He names what her going costs — anchored to the worth of the gear she stands up in, and haggled like any other bargain — and taking the gold does not reconcile him to it in the slightest.
+- A lover rides with you without being hired, and without being counted against the company you may keep. She comes for love, not wages.
+- New: what she is to you is written plainly in her own mind — that she is not your wife, that the world has a name for a woman in that place, and that what she makes of that is her own affair. Two women in the same position will not tell you the same thing about it.
+- New: everyone in the world now knows what the world holds about all this — that a woman weds, that to be first and only is honor and to be second or hidden is shame, and that a man's children are the ones he owns before everyone. It is stated as what is *held*, never as what anyone feels; where each soul stands toward it is theirs, and some of them will surprise you.
+- A lover shares the evenings, the leaks and the hearth with your wives now — including the chance of a child, which is reckoned honestly and works.
+- Both the offer and the price can travel by letter, and are put to you when the courier arrives.
+- Words alone never make it so. If she reaches for it and the world says no, you are told what she reached for and why nothing came of it — no more talk of something that quietly never happened.
+- She can end it, and so can you. What was between you is remembered afterward either way; the gold that bought her out of her house does not come back, and she does not go home.
+
 ### The nights
+- New: before a night you have laid something out for, you are asked in your own words whether you have anything in mind for it — a place, an hour, something you mean to say or to do — and the account of it is shaped by what you wrote. What she makes of it is still hers, and if what you wanted could not be had where you were, that is part of the night too. Leave the box empty and the evening finds its own way.
 - Changed: the more you lay out for a night with your wife, the longer and more particular the account she keeps of it — and every account now tells the whole of it, not only the evening before.
 - Changed: the account reaches for different images each time, so a long marriage stops reading like one evening written over and over.
 - Changed: her roll of nights keeps the SPECIAL ones whole however old they are — the night a child began on no longer scrolls away in four days — and a run of ordinary nights gathers into one line instead of ten.

@@ -179,9 +179,10 @@ namespace ImmersiveAI.Core.Nights
             For(wifeId).LastOrDefault(n => n.Kind == NightKind.Together);
 
         /// <summary>The last night the player spent with ANYONE — what the cooldown is counted from,
-        /// since a man cannot be in two beds in one evening.</summary>
+        /// since a man cannot be in two beds in one evening. A duty night counts here and nowhere
+        /// else it is not wanted: it was still a night, and the clock does not care what it was.</summary>
         public NightRecord? LastTogetherWithAnyone() =>
-            Nights.Where(n => n != null && n.Kind == NightKind.Together)
+            Nights.Where(n => n != null && (n.Kind == NightKind.Together || n.Kind == NightKind.Duty))
                 .OrderBy(n => n.GameDay).LastOrDefault();
 
         /// <summary>Nights still owed an account, freshest first — the hourly retry's work list.</summary>
@@ -200,7 +201,8 @@ namespace ImmersiveAI.Core.Nights
             Nights.Any(n => n != null && n.Conceived && !n.Revealed
                 && string.Equals(n.WifeId, wifeId, StringComparison.Ordinal));
 
-        /// <summary>Nights owed a beat in her memory, oldest first.</summary>
+        /// <summary>Nights owed a beat in her memory, oldest first. A duty night gets its beat the
+        /// instant it happens and never passes through here — there is no writing for it to wait on.</summary>
         public IReadOnlyList<NightRecord> AwaitingBeats() =>
             Nights.Where(n => n != null && !n.BeatDone && n.Kind == NightKind.Together)
                 .OrderBy(n => n.GameDay).ToList();

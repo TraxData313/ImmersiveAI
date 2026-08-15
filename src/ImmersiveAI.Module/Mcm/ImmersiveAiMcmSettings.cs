@@ -328,10 +328,41 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool ShowConceptionOdds { get; set; } = true;
 
+        [SettingPropertyBool("Ask what you have in mind", Order = 25, RequireRestart = false,
+            HintText = "Before a night you have laid something out for, you are asked in your own words whether you have anything in mind for it - a place, an hour, something you mean to say or to do. What you write shapes the evening as far as a man can shape one; what she makes of it stays hers. Leave it empty and the night finds its own way. Never asked for a night that costs nothing, since nothing is written of those.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool AskWhatYouHaveInMind { get; set; } = true;
+
         [SettingPropertyBool("A paid night costs you the morning", Order = 24, RequireRestart = false,
             HintText = "A night you laid something out for leaves the company slow to break camp - disorganized, as after a fight. That is what the coin and the hours actually cost, and she is told of the lingering, since it was for her. Ordinary nights cost the road nothing.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool PaidNightsDisorganizeParty { get; set; } = true;
+
+        // ── The lover's road ────────────────────────────────────────────────────────
+        // The courtship road's other branch: what a heart can offer when it will never be a wedding.
+
+        [SettingPropertyBool("The lover's road", Order = 26, RequireRestart = false,
+            HintText = "A courtship may fork. A woman whose heart has gone deeper than any marriage asks may offer herself to you as your lover - no vow, no wedding, no house that takes her name, and no word of the two of you said before anyone. Your own marriage is no bar to it. Nothing binds until you seal it yourself, and a woman of another house stays under her father's roof until he is paid for losing her. Off: the road runs only where it always did, to a wedding or nowhere.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableLoversRoad { get; set; } = true;
+
+        [SettingPropertyInteger("Haggling over what her house is owed", 0, 90, "0%", Order = 27, RequireRestart = false,
+            HintText = "How far the head of a house will argue about what it costs to take a woman of his blood out of it, above or below his own reckoning of her worth. 0% means the figure does not move at all. He is being paid, not asked - the gold settles what is owed to his house and nothing else besides.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int LoverRansomHagglePercent { get; set; } = 30;
+
+        // ── The doors ───────────────────────────────────────────────────────────────
+        // A wife's or a lover's door can be shut, and the closure always carries her own words.
+
+        [SettingPropertyBool("Doors can be shut", Order = 28, RequireRestart = false,
+            HintText = "A wife's or a lover's door can be shut against you - and when it is, she has written down why, in her own words, and what would answer it. Nothing opens it but her own judgment: no coin, no apology button, no timer. You talk to her, and if what you say truly reaches her she lays her own reason to rest, or she does not. Off: the only refusal is the one the nights always had, her body's own season.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableClosedDoors { get; set; } = true;
+
+        [SettingPropertyBool("Allow \"go to her anyway\"", Order = 29, RequireRestart = false,
+            HintText = "A shut door still offers one quiet option at dusk: to go to her anyway. She does not refuse you; she performs, and the weight of it is exactly that. Nothing is written of such a night, no gift is offered and no name is kept - and each one makes the road back longer, in her own written account of it. Off and the option does not exist in your game at all. Never offered during her season, whatever this is set to.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool AllowDutyNights { get; set; } = true;
 
         [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]

@@ -76,6 +76,12 @@ namespace ImmersiveAI.Core.Initiation
         /// bit"), because who they are is already carried by the bond itself.</summary>
         public const double CompanionHearthFactor = 1.5;
 
+        /// <summary>A lover's rung, between the two (2026.08.15). Well above a companion — she has
+        /// far more reason to seek him out than a sworn sword does — and well below the wife,
+        /// because Anton's 4.5 was for the one he is WED to, and letting the fall be louder than the
+        /// marriage would invert the whole point of the batch it belongs to.</summary>
+        public const double LoverHearthFactor = 2.5;
+
         /// <summary>Days a soul rests after ANY outreach of their own (even a welcomed one) before their
         /// pull fully returns — a visit paid is a visit paid; no one knocks twice in the same afternoon.</summary>
         public const double OutreachCooldownDays = 0.75;
@@ -149,6 +155,40 @@ namespace ImmersiveAI.Core.Initiation
             double rest = Math.Min(1.0, daysSinceOutreach / patience);
             double pride = Math.Pow(UnansweredPrideFactor, unanswered);
             return rest * pride;
+        }
+
+        /// <summary>How long a fresh wound stays hot, in hours. Anton's window: the confrontation
+        /// should come while it still is one — the morning after, not next week.</summary>
+        public const double WoundFreshHours = 36.0;
+
+        /// <summary>How strongly a fresh wound moves her, at the moment she learns of it. High
+        /// enough that a bond with almost no pull of its own still crosses the room, because the
+        /// woman who most needs to say something is very often the one who has been talked to
+        /// least.</summary>
+        public const double WoundSpikeAtOnce = 0.85;
+
+        /// <summary>
+        /// THE MORNING AFTER (2026.08.15). She has just learned something — that he went to
+        /// another, that another woman is his now — and for a day and a half it is the loudest
+        /// thing in her. Then it stops being news, the ordinary damping takes back over, and what
+        /// follows is the cold silence, which the design record is quite clear is the worse
+        /// punishment anyway.
+        ///
+        /// It is a FLOOR rather than a multiplier on purpose: multiplying a near-zero pull leaves a
+        /// near-zero pull, and then the single most important moment the feature has would be
+        /// silently eaten by a quiet bond.
+        ///
+        /// THE GROUP-TOTAL LAW IS UNTOUCHED, and structurally so rather than by care: a higher pull
+        /// only pushes <see cref="UnionPull"/> nearer 1, and the day's expectation stays
+        /// rate × unionPull ≤ rate. A wounded woman does not add visits to the day; she becomes the
+        /// one whose visit it is.
+        /// </summary>
+        public static double WoundSpike(double hoursSinceWound)
+        {
+            if (hoursSinceWound < 0 || double.IsNaN(hoursSinceWound)) return 0;
+            if (hoursSinceWound >= WoundFreshHours) return 0;
+            double freshness = 1.0 - hoursSinceWound / WoundFreshHours;
+            return WoundSpikeAtOnce * freshness;
         }
 
         /// <summary>

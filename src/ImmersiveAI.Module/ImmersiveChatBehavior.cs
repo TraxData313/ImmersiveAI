@@ -188,7 +188,7 @@ namespace ImmersiveAI
         // a tally was handed in — so the preview can ask for the list without inventing one.
         private List<ToolDefinition> GatherSpokenTools(Hero npc,
             Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
-            Tools.TrothTool.BlessTally? bless = null)
+            Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
@@ -212,17 +212,26 @@ namespace ImmersiveAI
             // trunk, and the letter-answer flow — a promise or a price can be agreed in writing too).
             // The misgivings' hand rides wherever the troth's does: her own written doubts about the
             // marriage, tended by her alone (the retired matchmaker's checkable asks, unrobotted).
-            if (troth != null) { tools.Add(Tools.TrothTool.Tend); tools.Add(Tools.MisgivingTool.Tool); }
-            if (bless != null) tools.Add(Tools.TrothTool.Bless);
+            if (troth != null && troth.TrothRides) { tools.Add(Tools.TrothTool.Tend); tools.Add(Tools.MisgivingTool.Tool); }
+            // The lover's fork rides the SAME tally and its own narrow gate: only where her heart has
+            // already walked the shared trunk and gone deeper than any marriage gate asks. The two
+            // branches can ride together — a woman may be courted toward a wedding and reach for
+            // something else instead, and refusing to model that would be the mod choosing for her.
+            if (troth != null && troth.LoverRides) tools.Add(Tools.LoverTool.Offer);
+            if (bless != null) tools.Add(bless.IsRansom ? Tools.LoverTool.NamePrice : Tools.TrothTool.Bless);
+            // Her hand on the door rides wherever there is a bed to be shut out of — a wife or a
+            // lover, face to face or in writing. It is the only way anything on that list ever
+            // moves, in either direction, so it must never be quietly absent.
+            if (door != null) tools.Add(Tools.DoorTool.Tool);
             return tools;
         }
 
         private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc,
             Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null,
             Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
-            Tools.TrothTool.BlessTally? bless = null)
+            Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null)
         {
-            var tools = GatherSpokenTools(npc, bargain, troth, bless);
+            var tools = GatherSpokenTools(npc, bargain, troth, bless, door);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
@@ -233,10 +242,11 @@ namespace ImmersiveAI
             // The heart's hand and the personal hands (the bargain, the troth) are not recalls:
             // they keep at least one round even when the recall budget is zeroed out.
             bool heartRides = CanMoveHeart();
-            int rounds = (heartRides || bargain != null || troth != null || bless != null) ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
+            int rounds = (heartRides || bargain != null || troth != null || bless != null || door != null)
+                ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
-                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain, troth, bless),
+                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain, troth, bless, door),
                 rounds);
         }
 
@@ -260,8 +270,11 @@ namespace ImmersiveAI
         // Routes one tool call to its resolver, announcing the activity to the player first so the
         // wait is never silent ("remembering…", "researching…"). The heart's shift gets no notice
         // of its own — the colored relation line that follows IS the notice.
-        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null)
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null)
         {
+            if (call.Name == Tools.DoorTool.WeighWhatStands)
+                return Task.FromResult(ResolveWeighTheDoor(call, npc, door, liveMemory));
+
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
 
@@ -276,6 +289,12 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.TrothTool.BlessMarriage)
                 return Task.FromResult(ResolveBlessLay(call, npc, bless));
+
+            if (call.Name == Tools.LoverTool.OfferMyself)
+                return Task.FromResult(ResolveOfferSelf(call, npc, troth, liveMemory));
+
+            if (call.Name == Tools.LoverTool.NameHerPrice)
+                return Task.FromResult(ResolveRansomLay(call, npc, bless));
 
             NotifyActivity(npc, call);
             if (call.Name == Tools.WebWisdom.SeekWisdom)
@@ -1868,14 +1887,29 @@ namespace ImmersiveAI
             Hero? blessBride = null;
             var bless = CanBlessTroth(npc, out blessBride)
                 ? new Tools.TrothTool.BlessTally { Bride = blessBride } : null;
+            // And the same head of a house may instead be owed for a kinswoman who is leaving it
+            // for the player with no wedding in it. The two never ride together: they are opposite
+            // errands about the same woman, and the blessing is the one with a road ahead of it.
+            if (bless == null && CanNameHerPrice(npc, out var ransomKin))
+                bless = new Tools.TrothTool.BlessTally { Bride = ransomKin, IsRansom = true };
+
             // The troth's hand — and, first, the road's one-time readiness: a soul with a real
             // lived story is seeded from it ("where does my heart already stand"), and a soul on
             // the road receives her quiet asks from the matchmaker's ledger.
-            var troth = bless == null && CanTendTroth(npc) ? new Tools.TrothTool.Tally() : null;
-            if (troth != null) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
+            bool trothRides = bless == null && CanTendTroth(npc);
+            bool loverRides = bless == null && CanOfferSelf(npc);
+            var troth = (trothRides || loverRides)
+                ? new Tools.TrothTool.Tally { TrothRides = trothRides, LoverRides = loverRides } : null;
+            if (trothRides) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
+
+            // Her hand on the door — the only thing that ever moves what stands between them, in
+            // either direction. It rides beside everything else rather than instead of it: a wife
+            // may take offence and move her heart in the same breath, and so may a person.
+            var door = CanWeighTheDoor(npc) ? new Tools.DoorTool.Tally() : null;
 
             var ctx = BuildContext(npc, situationOverride, bargainRides: bargain != null,
-                trothRides: troth != null, blessBride: bless?.Bride);
+                trothRides: trothRides, blessBride: bless?.Bride,
+                loverRides: loverRides, ransom: bless?.IsRansom ?? false, doorRides: door != null);
             var memory = ctx.Memory;
 
             // The opening greeting (if any) is already a recorded turn in the loaded memory,
@@ -1886,7 +1920,7 @@ namespace ImmersiveAI
             // The live memory rides along so a mid-reply hand upon it (a misgiving set down, a
             // courtship step) lands in the same instance this turn will record into and save —
             // the end-of-exchange save can never clobber it.
-            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless).ConfigureAwait(false);
+            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless, door).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
             // How the exchange moved her heart. In the tool shape she moves it herself mid-reply
@@ -2034,6 +2068,17 @@ namespace ImmersiveAI
                             sb.Append(" · no misgivings");
                     }
                 }
+                // And the road's other branch, worn just as openly (2026.08.15). A bond the player
+                // cannot see is worse than a rail he cannot see: this one changed a life, and the
+                // line is the only place outside her own words that says so.
+                var loverLine = LoverStandingLine(npc);
+                if (!string.IsNullOrEmpty(loverLine)) sb.Append(" · ").Append(loverLine);
+
+                // And what stands between them, counted plainly, so a player can watch a spiral
+                // getting deeper without opening anything.
+                var doorLine = DoorLabelFor(npc);
+                if (!string.IsNullOrEmpty(doorLine)) sb.Append(" · ").Append(doorLine);
+
                 // Why the quiet, in a word: waiting on an answer, or simply resting after a visit paid.
                 if (known != null && known.UnansweredOutreach > 0)
                     sb.Append($" · awaits your answer ({known.UnansweredOutreach} unanswered)");
@@ -2377,10 +2422,26 @@ namespace ImmersiveAI
             // The damping multiplies AFTER the presence floor: a soul who just came knocking (or whose
             // knocks the player left unanswered) rests below it — else the floor would re-arm the very
             // repetition the damping exists to stop (the 2026.07.26 tune-down).
-            return Math.Max(floor, InitiationScorer.Pull(known.Richness, GetStanding(hero), daysSince))
+            double pull = Math.Max(floor, InitiationScorer.Pull(known.Richness, GetStanding(hero), daysSince))
                  * InitiationScorer.OutreachDamping(
                        DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach)
                  * hearth;
+
+            // AND THE MORNING AFTER (2026.08.15) rides LAST, as a floor over the damped pull, which
+            // is a deliberate exception to the paragraph above. A woman who has just learned where
+            // he was must be able to come and say so even if she reached out about something else
+            // yesterday — otherwise the single most important moment this feature has is silently
+            // eaten by ordinary bookkeeping. It is spent the instant she goes (NoteOutreach clears
+            // the stamp), so it can move her once and never twice.
+            return Math.Max(pull, WoundSpikeFor(known, nowDay));
+        }
+
+        /// <summary>How hard a fresh wound is pushing her right now; 0 when nothing is fresh. Read
+        /// off the cached index, never a file — this runs for every co-located soul, every hour.</summary>
+        private static double WoundSpikeFor(MemoryIndex.Entry known, double nowDay)
+        {
+            if (known == null || known.FreshWoundDay < 0) return 0;
+            return InitiationScorer.WoundSpike((nowDay - known.FreshWoundDay) * 24.0);
         }
 
         // Days since a remembered game-day stamp, or -1 ("never") when the stamp itself is -1/unset —
@@ -2397,7 +2458,11 @@ namespace ImmersiveAI
         // the player seeing the wife pinned to the top and then never hearing from her would be the
         // mod saying two different things about the same relationship.
 
-        /// <summary>0 = the world, 1 = the player's own household, 2 = the one they are wed to.</summary>
+        /// <summary>0 = the world, 1 = the player's own household, 2 = a lover, 3 = the one they are
+        /// wed to. The two upper rungs sort the talk screen's list — wife pinned on top, lovers
+        /// right under her (2026.08.15, the design record's own ordering) — while
+        /// <see cref="HearthFactor"/> decides what each rung is worth to the reach-out roll, and
+        /// deliberately does NOT give a lover the wife's multiplier.</summary>
         internal static int HearthRank(Hero? hero)
         {
             try
@@ -2406,7 +2471,8 @@ namespace ImmersiveAI
 
                 // NEVER a bare Spouse check: a polygamy mod parks living wives in ExSpouses, and the
                 // second wife is exactly the soul this rank exists for (see FamilyBuilder.AreWed).
-                if (Personas.FamilyBuilder.AreWed(hero, Hero.MainHero)) return 2;
+                if (Personas.FamilyBuilder.AreWed(hero, Hero.MainHero)) return 3;
+                if (IsLoverOfPlayer(hero)) return 2;
 
                 return hero.Clan != null && hero.Clan == Clan.PlayerClan ? 1 : 0;
             }
@@ -2417,11 +2483,28 @@ namespace ImmersiveAI
         /// floor included, so "even with no history" is true — and after the outreach damping, which
         /// still bites: the damping multiplies toward zero, and 4.5 × nothing is nothing. A wife who
         /// knocked an hour ago is as quiet as anyone else who did.</summary>
+        /// <summary>The rung in a word, for the developer's odds view.</summary>
+        private static string HearthWord(int rank)
+        {
+            switch (rank)
+            {
+                case 3: return "wedded to you";
+                case 2: return "yours without vows";
+                case 1: return "of your own household";
+                default: return "of the world";
+            }
+        }
+
         private static double HearthFactor(Hero? hero)
         {
             switch (HearthRank(hero))
             {
-                case 2: return InitiationScorer.SpouseHearthFactor;
+                case 3: return InitiationScorer.SpouseHearthFactor;
+                // A LOVER SITS BETWEEN THEM, and closer to the household than to the wife. Anton's
+                // number was for the one he is WED to — "she is the hearth of this mod" — and
+                // handing a lover the same 4.5 would quietly make the fall louder than the
+                // marriage, which is the opposite of everything this batch is for.
+                case 2: return InitiationScorer.LoverHearthFactor;
                 case 1: return InitiationScorer.CompanionHearthFactor;
                 default: return 1.0;
             }
@@ -3162,7 +3245,7 @@ namespace ImmersiveAI
                         (coLocated ? herePulls : awayPulls).Add(pull);
 
                         string hearthNote = hearth > 1.0
-                            ? $", {(HearthRank(hero) == 2 ? "wedded to you" : "of your own household")} (pull ×{hearth:0.0})"
+                            ? $", {HearthWord(HearthRank(hero))} (pull ×{hearth:0.0})"
                             : string.Empty;
                         string quietNote = known.UnansweredOutreach > 0
                             ? $", {known.UnansweredOutreach} outreach{(known.UnansweredOutreach == 1 ? "" : "es")} of theirs unanswered (pull damped ×{damping:0.00})"
@@ -3720,16 +3803,47 @@ namespace ImmersiveAI
         // classic windows are in use, where they really are two different windows.
         private void AddChatWindowMenus(CampaignGameStarter starter)
         {
+            // THE MENU TEACHES ITS KEYS (2026.08.15, Anton's ask). A player who found the door here
+            // has no way to learn there is a hotkey for it, and never presses one again. The key is
+            // read LIVE from config, exactly as the info overlays already do, so a rebound key is
+            // never advertised wrong. "{=!}" because the label is composed at runtime and there is
+            // no fixed string to localize.
             foreach (var menuId in new[] { "town", "castle", "village" })
             {
                 starter.AddGameMenuOption(menuId, "immersiveai_talk_screen_" + menuId,
-                    "{=ImmersiveAI_TalkScreen}Speak with those you know",
+                    "{=!}Speak with those you know" + KeyHint(_config.ChatWindowHotkey),
                     OnTalkScreenMenuCondition, _ => UI.TalkUI.Open(), false, -1, false, null);
 
                 starter.AddGameMenuOption(menuId, "immersiveai_chat_window_" + menuId,
-                    "{=ImmersiveAI_ChatWindow}Speak with those near you",
+                    "{=!}Speak with those near you" + KeyHint(_config.ChatWindowHotkey),
                     OnChatWindowMenuCondition, _ => UI.TalkUI.Open(), false, -1, false, null);
+
+                // And the second door, in the same voice: the hearth, where the nights and the
+                // children of this house are.
+                starter.AddGameMenuOption(menuId, "immersiveai_hearth_" + menuId,
+                    "{=!}Look to your own hearth" + KeyHint(_config.NightWindowHotkey),
+                    OnHearthMenuCondition, _ => UI.NightWindow.NightWindowManager.OpenWhenClear(null),
+                    false, -1, false, null);
             }
+        }
+
+        /// <summary>" (O)" — or nothing at all when no key is bound to it.</summary>
+        private static string KeyHint(string? key)
+        {
+            var k = (key ?? string.Empty).Trim();
+            return k.Length == 0 ? string.Empty : $" ({k})";
+        }
+
+        /// <summary>The hearth's own door in the settlement menu — shown on the same rules its
+        /// hotkey obeys, so the menu never offers a window the key would refuse to open.</summary>
+        private bool OnHearthMenuCondition(TaleWorlds.CampaignSystem.GameMenus.MenuCallbackArgs args)
+        {
+            try
+            {
+                args.optionLeaveType = TaleWorlds.CampaignSystem.GameMenus.GameMenuOption.LeaveType.Submenu;
+                return _config.EnableNights && _config.EnableNightWindow && WomenOfTheHearth().Count > 0;
+            }
+            catch { return false; }
         }
 
         private bool OnTalkScreenMenuCondition(TaleWorlds.CampaignSystem.GameMenus.MenuCallbackArgs args)
@@ -3768,7 +3882,8 @@ namespace ImmersiveAI
         // sceneOverride lets a background flow (an NPC reaching out) pin the exact situation it captured,
         // rather than falling back to the cached-or-rebuilt one used by an open chat.
         private ChatContext BuildContext(Hero npc, string? sceneOverride = null, bool bargainRides = false,
-            bool trothRides = false, Hero? blessBride = null)
+            bool trothRides = false, Hero? blessBride = null, bool loverRides = false, bool ransom = false,
+            bool doorRides = false)
         {
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
@@ -3807,10 +3922,36 @@ namespace ImmersiveAI
             // letter knows she is betrothed), tool or no tool.
             persona.CanTendTroth = trothRides;
             persona.CourtshipTerms = BuildRoadTerms(npc, memory);
+            // The lover's fork rides the same way: the whisper only while the hand truly rides, the
+            // SECTION on every sheet once the bond stands — a woman who is his knows she is his
+            // while writing a letter as surely as while standing in front of him.
+            persona.CanOfferSelf = loverRides;
+            persona.LoverTerms = BuildLoverTerms(npc, memory);
+            // And what stands between them, which rides every sheet where a bed exists: a woman
+            // whose door is shut knows it while writing a letter as surely as face to face.
+            persona.CanWeighTheDoor = doorRides;
+            persona.DoorTerms = BuildDoorTerms(npc, memory);
+            // And how his house is spoken of — carried by the women of it, who would all know and
+            // all have a view. Empty for a house with nothing to explain, which is most houses.
+            if (BondKindOf(npc, memory) != Core.Courtship.BondKind.None)
+                persona.PlayerHouseLine = HouseOfThePlayerLine();
+            // The air of the era, carried by everyone who breathes it. Gated on the road that makes
+            // it legible: without lovers it is decoration, and nobody should pay tokens for
+            // decoration on every reply of every conversation in the game.
+            if (_config.EnableLoversRoad && _config.EnableConversationMarriage)
+                persona.EraNorm = Core.Courtship.LoverText.TheOrderOfTheWorld;
             if (blessBride != null)
             {
-                persona.CanBlessTroth = true;
-                persona.SuitorTerms = BuildSuitorTerms(npc, blessBride);
+                if (ransom)
+                {
+                    persona.CanNamePrice = true;
+                    persona.SuitorTerms = BuildRansomTerms(npc, blessBride);
+                }
+                else
+                {
+                    persona.CanBlessTroth = true;
+                    persona.SuitorTerms = BuildSuitorTerms(npc, blessBride);
+                }
             }
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;

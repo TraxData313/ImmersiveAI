@@ -48,6 +48,17 @@ namespace ImmersiveAI.Core.Prompts
             "a hunger or a thrift that rules their table",
             "how they hope to die, when they let themselves think of it",
             "the person they failed",
+
+            // THE THREE CARDS OF THE ORDER OF THE WORLD (2026.08.15). The era holds one thing
+            // about a woman's place — first and only is honor, second or hidden is shame — and
+            // that holding is world-knowledge every soul carries. What is NOT world-knowledge is
+            // her stance toward it, and these exist so that stance is drawn rather than assumed.
+            // One norm, sixty women, no two of them saying the same thing about it: that is the
+            // whole point, and if every woman sounds alike here the mod has failed its founding
+            // rule. They are phrased for anyone, because a man has a stance on this too.
+            "how they carry the world's rules about women, wives and honor — with pride, with a private ache, or as armor",
+            "what they secretly think a person's worth is measured by, when the world says it is the house they keep",
+            "what they would give up their place in the world's good opinion for, if anything",
         };
 
         /// <summary>One face of the intensity die: how bold the spark should be, with the exact

@@ -37,6 +37,16 @@ namespace ImmersiveAI
             public int MisgivingsOpen;
             public int MisgivingsTotal;
             public bool MisgivingsWeighed;
+            /// <summary>The road's other branch as a raw int (see Core LoverBond) — read by the
+            /// bond-stats line, the sheet, and every "who else does he keep" question. It is HERE
+            /// for the same reason the courtship stage is: gathering the household otherwise means
+            /// loading every memories.json in the campaign, on every reply, for every lover's
+            /// sheet — sixty file reads to answer a question the index already stamps.</summary>
+            public int LoverBond;
+            /// <summary>The day she learned something that wounded her; -1 = nothing fresh. Here
+            /// rather than in the file because the HOURLY reach-out roll reads it for every
+            /// co-located soul, which is exactly the loop that must never open a file.</summary>
+            public double FreshWoundDay = -1;
             public DateTime StampUtc;
             public long Length;
         }
@@ -77,6 +87,8 @@ namespace ImmersiveAI
                     MisgivingsOpen = Core.Courtship.CourtshipMisgivings.OpenCount(memory.CourtshipMisgivings),
                     MisgivingsTotal = Core.Courtship.CourtshipMisgivings.TotalCount(memory.CourtshipMisgivings),
                     MisgivingsWeighed = memory.MisgivingsWeighed,
+                    LoverBond = (int)memory.LoverBond,
+                    FreshWoundDay = memory.FreshWoundDay,
                     StampUtc = info.LastWriteTimeUtc,
                     Length = info.Length,
                 };

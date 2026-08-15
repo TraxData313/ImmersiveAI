@@ -107,7 +107,10 @@ namespace ImmersiveAI
             if (!(_client is IToolChatClient)) return false;
             try
             {
-                return TrothBlockReason(npc, forWedding: false) == TrothBlock.None
+                // "May this hand ride at all" is the trunk's question, so it is asked as the trunk:
+                // whether a married player's acquaintance may take one more step of feeling. What
+                // is reached for is judged again, properly, in the resolver.
+                return TrothBlockReason(npc, forWedding: false, _config, forHand: false) == TrothBlock.None
                     && (byLetter || IsCoLocated(npc));
             }
             catch { return false; }
@@ -187,7 +190,12 @@ namespace ImmersiveAI
         // The world's own law over the pair — vanilla's own suitability where it can speak (nobles),
         // our matching checks where vanilla has no words (companion brides). forWedding adds the
         // legs only a wedding needs; the courtship road itself may be walked by an unhired wanderer.
-        private static TrothBlock TrothBlockReason(Hero npc, bool forWedding, ModConfig? config = null)
+        /// <param name="forHand">Whether what is being reached for is ABOUT marriage — readiness,
+        /// the betrothal, the wedding, a blessing. Defaults true, so every caller written before
+        /// 2026.08.15 keeps exactly the behaviour it had. Only the trunk's own feeling-steps pass
+        /// false, and only that lets the wall below stand where it belongs.</param>
+        private static TrothBlock TrothBlockReason(Hero npc, bool forWedding, ModConfig? config = null,
+            bool forHand = true)
         {
             try
             {
@@ -199,7 +207,22 @@ namespace ImmersiveAI
                 if (npc.Spouse != null) return TrothBlock.NotFree;
                 // The player's own marriage bars a new road only in a monogamous world — with a
                 // polygamy mod (Marry Anyone) loaded, the road opens and the model stays the judge.
-                if (player.Spouse != null && !PolygamyLoose()) return TrothBlock.NotFree;
+                //
+                // AND SINCE 2026.08.15 IT BARS ONLY WHAT IS ABOUT MARRIAGE. With the lover's road
+                // open, the trunk — warmth, then love — may be walked by a married man's
+                // acquaintance, because the trunk is nothing but feelings and a feeling has never
+                // needed anyone's leave; the road's own comment has said "the heart is free, the
+                // HAND has rails" since the day it was written. The wall now stands at readiness,
+                // which is the first rung that speaks of a hand at all. Without this the whole
+                // post-marriage batch was unreachable by the one player it exists for: no new
+                // courtship could start, so no heart could reach the fork, so nobody could ever be
+                // offered anything. Gated on the feature, so a game with it turned off behaves
+                // exactly as it did before.
+                if (player.Spouse != null && !PolygamyLoose())
+                {
+                    bool loversOpen = cfg.EnableLoversRoad && cfg.EnableConversationMarriage;
+                    if (forHand || !loversOpen) return TrothBlock.NotFree;
+                }
                 if (npc.IsChild || npc.Age < 18f || player.Age < 18f) return TrothBlock.TooYoung;
                 if (npc.IsNotable || npc.IsMinorFactionHero || npc.IsTemplate) return TrothBlock.NotForMarriage;
 
@@ -357,6 +380,10 @@ namespace ImmersiveAI
                 // A soul already wed (to anyone — vanilla barter, another mod, the world's own
                 // turnings) wears no courtship section: the kin lines carry the marriage.
                 if (npc?.Spouse != null) return string.Empty;
+                // Nor does one who took the other branch: this section would go on telling her she
+                // is walking toward a wedding, while her own lover's section says plainly that
+                // there is no wedding in it. One sheet, one truth (2026.08.15).
+                if (memory.LoverBond == LoverBond.Lover) return string.Empty;
 
                 var misgivings = memory.CourtshipMisgivings
                     .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text))
@@ -452,6 +479,15 @@ namespace ImmersiveAI
 
                 if (move == "apart")
                 {
+                    // THE BOND STEPS BACK FIRST (2026.08.15). If she is his without vows, that is
+                    // the deepest thing standing between them, and a step back is a step back from
+                    // THAT — not from a courtship stage underneath it, which would leave her
+                    // simultaneously cooled and still his, and be no truthful state at all. One
+                    // step and it is over, because there was never anything holding it; her own
+                    // tool description tells her as much before she can reach for this.
+                    if (memory.LoverBond == LoverBond.Lover)
+                        return EndBondByHerHand(npc, memory, troth, word);
+
                     if (stage <= CourtshipStage.None)
                         return "There is no road between us to step back from; my heart stands where it always stood.";
                     if (stage >= CourtshipStage.Wed)
@@ -487,7 +523,10 @@ namespace ImmersiveAI
                     return herWords + " " + CourtshipText.WordsDoNotWed;
                 }
 
-                var block = TrothBlockReason(npc, forWedding: target == CourtshipStage.Wed, _config);
+                // Readiness is the first rung that speaks of a hand, so it is the first that a
+                // standing marriage of the player's own may bar.
+                var block = TrothBlockReason(npc, forWedding: target == CourtshipStage.Wed, _config,
+                    forHand: target >= CourtshipStage.Ready);
                 if (block != TrothBlock.None)
                     return Refused("The world stands in the way: " + TrothBlockForNpc(block, npc),
                         TrothBlockForPlayer(block, npc));
@@ -1008,6 +1047,20 @@ namespace ImmersiveAI
                     case "betrothal":
                         ShowBetrothalInquiry(npc, letter.LaidWord);
                         break;
+                    case "lover":
+                        ShowLoverInquiry(npc, letter.LaidWord);
+                        break;
+                    case "ransom":
+                        var kin = FindAliveHero(letter.LaidBrideId);
+                        if (kin == null) break;
+                        ShowRansomInquiry(npc, new Tools.TrothTool.BlessTally
+                        {
+                            Laid = true,
+                            Price = letter.LaidPrice,
+                            Bride = kin,
+                            IsRansom = true,
+                        });
+                        break;
                     case "blessing":
                         var bride = FindAliveHero(letter.LaidBrideId);
                         if (bride == null) break;
@@ -1029,10 +1082,14 @@ namespace ImmersiveAI
             try
             {
                 if (outcome.Bless != null && outcome.Bless.Laid)
-                    ShowBlessingInquiry(npc, outcome.Bless);
+                {
+                    if (outcome.Bless.IsRansom) ShowRansomInquiry(npc, outcome.Bless);
+                    else ShowBlessingInquiry(npc, outcome.Bless);
+                }
                 if (outcome.Troth == null) return;
                 if (outcome.Troth.LaidBetrothal) ShowBetrothalInquiry(npc, outcome.Troth.Word);
                 else if (outcome.Troth.LaidWedding) ShowWeddingInquiry(npc);
+                else if (outcome.Troth.LaidLoverBond) ShowLoverInquiry(npc, outcome.Troth.Word);
             }
             catch (Exception ex) { ModLog.Error("presenting the troth", ex); }
         }
@@ -1581,21 +1638,135 @@ namespace ImmersiveAI
         /// 2026.08.09): the misgivings while she is deciding, then her kin's blessing to be sought,
         /// then the days of preparation counting down, then the wedding itself to be paid for and
         /// sealed — and once wed, the day itself, kept forever.</summary>
-        internal enum RoadPageKind { None, Misgivings, Blessing, Preparations, Wedding, WeddingDay }
+        internal enum RoadPageKind { None, Misgivings, Blessing, Preparations, Wedding, WeddingDay, BetweenUs }
 
         internal sealed class RoadPage
         {
             public RoadPageKind Kind = RoadPageKind.None;
-            /// <summary>The button's own words ("Misgivings 2/4", "Preparations 1/3", "Wed Sibylla").</summary>
+            /// <summary>The button's own words. Since 2026.08.15 this is ALWAYS "Between us" — see
+            /// <see cref="RoadPageFor"/>. The stage-specific labels live on inside the page.</summary>
             public string Label = string.Empty;
             /// <summary>The hover text — this is where the player is TOLD what to do next.</summary>
             public string Hint = string.Empty;
             public string Title = string.Empty;
             public string Body = string.Empty;
+            /// <summary>An act the page offers, when it offers one ("Give the child your name",
+            /// "Choose the wedding day"). Empty means the page is only something to read.</summary>
+            public string ActionLabel = string.Empty;
+            /// <summary>Who the act is about, when it is not the soul whose page this is — the
+            /// child being owned, rather than its mother.</summary>
+            public Hero? ActionSubject;
         }
 
-        /// <summary>The whole road in one call, in the order the stages actually come.</summary>
+        /// <summary>
+        /// ONE DOOR, MANY ROOMS (2026.08.15, Anton's design). The little button under a soul's name
+        /// used to morph — Misgivings 2/4, then Our wedding day, then Our children — and that
+        /// pinched us exactly once and memorably: the label went on saying "Our wedding day" over a
+        /// page of children, because the widget could not hold the truth. So the LABEL never changes
+        /// again and the PAGE adapts, which is the right way round.
+        ///
+        /// The page is composed rather than chosen: whatever the road's own stage has to say, plus
+        /// what stands between them, plus what is still owed to a child. Sections appear only when
+        /// they have something to say, and when nothing does there is no button at all.
+        /// </summary>
         internal static RoadPage? RoadPageFor(Hero npc)
+        {
+            try
+            {
+                var self = Current;
+                if (self == null || npc == null) return null;
+
+                var page = RoadStagePage(npc);
+                var sb = new StringBuilder();
+                var hint = new StringBuilder();
+
+                // WHAT IS UNSAID comes FIRST, always. A shut door is the most present fact between
+                // two people and the one thing a player most needs to be able to read.
+                var doorBody = DoorPageFor(npc);
+                if (!string.IsNullOrWhiteSpace(doorBody))
+                {
+                    sb.AppendLine(doorBody.Trim());
+                    sb.AppendLine();
+                    hint.Append("Something of theirs stands unanswered between you. ");
+                }
+
+                // WHERE WE STAND — what they are to you outside the world's ceremonies.
+                var lover = LoverStandingLine(npc);
+                if (!string.IsNullOrEmpty(lover))
+                {
+                    sb.AppendLine("Where you stand: " + Upper(lover) + ".");
+                    sb.AppendLine();
+                }
+
+                // OUR DAYS — whatever the road's own stage was already saying.
+                if (page != null && !string.IsNullOrWhiteSpace(page.Body))
+                {
+                    sb.AppendLine(page.Body.Trim());
+                    sb.AppendLine();
+                }
+
+                // AND WHAT IS STILL OWED to a child of theirs.
+                var owed = ChildrenAwaitingTheNameBy(npc);
+                if (owed.Count > 0)
+                {
+                    var names = string.Join(", ", owed.Select(c => c.Name?.ToString() ?? "the child"));
+                    sb.AppendLine($"You have never owned {names} before the world. The child is yours by blood and "
+                                + "always will be; what has not been said is that it is yours. Until it is, the world "
+                                + "speaks of the child as its mother's and of nothing else.");
+                    sb.AppendLine();
+                    hint.Append("A child of theirs is still waiting on your name. ");
+                }
+
+                var body = sb.ToString().TrimEnd();
+                if (body.Length == 0) return null;
+
+                if (page != null && !string.IsNullOrWhiteSpace(page.Hint)) hint.Append(page.Hint);
+                if (hint.Length == 0) hint.Append("Everything that stands between the two of you, in their own words and yours.");
+
+                // THE PRESS ALWAYS OPENS THE PAGE (self-review, 2026.08.15). The first cut kept the
+                // stage's own kind so the old click-routing still fired — which meant a WED soul
+                // went straight to the wedding view and the composed page was never seen at all.
+                // Wives are exactly who has doors, so the doors were invisible to precisely the
+                // people who have them. The stage's own DOOR is not lost: it moved into the page as
+                // its action, which is the better shape anyway — you read what you are about to do.
+                var stageAction = page?.Kind == RoadPageKind.Wedding ? "Choose the wedding day"
+                    : page?.Kind == RoadPageKind.WeddingDay ? "See the day itself"
+                    : string.Empty;
+
+                return new RoadPage
+                {
+                    Kind = page?.Kind ?? RoadPageKind.BetweenUs,
+                    Label = "Between us",
+                    Title = $"Between you and {npc.Name}",
+                    Body = body,
+                    Hint = hint.ToString().Trim(),
+                    // A child waiting on a name outranks the stage's own act: it is the rarer and
+                    // heavier of the two, and the stage's door comes back the moment it is given.
+                    ActionLabel = owed.Count > 0
+                        ? (owed.Count == 1 ? $"Give {owed[0].Name} your name" : "Give them your name")
+                        : stageAction,
+                    ActionSubject = owed.FirstOrDefault(),
+                };
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Children of THIS soul's that the player has never owned before the world.</summary>
+        private static List<Hero> ChildrenAwaitingTheNameBy(Hero mother)
+        {
+            try
+            {
+                if (mother == null) return new List<Hero>();
+                return ChildrenAwaitingTheName()
+                    .Where(c => c != null && c.Mother == mother)
+                    .ToList();
+            }
+            catch { return new List<Hero>(); }
+        }
+
+        /// <summary>The road's own stage in one call, in the order the stages actually come. Composed
+        /// into the one door by <see cref="RoadPageFor"/>.</summary>
+        private static RoadPage? RoadStagePage(Hero npc)
         {
             try
             {

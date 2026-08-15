@@ -722,22 +722,35 @@ namespace ImmersiveAI
                 Hero? blessBride = null;
                 var bless = CanBlessTroth(npc, out blessBride, byLetter: true)
                     ? new Tools.TrothTool.BlessTally { Bride = blessBride, ByLetter = true } : null;
-                var troth = bless == null && CanTendTroth(npc, byLetter: true)
-                    ? new Tools.TrothTool.Tally { ByLetter = true } : null;
+                // A head of house may instead be owed for a kinswoman leaving it — and by letter is
+                // exactly where such a thing would be settled, since he is rarely where the player is.
+                if (bless == null && CanNameHerPrice(npc, out var ransomKin, byLetter: true))
+                    bless = new Tools.TrothTool.BlessTally { Bride = ransomKin, IsRansom = true, ByLetter = true };
+
+                bool trothRides = bless == null && CanTendTroth(npc, byLetter: true);
+                bool loverRides = bless == null && CanOfferSelf(npc, byLetter: true);
+                var troth = (trothRides || loverRides)
+                    ? new Tools.TrothTool.Tally { ByLetter = true, TrothRides = trothRides, LoverRides = loverRides }
+                    : null;
                 var bargain = bless == null && troth == null && CanStrikeBargain(npc, byLetter: true)
                     ? new Tools.BargainTool.Tally { ByLetter = true } : null;
-                if (troth != null) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
+                // A woman may take offence in writing, and may certainly forgive in writing. The
+                // notices stay quiet until the courier arrives; the door itself moves at once.
+                var door = CanWeighTheDoor(npc, byLetter: true)
+                    ? new Tools.DoorTool.Tally { ByLetter = true } : null;
+                if (trothRides) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
                 // The reply flow has grown stages (spark, desire, seeding, asks, the tool-looped
                 // compose) — refresh the watchdog so a legitimate slow run is never mistaken for a
                 // lost one and doubled (review find, 2026.08.08).
                 MarkLetterWorkInFlight();
 
                 var replyCtx = BuildContext(npc, situation, bargainRides: bargain != null,
-                    trothRides: troth != null, blessBride: bless?.Bride);
+                    trothRides: trothRides, blessBride: bless?.Bride,
+                    loverRides: loverRides, ransom: bless?.IsRansom ?? false, doorRides: door != null);
                 var composeLine = PromptBuilder.ComposeReplyLine(ctx.PlayerName);
                 var composeMsgs = _promptBuilder.BuildInnerPrompt(
                     replyCtx.Persona, replyCtx.Memory, replyCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
-                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc, null, replyCtx.Memory, bargain, troth, bless).ConfigureAwait(false);
+                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc, null, replyCtx.Memory, bargain, troth, bless, door).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
 
                 // An invited answer, not an outreach — but it still rests them (no spontaneous letter
@@ -753,13 +766,18 @@ namespace ImmersiveAI
                         // one hand rode this reply (the exclusivity above), so nothing can be dropped.
                         if (bless != null && bless.Laid)
                         {
-                            letter.LaidKind = "blessing";
+                            letter.LaidKind = bless.IsRansom ? "ransom" : "blessing";
                             letter.LaidPrice = bless.Price;
                             letter.LaidBrideId = bless.Bride?.StringId ?? string.Empty;
                         }
                         else if (troth != null && troth.LaidBetrothal)
                         {
                             letter.LaidKind = "betrothal";
+                            letter.LaidWord = troth.Word;
+                        }
+                        else if (troth != null && troth.LaidLoverBond)
+                        {
+                            letter.LaidKind = "lover";
                             letter.LaidWord = troth.Word;
                         }
                         else if (bargain != null && bargain.Laid)

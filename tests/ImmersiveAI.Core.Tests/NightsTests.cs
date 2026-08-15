@@ -648,6 +648,62 @@ public class NightsTests
                   > prompt.IndexOf("TITLE:", StringComparison.Ordinal));
     }
 
+    // ------------------------------ what HE had in mind (2026.08.15) ------------------------------
+
+    [Fact]
+    public void ThePlayersWish_ReachesTheChronicler_AndStaysHis()
+    {
+        var facts = SomeFacts();
+        facts.PlayerWish = "I want us to spend the night under the stars, away from the walls";
+        var prompt = NightText.BuildStoryPrompt(facts);
+
+        // It arrives as a fact of the night, in his own words, marked as his.
+        Assert.Contains("What HE had in mind for this night, in his own words", prompt);
+        Assert.Contains("under the stars", prompt);
+
+        // And it arrives fenced. The first rail keeps it from being copied as prose; the second is
+        // the load-bearing one — this is the only line in the whole feature the player writes, so
+        // it is the only place he could reach past his own side of the night and script her.
+        Assert.Contains("shapes the evening as far as a man can shape one", prompt);
+        Assert.Contains("he does not write her", prompt);
+        Assert.Contains("could not be had where they actually were", prompt);
+    }
+
+    [Fact]
+    public void NoWish_LeavesThePromptExactlyAsItWas()
+    {
+        // The usual night is the overwhelmingly common one, and it must not pay a syllable for a
+        // feature it is not using — neither the fact nor its rails may appear unasked.
+        var prompt = NightText.BuildStoryPrompt(SomeFacts());
+
+        Assert.DoesNotContain("had in mind", prompt);
+        Assert.DoesNotContain("he does not write her", prompt);
+    }
+
+    [Fact]
+    public void TheWishIsKeptInHisOwnKeepsake()
+    {
+        var night = new NightRecord
+        {
+            GameDay = 91.0,
+            DateText = "Autumn 14, Year 1084",
+            WifeName = "Sibylla",
+            Kind = NightKind.Together,
+            PlaceName = "the town of Onira",
+            GiftPrice = 100,
+            GiftName = "Hot water, oil, and a table for two",
+            Wish = "I want to tell her about my mother",
+            Title = "The Table Laid For Two",
+            Story = "He had the water carried up before I came in from the yard, and the room smelled of it.",
+        };
+
+        var entry = NightText.KeepsakeEntry(night);
+        Assert.Contains("What you had in mind: I want to tell her about my mother", entry);
+
+        night.Wish = string.Empty;
+        Assert.DoesNotContain("What you had in mind", NightText.KeepsakeEntry(night));
+    }
+
     // ------------------------------ what the coin buys the writing (2026.08.10) ------------------------------
 
     [Fact]

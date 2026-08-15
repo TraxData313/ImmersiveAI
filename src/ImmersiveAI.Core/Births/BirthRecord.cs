@@ -12,6 +12,25 @@ namespace ImmersiveAI.Core.Births
         public bool IsFemale { get; set; }
     }
 
+    /// <summary>
+    /// WHETHER HE HAS OWNED THE CHILD BEFORE THE WORLD (2026.08.15). Blood is the game's and is
+    /// never touched: in vanilla's eyes the child is his and hers forever, inheritance and kin
+    /// lines and all. HONOR is ours — what has been SAID, out loud, where people could hear it.
+    /// The king's bastard whom everybody knows, against the king saying it aloud.
+    ///
+    /// <see cref="NeverArose"/> is 0 ON PURPOSE, so that both a record written before this existed
+    /// and any value that fails to load land on the safe answer. A child of a marriage is his by
+    /// the fact of the marriage and is never asked about.
+    /// </summary>
+    public enum Acknowledgement
+    {
+        NeverArose = 0,
+        /// <summary>He said nothing. The world is left to talk, and it will.</summary>
+        Withheld = 1,
+        /// <summary>He owned the child before the world — quietly, or with a hall full of witnesses.</summary>
+        Given = 2,
+    }
+
     /// <summary>One soul who stood at the feast and carries the day — kept by id, like the
     /// wedding's, so the record can answer "was this asker there?" forever.</summary>
     public sealed class BirthWitness
@@ -106,6 +125,39 @@ namespace ImmersiveAI.Core.Births
         /// the mother left three weeks earlier is simply wrong.</summary>
         public string FeastPlaceName { get; set; } = string.Empty;
         public string FeastCultureName { get; set; } = string.Empty;
+
+        // ------------------------- blood is the game's, honor is ours (2026.08.15) -------------------------
+
+        /// <summary>Whether the two of them were wed on the day. Such a child is his before the
+        /// world by the fact of it and no choice ever arises. Old records load false — which is why
+        /// <see cref="IsOwnedBeforeTheWorld"/> leans on <see cref="Acknowledgement.NeverArose"/>
+        /// rather than on this, so a campaign's worth of existing children are not all quietly
+        /// disowned by an update.</summary>
+        public bool BornInMarriage { get; set; }
+
+        /// <summary>What he said before the world. See <see cref="Acknowledgement"/>.</summary>
+        public Acknowledgement Owned { get; set; } = Acknowledgement.NeverArose;
+
+        /// <summary>The day he owned the child, when it was not the day it was born — the giving of
+        /// the name, which may come at any age and is the heaviest thing on this road. -1 = never,
+        /// or on the day itself.</summary>
+        public double NameGivenDay { get; set; } = -1;
+        public string NameGivenDateText { get; set; } = string.Empty;
+
+        /// <summary>Whether the owning came LATE — years after, before everyone's eyes. It is a
+        /// different act from owning a newborn and the world remembers which it was.</summary>
+        public bool NameGivenLate { get; set; }
+
+        /// <summary>
+        /// Whether the world may call this child his. True for a child of a marriage, true once he
+        /// has said so, and true for every record written before the question existed — only an
+        /// explicit withholding reads as unowned, which is the one reading that must never happen
+        /// by accident.
+        /// </summary>
+        public bool IsOwnedBeforeTheWorld => Owned != Acknowledgement.Withheld;
+
+        /// <summary>Whether this child is waiting on a name it may still be given.</summary>
+        public bool AwaitsTheName => Owned == Acknowledgement.Withheld && AnyLived;
 
         /// <summary>Part one: the hour itself, in the mother's own first person. The parents' alone.</summary>
         public string BirthAccount { get; set; } = string.Empty;

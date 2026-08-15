@@ -271,6 +271,9 @@ namespace ImmersiveAI.Core.Nights
                 case NightKind.DoorClosed:
                     return $"{span} my door was closed to him, for the custom of women was upon me.";
 
+                case NightKind.Duty:
+                    return $"{span} my door was shut, and he came to me even so, {howOften}.";
+
                 case NightKind.Alone:
                     return $"{span} he slept alone {howOften}.";
 
@@ -290,6 +293,41 @@ namespace ImmersiveAI.Core.Nights
                         : $"{span} I never saw him come in on {Spell(n)} of those nights, nor learned where he slept.";
             }
         }
+
+        // ------------------------- the duty night (2026.08.15) -------------------------
+
+        /// <summary>
+        /// WHAT THE PLAYER IS TOLD, and these three are Anton's own words, approved verbatim. They
+        /// are FIXED TEXT: never generated, never varied by a model, and above all never brightened.
+        /// The register they hold is the whole moral of the feature — the difference between what is
+        /// OWED and what was once GIVEN FREELY — and a model having a warm day would sand exactly
+        /// that off. Dealt by a stable hash from the night's own id, the ImageDeck's own discipline.
+        /// </summary>
+        public static readonly IReadOnlyList<string> DutyNightLines = new[]
+        {
+            "The duty of the marriage was kept. She said nothing.",
+            "She did not refuse you. She was turned to the wall before you rose.",
+            "What a wife owes, she gave. What she once gave unasked, she did not.",
+        };
+
+        public static string DrawDutyLine(string? seed)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (var c in seed ?? string.Empty) { hash ^= c; hash *= 16777619; }
+                hash ^= hash >> 13; hash *= 2246822519; hash ^= hash >> 16;
+                return DutyNightLines[(int)(hash % (uint)DutyNightLines.Count)];
+            }
+        }
+
+        /// <summary>
+        /// HER OWN BEAT, and the design record calls it the load-bearing piece. Short, fixed, first
+        /// person, and utterly flat. From here her own voice does the rest with no staging whatever
+        /// — which is why there must be nothing in it to perform.
+        /// </summary>
+        public static string DutyBeat(string partnerName) =>
+            $"{NightBeatMark} {Name(partnerName)} came to me this night. I did what a wife does. We did not speak of it.";
 
         /// <summary>Opens the mark left in everyone ELSE when a child becomes known. Never reword.</summary>
         public const string ChildNewsMark = "Word went round the company:";
@@ -342,8 +380,9 @@ namespace ImmersiveAI.Core.Nights
             int alone = window.Count(m => m.Kind == NightKind.Alone);
             var elsewhere = window.Where(m => m.Kind == NightKind.Elsewhere).ToList();
 
+            int dutyNights = window.Count(m => m.Kind == NightKind.Duty);
             // Nothing at all is nothing to reckon — an empty month says itself in the roll above.
-            if (together.Count == 0 && alone == 0 && elsewhere.Count == 0) return string.Empty;
+            if (together.Count == 0 && alone == 0 && elsewhere.Count == 0 && dutyNights == 0) return string.Empty;
 
             var sb = new StringBuilder();
             sb.Append("Reckoning the last ").Append(Spell(days)).Append(" days as I have known them: ");
@@ -393,7 +432,17 @@ namespace ImmersiveAI.Core.Nights
                 sb.Append('.');
             }
 
-            var begun = window.FirstOrDefault(m => m.Conceived && m.Kind == NightKind.Together);
+            // The duty nights are counted apart and never folded into "he came to me". Adding them
+            // to that tally would be the arithmetic quietly telling her they were the same thing.
+            int duty = window.Count(m => m.Kind == NightKind.Duty);
+            if (duty > 0)
+                sb.Append(" And ").Append(Times(duty))
+                  .Append(duty == 1
+                      ? " my door was shut and he came to me even so."
+                      : " my door was shut and he came to me even so.");
+
+            var begun = window.FirstOrDefault(m => m.Conceived
+                && (m.Kind == NightKind.Together || m.Kind == NightKind.Duty));
             if (begun != null)
                 sb.Append(" And on one of those nights our child was begun.");
 
@@ -428,6 +477,11 @@ namespace ImmersiveAI.Core.Nights
 
                 case NightKind.DoorClosed:
                     return $"{Upper(when)} my door was closed to him, for the custom of women was upon me.";
+
+                // Flat, and it must stay flat. There is no name, no account and no adornment for
+                // one of these — the bareness of the line IS what it has to say.
+                case NightKind.Duty:
+                    return $"{Upper(when)}{where}, my door was shut and he came to me even so.";
 
                 case NightKind.Elsewhere:
                     var other = string.IsNullOrWhiteSpace(night.OtherName) ? "another of his wives" : night.OtherName.Trim();
@@ -479,6 +533,9 @@ namespace ImmersiveAI.Core.Nights
 
             if (night.GiftPrice > 0)
                 sb.AppendLine($"Laid out for it: {night.GiftName?.Trim()} ({night.GiftPrice} denars).");
+            // His own line, kept in his own keepsake — the one thing in this file he wrote himself.
+            if (!string.IsNullOrWhiteSpace(night.Wish))
+                sb.AppendLine($"What you had in mind: {night.Wish.Trim()}");
             if (!string.IsNullOrWhiteSpace(night.SeasonWord))
                 sb.AppendLine("Her season: " + night.SeasonWord.Trim() + ".");
             if (night.Conceived)
@@ -551,6 +608,21 @@ namespace ImmersiveAI.Core.Nights
             /// <summary>What was laid out for the night, as the chronicler is told of it
             /// (<see cref="NightGifts.Tier.ChroniclerNote"/>).</summary>
             public string GiftNote = string.Empty;
+
+            /// <summary>
+            /// WHAT HE HAD IN MIND FOR IT, in his own words (2026.08.15) — the player's own line,
+            /// typed by him, in whatever tongue he types in. Optional and usually empty; when it is
+            /// there it shapes the evening, and when it could not be had where they truly were, that
+            /// too is part of the night.
+            ///
+            /// It is HIS, and the prompt says so in as many words. A wish that reaches for HER —
+            /// what she feels, what she says, what she wants — is honoured only as far as he could
+            /// have brought it about, because the founding law of the nights is that she sees what
+            /// she would see and nothing scripts the feeling. That rail lives in the prompt beside
+            /// this fact and is the reason the fact is named "what he wanted" rather than "the
+            /// night".
+            /// </summary>
+            public string PlayerWish = string.Empty;
 
             /// <summary>How long since he last came to her, in plain words; empty when unknown.</summary>
             public string SinceLastPhrase = string.Empty;
@@ -733,6 +805,21 @@ namespace ImmersiveAI.Core.Nights
             sb.AppendLine(string.IsNullOrWhiteSpace(facts.PlacePhrase)
                 ? $"- Where they truly were governs BOTH halves: the open country, and there was no room, no door, no bed — you must not invent one. The fire or the dark, the cold and what they had against it, cloaks on the ground, the horses standing near, the sky, {his} hands and her own."
                 : $"- Where they truly were governs BOTH halves: the room and its lamp, the cold or the warmth, a cup, a cloak laid aside, the door shut on the rest of the house, {his} hands and her own.");
+
+            // THE WISH IS HIS AND THE NIGHT IS HERS (2026.08.15). Two rails, and the second one is
+            // the load-bearing one: the player types this line himself, so it is the one place in
+            // the whole feature where he could reach past his own side of the night and write her.
+            // He cannot. He may bring about anything a man can bring about — the place, the hour,
+            // the thing prepared, what he says and does — and what she makes of it stays hers, which
+            // is the founding law of the nights and not a nicety. A wish the place could not hold is
+            // not quietly granted either: wanting the stars and getting a keep is its own true
+            // evening, and she would know he had wanted something.
+            if (!string.IsNullOrWhiteSpace(facts.PlayerWish))
+            {
+                sb.AppendLine("- What he had in mind is HIS, and it shapes the evening as far as a man can shape one: where they went, the hour, what was made ready, what he said and did, what he reached for. Take it as his intent and not as wording to lift.");
+                sb.AppendLine("- But he does not write her. What she feels of it, what she answers, whether it moved her the way he hoped — all of that is hers, and you set down what was truly so. If what he wanted could not be had where they actually were, then that is the night: he had meant something, and it went otherwise, and she saw that he had meant it.");
+            }
+
             sb.AppendLine("- Let what she is carry into it — her humor this day, her body's season, whatever stands between them just now. A tired night is a tired night; a night after a quarrel is that.");
             sb.AppendLine("- No sermon, no moral, no prophecy, nothing from outside their world. Do not speak of a child unless she herself would be thinking of one.");
             sb.AppendLine("- Everything above is FACTS, not phrasing. Do not lift the wording of any of it into the account; say it your own way, or leave it unsaid.");
@@ -791,6 +878,8 @@ namespace ImmersiveAI.Core.Nights
             if (!string.IsNullOrWhiteSpace(facts.GiftNote))
                 sb.AppendLine("- What he brought to it (the bare facts of it, not words to reuse): "
                             + facts.GiftNote.Trim());
+            if (!string.IsNullOrWhiteSpace(facts.PlayerWish))
+                sb.AppendLine($"- What HE had in mind for this night, in his own words: \"{Squeeze(facts.PlayerWish, 400)}\"");
             if (!string.IsNullOrWhiteSpace(facts.SinceLastPhrase))
                 sb.AppendLine($"- Since he last came to her: {facts.SinceLastPhrase.Trim().TrimEnd('.')}.");
             if (!string.IsNullOrWhiteSpace(facts.MarriedPhrase))

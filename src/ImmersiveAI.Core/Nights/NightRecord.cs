@@ -17,6 +17,17 @@ namespace ImmersiveAI.Core.Nights
         Alone = 3,
         /// <summary>I never learned where he laid his head.</summary>
         Unknown = 4,
+        /// <summary>
+        /// He came on a night my door was shut, and I did what a wife does (2026.08.15).
+        ///
+        /// Its own kind and not a <see cref="Together"/> with a flag, because EVERYTHING downstream
+        /// must branch on it and a flag gets forgotten: no gift is offered, no chronicler is ever
+        /// called, no name is kept, no ☾ card is drawn, and the roll tells it in one flat line. The
+        /// design record says the no-narrator rule here is enforced in CODE rather than in prompt
+        /// words, and this enum value is that enforcement — the story path simply cannot be reached
+        /// from here. There is nothing to tell. That IS the telling.
+        /// </summary>
+        Duty = 5,
     }
 
     /// <summary>
@@ -79,6 +90,22 @@ namespace ImmersiveAI.Core.Nights
         /// <summary>The gift in a word, kept on the record so an old night still reads right after
         /// the tiers are ever re-tuned.</summary>
         public string GiftName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// WHAT HE HAD IN MIND FOR IT, in his own words (2026.08.15, Anton's design — "I want us to
+        /// spend the night under the stars"). The coin has always bought the odds, the writing and
+        /// its length; this buys the SHAPE of it, and it is the one place in the whole feature where
+        /// the player writes rather than chooses.
+        ///
+        /// It rides on the record and not merely through to the prompt so that a night whose
+        /// chronicler answered with a 429 is asked again an hour later for the SAME night — the
+        /// images are already dealt from the id for that reason, and a wish that evaporated on the
+        /// first failure would leave him the account of an evening he did not ask for.
+        ///
+        /// It is HIS wish and never hers: what she made of it is her own, and the chronicler is told
+        /// so plainly. See <see cref="NightText.Facts.PlayerWish"/>.
+        /// </summary>
+        public string Wish { get; set; } = string.Empty;
 
         /// <summary>The name she remembers this night by; empty for a night nobody wrote down.</summary>
         public string Title { get; set; } = string.Empty;

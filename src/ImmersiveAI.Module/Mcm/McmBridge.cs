@@ -248,12 +248,14 @@ namespace ImmersiveAI.Mcm
                 s.EnableConversationHiring, s.ConversationHiringHagglePercent,
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
+                s.EnableLoversRoad, s.LoverRansomHagglePercent, s.EnableClosedDoors, s.AllowDutyNights,
                 SelectedOf(s.PersonaSparkMode),
                 s.EnableVoice, s.VoiceAutoSpeak, s.VoiceAutoCast, SelectedOf(s.VoiceDelivery),
                 SelectedOf(s.VoiceForMe),
                 s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.CloudVoiceApiKey,
                 s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightCooldownHours,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
+                s.AskWhatYouHaveInMind,
                 s.EnableNightWindow, SelectedOf(s.NightWindowHotkey),
                 s.RevertMemoriesWithSaves,
                 s.MaxRecentMemoryPercent, s.MinRecentMemoryPercentAfterCompression,
@@ -279,6 +281,7 @@ namespace ImmersiveAI.Mcm
                 c.EnableConversationHiring, c.ConversationHiringHagglePercent,
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
+                c.EnableLoversRoad, c.LoverRansomHagglePercent, c.EnableClosedDoors, c.AllowDutyNights,
                 c.PersonaSparkMode,
                 c.EnableVoice, c.VoiceAutoSpeak, c.VoiceAutoCast, c.VoiceDelivery,
                 // The castings live in the voices' own sheet, not in config.json — so the signature
@@ -288,6 +291,7 @@ namespace ImmersiveAI.Mcm
                 c.VoiceSpeakReachOuts, c.VoicePanicKey, c.CloudVoiceApiKey,
                 c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightCooldownHours,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
+                c.AskWhatYouHaveInMind,
                 c.EnableNightWindow, c.NightWindowHotkey,
                 c.RevertMemoriesWithSaves,
                 c.MaxRecentMemoryPercent, c.MinRecentMemoryPercentAfterCompression,
@@ -342,6 +346,10 @@ namespace ImmersiveAI.Mcm
             s.MarriageDowryHagglePercent = Clamp(c.MarriageDowryHagglePercent, 0, 90);
             s.CourtshipCharmSlack = Clamp(c.CourtshipCharmSlack, 0, 4);
             s.MinBetrothalDays = Clamp(c.MinBetrothalDays, 0, 30);
+            s.EnableLoversRoad = c.EnableLoversRoad;
+            s.LoverRansomHagglePercent = Clamp(c.LoverRansomHagglePercent, 0, 90);
+            s.EnableClosedDoors = c.EnableClosedDoors;
+            s.AllowDutyNights = c.AllowDutyNights;
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.EnableVoice = c.EnableVoice;
             s.VoiceAutoSpeak = c.VoiceAutoSpeak;
@@ -358,6 +366,7 @@ namespace ImmersiveAI.Mcm
             s.ConceptionRevealDelayDays = Clamp(c.ConceptionRevealDelayDays, 0, 30);
             s.ShowConceptionOdds = c.ShowConceptionOdds;
             s.PaidNightsDisorganizeParty = c.PaidNightsDisorganizeParty;
+            s.AskWhatYouHaveInMind = c.AskWhatYouHaveInMind;
             s.EnableNightWindow = c.EnableNightWindow;
             Select(s.NightWindowHotkey, c.NightWindowHotkey);
             s.RevertMemoriesWithSaves = c.RevertMemoriesWithSaves;
@@ -445,6 +454,10 @@ namespace ImmersiveAI.Mcm
             c.MarriageDowryHagglePercent = s.MarriageDowryHagglePercent;
             c.CourtshipCharmSlack = s.CourtshipCharmSlack;
             c.MinBetrothalDays = s.MinBetrothalDays;
+            c.EnableLoversRoad = s.EnableLoversRoad;
+            c.LoverRansomHagglePercent = s.LoverRansomHagglePercent;
+            c.EnableClosedDoors = s.EnableClosedDoors;
+            c.AllowDutyNights = s.AllowDutyNights;
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.EnableVoice = s.EnableVoice;
             c.VoiceAutoSpeak = s.VoiceAutoSpeak;
@@ -461,6 +474,7 @@ namespace ImmersiveAI.Mcm
             c.ConceptionRevealDelayDays = s.ConceptionRevealDelayDays;
             c.ShowConceptionOdds = s.ShowConceptionOdds;
             c.PaidNightsDisorganizeParty = s.PaidNightsDisorganizeParty;
+            c.AskWhatYouHaveInMind = s.AskWhatYouHaveInMind;
             c.EnableNightWindow = s.EnableNightWindow;
             c.NightWindowHotkey = SelectedOf(s.NightWindowHotkey) ?? c.NightWindowHotkey;
             c.RevertMemoriesWithSaves = s.RevertMemoriesWithSaves;

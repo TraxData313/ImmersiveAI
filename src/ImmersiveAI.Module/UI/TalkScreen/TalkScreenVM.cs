@@ -85,6 +85,7 @@ namespace ImmersiveAI.UI.TalkScreen
         private bool _pageIsWedding;
         private ImmersiveChatBehavior.RoadPage? _roadPage;
         private string _misgivingsButtonText = string.Empty;
+        private string _roadActionText = string.Empty;
         private string _misgivingsTitleText = string.Empty;
         private string _misgivingsBodyText = string.Empty;
         private bool _isDevShown;
@@ -724,9 +725,13 @@ namespace ImmersiveAI.UI.TalkScreen
                 MisgivingsButtonText = page.Label;
                 MisgivingsTitleText = page.Title;
                 MisgivingsBodyText = page.Body;
+                RoadActionText = page.ActionLabel;
+                OnPropertyChanged("HasRoadAction");
             }
             else
             {
+                RoadActionText = string.Empty;
+                OnPropertyChanged("HasRoadAction");
                 MisgivingsButtonText = string.Empty;
                 IsMisgivingsShown = false;
             }
@@ -1016,20 +1021,11 @@ namespace ImmersiveAI.UI.TalkScreen
             var kind = _roadPage?.Kind ?? ImmersiveChatBehavior.RoadPageKind.Misgivings;
 
             // The wedding day plays itself again before it is read (Anton, 2026.08.09).
-            if (kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay)
-            {
-                if (npc != null) ImmersiveChatBehavior.ShowWeddingViewFor(npc);
-                return;
-            }
-
-            // The wedding stage is a DOOR, not a page: it opens the choice of the day itself.
-            if (kind == ImmersiveChatBehavior.RoadPageKind.Wedding && npc != null)
-            {
-                IsMisgivingsShown = false;
-                ImmersiveChatBehavior.OpenWeddingDoorFor(npc);
-                return;
-            }
-
+            // ONE DOOR, ALWAYS THE PAGE (2026.08.15). This used to route by stage, so a wed soul
+            // went straight to the wedding view and the composed "Between us" page — which is where
+            // a shut door and its written reasons live — was never seen by the one group of people
+            // who actually have one. The stage's own act did not vanish; it is the page's action
+            // button now, which is the better shape anyway: you read it before you do it.
             IsMisgivingsShown = !IsMisgivingsShown;
         }
 
@@ -1432,6 +1428,54 @@ namespace ImmersiveAI.UI.TalkScreen
             RefreshSelectionState();
         });
         public void ExecuteDevChild() => RunDev(ImmersiveChatBehavior.DevHastenConception);
+        // Staging a household without playing forty hours (Anton's ask): the levers run the REAL
+        // seal, so they prove the machinery rather than miming it.
+        public void ExecuteDevMakeLover() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevMakeLover(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevEndLover() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevEndLover(npc);
+            RefreshSelectionState();
+        });
+        /// <summary>The one act the "Between us" page offers, when it offers one — today that is the
+        /// giving of a name to a child who has never been owned before the world. It lives INSIDE
+        /// the page rather than on the button so the player reads what they are about to do first,
+        /// and so the door itself never has to morph again.</summary>
+        public void ExecuteRoadAction()
+        {
+            var page = _roadPage;
+            if (page == null) return;
+            var npc = _selected?.Hero;
+            IsMisgivingsShown = false;
+
+            // A child waiting on a name comes first — the rarer, heavier act.
+            if (page.ActionSubject != null)
+            {
+                ImmersiveChatBehavior.DevGiveTheName(page.ActionSubject);
+                RefreshSelectionState();
+                return;
+            }
+            if (npc == null) return;
+            if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Wedding)
+                ImmersiveChatBehavior.OpenWeddingDoorFor(npc);
+            else if (page.Kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay)
+                ImmersiveChatBehavior.ShowWeddingViewFor(npc);
+            RefreshSelectionState();
+        }
+
+        public void ExecuteDevShutDoor() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevShutDoor(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevOpenDoor() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevOpenDoor(npc);
+            RefreshSelectionState();
+        });
 
         // Voice-over milestone 1 — does the game's own audio engine play a WAV of ours? Temporary.
         public void ExecuteDevTestSound() => RunDev(ImmersiveChatBehavior.DevTestSound);
@@ -1451,6 +1495,17 @@ namespace ImmersiveAI.UI.TalkScreen
             get => _messages;
             set { if (value != _messages) { _messages = value; OnPropertyChangedWithValue(value, "Messages"); } }
         }
+
+        /// <summary>The act the "Between us" page offers, if any — empty hides its button.</summary>
+        [DataSourceProperty]
+        public string RoadActionText
+        {
+            get => _roadActionText;
+            set { if (value != _roadActionText) { _roadActionText = value; OnPropertyChangedWithValue(value, "RoadActionText"); } }
+        }
+
+        [DataSourceProperty]
+        public bool HasRoadAction => !string.IsNullOrEmpty(_roadActionText);
 
         [DataSourceProperty]
         public string TitleText => "Those you know";

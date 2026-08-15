@@ -37,6 +37,23 @@ namespace ImmersiveAI.Tools
             public bool LaidBetrothal;
             public bool LaidWedding;
             public string Word = string.Empty;
+
+            // ------------------------- the lover's fork (2026.08.15) -------------------------
+            // The road forks past the trunk, and the two branches ride ONE tally because they are
+            // one road: the same gates, the same seal presentation, the same letter-borne offers.
+            // Which HANDS ride is asked separately, because their gates genuinely differ — the
+            // marriage road is barred by the player's own standing marriage and the lover's road
+            // deliberately is not, which is the entire point of the feature.
+
+            /// <summary>Whether the marriage road's hands ride this turn (tend_courtship + the
+            /// misgivings). Old callers that simply construct a Tally get the historical behaviour.</summary>
+            public bool TrothRides = true;
+            /// <summary>Whether the lover's own hand rides this turn (offer_myself).</summary>
+            public bool LoverRides;
+            /// <summary>She offered herself — presented to the player as a seal after the reply lands.</summary>
+            public bool LaidLoverBond;
+            /// <summary>She stepped away from being his. Needs no seal: it was never his to keep.</summary>
+            public bool EndedLoverBond;
             /// <summary>True when this turn is a LETTER being written, not a live talk: her heart
             /// still walks its road and a betrothal may be laid in writing (presented when the
             /// letter arrives), but a wedding day is never laid by letter — that is done face to
@@ -53,6 +70,16 @@ namespace ImmersiveAI.Tools
             /// <summary>True when the blessing is being laid in a LETTER — no notice fires at
             /// composing time (the courier's seal law), and the offer rides to arrival.</summary>
             public bool ByLetter;
+
+            /// <summary>
+            /// THE OTHER THING A HEAD OF A HOUSE MAY BE PAID FOR (2026.08.15): not his blessing on a
+            /// match, but what it costs to take a woman of his blood out of his house with no
+            /// wedding in it. Structurally the identical act — a head, a figure, a seal, gold — so
+            /// it rides this tally rather than a second one that would differ by a single flag.
+            /// Everything downstream branches on this: the tool that rides, the terms he reads, the
+            /// popup, and whether the sealing improves his standing or ruins it.
+            /// </summary>
+            public bool IsRansom;
         }
 
         public static readonly ToolDefinition Tend = new ToolDefinition(TendCourtship,
@@ -71,7 +98,11 @@ namespace ImmersiveAI.Tools
             "each other about. Until I lay the day by this very hand and they seal it by theirs, " +
             "we are not wed, and I neither say we are nor let the talk drift as though we were. " +
             "I move apart when a " +
-            "wound or a true doubt sets me back — that is always mine to do. I never speak of " +
+            "wound or a true doubt sets me back — that is always mine to do. And if I am already " +
+            "theirs without any vow between us, then moving apart is the ending of THAT, whole and " +
+            "at once: it is the deepest thing standing between us and so it is the first thing a " +
+            "step back steps back from, and there was never anything holding it but what I feel. " +
+            "I never speak of " +
             "steps, stages, or rules: my heart simply knows where it stands, and speaks as a " +
             "heart does.",
             new[]

@@ -115,6 +115,63 @@ namespace ImmersiveAI.Core.Memory
         /// <summary>The bride-price paid for the blessing, for the record's honesty.</summary>
         public int FamilyBlessingPrice { get; set; }
 
+        // ------------------------- the lover's fork (2026.08.15) -------------------------
+        // The road above forks at Devotion: one branch runs on to a wedding, the other stops here.
+        // It rides in the same file for the same reason the courtship does — the save-scoped memory
+        // snapshots rewind it with everything else, and a bond that survived a reload the player
+        // undid would be the worst kind of bug in exactly the most sensitive feature in the mod.
+        // Old files load the defaults: nothing of the kind, never bought, never begun.
+
+        /// <summary>What she is to the player outside the world's ceremonies. Old files load as None.</summary>
+        public LoverBond LoverBond { get; set; } = LoverBond.None;
+
+        /// <summary>Campaign day the bond was sealed; -1 = never. Kept through Former, because "we
+        /// were, once, for two years" is a different sentence from "we were, once, for a week".</summary>
+        public double LoverSinceDay { get; set; } = -1;
+
+        /// <summary>Campaign day it ended; -1 = it has not. Set alongside <see cref="LoverBond"/>
+        /// becoming Former.</summary>
+        public double LoverEndedDay { get; set; } = -1;
+
+        /// <summary>What her house was paid for her leaving it; 0 = never bought. Survives the end
+        /// of the bond ON PURPOSE — the gold is not returned, she did not go home, and both of them
+        /// carry that whatever else changed.</summary>
+        public int LoverRansomPaid { get; set; }
+
+        /// <summary>Whether she has ever been his, now or once. The plain question most callers
+        /// actually want.</summary>
+        public bool HasLoverHistory => LoverBond != LoverBond.None;
+
+        // ------------------------- the door (2026.08.15) -------------------------
+
+        /// <summary>
+        /// Why her door is shut, in her own words — the misgivings' model applied to the night, and
+        /// kept in the same file for the same reason: a save-scoped snapshot must rewind a wound
+        /// with everything else, or reloading past a bad evening would leave her still hurt by
+        /// something that, on that timeline, never happened.
+        ///
+        /// Written by her own hand through her own tool, and by the WORLD for a duty night — see
+        /// <see cref="Doors.DoorReasons.LayDownByTheWorld"/> for why that one exception exists.
+        /// Old files load an empty list, which is an open door.
+        /// </summary>
+        public List<Doors.DoorReason> DoorReasons { get; set; } = new List<Doors.DoorReason>();
+
+        /// <summary>
+        /// The campaign day she LEARNED something that wounded her — he went to another, another
+        /// woman is his now. -1 = nothing fresh. For a day and a half it is the loudest thing in
+        /// her and she will cross a room or write a letter to say so
+        /// (<see cref="Initiation.InitiationScorer.WoundSpike"/>); after that it is simply true, and
+        /// the cold quiet takes over.
+        ///
+        /// ONE SPIKE PER WOUND, and this stamp is how: it is cleared the moment she acts on it, so
+        /// a wound cannot keep producing visits for a day and a half. Nothing here decides what she
+        /// FEELS or whether she raises it — only whether she is moved to come.
+        /// </summary>
+        public double FreshWoundDay { get; set; } = -1;
+
+        /// <summary>She has said her piece, or written it. The wound stops being news.</summary>
+        public void NoteWoundSpoken() => FreshWoundDay = -1;
+
         public void AddTurn(ConversationTurn turn)
         {
             if (turn == null) throw new ArgumentNullException(nameof(turn));
@@ -133,6 +190,11 @@ namespace ImmersiveAI.Core.Memory
         {
             LastOutreachGameDay = gameDay;
             UnansweredOutreachCount++;
+            // ONE SPIKE PER WOUND: she has gone to him, whatever she chose to say when she got
+            // there. Without this a single leak would keep pushing her across the room for a day
+            // and a half, and the design's own rule is that punishment is rare and heavy rather
+            // than frequent and light.
+            NoteWoundSpoken();
         }
 
         /// <summary>They weighed reaching out and let the moment pass (or answered a letter they were
@@ -141,6 +203,9 @@ namespace ImmersiveAI.Core.Memory
         public void NoteOutreachConsidered(double gameDay)
         {
             LastOutreachGameDay = gameDay;
+            // She weighed it and let it pass. That IS her answer to the wound, and she does not get
+            // asked again about the same one.
+            NoteWoundSpoken();
         }
 
         /// <summary>The player engaged outside the turn stream (met them face to face without free chat,

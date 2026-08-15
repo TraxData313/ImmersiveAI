@@ -119,5 +119,61 @@ namespace ImmersiveAI.Core.Prompts
         /// private bounds, the head-of-house bargaining mind (Core CourtshipText.SuitorTerms).
         /// Empty unless a kinswoman of his is betrothed to the player and his word is wanted.</summary>
         public string SuitorTerms { get; set; } = string.Empty;
+
+        // ------------------------- the lover's fork (2026.08.15) -------------------------
+
+        /// <summary>True when this NPC may offer herself to the player mid-reply — the courtship
+        /// road's other branch, where nothing is promised and nothing is sealed before the world
+        /// (the offer_myself tool rides along; see the game layer's LoverTool). Adds a whisper that
+        /// the offering is hers alone to make, from a love gone past all sense, and that it settles
+        /// nothing until the other side takes it by their own hand.</summary>
+        public bool CanOfferSelf { get; set; }
+
+        /// <summary>True when this NPC heads a house a woman of his blood is leaving for the player
+        /// with no wedding in it, and the name_her_price tool rides along. Adds a whisper that what
+        /// her going costs is his to name — never his lowest — and that the gold settles what is
+        /// owed to his house and nothing else besides.</summary>
+        public bool CanNamePrice { get; set; }
+
+        /// <summary>What she is to the player outside the world's ceremonies, and what the world
+        /// holds about women in that place — built by the game layer via Core LoverText.BondSection.
+        /// Rides every sheet once the bond stands or once stood, tool or no tool; empty otherwise.
+        /// It states the world's position and never her feeling about it: her stance is her own,
+        /// and if every woman sounds the same about this the mod has failed its founding rule.</summary>
+        public string LoverTerms { get; set; } = string.Empty;
+
+        // ------------------------- the door (2026.08.15) -------------------------
+
+        /// <summary>True when her own hand on the door rides this turn (the weigh_what_stands tool;
+        /// see the game layer's DoorTool). Adds a whisper that the list is hers alone, that no warm
+        /// hour opens a door while something of hers stands unanswered on it, and equally that she
+        /// does not invent a grievance to keep it shut.</summary>
+        public bool CanWeighTheDoor { get; set; }
+
+        /// <summary>Why her door is shut, in her own written words, and what she said would answer
+        /// each — built by the game layer via Core DoorText. Rides every sheet where a bed exists,
+        /// tool or no tool. Empty when there is nothing standing and nothing ever was.</summary>
+        public string DoorTerms { get; set; } = string.Empty;
+
+        /// <summary>
+        /// THE ORDER OF THE WORLD (2026.08.15) — one short passage of what the ERA holds about a
+        /// woman's place, carried by every soul who lives in it. See Core LoverText.TheOrderOfTheWorld.
+        ///
+        /// Its whole grammar is "so it is held", never "so I feel", and that is the difference
+        /// between a world and a personality mandate. Her stance toward this air is her own — her
+        /// traits, her spark, her lived story — and the spark deck carries cards for exactly that.
+        /// If every woman in a player's game sounds the same about this, the mod has failed its
+        /// founding rule, and this field is where that failure would begin.
+        /// </summary>
+        public string EraNorm { get; set; } = string.Empty;
+
+        /// <summary>
+        /// How the player's house is SPOKEN OF — which children he has owned before the world and
+        /// which he has not (Core BirthText.HouseLine). Carried only by the women of his hearth,
+        /// who would all know it and all have a view, and empty for a house with nothing to explain,
+        /// which is most houses. Blood is the game's and untouched; this is the layer of words over
+        /// it, and the layer of words is where this mod lives.
+        /// </summary>
+        public string PlayerHouseLine { get; set; } = string.Empty;
     }
 }

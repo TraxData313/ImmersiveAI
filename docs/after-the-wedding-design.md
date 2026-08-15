@@ -366,15 +366,141 @@ without playing forty hours.
 ## Build order
 
 1. **Special night intent** — tiny, felt immediately, exercises the chronicler plumbing.
+   **BUILT 2026.08.15.** `NightRecord.Wish` (persisted, so a retried night is still the night he
+   asked for) → `NightText.Facts.PlayerWish` → one fact line plus TWO rails: what he wanted shapes
+   the evening as far as a man can shape one, and *he does not write her* — what she made of it
+   stays hers, and a wish the place could not hold is its own true evening. Asked only for a night
+   that will actually be written (a wish on a plain night has nowhere to land). `AskWhatYouHaveInMind`.
 2. **The lover road** — the fork, the buyout, the father's letter, outside-the-limit joining,
    ex-lover. The heart of the batch.
+   **BUILT 2026.08.15.** Core `HeartBands` (bands derived from relation + stage, never stored;
+   the declared-stage cushion holds ONLY below Betrothed, because past the seal the fall needs the
+   number to read true) + `LoverRoad` (the fork's rails and the ransom arithmetic) + `LoverText`
+   (her sheet, the numberless refusals, `WordsDoNotBind`). `NpcMemory.LoverBond/LoverSinceDay/
+   LoverEndedDay/LoverRansomPaid`; `MemoryIndex.Entry.LoverBond` so gathering the household costs
+   no file reads. Module `ImmersiveChatBehavior.Lovers.cs` + `Tools/LoverTool.cs` (`offer_myself`,
+   `name_her_price`), riding the EXISTING troth/bless tallies via `TrothRides`/`LoverRides`/
+   `IsRansom` rather than a fourth tally threaded through every signature.
+   THREE THINGS A READER WILL WANT EXPLAINED:
+   • **The fork got its own verbs.** The doc says "a FORK, not a sibling", and it is one — the
+     trunk is still `tend_courtship`, and the fork is in the ROAD. But the destination is a
+     different ACT, and tend_courtship's description is already long and every clause of it
+     load-bearing. The hands ride only where the fork is truly reachable, so the cost is a tool
+     slot for a handful of souls, not for everyone courting.
+   • **No station gate here, deliberately.** The gate exists because marriage is an alliance
+     between houses. A lover is not an alliance, she is a scandal — so the emperor's daughter may
+     be his lover where she could never be his wife, and what she costs him instead is money and
+     her father's standing anger. The gate did not vanish; it turned into the thing it would
+     really have turned into.
+   • **The wall the player's own marriage makes had to MOVE, or the whole batch was unreachable.**
+     `TrothBlockReason` refused any new road to a married player, so no heart could ever reach the
+     fork. It now takes `forHand`: a standing marriage bars readiness and beyond (the rungs that
+     speak of a hand) and no longer bars the trunk, which is nothing but feelings. Gated on
+     `EnableLoversRoad`, so a game with the feature off behaves exactly as it did.
+   THE FATHER'S LETTER is `InviteHimToSayHisPiece` — the nights' own "this news does not wait its
+   turn" door, pointed at him the moment the gold is taken. Deliberately an INVITATION and not a
+   scripted grievance: his beat carries the fact ("the debt is settled; nothing else between us
+   is"), his own mind decides whether to write at all, and a head of a house who chooses to say
+   nothing is saying a great deal. He needs no unlocking — the beat gives him history, and the
+   relation drop RAISES his pull, since enmity pulls as hard as love.
+   STILL OWED on this item: nothing blocking. `LoverRoad.HeartHasLeft` is written and deliberately
+   uncalled — an automatic silent departure would take the choice out of her hands, which is the
+   one thing this mod does not do; it is there for the leaks (item 4) to lean on, where a thinned
+   heart plus a fresh wound is the moment she would actually act.
 3. **Doors with reasons** — the consequence engine. Without it lovers are free.
+   **BUILT 2026.08.15.** Core `Doors\` (`DoorReason` — her words AND what would answer them, which
+   is the half that makes it playable; `DoorReasons` — the misgivings' own five verbs and caps;
+   `DoorText`) + `Tools\DoorTool.cs` (`weigh_what_stands`) + `ImmersiveChatBehavior.Doors.cs`.
+   `NpcMemory.DoorReasons`; `DoorStanding` = Open / HerSeason / HerWord / Coldness.
+   FOUR THINGS WORTH KNOWING:
+   • **The verb table is NOT shared with the misgivings, and must never be.** For a misgiving
+     "close" means laying the matter to rest; for a DOOR it plainly means shutting it. Sharing
+     `CanonicalAction` would have made a woman forgive at the exact moment she meant to take
+     offence — silently, in the most sensitive feature in the mod. `DoorReasons.CanonicalDeed` has
+     its own table and its own test.
+   • **The matcher IS shared**, extracted to Core `Text\LooseMatch` unchanged: three live-probe
+     lessons live in it, the load-bearing one being that an inflected tongue must match itself.
+     Anton plays in Bulgarian; a letter-for-letter matcher makes `settle` silently do nothing there.
+   • **`SetDown` uses the STRICT matcher and `Settle` the lenient one** — asking "is this the same
+     thing again?" and "which of these did she mean?" are opposite questions. Its own test caught
+     five distinct grievances collapsing into one.
+   • **Coldness is told plainly, never dressed as a grievance she never made.** Inventing one to
+     fill the gap would be the mod speaking for her.
+4. **Leaks → the morning after.** **BUILT 2026.08.15.** `InitiationScorer.WoundSpike` +
+   `NpcMemory.FreshWoundDay` (stamped into `MemoryIndex`, because the hourly roll reads it for
+   every co-located soul). A leak lands as one flat silent beat and a 36-hour spike; the bond
+   being sealed leaks by the nights' own proximity reckoning, and learning he was elsewhere counts
+   too. The spike is a FLOOR applied AFTER the damping — a deliberate exception, documented at the
+   site: multiplying a near-zero pull leaves a near-zero pull, and the most important moment the
+   feature has would be eaten by a quiet bond. ONE SPIKE PER WOUND: `NoteOutreach` and
+   `NoteOutreachConsidered` both clear the stamp. The group-total law is untouched structurally —
+   a higher pull only pushes `UnionPull` nearer 1. **Nothing writes on her door for her**: she
+   learns it, she comes, and if she wants it written down she writes it herself. That whole loop is
+   emergent and none of it is scripted.
+5. **Duty nights + the spiral.** **BUILT 2026.08.15.** `NightKind.Duty` — its OWN kind and not a
+   flag, because the no-narrator rule is enforced by making the story path unreachable rather than
+   by prompt words: `NeedsStory`/`IsStoried`/`AwaitingBeats` all refuse it, and `GoToHerAnyway` has
+   no gift step, no wish, no chronicler call and no ☾ notice in it. Anton's three player-facing
+   lines are verbatim and fixed. The spiral is `DoorReasons.LayDownByTheWorld` — laid whether or
+   not she is in a talk, or a player farms it by not speaking to her. Offered ONLY for a door shut
+   by her word or by coldness and NEVER during her season; the automatic night never walks through
+   a shut door. Config `AllowDutyNights` removes the option from the game entirely.
+7. **Bands + the norm + muse cards.** **BUILT 2026.08.15** (see item 2 for the bands).
+   `LoverText.TheOrderOfTheWorld` rides `NpcPersona.EraNorm`, placed BEFORE the player-authored
+   block and outside it — it is background knowledge, and must never wear the frame that says
+   "this is what I hold truest", which belongs to the player's own words. Three muse cards joined
+   the spark deck for her stance toward it. NOTE a deliberate deviation: the doc asks for a
+   permanent standing line on her sheet naming the band. That was NOT built, because telling a
+   woman her feeling is thinning is scripting the feeling — the founding law. The band is spoken by
+   name where it is safe and where it actually matters: in the numberless refusal
+   (`TakeRefusal(HeartNotDeepEnough)`), and in the player's own views.
 4. **Leaks → the morning after** — the drama loop; machinery exists, this is wiring + tuning.
 5. **Duty nights + the spiral** — needs doors first.
 6. **Recognition + the child's story + recall_house / family lines.**
+   **BUILT 2026.08.15**, except `recall_house` (see below). `BirthRecord.BornInMarriage` + `Owned`
+   (`Acknowledgement`) + `NameGivenDay`/`NameGivenLate`; the three-way choice rides the existing
+   feast offer; `OwnTheChild` / `WithholdTheName` / `GiveTheNameTo`; `BirthText.HouseLine` on
+   `NpcPersona.PlayerHouseLine` for the women of the hearth; `LoverText.BondSection` takes the count
+   of her unnamed children so her craving has a concrete object.
+   THE SAFETY THAT MATTERS MOST: `Acknowledgement.NeverArose` is **0**, so an old record, a missing
+   JSON field and a failed load all land on "owned". An update that read a campaign's worth of
+   existing children as unacknowledged would be the most upsetting bug this feature could ship, and
+   it is guarded by its own test.
+   THE CHILD'S OWN STORY is `RecordChildsOwnBeginning` + `BirthText.ChildBornBeat`/`ChildNameBeat` —
+   one hand-written line each, no LLM, and the privacy fence runs one person further than the
+   tool's: a child is never handed its mother's first-person hour.
+   STILL OWED: `recall_house` (the family lines carry the public state, so this is the fuller
+   on-demand log rather than the feature itself), and the world-commentary tidings that were
+   deferred by design anyway.
 7. **Bands + the norm passage + muse cards** — can slot in beside any of the above.
 8. **Between us page**, absorbing the misgivings view.
+   **BUILT 2026.08.15.** `RoadPageFor` became a COMPOSER over the old stage chain (now
+   `RoadStagePage`): the label is permanently "Between us" and the body is assembled from what is
+   unsaid (first, always — a shut door is the most present fact between two people), where you
+   stand, the road's own stage, and what is still owed to a child. Sections appear only when they
+   have something to say; nothing at all means no button. The page gained an ACTION
+   (`RoadPage.ActionLabel`/`ActionSubject` → `ExecuteRoadAction`, one button inside the overlay) so
+   the giving of the name is reachable by players and not only by a dev lever — deliberately inside
+   the page rather than on the door, so the player reads what they are about to do and the door
+   never morphs again.
+   NOTE the click-routing was deliberately LEFT kind-based, so the wedding stage still opens the
+   wedding door exactly as it always did. That is a shipped, playtested flow and it was not worth
+   rebuilding blind at the end of a long unplaytested batch.
 9. **Hearth-as-stage + small UI debts** — a parallel track, independent of 1–8.
+   **THE SMALL DEBTS ARE BUILT (2026.08.15); THE STAGE IS NOT.**
+   Built: the purple empty circle (the evening's notice was the only one of the three carrying no
+   Hero at all, so the portrait widget had nothing to bind and the bare type circle showed —
+   `ImmersiveNightMapNotification.Woman` + the VM's `CharacterImage`, the shape its two siblings
+   have had since they shipped); the contact ordering (`HearthRank` grew a rung — 3 wed, 2 lover,
+   1 household, 0 world — with `LoverHearthFactor` 2.5 deliberately far below the wife's 4.5, since
+   letting the fall be louder than the marriage would invert the batch); and the settlement menus
+   now teach their keys and carry a second door to the hearth.
+   NOT built, and deliberately: rebuilding the hearth window as a second tableau-hosting screen.
+   It is the largest UI job in the batch, it carries the four decompile-verified tableau traps plus
+   a new one of its own (two screens over ONE shared cached scene), and its failure mode is a hard
+   native crash rather than a wrong sentence. Shipping it blind at the end of a session in which
+   nothing else has been playtested either would have been the wrong trade. It is the natural first
+   piece of the next pass.
 
 Heir choice, world commentary on bastards, the wife's kin learning, married-NPC temptation:
 all DEFERRED, deliberately, with Anton's explicit word.

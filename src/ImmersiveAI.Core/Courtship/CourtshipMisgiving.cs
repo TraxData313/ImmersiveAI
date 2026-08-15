@@ -199,20 +199,11 @@ namespace ImmersiveAI.Core.Courtship
         /// real new one is the worse mistake. The length floor keeps a stray word from vanishing
         /// into a long held line.
         /// </summary>
-        private static bool Restates(List<CourtshipMisgiving> list, string piece)
-        {
-            var p = Normalize(piece);
-            if (p.Length == 0) return true;
-            foreach (var m in list)
-            {
-                if (m == null || string.IsNullOrWhiteSpace(m.Text)) continue;
-                var t = Normalize(m.Text);
-                if (t.Length == 0) continue;
-                if (t == p) return true;
-                if (Math.Min(t.Length, p.Length) >= 12 && (t.Contains(p) || p.Contains(t))) return true;
-            }
-            return false;
-        }
+        private static bool Restates(List<CourtshipMisgiving> list, string piece) =>
+            Text.LooseMatch.Restates(
+                (list ?? new List<CourtshipMisgiving>())
+                    .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)).Select(m => m.Text),
+                piece);
 
         /// <summary>
         /// Whether the two hands came in swapped — the misgiving written into her light word, and
@@ -281,80 +272,15 @@ namespace ImmersiveAI.Core.Courtship
         /// <summary>The held misgiving that best matches a restatement of it — leniently: exact,
         /// then containment, then word-overlap above a real majority — among those passing
         /// <paramref name="among"/>. Null when nothing is close enough.</summary>
+        /// <summary>
+        /// The matching itself lives in <see cref="Text.LooseMatch"/> since 2026.08.15 — the doors
+        /// needed exactly this and a second, weaker copy of it would have been the real bug. The
+        /// behaviour is unchanged; every rule and every live-probe lesson moved with it.
+        /// </summary>
         public static CourtshipMisgiving? FindBestMatch(
-            List<CourtshipMisgiving>? list, string? query, Func<CourtshipMisgiving, bool>? among = null)
-        {
-            if (list == null || list.Count == 0 || string.IsNullOrWhiteSpace(query)) return null;
-            var pool = list.Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)
-                && (among == null || among(m))).ToList();
-            if (pool.Count == 0) return null;
-
-            var q = Normalize(query!);
-            if (q.Length == 0) return null;
-
-            foreach (var m in pool)
-                if (Normalize(m.Text) == q) return m;
-
-            foreach (var m in pool)
-            {
-                var t = Normalize(m.Text);
-                if (t.Length > 0 && (t.Contains(q) || q.Contains(t))) return m;
-            }
-
-            var qWords = Stems(q);
-            CourtshipMisgiving? best = null;
-            double bestScore = 0.34;
-            foreach (var m in pool)
-            {
-                var score = Overlap(qWords, Stems(Normalize(m.Text)));
-                if (score > bestScore) { bestScore = score; best = m; }
-            }
-            return best;
-        }
-
-        private static string Normalize(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return string.Empty;
-            var sb = new StringBuilder(s.Length);
-            foreach (var c in s.Trim().ToLowerInvariant())
-            {
-                if (char.IsLetterOrDigit(c)) sb.Append(c);
-                else if (char.IsWhiteSpace(c) && (sb.Length == 0 || sb[sb.Length - 1] != ' ')) sb.Append(' ');
-            }
-            return sb.ToString().Trim();
-        }
-
-        /// <summary>
-        /// The words of a line, each cut back to its first few letters. Crude on purpose — no
-        /// language is named and none is favored — but it is what lets an INFLECTED tongue match
-        /// itself: Anton plays in Bulgarian, where "избере" and "избереш" are the same word wearing
-        /// two endings, and word-for-word comparison called them strangers. Four letters is the
-        /// bargain: enough to keep "разлика" apart from "разум", short enough to fold an ending.
-        /// </summary>
-        private static HashSet<string> Stems(string normalized)
-        {
-            var set = new HashSet<string>();
-            foreach (var w in normalized.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
-                set.Add(w.Length <= 4 ? w : w.Substring(0, 4));
-            return set;
-        }
-
-        /// <summary>
-        /// How near two lines are. Jaccard alone punishes the honest shape of a restatement — a
-        /// short paraphrase of a long written doubt shares nearly all ITS words and still scores
-        /// low against the longer line — so a real overlap of the SHORTER line counts too, guarded
-        /// by a floor of three shared words so a two-word scrap can never sweep the list.
-        /// </summary>
-        private static double Overlap(HashSet<string> a, HashSet<string> b)
-        {
-            if (a.Count == 0 || b.Count == 0) return 0;
-            int inter = a.Count(b.Contains);
-            if (inter == 0) return 0;
-            int union = a.Count + b.Count - inter;
-            double jaccard = union == 0 ? 0 : (double)inter / union;
-            if (inter < 3) return jaccard;
-            double contained = (double)inter / Math.Min(a.Count, b.Count);
-            return contained >= 0.5 && contained > jaccard ? contained : jaccard;
-        }
+            List<CourtshipMisgiving>? list, string? query, Func<CourtshipMisgiving, bool>? among = null) =>
+            Text.LooseMatch.Best(
+                (list ?? new List<CourtshipMisgiving>()).Where(m => m != null && (among == null || among(m))),
+                m => m.Text, query);
     }
 }

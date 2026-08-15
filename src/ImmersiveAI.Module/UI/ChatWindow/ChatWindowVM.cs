@@ -819,6 +819,26 @@ namespace ImmersiveAI.UI.ChatWindow
             RefreshSelectionState();
         });
         public void ExecuteDevChild() => RunDev(ImmersiveChatBehavior.DevHastenConception);
+        public void ExecuteDevMakeLover() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevMakeLover(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevEndLover() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevEndLover(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevShutDoor() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevShutDoor(npc);
+            RefreshSelectionState();
+        });
+        public void ExecuteDevOpenDoor() => RunDev(npc =>
+        {
+            ImmersiveChatBehavior.DevOpenDoor(npc);
+            RefreshSelectionState();
+        });
 
         // The panel is deliberately SHORT (Anton, 2026.08.10): the eight levers he never reaches
         // for — reroll a spark, force a reach-out, force a letter, forge a battle, spend a night,

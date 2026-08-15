@@ -482,6 +482,43 @@ namespace ImmersiveAI
         /// unwritten.</summary>
         public bool EnableBirthChronicle { get; set; } = true;
 
+        // ------------------------------ the lover's road ------------------------------
+
+        /// <summary>
+        /// When true, the road of a courtship may fork: a woman whose heart has gone deeper than any
+        /// marriage asks may offer herself to you as your lover — no vow, no wedding, no house that
+        /// takes her name, and no word of the two of you said before anyone. Your own marriage is no
+        /// bar to it, which is the whole of the point. Nothing binds until you seal it yourself, and
+        /// a woman of another house stays under her father's roof until he is paid for losing her.
+        /// Set false and the courtship road runs only where it always did, to a wedding or nowhere.
+        /// </summary>
+        public bool EnableLoversRoad { get; set; } = true;
+
+        /// <summary>How far, in percent, the head of a house will argue about what it costs to take
+        /// a woman of his blood out of it. 0 means the figure does not move; the same rail the
+        /// hiring handshake and the bride-price already haggle on.</summary>
+        public int LoverRansomHagglePercent { get; set; } = 30;
+
+        // ------------------------------ the doors ------------------------------
+
+        /// <summary>
+        /// When true, a wife's or a lover's door can be SHUT — and when it is, she has written down
+        /// why, in her own words, and what would answer it. Nothing opens it but her own judgment:
+        /// no coin, no apology button, no timer. You talk to her, and if what you say truly reaches
+        /// her she lays her own reason to rest, or she does not. Set false and the only refusal is
+        /// the one the nights always had, her body's own season.
+        /// </summary>
+        public bool EnableClosedDoors { get; set; } = true;
+
+        /// <summary>
+        /// When true, a shut door still offers you one quiet option at dusk: to go to her anyway.
+        /// She does not refuse you; she performs, and the weight of it is exactly that. Nothing is
+        /// written of such a night, no gift is offered and no name is kept — and each one makes the
+        /// road back longer, by her own written account of it. Set false and the option does not
+        /// exist in your game at all, which some players will want. Never offered during her season.
+        /// </summary>
+        public bool AllowDutyNights { get; set; } = true;
+
         // ------------------------------ the nights ------------------------------
 
         /// <summary>When true, the nights of your marriage are yours to spend: each evening you are
@@ -569,6 +606,13 @@ namespace ImmersiveAI
         /// <summary>At most how many denars a single night may be given, of the offered gifts. Lower
         /// it to keep the grander gifts out of your game entirely.</summary>
         public int MaxNightGift { get; set; } = 1000;
+
+        /// <summary>When true, a night you have laid something out for asks you one more thing before
+        /// you go: whether you have anything in mind for it — a place, an hour, something you mean to
+        /// say or do — in your own words. What you write shapes the evening as far as a man can shape
+        /// one; what she makes of it stays hers. Leave the box empty and the night takes its own
+        /// course. Never asked for a night that costs nothing, since nothing is written of those.</summary>
+        public bool AskWhatYouHaveInMind { get; set; } = true;
 
         /// <summary>When true (and the nights are enabled), a small window of your own hearth can be
         /// opened anywhere on the map with its hotkey: your wives, where each of them stands and how
@@ -1166,6 +1210,7 @@ namespace ImmersiveAI
 
             // The nights. The hour must be an hour; the cooldown must leave a night to be a night,
             // and a day and a half is as far as it is worth stretching one.
+            LoverRansomHagglePercent = Clamp(LoverRansomHagglePercent, 0, 90);
             NightHour = Clamp(NightHour, 0, 23);
             NightCooldownHours = Clamp(NightCooldownHours, 1, 72);
             if (ConceptionChanceMultiplier < 0 || double.IsNaN(ConceptionChanceMultiplier)) ConceptionChanceMultiplier = 0;

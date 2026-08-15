@@ -1,14 +1,88 @@
 ﻿BUGS:
+- [ ] THE VOICE BUZZES ON A NIGHT ACCOUNT (Anton, 2026.08.15, reproduced twice). Pressing ♪ on the
+      ☾ night-account card ("The Jug by the Fire") plays a "buuuuu" noise where the first part
+      should be. Suspects in order: the card's body carries furniture the words never should — the
+      "[the road, 1084.04.19 02.29 (Winter 19, Year 1084)] ☾ Of that night between us: …" stamp and
+      the ☾ glyph — so SpeakableText may not be stripping THIS card's shape; or the account's
+      length trips VoiceBudget's ceiling and the runaway guard cuts mid-stream. Start at
+      ChatMessageVM.WithVoice and what body the ☾ card hands it; docs/voiceover-engine-notes.md has
+      the derail numbers.
+- [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN, not the tavern (Anton, 2026.08.15). Vanilla's
+      own Talk puts her in the tavern set; our tableau picks by culture and settlement only. SAME
+      ROOT as "change the set" below, same file: ConversationSceneBuilder.
 
 NEXT UPDATE:
+- [ ] REVIEW FINDINGS STILL OPEN (adversarial pass over the after-the-wedding batch, 2026.08.15).
+      ALL 35 RAW FINDINGS ARE IN docs/review-findings-2026-08-15.md — recovered from the run's
+      journal, with file:line and a scenario each, grouped high/medium/low. They are UNVERIFIED:
+      the verify phase (24 refuters whose job is killing false positives) died on a session limit,
+      so the run's "0 confirmed" means nothing. Ten were checked by hand and fixed the same day;
+      the five below were judged plausible; the remaining twenty have not been triaged at all.
+      A finding there is not a bug until someone reads the code.
+    - [ ] `weigh_what_stands` REVISE cannot work as wired. The resolver calls
+          `DoorReasons.Revise(list, matter, matter, opens)` — the same field as both "which one I
+          mean" and "the new wording" — so a model that sends the NEW text finds nothing and a
+          model that sends the OLD text rewrites it to itself. The tool needs a second field (the
+          misgivings' own tool has one), or revise should be dropped from the deed enum.
+    - [ ] The fresh-wound spike is read only in `CoLocatedPull`, so a wounded woman who is far away
+          never writes about it. The design says "she comes to you in the morning, or writes if
+          apart" — the letter path needs the same floor.
+    - [ ] The duty-night spiral stops biting at `DoorReasons.MaxStandingOpen` (5). After about five
+          duty nights nothing further is laid down. Commented as deliberate; the guardrail says
+          "if playtests show it farmable, deepen the closure" — so this is a tuning question to
+          settle with real play, not a bug yet.
+    - [ ] The classic chat window (the fallback) has no `RoadActionText`/`HasRoadAction` binding, so
+          the "Between us" page's action button exists only in the talk screen.
+    - [ ] A feast/owning offer that lapses past its 30-day window leaves `Owned = NeverArose`, which
+          reads as owned. That is the SAFE default and probably right — but it means silence can
+          become accidental recognition, and it should be a decision rather than an accident.
+
+- [ ] FOUR ASKS FROM THE 2026.08.15 PLAYTEST (Anton, while the batch was building):
+    - [ ] THE NIGHT'S CLOCK, by the sun instead of by the hour count. Retire the flat 24-hour
+          cooldown: availability RESETS in the late afternoon (~16h), and the manual popup comes in
+          the late evening (~22h) if the player has not gone of his own accord earlier in the day.
+          Touches NightCooldownHours / CooldownHoursLeft / IsWithinEveningWindow / _nightAskedOnDay.
+          Read the "LATE IN THE EVENING AND NOT BEFORE" and "IT IS A WINDOW OF HOURS" comments in
+          ImmersiveChatBehavior.Nights.cs first — both were hard-won and this must not undo them.
+    - [ ] CHANGE THE SET INSIDE A TOWN — talk with your men in the town, the tavern, or the keep
+          when it is open to you (and note who else is standing there). ConversationSceneBuilder,
+          which today picks a hall interior by culture alone. Pairs with the tavern bug above and
+          with the hearth-as-stage job; do them together.
+    - [ ] LET THE VOICES READ THE *ACTED* PARTS, with an MCM toggle ON by default that turns it
+          back off. Core Voices\SpeakableText is where words and gestures are told apart today;
+          the split itself is Core EmoteText's strict single-asterisk grammar.
+    - [ ] SPEAK HER ANSWER WHEN THE CHAT IS CLOSED, so it can be listened to while doing something
+          else. Today VoiceAutoSpeak only speaks into an open thread; the reply-ready notice path
+          is where a closed-window answer already lands.
+
 - [ ] THE ONE SCREEN REWORK (2026.08.14, Anton's big batch — THE PLAN LIVES IN docs/one-screen-plan.md,
       read it first; research in docs/talk-screen-research.md + docs/prompt-text-inventory.md)
     - [x] Phase 1 — THE SCREEN: built + deployed 2026.08.14, UNPLAYTESTED
     - [x] Phase 2 — THE SCROLLBACK PROMPT: built + deployed 2026.08.14, UNPLAYTESTED
     - [ ] PLAYTESTS are underway
 
-- [ ] LIFE AFTER THE WEDDING (designed with Anton 2026.08.15 — concept LOCKED, build not started;
-      THE PLAN LIVES IN docs/after-the-wedding-design.md, read its spirit section FIRST and whole)
+- [ ] LIFE AFTER THE WEDDING (designed with Anton 2026.08.15 — concept LOCKED, BUILD UNDERWAY;
+      THE PLAN LIVES IN docs/after-the-wedding-design.md, read its spirit section FIRST and whole.
+      Each item's own entry in that doc records what was built and why, as it lands.)
+    - [x] 1. Special night intent — built 2026.08.15, UNPLAYTESTED
+    - [x] 2. The lover road — built 2026.08.15, UNPLAYTESTED (Core bands + fork + text, the two
+          hands, the buyout, the father's invitation, outside-the-limit joining, ex-lover, dev
+          levers in both windows). NOTE it moved one existing wall: a married player's courtships
+          may now walk the trunk (feelings) and are barred only from readiness onward, gated on
+          EnableLoversRoad — without that the whole batch was unreachable.
+    - [x] 3. Doors with reasons — built 2026.08.15, UNPLAYTESTED
+    - [x] 4. Leaks and the morning after — built 2026.08.15, UNPLAYTESTED
+    - [x] 5. Duty nights and the spiral — built 2026.08.15, UNPLAYTESTED
+    - [x] 6. Recognition + the child's own story + the house lines — built 2026.08.15, UNPLAYTESTED
+          (recall_house itself deferred; the family lines carry the public state)
+    - [x] 7. Heart-bands + the era norm + spark muse cards — built 2026.08.15, UNPLAYTESTED
+    - [x] 8. "Between us" — one permanent door, composed page — built 2026.08.15, UNPLAYTESTED
+    - [~] 9. Small UI debts BUILT (the empty purple notice circle now wears her face; wife pinned
+          top, lovers under her; settlement menus teach their hotkeys and carry a hearth door).
+          THE HEARTH-AS-TABLEAU-STAGE IS NOT BUILT — the one piece deliberately left. It is the
+          batch's largest UI job, it carries the four tableau traps plus a new one (two screens
+          over ONE shared cached scene), and its failure mode is a hard native crash. Not worth
+          shipping blind before a single playtest of anything above it. Start the next pass here.
       The post-marriage batch: temptation that comes to you, the lover road (buyout from her clan,
       the father's letter, outside the companion limit), doors-with-reasons (misgivings applied to
       the night — SUPERSEDES the nights doc's no-refusals rule, the asking happened), leaks → the

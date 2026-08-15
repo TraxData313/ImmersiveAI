@@ -662,6 +662,41 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.CourtshipTerms.Trim());
             }
 
+            // What the world is allowed to say about his house — which children he has owned and
+            // which he has left unsaid. It belongs here, beside what he IS to her, because for the
+            // women of a household this is not gossip about a third party; it is the shape of their
+            // own lives.
+            if (!string.IsNullOrWhiteSpace(persona.PlayerHouseLine))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.PlayerHouseLine.Trim());
+            }
+
+            // The road's other branch sits in the same place, for the same reason: what she IS to
+            // this person belongs beside what she remembers of them, not off in some other section.
+            if (!string.IsNullOrWhiteSpace(persona.LoverTerms))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.LoverTerms.Trim());
+            }
+            // The rail against pretending the bond into being rides wherever the hand does — and it
+            // is needed MOST before the bond exists, which is exactly when LoverTerms is still
+            // empty. So it hangs off the hand, never off the section.
+            if (persona.CanOfferSelf)
+            {
+                sb.AppendLine();
+                sb.AppendLine(Courtship.LoverText.WordsDoNotBind);
+            }
+
+            // What stands between them sits here too, and it is the LAST thing she reads before the
+            // moment itself — deliberately, because a shut door is the single most present fact of
+            // an evening and must not be buried above her memory of him.
+            if (!string.IsNullOrWhiteSpace(persona.DoorTerms))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.DoorTerms.Trim());
+            }
+
             if (!string.IsNullOrWhiteSpace(persona.SuitorTerms))
             {
                 sb.AppendLine();
@@ -698,6 +733,17 @@ namespace ImmersiveAI.Core.Prompts
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
                 sb.AppendLine(persona.RoleplayGuidance.Trim());
+
+            // THE ORDER OF THE WORLD, if this game is carrying it — the air everybody in the era
+            // breathes about a woman's place. It sits HERE, ahead of the player-authored block and
+            // outside it, on purpose: it is background knowledge and not a rule she is handed, and
+            // it must never wear the frame that says "this is what I hold truest", which belongs to
+            // the player's own words alone.
+            if (!string.IsNullOrWhiteSpace(persona.EraNorm))
+            {
+                sb.AppendLine();
+                sb.AppendLine(persona.EraNorm.Trim());
+            }
 
             AppendPlayerAuthored(sb, persona);
 

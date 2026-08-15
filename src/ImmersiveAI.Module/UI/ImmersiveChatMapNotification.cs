@@ -81,11 +81,29 @@ namespace ImmersiveAI.UI
     /// </summary>
     public class ImmersiveNightMapNotification : InformationData
     {
+        /// <summary>
+        /// WHOSE FACE THE NOTICE WEARS (2026.08.15, Anton's screenshot). This class was the only one
+        /// of the three with no hero on it at all — so the portrait widget in our MapNotificationItem
+        /// override had nothing to bind to, drew nothing, and left the bare type circle showing as a
+        /// flat magenta disc. Its two siblings have carried a Hero since the day they shipped; this
+        /// one simply never did.
+        ///
+        /// Nullable on purpose: an evening with nobody to go to raises no notice at all, but a save
+        /// written before this field existed loads it as null, and the VM must be happy with that —
+        /// which it is, since HideWhenNull was already doing the work.
+        /// </summary>
+        [SaveableProperty(1)]
+        public Hero? Woman { get; private set; }
+
         public override TextObject TitleText => new TextObject("{=ImmersiveAI_NightNoticeTitle}Where will you sleep?");
 
         public override string SoundEventPath => "event:/ui/notification/ransom_offer";
 
-        public ImmersiveNightMapNotification(TextObject descriptionText) : base(descriptionText) { }
+        public ImmersiveNightMapNotification(TextObject descriptionText, Hero? woman = null)
+            : base(descriptionText)
+        {
+            Woman = woman;
+        }
 
         public override bool IsValid() => ImmersiveChatBehavior.IsNightNoticeStillAlive();
     }

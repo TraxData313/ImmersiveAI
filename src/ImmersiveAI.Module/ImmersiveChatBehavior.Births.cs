@@ -173,6 +173,11 @@ namespace ImmersiveAI
                 FatherIsPlayer = father != null && father == player,
                 FatherAge = Safe(() => (int)(father?.Age ?? 0f), 0),
 
+                // Whether the two of them were wed ON THE DAY, captured here with everything else
+                // and for the same reason: a marriage can be made or unmade later, and a child born
+                // outside one does not retroactively become a child of it (2026.08.15).
+                BornInMarriage = Safe(() => father != null && FamilyBuilder.AreWed(mother, father), false),
+
                 StillbornCount = Math.Max(0, stillbornCount),
                 PlayerWasThere = Safe(() => WasPresentAt(player, mother), false),
                 FatherWasThere = Safe(() => WasPresentAt(father, mother), false),
@@ -438,10 +443,47 @@ namespace ImmersiveAI
                     }
                 }
 
+                // AND THE CHILD ITSELF (2026.08.15). A hero has a memory file from the day it is
+                // born, so its own history simply begins accumulating — and the day it comes of age
+                // and first opens its mouth, it already knows who it is. Nothing briefs it, nothing
+                // is generated, and this costs one hand-written line.
+                //
+                // THE PRIVACY FENCE RUNS ONE PERSON FURTHER HERE: it is given the facts of its own
+                // day and never its mother's first-person account of the hour. Planting her private
+                // "I" in her child's memory would be exactly the small lie this mod exists not to
+                // tell, and this is the code that stops it rather than a sentence in a prompt.
+                RecordChildsOwnBeginning(record);
+
                 record.BirthBeatDone = true;
                 _birthLedger?.Save(record);
             }
             catch (Exception ex) { ModLog.Error("recording the beats of a birth", ex); }
+        }
+
+        /// <summary>One flat line into each newborn's own memory. Never the mother's account.</summary>
+        private void RecordChildsOwnBeginning(BirthRecord record)
+        {
+            try
+            {
+                if (record?.Children == null) return;
+                foreach (var child in record.Children)
+                {
+                    var hero = FindAliveHero(child?.HeroId);
+                    if (hero == null) continue;
+                    // owned: only what is CERTAIN at this instant. This runs when the hour's
+                    // account arrives, which is BEFORE the player has answered the owning question
+                    // — and IsOwnedBeforeTheWorld reads "yes" while it is still unasked, so using
+                    // it here made every child's own first memory assert a recognition that had not
+                    // happened yet (self-review, 2026.08.15). A child of the marriage is the only
+                    // one certainly owned now; the rest get their line from OwnTheChild when the
+                    // answer actually comes.
+                    WriteBirthBeat(hero, BirthText.ChildBornBeat(
+                        record.MotherName,
+                        string.IsNullOrWhiteSpace(record.FatherName) ? PlayerName() : record.FatherName,
+                        record.PlaceName, record.BornInMarriage), OutreachMark.None);
+                }
+            }
+            catch (Exception ex) { ModLog.Error("setting down a child's own beginning", ex); }
         }
 
         // A child who never drew breath: one plain mark, written by hand, and nothing else. No
@@ -491,13 +533,34 @@ namespace ImmersiveAI
                 // the world each time (2026.08.10, second review: introduced by the FIRST review's
                 // own fix). So it is simply never shown, and the question comes on its own the
                 // moment the purse can carry the cheapest feast.
-                if ((Hero.MainHero?.Gold ?? 0) < BirthTiers.All.Min(t => t.Price)) return false;
+                // THE CHOICE IS THREE-WAY FOR A CHILD BORN OUTSIDE A MARRIAGE (2026.08.15) — and
+                // the question is asked of the LIVE world, not only of the record: every birth
+                // written before this field existed carries BornInMarriage = false, and asking a
+                // long-married player whether his wife's child is his would be absurd
+                // (self-review). If she is his wife today, no such question arises.
+                bool mustOwnIt = !record.BornInMarriage
+                    && !Safe(() => FamilyBuilder.AreWed(Hero.MainHero, mother), false);
+
+                // An empty purse is not a question — EXCEPT when one of the answers is free. Owning
+                // a child quietly costs nothing and is the whole point of the choice; gating it
+                // behind the cheapest feast meant a broke man could never say the child was his
+                // (self-review, 2026.08.15).
+                if (!mustOwnIt && (Hero.MainHero?.Gold ?? 0) < BirthTiers.All.Min(t => t.Price)) return false;
 
                 var player = Hero.MainHero;
                 var settlement = BirthPlace(mother);
                 var venue = VenueOf(settlement, out bool ownTown);
 
+                // Blood is the game's and untouched; what is asked here is HONOR — whether he will
+                // say out loud, where people can hear it, that this child is his. Feast it, own it
+                // quietly, or say nothing. For a child of the marriage no such question exists and
+                // the popup is exactly what it always was.
                 var elements = new List<InquiryElement>();
+                if (mustOwnIt)
+                    elements.Add(new InquiryElement(QuietOwning, "Own the child — no feast", null, true,
+                        "You say it plainly, where it will be heard, and keep no hall. It costs nothing and "
+                        + "changes everything the world is allowed to say about this child — and about its mother."));
+
                 foreach (var tier in BirthTiers.All)
                 {
                     bool afford = (player?.Gold ?? 0) >= tier.Price;
@@ -511,23 +574,37 @@ namespace ImmersiveAI
                         $"{tier.Name} — {tier.Price} denars", null, afford && fits, why.ToString()));
                 }
 
+                var body = new StringBuilder();
+                body.Append($"{record.MotherName} has borne {record.ChildWords()} — {record.ChildNames()}.");
+                if (!record.PlayerWasThere) body.Append(" You were not there for it.");
+                if (mustOwnIt)
+                    body.Append("\n\n").Append(record.MotherName).Append(" is not your wife. In this world a man's ")
+                        .Append("children are the ones he owns before everyone — and what he does not own is not ")
+                        .Append("counted his, whatever the whole town privately knows. Say nothing and the child is ")
+                        .Append("still yours by blood, and grows up in its mother's shadow.");
+                body.Append("\n\nWhat you spend decides who is called, and everyone who stands there will carry this day for the rest of their life. ")
+                    .Append("A child welcomed with nothing is welcomed all the same — the hour itself is already written down.\n\n")
+                    .Append($"You hold {player?.Gold ?? 0} denars.");
+
                 var data = new MultiSelectionInquiryData(
-                    new TextObject("{=ImmersiveAI_BirthFeastTitle}How will you welcome the child?").ToString(),
-                    $"{record.MotherName} has borne {record.ChildWords()} — {record.ChildNames()}."
-                    + (record.PlayerWasThere ? string.Empty : " You were not there for it.")
-                    + "\n\nWhat you spend decides who is called, and everyone who stands there will carry this day for the rest of their life. "
-                    + "A child welcomed with nothing is welcomed all the same — the hour itself is already written down.\n\n"
-                    + $"You hold {player?.Gold ?? 0} denars.",
+                    new TextObject(mustOwnIt
+                        ? "{=ImmersiveAI_BirthOwnTitle}Is this child yours before the world?"
+                        : "{=ImmersiveAI_BirthFeastTitle}How will you welcome the child?").ToString(),
+                    body.ToString(),
                     elements, true, 1, 1,
                     new TextObject("{=ImmersiveAI_BirthFeastAccept}Keep the feast").ToString(),
-                    new TextObject("{=ImmersiveAI_BirthFeastDecline}No feast").ToString(),
+                    new TextObject(mustOwnIt
+                        ? "{=ImmersiveAI_BirthSayNothing}Say nothing"
+                        : "{=ImmersiveAI_BirthFeastDecline}No feast").ToString(),
                     chosen =>
                     {
                         try
                         {
                             MarkFeastOffered(record);
                             var pick = chosen?.FirstOrDefault()?.Identifier;
-                            if (pick is BirthScale scale) HoldTheFeast(record, scale);
+                            // Every feast is an owning; the free choice is an owning with no hall.
+                            if (pick is BirthScale scale) { OwnTheChild(record, late: false); HoldTheFeast(record, scale); }
+                            else if (pick as string == QuietOwning) { OwnTheChild(record, late: false); TrySealIfWhole(record); }
                         }
                         catch (Exception ex) { ModLog.Error("choosing the child's feast", ex); }
                     },
@@ -543,6 +620,201 @@ namespace ImmersiveAI
                 return true;
             }
             catch (Exception ex) { ModLog.Error("offering the child's feast", ex); return false; }
+        }
+
+        /// <summary>The one answer in the feast question that is not a feast and not a refusal.</summary>
+        private const string QuietOwning = "immersiveai_birth_own_quietly";
+
+        /// <summary>
+        /// THE OWNING (2026.08.15) — the whole of what this feature adds, and it is a layer of WORDS
+        /// over blood the game already settled. Nothing about the child's parentage, clan or
+        /// inheritance moves here, and nothing ever will: what moves is what the world is allowed to
+        /// say, which in this era is the entire difference between a son and somebody's boy.
+        ///
+        /// <paramref name="late"/> is the giving of the name — the same act, years afterwards, in
+        /// front of everyone who spent those years not saying it. The record keeps which it was
+        /// because they are not the same thing and nobody involved would ever confuse them.
+        /// </summary>
+        private void OwnTheChild(BirthRecord record, bool late, bool withFeast = false)
+        {
+            try
+            {
+                if (record == null || record.Owned == Acknowledgement.Given) return;
+                record.Owned = Acknowledgement.Given;
+                record.NameGivenLate = late;
+                if (late)
+                {
+                    record.NameGivenDay = CampaignTime.Now.ToDays;
+                    record.NameGivenDateText = CalradiaDate();
+                }
+                _birthLedger?.Save(record);
+
+                var fatherName = string.IsNullOrWhiteSpace(record.FatherName) ? PlayerName() : record.FatherName;
+
+                // The mother learns it, wherever she stands. She is told the fact and nothing about
+                // how to take it — hers has been hers since the day move_heart shipped.
+                var mother = record.MotherIsPlayer ? null : FindAliveHero(record.MotherId);
+                if (mother != null)
+                {
+                    WriteBirthBeat(mother, BirthText.MotherNameBeat(fatherName, record.ChildNames(),
+                        given: true, withFeast: withFeast, late: late), OutreachMark.PlayerEngaged);
+                    UI.TalkUI.OnThreadChanged(mother, markUnread: true);
+                }
+
+                // And the child, in whose own memory it will still be waiting when the child is
+                // grown enough to have something to say about it.
+                foreach (var kid in record.Children ?? new List<BirthChild>())
+                {
+                    var hero = FindAliveHero(kid?.HeroId);
+                    if (hero == null) continue;
+                    WriteBirthBeat(hero, BirthText.ChildNameBeat(fatherName, late), OutreachMark.None);
+                }
+
+                NotifyBirth(late
+                    ? $"❧ You have owned {record.ChildNames()} before the world, and given the child your name."
+                    : $"❧ {record.ChildNames()} is yours before the world.");
+            }
+            catch (Exception ex) { ModLog.Error("owning a child before the world", ex); }
+        }
+
+        /// <summary>He said nothing. Recorded as a decision rather than an absence — it is one.</summary>
+        private void WithholdTheName(BirthRecord record)
+        {
+            try
+            {
+                if (record == null || record.BornInMarriage) return;
+                if (record.Owned != Acknowledgement.NeverArose) return;
+                record.Owned = Acknowledgement.Withheld;
+                _birthLedger?.Save(record);
+
+                var mother = record.MotherIsPlayer ? null : FindAliveHero(record.MotherId);
+                if (mother != null)
+                {
+                    WriteBirthBeat(mother, BirthText.MotherNameBeat(
+                        string.IsNullOrWhiteSpace(record.FatherName) ? PlayerName() : record.FatherName,
+                        record.ChildNames(), given: false, withFeast: false, late: false),
+                        OutreachMark.PlayerEngaged);
+                    UI.TalkUI.OnThreadChanged(mother, markUnread: true);
+                }
+            }
+            catch (Exception ex) { ModLog.Error("withholding a name", ex); }
+        }
+
+        /// <summary>
+        /// THE GIVING OF THE NAME — the late owning, possible at any age and heavier the longer it
+        /// waited. The design record calls the "adoption" idea from the first brainstorm exactly
+        /// this act, and it needs no separate mechanic: the child is already the player's by blood,
+        /// so what changes is only, and entirely, what has been said.
+        /// </summary>
+        internal void GiveTheNameTo(Hero child)
+        {
+            try
+            {
+                if (child == null || _birthLedger == null) return;
+                var record = _birthLedger.Records.FirstOrDefault(r =>
+                    r != null && r.AwaitsTheName
+                    && r.Children != null
+                    && r.Children.Any(c => c != null && string.Equals(c.HeroId, child.StringId, StringComparison.Ordinal)));
+                if (record == null)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"{child.Name} is not waiting on a name from you.", SealGrey));
+                    return;
+                }
+                OwnTheChild(record, late: true);
+            }
+            catch (Exception ex) { ModLog.Error("giving the name", ex); }
+        }
+
+        /// <summary>
+        /// HOW THE PLAYER'S HOUSE IS SPOKEN OF (2026.08.15) — one line for the sheet, built from the
+        /// ledger's own record of what has been SAID rather than from the game's record of blood.
+        /// A child of the marriage is simply his; one he has owned is his and the world says how; one
+        /// he has not owned appears in nobody's line but its mother's.
+        ///
+        /// Empty for a house with nothing to explain, which is most houses — a player who has never
+        /// fathered a child outside a marriage pays nothing for this.
+        /// </summary>
+        internal static string HouseOfThePlayerLine()
+        {
+            try
+            {
+                var self = Current;
+                if (self?._birthLedger == null || !self.BirthsOn) return string.Empty;
+
+                var children = new List<BirthText.HouseChild>();
+                bool anyOutside = false;
+                foreach (var record in self._birthLedger.Records)
+                {
+                    if (record == null || !record.AnyLived) continue;
+                    if (!record.FatherIsPlayer && !record.MotherIsPlayer) continue;
+                    if (!record.BornInMarriage) anyOutside = true;
+                    foreach (var kid in record.Children ?? new List<BirthChild>())
+                    {
+                        if (kid == null || string.IsNullOrWhiteSpace(kid.Name)) continue;
+                        children.Add(new BirthText.HouseChild
+                        {
+                            Name = kid.Name,
+                            MotherName = record.MotherName,
+                            InMarriage = record.BornInMarriage,
+                            Owned = record.IsOwnedBeforeTheWorld,
+                        });
+                    }
+                }
+
+                // Nothing outside a marriage means nothing the world needs explaining, and the kin
+                // lines already carry the family. No line, no tokens.
+                if (!anyOutside) return string.Empty;
+                return BirthText.HouseLine(children, PlayerName());
+            }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>How many of THIS woman's children by the player have never been owned before the
+        /// world. The concrete object of a lover's asking — her craving stops being an abstraction
+        /// the moment there is a specific child with no name, and that is what makes her a living
+        /// character for years instead of an episode.</summary>
+        internal static int UnnamedChildrenOf(Hero mother)
+        {
+            try
+            {
+                var self = Current;
+                if (self?._birthLedger == null || mother == null || !self.BirthsOn) return 0;
+                return self._birthLedger.Records
+                    .Where(r => r != null && r.AwaitsTheName
+                             && string.Equals(r.MotherId, mother.StringId, StringComparison.Ordinal))
+                    .Sum(r => r.Children?.Count ?? 0);
+            }
+            catch { return 0; }
+        }
+
+        /// <summary>Every child of the player's still waiting to be owned — what the one door's page
+        /// offers, and what a lover has to be asking about.</summary>
+        internal static List<Hero> ChildrenAwaitingTheName()
+        {
+            var waiting = new List<Hero>();
+            try
+            {
+                var self = Current;
+                if (self?._birthLedger == null) return waiting;
+                foreach (var record in self._birthLedger.Records)
+                {
+                    if (record == null || !record.AwaitsTheName) continue;
+                    foreach (var kid in record.Children ?? new List<BirthChild>())
+                    {
+                        var hero = FindAliveHero(kid?.HeroId);
+                        if (hero != null) waiting.Add(hero);
+                    }
+                }
+            }
+            catch { }
+            return waiting;
+        }
+
+        internal static void DevGiveTheName(Hero child)
+        {
+            try { if (child != null) Current?.GiveTheNameTo(child); }
+            catch (Exception ex) { ModLog.Error("dev: giving the name", ex); }
         }
 
         private void MarkFeastOffered(BirthRecord record)
@@ -563,6 +835,9 @@ namespace ImmersiveAI
             try
             {
                 MarkFeastOffered(record);
+                // For a child born outside a marriage, declining is not "no feast" — it is saying
+                // nothing, which in this world is its own loud act. Recorded as the decision it is.
+                WithholdTheName(record);
                 TrySealIfWhole(record);
             }
             catch (Exception ex) { ModLog.Error("declining the child's feast", ex); }
