@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using SandBox.View.Map;
@@ -86,9 +86,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 timeOfDay,
                 underSnow,
                 place,
-                // No interior location: the hall sets are culture-bound (see the note above), and the
-                // open air of a place is true for everyone.
-                null,
+                LocationFor(hero, place),
                 weather == MapWeatherModel.WeatherEvent.HeavyRain,
                 weather == MapWeatherModel.WeatherEvent.Blizzard);
         }
@@ -270,6 +268,27 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             try { return hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty; }
             catch { return false; }
+        }
+
+        /// <summary>
+        /// WHICH ROOM they are standing in (2026.08.16, Anton: "a wanderer in a tavern is drawn in
+        /// the town"). Vanilla's own Talk hands the tableau the speaker's real location, and we were
+        /// handing it null — so every soul inside a settlement was drawn in its open air, and the
+        /// wanderer you found by the fire was standing in the street.
+        /// <para>
+        /// The old comment argued that null was safer because "the hall sets are culture-bound". It
+        /// was solving the right problem in the wrong place: <see cref="SceneSettlementFor"/> ALREADY
+        /// answers null for a culture whose sets we do not ship, so a non-null <paramref name="place"/>
+        /// is itself the proof that this settlement's interiors exist. The tableau wants the room's
+        /// own id (a string), which is what vanilla passes it. Outside walls there is no room
+        /// to be in and the answer is null, exactly as before.
+        /// </para>
+        /// </summary>
+        private static string? LocationFor(Hero hero, Settlement? place)
+        {
+            if (place == null || hero == null) return null;
+            try { return place.LocationComplex?.GetLocationOfCharacter(hero)?.StringId; }
+            catch { return null; }   // an unknown room is simply the open air again
         }
 
         // Where to draw them: inside a settlement's air if they are lodged in one whose culture the
