@@ -35,9 +35,6 @@ BUGS:
       it is closed. Both want the real engine in front of them. UNPLAYTESTED — Anton should hear a
       long reply on Streaming and say whether it is now one clean take, seams and all.
 
-- [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN → moved into **THE STAGE** below. It is the same
-      file as two other open items and must not be fixed alone.
-
 NEXT UPDATE:
 - [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means
@@ -49,8 +46,15 @@ NEXT UPDATE:
           chosen one ALIVE in the centre via the tableau, settings RIGHT. The batch's largest UI
           job; four documented tableau traps plus one nobody has solved (two screens over ONE
           shared cached scene); failure mode is a hard native crash, not a wrong sentence.
-    - [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN (Anton, 2026.08.15). Vanilla's own Talk puts
-          her in the tavern set; our tableau picks by culture and settlement only.
+    - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
+          now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),
+          where it had been passing null. NOTE the tableau wants the room's own StringId as a
+          STRING, not a Location — the seventh argument of `MapConversationTableauData.CreateFrom`.
+          The old comment argued null was safer because the hall sets are culture-bound; that was
+          the right worry in the wrong place, since `SceneSettlementFor` already answers null for a
+          culture whose sets we do not ship, so a non-null settlement IS the proof its interiors
+          exist. UNPLAYTESTED — worth a look in a tavern, a keep, and a War Sails town (which should
+          still be drawn out of doors).
     - [ ] CHANGE THE SET INSIDE A TOWN (Anton's ask, same evening) — the town, the tavern, or the
           keep when it is open to you, and note who else is standing there.
       DO THEM TOGETHER, and in that order: the two smaller ones teach the scene selection that the
