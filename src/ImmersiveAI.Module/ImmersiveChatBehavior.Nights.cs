@@ -105,6 +105,11 @@ namespace ImmersiveAI
         /// Wives first, deliberately. The first wife is the official, ceremonial one and the dusk
         /// question should read that way; the sort within each group is the season's own.
         /// </summary>
+        /// <summary>The same roster, for the hearth side of the talk screen. Internal rather than
+        /// public: the screen is the only outside caller, and everything else must keep asking the
+        /// nights themselves.</summary>
+        internal static List<Hero> HearthRoster() => WomenOfTheHearth();
+
         private static List<Hero> WomenOfTheHearth()
         {
             var women = new List<Hero>();

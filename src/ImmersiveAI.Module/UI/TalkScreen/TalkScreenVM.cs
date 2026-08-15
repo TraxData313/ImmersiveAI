@@ -131,7 +131,21 @@ namespace ImmersiveAI.UI.TalkScreen
             // the same ranking that decides who is likeliest to come to them, on purpose: pinning her
             // to the top while she never knocked would be the mod saying two things about one bond.
             // It also settles what opens on the hotkey, since the first row is what gets chosen.
-            foreach (var info in ImmersiveChatBehavior.ContactsForTalk()
+            // HEARTH MODE narrows the same circle to the women of it (2026.08.16). Deliberately a
+            // FILTER over the one list rather than a second source: they are the same souls, drawn
+            // by the same stage, and a parallel roster would be one more thing to keep in step.
+            var circle = ImmersiveChatBehavior.ContactsForTalk().AsEnumerable();
+            if (_hearthMode)
+            {
+                var hearth = new HashSet<string>(
+                    ImmersiveChatBehavior.HearthRoster()
+                        .Where(h => h != null)
+                        .Select(h => h.StringId),
+                    StringComparer.OrdinalIgnoreCase);
+                circle = circle.Where(i => i.Hero != null && hearth.Contains(i.Hero.StringId));
+            }
+
+            foreach (var info in circle
                          .OrderByDescending(i => ImmersiveChatBehavior.HearthRank(i.Hero))
                          .ThenByDescending(i => i.IsHere)
                          .ThenByDescending(i => !i.IsGone)
@@ -1762,6 +1776,60 @@ namespace ImmersiveAI.UI.TalkScreen
 
         /// <summary>Whether there is any point in a writing box at all — a soul gone from the world
         /// can be read, never written to.</summary>
+        // ------------------------------ the hearth ------------------------------
+        //
+        // THE HEARTH IS A MODE OF THIS SCREEN, NOT A SECOND ONE (decided 2026.08.16, and the whole
+        // reason the job was safe to do at all — see docs/after-the-wedding-design.md, "The hearth
+        // window becomes a stage").
+        //
+        // The design record asked for the H window rebuilt with the women listed left, the chosen
+        // one alive in the middle via the tableau, and her own page on the right. The unsolved
+        // question underneath it was how TWO tableau-hosting screens would share the ONE cached
+        // conversation scene: yielding a Gauntlet layer is trivial, yielding a cached NATIVE scene
+        // mid-teardown with a render-to-texture camera still pointed at it is where the hard crash
+        // lives. So that situation is never created. Same layer, same host, same stub, same
+        // teardown — only the right-hand panel changes, and the four documented tableau traps stay
+        // paid for exactly once by code that already works.
+
+        private bool _hearthMode;
+
+        [DataSourceProperty]
+        public bool IsHearth
+        {
+            get => _hearthMode;
+            set
+            {
+                if (value == _hearthMode) return;
+                _hearthMode = value;
+                OnPropertyChangedWithValue(value, "IsHearth");
+                OnPropertyChanged("IsTalking");
+                OnPropertyChanged("ModeButtonText");
+                RefreshContacts();
+            }
+        }
+
+        /// <summary>The talk side, for anything the hearth page hides. Bound rather than negated in
+        /// the prefab because Gauntlet has no "not" of its own.</summary>
+        [DataSourceProperty]
+        public bool IsTalking => !_hearthMode;
+
+        [DataSourceProperty]
+        public string ModeButtonText => _hearthMode ? "Talk" : "The hearth";
+
+        /// <summary>Shown only when there IS a hearth — an unmarried player has no page to open,
+        /// and a button that leads to an empty list is a promise the game does not keep.</summary>
+        [DataSourceProperty]
+        public bool HasHearth
+        {
+            get
+            {
+                try { return ImmersiveChatBehavior.HearthRoster().Count > 0; }
+                catch { return false; }
+            }
+        }
+
+        public void ExecuteToggleHearth() => IsHearth = !_hearthMode;
+
         // ------------------------------ the set ------------------------------
         //
         // Anton's ask (2026.08.15): inside a town, move the talk between the town itself, the tavern

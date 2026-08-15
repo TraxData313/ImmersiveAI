@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.GameState;
 using TaleWorlds.Core;
@@ -183,6 +183,19 @@ namespace ImmersiveAI.UI.NightWindow
             if (_config == null || !_config.EnableNights || !_config.EnableNightWindow) return;
             if (Campaign.Current == null) return;
             if (!Input.IsKeyReleased(_hotkey)) return;
+
+            // THE HEARTH IS A MODE OF THE TALK SCREEN NOW (2026.08.16). The key is unchanged and so
+            // is everything the player knows; what it raises is the one screen, turned to the
+            // hearth — the women listed left, the chosen one ALIVE in the middle in her own place.
+            // The old window is still whole behind UseClassicChatWindow and behind the screen's own
+            // session fallback, so a game patch that breaks the tableau costs the hearth its stage
+            // and not its existence.
+            if (UI.TalkUI.UsesTalkScreen)
+            {
+                TalkScreen.TalkScreenManager.Open(hearth: true);
+                return;
+            }
+
             if (!CanOpenNow()) return;
             Open();
         }

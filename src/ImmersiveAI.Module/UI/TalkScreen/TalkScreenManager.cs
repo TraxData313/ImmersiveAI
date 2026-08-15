@@ -268,10 +268,13 @@ namespace ImmersiveAI.UI.TalkScreen
 
         /// <summary>Opens the screen (optionally with someone already on stage). Safe to call at any
         /// moment: does nothing when the map is not the place for it.</summary>
-        internal static void Open(Hero? preselect = null)
+        internal static void Open(Hero? preselect = null, bool hearth = false)
         {
             if (IsOpen)
             {
+                // Already up: the hotkey for the other side simply turns this one over, which is
+                // what makes the hearth a MODE rather than a second screen the player must close.
+                if (_vm != null && _vm.IsHearth != hearth) _vm.IsHearth = hearth;
                 if (preselect != null) _vm?.TrySelect(preselect);
                 return;
             }
@@ -289,6 +292,10 @@ namespace ImmersiveAI.UI.TalkScreen
                 _host.AddLayer(_layer);
                 ScreenManager.TrySetFocus(_layer);
 
+                // Set BEFORE the first selection, so the contact list is already the right circle
+                // and the soul chosen for the player is one of the women rather than whoever heads
+                // the world's list.
+                if (hearth) _vm.IsHearth = true;
                 if (preselect != null) _vm.TrySelect(preselect);
                 RequestScrollToBottom();
                 HoldTheWorld();

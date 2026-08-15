@@ -274,6 +274,14 @@
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceStopText" />
                       </Children>
                     </ButtonWidget>
+                    <!-- The hearth: the same screen turned to the women of it. Shown only when
+                         there IS one - a button leading to an empty list is a promise the game
+                         does not keep. -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleHearth" IsVisible="@HasHearth">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@ModeButtonText" />
+                      </Children>
+                    </ButtonWidget>
                     <!-- The set: only inside a town, and only when there is more than one room to
                          stand in. It cycles rather than opening a menu - three rooms at most, and a
                          menu for three is heavier than the choice it carries. -->
