@@ -1,4 +1,4 @@
-using ImmersiveAI.Core.Nights;
+﻿using ImmersiveAI.Core.Nights;
 using ImmersiveAI.Core.Prompts;
 
 namespace ImmersiveAI.Core.Tests;
@@ -1010,5 +1010,78 @@ public class NightsTests
             Assert.DoesNotContain("%", word);
         }
         Assert.Contains("no child can come of it", NightOdds.LikelihoodWord(0.0, doorClosed: true));
+    }
+
+    // ------------------------------ the night's clock, by the sun ------------------------------
+
+    private const int Reset = NightClock.DefaultResetHour;   // 16:00
+
+    private static double At(int day, double hour) => day + hour / 24.0;
+
+    [Fact]
+    public void ACycleRunsFromOneLateAfternoonToTheNext()
+    {
+        Assert.Equal(5, NightClock.CycleOf(At(5, 16), Reset));    // the turn itself opens the cycle
+        Assert.Equal(5, NightClock.CycleOf(At(5, 21), Reset));    // the evening's question
+        Assert.Equal(5, NightClock.CycleOf(At(6, 1), Reset));     // one in the morning is still that evening
+        Assert.Equal(5, NightClock.CycleOf(At(6, 15.9), Reset));  // and so is the whole day after it
+        Assert.Equal(6, NightClock.CycleOf(At(6, 16), Reset));    // until the sun comes round again
+    }
+
+    [Fact]
+    public void TheSmallHoursBelongToTheEveningTheyGrewOutOf()
+    {
+        // THE WHOLE POINT of the cycle. A night at one in the morning used to settle the day that
+        // was only just beginning, which cost the player the entire following evening.
+        var night = At(6, 1);
+        var nextEvening = At(6, 21);
+        Assert.False(NightClock.SameCycle(night, nextEvening, Reset));
+
+        var ledger = new NightLedger();
+        ledger.SettleNight(night);
+        Assert.True(ledger.IsNightSettled(nextEvening));            // the calendar says yes...
+        Assert.False(ledger.IsCycleSettled(nextEvening, Reset));    // ...and the sun says he is free
+    }
+
+    [Fact]
+    public void ANightIsSpentOncePerCycleHoweverLateItRan()
+    {
+        var ledger = new NightLedger();
+        ledger.SettleNight(At(5, 23.5));                              // half past eleven
+        Assert.True(ledger.IsCycleSettled(At(6, 1), Reset));          // still the same evening
+        Assert.True(ledger.IsCycleSettled(At(6, 15), Reset));         // and all the next day
+        Assert.False(ledger.IsCycleSettled(At(6, 16), Reset));        // ready again at the turn
+
+        // The drift the flat cooldown had: 23.5 + 24 = 23.5 the next night, hours past the
+        // evening's own question. The sun does not drift.
+        Assert.False(ledger.IsCycleSettled(At(6, 21), Reset));
+    }
+
+    [Fact]
+    public void HoursUntilResetCountsToTheTurnAndNeverToZero()
+    {
+        Assert.Equal(1.0, NightClock.HoursUntilReset(At(5, 15), Reset), 3);
+        Assert.Equal(19.0, NightClock.HoursUntilReset(At(5, 21), Reset), 3);
+        Assert.Equal(15.0, NightClock.HoursUntilReset(At(6, 1), Reset), 3);
+        Assert.Equal(24.0, NightClock.HoursUntilReset(At(5, 16), Reset), 3);   // just missed it
+    }
+
+    [Fact]
+    public void AHandEditedResetHourCanNeverThrow()
+    {
+        foreach (var hour in new[] { -5, 0, 23, 24, 99 })
+        {
+            var cycle = NightClock.CycleOf(At(5, 12), hour);
+            var left = NightClock.HoursUntilReset(At(5, 12), hour);
+            Assert.True(cycle == 4 || cycle == 5);
+            Assert.InRange(left, 0.001, 24.0);
+        }
+    }
+
+    [Fact]
+    public void AnEmptyLedgerHasSettledNothing()
+    {
+        var ledger = new NightLedger();
+        Assert.False(ledger.IsCycleSettled(At(5, 21), Reset));
     }
 }

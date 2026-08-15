@@ -533,9 +533,23 @@ namespace ImmersiveAI
         /// enough that the day's travelling is done.</summary>
         public int NightHour { get; set; } = 21;
 
-        /// <summary>Hours that must pass between one night and the next. A man cannot be in two
-        /// beds in one evening, and this is also what greys the choice out with an honest count of
-        /// the hours left.</summary>
+        /// <summary>
+        /// The hour the house is ready again (0-23) — late afternoon by default, hours before the
+        /// evening's own question, so the whole stretch between belongs to you: go of your own
+        /// accord if you want to, and the evening simply finds it already spent.
+        /// <para>
+        /// This REPLACED a flat count of hours between nights (2026.08.15, Anton's ask). The old
+        /// rule drifted: a night at half past eleven put the next one out of reach until half past
+        /// eleven the following day, which is after the evening's question has been and gone. The
+        /// sun does not drift.
+        /// </para>
+        /// </summary>
+        public int NightDayResetHour { get; set; } = Core.Nights.NightClock.DefaultResetHour;
+
+        /// <summary>RETIRED 2026.08.15, and read by nothing. It held the hours that had to pass
+        /// between one night and the next; <see cref="NightDayResetHour"/> keeps that clock by the
+        /// sun instead. Left standing so an existing config.json neither breaks nor loses a line the
+        /// player might still recognise.</summary>
         public int NightCooldownHours { get; set; } = 24;
 
         /// <summary>When true, the choice is offered as a popup each evening. False leaves it to
@@ -1242,7 +1256,8 @@ namespace ImmersiveAI
             // and a day and a half is as far as it is worth stretching one.
             LoverRansomHagglePercent = Clamp(LoverRansomHagglePercent, 0, 90);
             NightHour = Clamp(NightHour, 0, 23);
-            NightCooldownHours = Clamp(NightCooldownHours, 1, 72);
+            NightDayResetHour = Clamp(NightDayResetHour, 0, 23);
+            NightCooldownHours = Clamp(NightCooldownHours, 1, 72);   // retired; kept sane, read by nothing
             if (ConceptionChanceMultiplier < 0 || double.IsNaN(ConceptionChanceMultiplier)) ConceptionChanceMultiplier = 0;
             if (ConceptionChanceMultiplier > 10) ConceptionChanceMultiplier = 10;
             ConceptionRevealDelayDays = Clamp(ConceptionRevealDelayDays, 0, 30);

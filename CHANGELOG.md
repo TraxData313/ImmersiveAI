@@ -51,6 +51,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 - New: an answer now speaks itself even with the screen shut, so you can send a line and hear the reply while you ride on. The ping and the unread mark still show you the way back to it. A switch under Voices puts it back the old way.
 
+### The nights
+- Changed: the night's clock now keeps the sun instead of counting hours. One night an evening, and the house is ready again at the same hour every afternoon — whatever time you kept the night before. Before, a late night pushed the next one later still, until the evening's question came round while you were not ready yet and the day was simply lost. A night after midnight now belongs to the evening it grew out of rather than to the morning it landed in. The hour is yours to set in the options.
+
 ### What they are told about themselves
 - Changed: your own words now have the LAST word. What you write in the world prompt and in a character's own prompt closes their mind instead of sitting in the middle of it, under a line saying plainly that where anything else they remember disagrees, your words stand. Edits there used to lose quietly to a long memory; now they bite.
 - Changed: the "how I speak" part of a character's mind is three short habits instead of a wall of rules. Everything about their gifts — recalling the world, weighing their heart, tending a courtship — now sits with the gift itself, so it reaches them only when they can actually use it. Less telling them who to be leaves more room to be someone.

@@ -323,10 +323,10 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool NightsPreventChild { get; set; }
 
-        [SettingPropertyInteger("Hours between nights", 1, 72, "0 hours", Order = 21, RequireRestart = false,
-            HintText = "How long must pass before another night can be spent. A man cannot be in two beds in one evening; this is also what greys the choice out with the hours still to go.")]
+        [SettingPropertyInteger("Hour the house is ready again", 0, 23, "0:00", Order = 21, RequireRestart = false,
+            HintText = "One night an evening, and this is the hour it comes round again - the same hour every day, whatever time you kept the night before. Set it hours before the question above, so the stretch between is yours to go of your own accord; the evening then simply finds it already spent.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
-        public int NightCooldownHours { get; set; } = 24;
+        public int NightDayResetHour { get; set; } = Core.Nights.NightClock.DefaultResetHour;
 
         [SettingPropertyInteger("Days before she knows of the child", 0, 30, "0 days", Order = 22, RequireRestart = false,
             HintText = "A child begun is not a child known. Until this many days pass the world is told nothing either - so the game's own announcement no longer lands the same evening like a receipt. The birth waits the same days with it.")]

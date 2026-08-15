@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -184,11 +184,19 @@ namespace ImmersiveAI
                 // weighed — which is why the question reappeared after a reload and only then
                 // (the field is not persisted). The stamp now goes down only when something has
                 // truly been put to the player, and dusk keeps knocking for a few hours.
+                //
+                // AND THE CLOCK IT ALL HANGS ON IS THE SUN'S (Anton, 2026.08.15). Everything below
+                // counts in NIGHT-CYCLES — late afternoon to late afternoon — rather than in
+                // calendar days or in hours since the last night. Both of the paragraphs above
+                // survive it untouched: the evening still asks LATE and never before, and it still
+                // asks across a window of hours. What changed is only when the house becomes ready
+                // again, which is now the same hour every day instead of drifting later with every
+                // late night.
                 if (!IsWithinEveningWindow()) return;
 
-                int today = (int)CampaignTime.Now.ToDays;
-                if (_nightAskedOnDay == today) return;
-                if (_nightLedger!.IsNightSettled(CampaignTime.Now.ToDays)) return;
+                int cycle = NightCycleNow();
+                if (_nightAskedOnDay == cycle) return;
+                if (_nightLedger!.IsCycleSettled(CampaignTime.Now.ToDays, NightResetHour)) return;
 
                 HandleTheEvening();
             }
@@ -208,6 +216,14 @@ namespace ImmersiveAI
                 if (hour == (start + i) % 24) return true;
             return false;
         }
+
+        /// <summary>The hour the house is ready again — the turn a night-cycle is measured from.</summary>
+        private int NightResetHour => _config.NightDayResetHour;
+
+        /// <summary>Which night-cycle this moment falls in. Every "have we already had tonight?"
+        /// question in this file counts in these, not in calendar days: an hour after midnight
+        /// belongs to the evening it grew out of.</summary>
+        private int NightCycleNow() => NightClock.CycleOf(CampaignTime.Now.ToDays, NightResetHour);
 
         // Why a given wife cannot be gone to tonight. Empty means she can.
         private string NightBlockFor(Hero wife, out double hoursLeft)
@@ -248,16 +264,20 @@ namespace ImmersiveAI
             catch { return "not tonight"; }
         }
 
-        // How long since ANY night was spent — a man cannot be in two beds in one evening, so the
-        // cooldown is counted across the whole hearth, not per wife.
+        // Whether tonight has already been spent — across the whole hearth, because a man cannot be
+        // in two beds in one evening. Counted in CYCLES rather than in hours since (Anton,
+        // 2026.08.15): what is answered is "has there been a night since the house was last ready?",
+        // and what is counted back is the hours to the next turn, so the greyed line still tells the
+        // player a true number to wait.
         private double CooldownHoursLeft()
         {
             try
             {
                 var last = _nightLedger?.LastTogetherWithAnyone();
                 if (last == null) return 0;
-                double hoursSince = (CampaignTime.Now.ToDays - last.GameDay) * 24.0;
-                return Math.Max(0, _config.NightCooldownHours - hoursSince);
+                double now = CampaignTime.Now.ToDays;
+                if (!NightClock.SameCycle(last.GameDay, now, NightResetHour)) return 0;
+                return NightClock.HoursUntilReset(now, NightResetHour);
             }
             catch { return 0; }
         }
@@ -327,7 +347,7 @@ namespace ImmersiveAI
             // opens the evening's choice when clicked. X it and you are not asked for a week; leave
             // it and it lapses at first light like any other. Only when that UI is unavailable does
             // the old immediate popup stand in — and even then, never mid-battle or mid-talk.
-            _nightAskedOnDay = (int)CampaignTime.Now.ToDays;
+            _nightAskedOnDay = NightCycleNow();
 
             if (UI.MapNoticePatch.Applied && _config.UseMapNoticeForInitiations)
             {
@@ -341,13 +361,13 @@ namespace ImmersiveAI
 
         // ------------------------------ the evening's notice ------------------------------
 
-        // The campaign day a notice was raised on. A DAY and not a bool, so that a notice which
-        // simply lapsed at dawn cannot leave the flag stuck and silence every evening after it —
-        // the day turning clears it by itself, with nothing to remember to reset. Not persisted: a
-        // reloaded save just lets that evening pass, exactly as the reach-out notices do.
+        // The night-cycle a notice was raised on. A CYCLE and not a bool, so that a notice which
+        // simply lapsed cannot leave the flag stuck and silence every evening after it — the cycle
+        // turning clears it by itself, with nothing to remember to reset. Not persisted: a reloaded
+        // save just lets that evening pass, exactly as the reach-out notices do.
         private int _nightNoticeDay = int.MinValue;
 
-        private bool NightNoticeUp => _nightNoticeDay == (int)CampaignTime.Now.ToDays;
+        private bool NightNoticeUp => _nightNoticeDay == NightCycleNow();
 
         private void RaiseNightNotice(List<Hero> wives)
         {
@@ -365,7 +385,7 @@ namespace ImmersiveAI
                     ? $"{open[0].Name?.ToString() ?? "She"} is here. Where will you sleep tonight?"
                     : "Where will you sleep tonight?";
 
-                _nightNoticeDay = (int)CampaignTime.Now.ToDays;
+                _nightNoticeDay = NightCycleNow();
                 Campaign.Current.CampaignInformationManager.NewMapNoticeAdded(
                     new UI.ImmersiveNightMapNotification(new TextObject("{=!}" + line),
                         open.FirstOrDefault() ?? wives.FirstOrDefault()));
@@ -385,7 +405,7 @@ namespace ImmersiveAI
             {
                 var self = Current;
                 if (self == null || !self.NightsOn || !self.NightNoticeUp) return false;
-                if (self._nightLedger!.IsNightSettled(CampaignTime.Now.ToDays)) return false;
+                if (self._nightLedger!.IsCycleSettled(CampaignTime.Now.ToDays, self.NightResetHour)) return false;
                 return self.IsWithinEveningWindow();
             }
             catch { return false; }
@@ -431,7 +451,7 @@ namespace ImmersiveAI
             {
                 double lastNight = CampaignTime.Now.ToDays - 1;
                 if (lastNight < 0) return;
-                if (_nightLedger!.IsNightSettled(lastNight)) return;
+                if (_nightLedger!.IsCycleSettled(lastNight, NightResetHour)) return;
                 if (_nightLedger.LastSettledNight < 0)          // the very first evening settles nothing
                 {
                     _nightLedger.SettleNight(lastNight);

@@ -67,12 +67,29 @@ NEXT UPDATE:
           become accidental recognition, and it should be a decision rather than an accident.
 
 - [ ] FOUR ASKS FROM THE 2026.08.15 PLAYTEST (Anton, while the batch was building):
-    - [ ] THE NIGHT'S CLOCK, by the sun instead of by the hour count. Retire the flat 24-hour
-          cooldown: availability RESETS in the late afternoon (~16h), and the manual popup comes in
-          the late evening (~22h) if the player has not gone of his own accord earlier in the day.
-          Touches NightCooldownHours / CooldownHoursLeft / IsWithinEveningWindow / _nightAskedOnDay.
-          Read the "LATE IN THE EVENING AND NOT BEFORE" and "IT IS A WINDOW OF HOURS" comments in
-          ImmersiveChatBehavior.Nights.cs first — both were hard-won and this must not undo them.
+    - [x] THE NIGHT'S CLOCK, BY THE SUN — BUILT 2026.08.16. Core `Nights\NightClock` (CycleOf /
+          SameCycle / HoursUntilReset, unit-tested) + `NightLedger.IsCycleSettled`. A night now
+          belongs to a CYCLE — late afternoon to late afternoon — and every "have we already had
+          tonight?" in the nights flow counts in those instead of calendar days or hours-since:
+          `CooldownHoursLeft`, `_nightAskedOnDay`, `_nightNoticeDay`/`NightNoticeUp`,
+          `IsNightNoticeStillAlive` and `CloseUnansweredNight`. Config `NightDayResetHour` (16,
+          MCM slider "Hour the house is ready again", live); `NightCooldownHours` is RETIRED — the
+          property stands so an existing config.json neither breaks nor loses a familiar line, and
+          nothing reads it.
+          BOTH HARD-WON COMMENTS SURVIVE UNTOUCHED, which was the whole constraint: the evening
+          still asks LATE AND NOT BEFORE (`IsWithinEveningWindow` is unchanged and still gates
+          `HandleTheEvening`, so the automatic night waits for dusk and the day between stays the
+          player's), and it still asks ACROSS A WINDOW OF HOURS with the stamp going down only when
+          something is truly put to the player. The reset hour governs READINESS only; the evening
+          hour governs WHEN IT IS ASKED. That separation IS Anton's ask.
+          THE BUG IT KILLS: the flat cooldown drifted — a night at 23:30 put the next out of reach
+          until 23:30, which is after the evening's question has been and gone, so a house that went
+          to bed a little later each night walked its own clock out of the day. A test pins it. The
+          small hours are the other half: a night at 01:00 used to settle the day just beginning and
+          cost the whole of the following evening; it now belongs to the evening it grew out of.
+          NOTE `NightHour` was deliberately LEFT at 21 rather than moved to Anton's "~22h" — 21 is
+          already late evening, it is a shipped default, and defaults are never migrated. It is one
+          MCM slider away for anyone who wants 22. UNPLAYTESTED.
     - [ ] CHANGE THE SET INSIDE A TOWN → moved into **THE STAGE** above, with the tavern bug and
           the hearth rebuild. Same file; do not do it alone.
     - [x] LET THE VOICES READ THE *ACTED* PARTS — BUILT 2026.08.16. `VoiceSpeakActedParts` (config

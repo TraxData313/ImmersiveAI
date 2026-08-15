@@ -254,7 +254,7 @@ namespace ImmersiveAI.Mcm
                 SelectedOf(s.VoiceDelivery),
                 SelectedOf(s.VoiceForMe),
                 s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.CloudVoiceApiKey,
-                s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightCooldownHours,
+                s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightDayResetHour,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
                 s.AskWhatYouHaveInMind,
                 s.EnableNightWindow, SelectedOf(s.NightWindowHotkey),
@@ -290,7 +290,7 @@ namespace ImmersiveAI.Mcm
                 // in the menu on the next poll without either side owning the truth twice.
                 Voice.VoiceService.PlayerVoiceId,
                 c.VoiceSpeakReachOuts, c.VoicePanicKey, c.CloudVoiceApiKey,
-                c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightCooldownHours,
+                c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightDayResetHour,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
                 c.AskWhatYouHaveInMind,
                 c.EnableNightWindow, c.NightWindowHotkey,
@@ -365,7 +365,7 @@ namespace ImmersiveAI.Mcm
             s.EnableNights = c.EnableNights;
             s.NightsAutoVisit = c.NightsAutoVisit;
             s.NightsPreventChild = c.NightsPreventChild;
-            s.NightCooldownHours = Clamp(c.NightCooldownHours, 1, 72);
+            s.NightDayResetHour = Clamp(c.NightDayResetHour, 0, 23);
             s.ConceptionRevealDelayDays = Clamp(c.ConceptionRevealDelayDays, 0, 30);
             s.ShowConceptionOdds = c.ShowConceptionOdds;
             s.PaidNightsDisorganizeParty = c.PaidNightsDisorganizeParty;
@@ -475,7 +475,7 @@ namespace ImmersiveAI.Mcm
             c.EnableNights = s.EnableNights;
             c.NightsAutoVisit = s.NightsAutoVisit;
             c.NightsPreventChild = s.NightsPreventChild;
-            c.NightCooldownHours = s.NightCooldownHours;
+            c.NightDayResetHour = s.NightDayResetHour;
             c.ConceptionRevealDelayDays = s.ConceptionRevealDelayDays;
             c.ShowConceptionOdds = s.ShowConceptionOdds;
             c.PaidNightsDisorganizeParty = s.PaidNightsDisorganizeParty;

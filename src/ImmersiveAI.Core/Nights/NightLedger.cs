@@ -49,9 +49,24 @@ namespace ImmersiveAI.Core.Nights
         /// without this the sweep would keep re-closing it forever. -1 before the first evening.</summary>
         public double LastSettledNight { get; set; } = -1;
 
-        /// <summary>Whether the evening of <paramref name="gameDay"/> has already been settled.</summary>
+        /// <summary>Whether the evening of <paramref name="gameDay"/> has already been settled, by
+        /// the calendar. Kept for anything that genuinely means a DAY; the evening's own question
+        /// asks <see cref="IsCycleSettled"/> instead.</summary>
         public bool IsNightSettled(double gameDay) =>
             LastSettledNight >= 0 && Math.Floor(LastSettledNight) >= Math.Floor(gameDay);
+
+        /// <summary>
+        /// Whether the night-cycle this moment belongs to has already been settled — the same
+        /// question as above, asked by the sun (see <see cref="NightClock"/>).
+        /// <para>
+        /// The difference is the small hours, and it matters: a night spent at one in the morning
+        /// belongs to the evening it grew out of, so by the calendar it would settle the day that
+        /// was only just beginning and cost the player the whole of the following evening.
+        /// </para>
+        /// </summary>
+        public bool IsCycleSettled(double gameDay, int resetHour) =>
+            LastSettledNight >= 0 &&
+            NightClock.CycleOf(LastSettledNight, resetHour) >= NightClock.CycleOf(gameDay, resetHour);
 
         /// <summary>Marks an evening settled. Never walks backwards.</summary>
         public void SettleNight(double gameDay)
