@@ -1,11 +1,29 @@
-﻿WHERE THINGS STAND (2026.08.16)
-  The whole post-marriage batch is built, committed and deployed, and 784 Core tests are green —
-  and almost none of it has been played. If you are picking this up cold, read
-  docs/next-session-handoff.md: it carries Anton's own playtest findings and a list of what wants
-  checking, RANKED BY WHAT HURTS MOST IF IT IS WRONG rather than by likelihood.
-  Three docs hold the rest: docs/after-the-wedding-design.md (the design record — its SPIRIT
-  section is the feature and must be read whole), docs/review-findings-2026-08-15.md (35 raw,
-  UNVERIFIED review leads; twenty untriaged), and CLAUDE.md (the standing laws).
+﻿WHERE THINGS STAND (2026.08.16, after the night pass)
+  804 Core tests green, everything below built, committed and DEPLOYED — and almost none of it
+  played. The post-marriage batch, the voices, and this night's whole pass are all unplaytested.
+
+  THIS NIGHT LANDED, in order: the voices reading the *acted* parts; her answer spoken with the
+  screen shut; the night's clock kept by the sun instead of a drifting hour count; the voice BUZZ
+  (it was a WAV piece poured before it was finished, byte-shifting everything after it); the item
+  flood in towns (a computed view that aliased what it described, doubling on every save/load); the
+  scouts who could not see prisoners or wounded; a gang leader who believed he had no men; the
+  conception maths, which was genuinely wrong and is now provably right; and THE STAGE, all three
+  entries of it — the tavern set, moving the talk between a town's rooms, and the hearth rebuilt as
+  a mode of the talk screen.
+
+  THE STAGE'S ARCHITECTURE, since it was the open question: there is no scene arbitration, because
+  the hearth REUSES the talk screen's host instead of being a second one. Two tableau-hosting
+  screens over one shared cached scene is where the hard native crash lives, and a MODE never
+  creates that situation. Reasoning in docs/after-the-wedding-design.md under "The hearth window
+  becomes a stage" — the banner's three questions are answered there now.
+
+  UNAPPLIED AND WAITING: docs/workflow-results-2026-08-16.json holds one reader's verdicts on the
+  twenty untriaged review leads (the refuting half died on a session limit, twice). Three births
+  findings in it look real and are named in their own TODO entry below. Nothing from that file has
+  been applied.
+
+  Docs that hold the rest: docs/after-the-wedding-design.md (its SPIRIT section IS the feature and
+  must be read whole), docs/next-session-handoff.md, docs/review-findings-2026-08-15.md, CLAUDE.md.
 
 BUGS:
 - [x] THE VOICE BUZZES ON A LONG READING — FIXED 2026.08.16 (Anton, reproduced twice on a night
