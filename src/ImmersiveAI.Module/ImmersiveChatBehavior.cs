@@ -1335,16 +1335,106 @@ namespace ImmersiveAI
             catch { return false; }
         }
 
-        // Leaves the vanilla dialog and raises the screen on this soul. Deliberately does NOT call
-        // PrepareChat: nothing was said in the panel, so this really was only a meeting, and the
-        // silent meeting note ConversationEnded records for it is the honest account. Whatever is
-        // then said on the screen records itself, as it always does.
+        // Leaves the vanilla dialog and raises the screen on this soul.
+        //
+        // THEY GREET FIRST HERE, exactly as the panel has always done (Anton, 2026.08.15). The two
+        // roads had drifted apart in a way that read as a bug: approach someone on the map and the
+        // screen opened on silence, waiting for you to write; visit an artisan in a town — where the
+        // screen cannot open over a scene the player is standing in — and the old panel had them
+        // greet you properly. Same act, two different receptions.
+        //
+        // The distinction that survives is not which window it is but WHETHER YOU APPROACHED THEM.
+        // Walking up to somebody and saying "let us speak" is an arrival and deserves a greeting;
+        // pulling the screen up on the hotkey is the quick word it was always meant to be, and stays
+        // write-first with no ceremony and no call spent on a greeting nobody asked for.
         private void OnOpenTalkScreenFromDialog()
         {
             var npc = Hero.OneToOneConversationHero;
             if (npc == null) return;
+
             // The dialog is closing this very frame; the screen waits for the map to be clear of it.
             UI.TalkUI.OpenWhenClear(npc);
+
+            if (_config?.EnableConversationRecap != true) return;
+
+            // Held busy for the same reason a reply holds it: two writers on one memory file lose
+            // each other's turn, and nothing stops the player typing while she is drawing breath.
+            // It also gives the screen its "considers…" line instead of an empty thread.
+            if (!_quickChatBusy.Add(npc.StringId)) return;
+
+            // The situation snapshot is captured here now, as the panel road does: with a greeting
+            // being made, this is no longer "only a meeting". PrepareChat also stamps the beat
+            // marker, so ConversationEnded does not ALSO write its silent meeting note for a
+            // conversation that is about to carry a real recorded arrival.
+            if (PrepareChat() == null) { _quickChatBusy.Remove(npc.StringId); return; }
+            _ = GreetOnTalkScreenAsync(npc);
+        }
+
+        /// <summary>
+        /// Her greeting when the player has walked up to her and the talk screen is opening — the
+        /// same beat <see cref="RecapAsync"/> records for the conversation panel, put where the
+        /// screen will draw it instead of into a dialog variable.
+        /// </summary>
+        private async Task GreetOnTalkScreenAsync(Hero npc)
+        {
+            using var _cost = UsageLedger.BeginInteraction("greeting", npc?.Name?.ToString());
+            try
+            {
+                if (npc == null) return;
+
+                // A first meeting may first receive its spark, so her very first words carry it.
+                await EnsurePersonaSparkAsync(npc, canAsk: true).ConfigureAwait(false);
+
+                var ctx = BuildContext(npc);
+                var arrivalLine = PromptBuilder.ArrivalLine(
+                    ctx.PlayerName, firstMeeting: !PromptBuilder.HasRememberedHistory(ctx.Memory));
+                var messages = _promptBuilder.BuildInnerPrompt(
+                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
+
+                var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+                var greeting = (rawReply ?? string.Empty).Trim();
+                if (greeting.Length == 0)
+                {
+                    ReleaseGreetingHold(npc);
+                    return;                            // silence is better than an invented "..."
+                }
+
+                AppendRecordedTurn(npc, arrivalLine, greeting);
+                _lastNpcLine = greeting;
+
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    _quickChatBusy.Remove(npc.StringId);
+                    MarkMetInWorldsEyes(npc);
+                    UI.TalkUI.OnThreadChanged(npc, markUnread: false);
+
+                    // Spoken only if they are actually looking at this thread — the same rule a
+                    // reply follows. The screen was asked for, so they usually are.
+                    if (UI.TalkUI.IsViewing(npc) && Voice.VoiceService.AutoSpeakEnabled)
+                        Voice.VoiceService.Speak(npc, greeting);
+                    else
+                        NotifyReplyReady(npc);
+                });
+            }
+            catch (Exception ex)
+            {
+                // A greeting that fails costs the greeting and nothing else: the screen is already
+                // up and the player can simply speak first, which is what it did before this existed.
+                ModLog.Warn("greeting on the talk screen: " + ex.Message);
+                ReleaseGreetingHold(npc);
+            }
+        }
+
+        /// <summary>Lets the player speak again after a greeting that produced nothing. On the game
+        /// thread, because the set is touched from there everywhere else.</summary>
+        private void ReleaseGreetingHold(Hero? npc)
+        {
+            if (npc == null) return;
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                _quickChatBusy.Remove(npc.StringId);
+                UI.TalkUI.OnThreadChanged(npc, markUnread: false);
+            });
         }
 
         // Runs the moment the player picks "Speak freely" (before the greet state is shown), so the
