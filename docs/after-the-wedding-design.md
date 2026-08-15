@@ -1,4 +1,4 @@
-# Life after the wedding — the design record
+﻿# Life after the wedding — the design record
 
 *The developer decision record for the post-marriage batch (designed 2026.08.15, Anton + Claude,
 in conversation — concept locked, build not started). Read the WHOLE spirit section before
@@ -350,6 +350,41 @@ brother, not a new organism.
 > 3. **Does it reuse the talk screen's machinery, or duplicate it?** "The talk screen's brother,
 >    not a new organism" is a sentiment. Subclass the manager? Share it with a mode flag? Copy the
 >    VM? The answer decides how much of question 1 even arises.
+>
+> ---
+>
+> **THE THREE QUESTIONS ARE ANSWERED (2026.08.16).** Anton was asked the one that was his to
+> answer (question 2) and handed it back: "idk on this, think about it and do it the way you like,
+> I will then look at it live." So all three are decided here, before any UI is written, which is
+> the point of the banner.
+>
+> **1. Scene arbitration: THERE IS NO ARBITRATION — the hearth REUSES the talk screen's host.**
+> The banner already suspected this and it is right. The hard problem is only a problem if two
+> screens each own a tableau over ONE shared cached scene: yielding a Gauntlet layer is trivial,
+> yielding a cached NATIVE scene mid-teardown with a render-to-texture camera still pointed at it
+> is where the hard crash lives. So we never create that situation. The hearth is a MODE of the
+> talk screen, not a second screen: same layer, same `ConversationTableauController`, same stub,
+> same teardown — only the side panels change. The four documented traps are then paid for exactly
+> once, by code that already works, and the fifth trap is never born. It also costs the least: no
+> second manager, no second prefab lifecycle, no second place to get the teardown order wrong.
+> The H key becomes "open the talk screen in hearth mode", and the two modes swap panels with the
+> scene untouched — a soul is already drawn there, and switching mode does not rebuild her.
+>
+> **2. What the right-hand panel holds: EVERYTHING IT HOLDS TODAY, in one scrolling column.**
+> Nothing is dropped. Top to bottom: her season in words · the switches (household-wide ones in a
+> small bar, hers under her name) · her rolling fortnight of nights as the cards they already are ·
+> her children's cards. Tabs were the obvious alternative and are the wrong answer here: the H
+> window is the one page in this mod deliberately written for the player as an OPERATOR (its own
+> info text says so), and an operator's page must not hide half its state behind a click. The
+> column is long; that is what scrolling is for, and it already scrolls.
+>
+> **3. Reuse or duplicate: REUSE, and question 1 is why.** `TalkScreenVM` grows a mode, not a
+> sibling. The contact list is already a filtered view of everyone you know — hearth mode filters
+> it to the women of the hearth and reuses `HearthRank` for the order, which is the same ranking
+> that already sorts them. Anything genuinely hearth-only (the fortnight, the season line) lives in
+> its own VM hung off the screen, so the talk screen's own file does not swell.
+>
+> ---
 >
 > Two smaller items in TASKS_TODO now ride with this one, deliberately: the wanderer drawn in the
 > town instead of the tavern, and Anton's ask to change the set inside a town. Both are the same
