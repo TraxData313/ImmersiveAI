@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 
 namespace ImmersiveAI.UI.TalkScreen
@@ -43,11 +44,17 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             if (hero == null) { Hide(); return; }
             if (_unavailable) return;
-            if (ReferenceEquals(_shown, hero)) return;
+
+            // Choosing someone new drops any set the player had moved the last talk to: the room is
+            // a property of THIS conversation, not a standing preference, and the honest default is
+            // always where the soul in front of you actually stands.
+            if (!ReferenceEquals(_shown, hero)) _chosenSet = null;
+            else if (_builtSet == _chosenSet) return;      // same soul, same room — nothing to redraw
 
             try
             {
-                var data = ConversationSceneBuilder.BuildFor(hero);
+                var data = ConversationSceneBuilder.BuildFor(hero, _chosenSet);
+                _builtSet = _chosenSet;
                 TableauData = data;
                 _shown = data == null ? null : hero;
                 // A null here is NOT a verdict on this game build — the map may simply not be up
@@ -57,6 +64,54 @@ namespace ImmersiveAI.UI.TalkScreen
             catch (Exception ex)
             {
                 MarkUnavailable(ex);
+            }
+        }
+
+        /// <summary>Which room the talk has been MOVED to, or null for wherever they truly stand.
+        /// Never persisted: it belongs to this conversation and nothing else.</summary>
+        private static string? _chosenSet;
+
+        /// <summary>The room the stage currently on screen was built with — so a set change is told
+        /// apart from a re-selection of the same soul, which must still cost nothing.</summary>
+        private static string? _builtSet;
+
+        internal static string? ChosenSet => _chosenSet;
+
+        /// <summary>The rooms this talk may be moved to. Empty outside walls, and empty when there
+        /// is only one — a control offering a single choice is furniture, not a choice.</summary>
+        internal static IReadOnlyList<(string Id, string Label)> SetsFor(Hero? hero)
+        {
+            if (hero == null || _unavailable) return System.Array.Empty<(string, string)>();
+            try
+            {
+                var sets = ConversationSceneBuilder.SetsFor(hero);
+                return sets.Count > 1 ? sets : System.Array.Empty<(string, string)>();
+            }
+            catch { return System.Array.Empty<(string, string)>(); }
+        }
+
+        /// <summary>Moves the talk to another room of the same settlement. Answers false when the
+        /// stage could not be rebuilt, so the caller can leave the label where it was rather than
+        /// claim a move that did not happen.</summary>
+        internal static bool MoveTo(Hero? hero, string? setId)
+        {
+            if (hero == null || _unavailable) return false;
+            var was = _chosenSet;
+            _chosenSet = setId;
+            try
+            {
+                var data = ConversationSceneBuilder.BuildFor(hero, setId);
+                if (data == null) { _chosenSet = was; return false; }
+                TableauData = data;
+                _builtSet = setId;
+                _shown = hero;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _chosenSet = was;
+                MarkUnavailable(ex);
+                return false;
             }
         }
 
@@ -88,6 +143,8 @@ namespace ImmersiveAI.UI.TalkScreen
         internal static void Hide()
         {
             _shown = null;
+            _builtSet = null;
+            _chosenSet = null;
             TableauData = null;
         }
 
@@ -101,6 +158,8 @@ namespace ImmersiveAI.UI.TalkScreen
         internal static void Clear()
         {
             _shown = null;
+            _builtSet = null;
+            _chosenSet = null;
             TableauData = null;
             try { ConversationSceneBuilder.Release(); }
             catch { /* best-effort */ }
@@ -114,6 +173,8 @@ namespace ImmersiveAI.UI.TalkScreen
             _unavailable = true;
             TableauData = null;
             _shown = null;
+            _builtSet = null;
+            _chosenSet = null;
             ModLog.Error("showing a face on the talk screen (the words carry on without it)", ex);
         }
     }

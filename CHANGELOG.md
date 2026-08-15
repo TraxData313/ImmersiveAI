@@ -51,6 +51,10 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 - New: an answer now speaks itself even with the screen shut, so you can send a line and hear the reply while you ride on. The ping and the unread mark still show you the way back to it. A switch under Voices puts it back the old way.
 
+### The talk screen
+- Fixed: someone you meet in a tavern is now drawn IN the tavern. Everyone inside a town was being shown out in the street, whatever room they were really in.
+- New: inside a town you can move the talk — the town, the tavern, or the keep when it is open to you. One button in the bar, and it goes back to wherever they truly stand when you turn to somebody else.
+
 ### What they can see for you
 - Fixed: your scouts can now tell you how many of a band go wounded and whether it drags prisoners — naming captive lords among them — where before they could not report what you can read off the party's own nameplate. The same facts ride into weighing a battle, on both sides, since men too hurt to stand in a line are not men you are fighting.
 

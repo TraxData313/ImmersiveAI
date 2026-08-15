@@ -138,11 +138,27 @@ NEXT UPDATE:
           culture whose sets we do not ship, so a non-null settlement IS the proof its interiors
           exist. UNPLAYTESTED — worth a look in a tavern, a keep, and a War Sails town (which should
           still be drawn out of doors).
-    - [ ] CHANGE THE SET INSIDE A TOWN (Anton's ask, same evening) — the town, the tavern, or the
-          keep when it is open to you. The original ask closed "and note who else is standing there";
-          Anton WITHDREW that on 2026.08.16 when asked which of the two it meant ("no, I dont care
-          if they see who else is in the tavern"). So: neither other souls drawn into the scene, nor
-          a line telling her who else is present. Do not reinstate it as a missing requirement.
+    - [x] CHANGE THE SET INSIDE A TOWN — BUILT 2026.08.16. A button in the talk screen's bar,
+          "In the town" / "In the tavern" / "In the keep", which CYCLES rather than opening a menu:
+          three rooms at most, and a menu for three is heavier than the choice it carries. Shown
+          only inside walls and only when there IS more than one room.
+          `ConversationSceneBuilder.SetsFor` offers them and `BuildFor` takes an optional set;
+          `ConversationTableauController` keeps `_chosenSet` beside a `_builtSet` so a set change
+          redraws while a re-selection of the same soul still costs nothing, and every path that
+          empties the stage clears both (a stale `_builtSet` would make the next `Show` of that soul
+          short-circuit into drawing nothing).
+          THREE DECISIONS WORTH KEEPING: the keep is offered only when the game's OWN access model
+          says the player may walk in, bribe included — offering a barred door would be the mod
+          promising what the world refuses, and unlike the talk-range test this one fails CLOSED;
+          the default is always where the soul truly stands, and choosing a different contact drops
+          the move, because the room belongs to this conversation and not to the player's standing
+          taste; and the label only changes when the stage actually rebuilt, so it can never claim a
+          room the player is not looking at.
+          The original ask closed "and note who else is standing there"; Anton WITHDREW that on
+          2026.08.16 ("no, I dont care if they see who else is in the tavern") — neither other souls
+          drawn into the scene nor a line naming them. Do not reinstate it as a missing requirement.
+          UNPLAYTESTED, and this one genuinely needs eyes: it asks the tableau for a room the soul
+          is NOT in, which is a thing vanilla never does.
       DO THEM TOGETHER, and in that order: the two smaller ones teach the scene selection that the
       stage then has to arbitrate between two screens.
 

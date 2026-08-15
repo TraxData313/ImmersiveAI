@@ -700,6 +700,10 @@ namespace ImmersiveAI.UI.TalkScreen
             OnPropertyChanged("SendText");
             OnPropertyChanged("CanSend");
             OnPropertyChanged("CanEdit");
+            // The set belongs to whoever is on stage: a new soul may stand in a town with three
+            // rooms or out on the road with none, and the controller has just dropped any move.
+            OnPropertyChanged("CanChangeSet");
+            OnPropertyChanged("SetButtonText");
             OnPropertyChanged("MessagesBottomMargin");
             OnPropertyChanged("HasDraft");
 
@@ -1758,6 +1762,55 @@ namespace ImmersiveAI.UI.TalkScreen
 
         /// <summary>Whether there is any point in a writing box at all — a soul gone from the world
         /// can be read, never written to.</summary>
+        // ------------------------------ the set ------------------------------
+        //
+        // Anton's ask (2026.08.15): inside a town, move the talk between the town itself, the tavern
+        // and the keep when it is open to you. It CYCLES rather than opening a menu — there are at
+        // most three rooms, and a menu for three is heavier than the choice it carries.
+        //
+        // The default is always where the soul truly stands, and choosing someone else drops the
+        // move (the controller sees to that): the room belongs to this conversation, not to the
+        // player's standing taste.
+
+        [DataSourceProperty]
+        public bool CanChangeSet => ConversationTableauController.SetsFor(_selected?.Hero).Count > 1;
+
+        [DataSourceProperty]
+        public string SetButtonText
+        {
+            get
+            {
+                var sets = ConversationTableauController.SetsFor(_selected?.Hero);
+                if (sets.Count == 0) return "The set";
+                var chosen = ConversationTableauController.ChosenSet;
+                foreach (var set in sets)
+                    if (set.Id == chosen) return "In " + set.Label;
+                return "In " + sets[0].Label;      // no move made: they stand where they stand
+            }
+        }
+
+        public void ExecuteChangeSet()
+        {
+            try
+            {
+                var hero = _selected?.Hero;
+                var sets = ConversationTableauController.SetsFor(hero);
+                if (hero == null || sets.Count < 2) return;
+
+                var chosen = ConversationTableauController.ChosenSet;
+                int at = 0;
+                for (int i = 0; i < sets.Count; i++)
+                    if (sets[i].Id == chosen) { at = i; break; }
+
+                var next = sets[(at + 1) % sets.Count];
+                // Only say it moved if it did: a stage that refused to rebuild keeps its old label
+                // rather than claiming a room the player is not looking at.
+                if (ConversationTableauController.MoveTo(hero, next.Id))
+                    OnPropertyChanged("SetButtonText");
+            }
+            catch (Exception ex) { ModLog.Error("moving the talk to another set", ex); }
+        }
+
         [DataSourceProperty]
         public bool CanEdit => HasSelection && _selected?.Hero != null;
 

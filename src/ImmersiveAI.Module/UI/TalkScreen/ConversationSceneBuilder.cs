@@ -46,7 +46,7 @@ namespace ImmersiveAI.UI.TalkScreen
 
         /// <summary>Builds the tableau data for one soul, or null when it cannot be built right now
         /// (no map, or the game's own conversation holds the scene).</summary>
-        internal static object? BuildFor(Hero hero)
+        internal static object? BuildFor(Hero hero, string? chosenSet = null)
         {
             if (hero?.CharacterObject == null) return null;
             if (Campaign.Current == null) return null;
@@ -86,7 +86,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 timeOfDay,
                 underSnow,
                 place,
-                LocationFor(hero, place),
+                chosenSet ?? LocationFor(hero, place),
                 weather == MapWeatherModel.WeatherEvent.HeavyRain,
                 weather == MapWeatherModel.WeatherEvent.Blizzard);
         }
@@ -267,6 +267,51 @@ namespace ImmersiveAI.UI.TalkScreen
         private static bool RidesWithPlayer(Hero hero)
         {
             try { return hero.PartyBelongedTo != null && hero.PartyBelongedTo == MobileParty.MainParty; }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// The rooms a talk inside a town may be MOVED to (Anton's ask, 2026.08.15). Empty outside
+        /// walls, and empty for a settlement whose interiors we do not ship — the same test the room
+        /// itself rides on, so a set can never be offered that cannot be drawn.
+        /// <para>
+        /// The keep is offered ONLY when the game says the player may walk into it, asked through
+        /// the game's own access model exactly as the talk range does. It is the one door in a town
+        /// that is genuinely barred, and offering it anyway would be the mod promising something the
+        /// world refuses.
+        /// </para>
+        /// </summary>
+        internal static IReadOnlyList<(string Id, string Label)> SetsFor(Hero hero)
+        {
+            var sets = new List<(string, string)>();
+            try
+            {
+                var place = SceneSettlementFor(hero);
+                if (place == null) return sets;
+
+                sets.Add(("center", place.IsVillage ? "the village" : "the town"));
+                if (!place.IsVillage) sets.Add(("tavern", "the tavern"));
+                if (place.IsFortification && KeepStandsOpen(place)) sets.Add(("lordshall", "the keep"));
+            }
+            catch { /* a set we cannot reason about is a set we do not offer */ }
+            return sets;
+        }
+
+        /// <summary>Whether the lord's hall is open to the player right now — the game's own model,
+        /// including a bribe already paid this visit. Fails CLOSED, unlike the talk-range test which
+        /// fails open: there, a hiccup must not silence a keep; here, it would only offer a door the
+        /// world may refuse, and a set that cannot be entered is worse than a set not offered.</summary>
+        private static bool KeepStandsOpen(Settlement place)
+        {
+            try
+            {
+                Campaign.Current.Models.SettlementAccessModel.CanMainHeroEnterLordsHall(place, out var access);
+                if (access.AccessLevel == TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel.AccessLevel.FullAccess)
+                    return true;
+                return access.AccessLevel == TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel.AccessLevel.LimitedAccess
+                       && access.LimitedAccessSolution == TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel.LimitedAccessSolution.Bribe
+                       && place.BribePaid >= Campaign.Current.Models.BribeCalculationModel.GetBribeToEnterLordsHall(place);
+            }
             catch { return false; }
         }
 
