@@ -1,4 +1,4 @@
-using ImmersiveAI.Core.Initiation;
+﻿using ImmersiveAI.Core.Initiation;
 
 namespace ImmersiveAI.Core.Tests;
 
@@ -218,5 +218,17 @@ public class InitiationScorerTests
         double three = InitiationScorer.OutreachDamping(1000, 3);
         Assert.Equal(Math.Pow(InitiationScorer.UnansweredPrideFactor, 2), two, 5);
         Assert.True(three < two);
+    }
+
+    [Fact]
+    public void HearthFactors_TheWeddedOneIsThriceACompanion()
+    {
+        // Anton's own numbers, 2026.08.15: the one the player is wed to is three times as likely to
+        // come to them as a companion of the very same shared story, and a companion is only a nudge
+        // above the world ("not as dramatically... maybe touch them a bit"). Pinned because these are
+        // a stated requirement rather than a tuning knob free to drift.
+        Assert.Equal(3.0 * InitiationScorer.CompanionHearthFactor, InitiationScorer.SpouseHearthFactor, 5);
+        Assert.True(InitiationScorer.CompanionHearthFactor > 1.0);
+        Assert.True(InitiationScorer.CompanionHearthFactor < 2.0);
     }
 }

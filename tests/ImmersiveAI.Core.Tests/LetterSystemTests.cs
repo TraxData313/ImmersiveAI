@@ -16,6 +16,19 @@ public class LetterSystemTests
     }
 
     [Fact]
+    public void TravelDays_ACourierOutridesAnyColumn()
+    {
+        // The one law of the post (Anton, 2026.08.15): the player must never outrun their own letter
+        // and arrive before it. Light cavalry riding hard makes about 190 map units a day; a single
+        // horseman with fresh mounts has to beat that over any road worth riding.
+        const double fastestPartyUnitsPerDay = 190.0;
+        Assert.True(LetterCourier.UnitsPerDay > fastestPartyUnitsPerDay);
+
+        foreach (var distance in new[] { 20.0, 100.0, 400.0, 900.0 })
+            Assert.True(LetterCourier.TravelDays(distance) < distance / fastestPartyUnitsPerDay + LetterCourier.MinDays);
+    }
+
+    [Fact]
     public void TravelDays_UnknownDistance_IsAMiddlingRoadNotADoorstep()
     {
         Assert.Equal(LetterCourier.MaxDays / 2, LetterCourier.TravelDays(-1));

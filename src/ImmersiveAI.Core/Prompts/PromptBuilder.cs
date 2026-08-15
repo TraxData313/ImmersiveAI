@@ -232,25 +232,44 @@ namespace ImmersiveAI.Core.Prompts
         }
 
         /// <summary>The NPC's own reckoning on whether to approach the player — one simple nudge, first
-        /// person: is there something I want to DISCUSS with them (not merely "do I want to say hi"), the
-        /// rest left wholly to their own nature and what the sheet has stirred (news, mood, trade, memory).
+        /// person: is there anything I want to TELL them or to ASK them, the rest left wholly to their
+        /// own nature and what the sheet has stirred (news, mood, trade, memory).
         /// Deliberately free of instruction about what a worthy topic is — a list there made every soul
         /// answer the same (Anton, 2026.07.27: "the AI stops being AI and becomes a program again").
-        /// Answered NO or "YES: the something" (see <see cref="Initiation.InitiationParser.WantsToGo"/>).</summary>
+        /// Answered NO or "YES: the something" (see <see cref="Initiation.InitiationParser.WantsToGo"/>).
+        ///
+        /// THE VERB IS THE WHOLE DIAL, and it has now been set at both extremes (Anton, 2026.08.15).
+        /// It read "is there something I want to DISCUSS", raised on 2026.07.26 to stop courtesy visits —
+        /// the steward asking how you feel, the quartermaster's "troops are good, how are you today". It
+        /// worked far too well: "discuss" asks for a MATTER, an item of business, and almost nobody has
+        /// one on a given hour, so every ponder came back NO and the feature became a tax paid in tokens
+        /// for nothing that ever happened. Tell / ask are plain speech acts instead: they still demand
+        /// real content — nobody can tell another person nothing — while a remark, a question, a thing
+        /// noticed on the road all clear the bar. And the anti-spam load has not belonged here since
+        /// OutreachDamping (2026.07.26) fixed the actual cause, which was a feedback loop and not an
+        /// eager prompt; the raised bar was doing that job a second time. If courtesy visits ever come
+        /// back in volume, damp them there — do not re-raise this.</summary>
         public static string ReachOutPonderLine(string playerName, bool stranger = false) => stranger
             ? $"I notice {playerName} nearby — someone I know only by sight, for we have never spoken. " +
-              "Is there something I would discuss with them? " +
-              "I decide in one line: NO — or YES: what I want to discuss."
+              "Is there anything I want to tell them, or to ask them? " +
+              "I decide in one line: NO — or YES: what I want to say."
             : $"I notice {playerName} nearby, about their own affairs. " +
-              "Is there something I want to discuss with them just now? " +
-              "I decide in one line: NO — or YES: what I want to discuss.";
+              "Is there anything I want to tell them, or to ask them? " +
+              "I decide in one line: NO — or YES: what I want to say.";
 
         /// <summary>The condensed note recorded for a ponder beat (the live prompt uses the full
         /// <see cref="ReachOutPonderLine"/>; memory keeps this short truthful note plus their answer).
-        /// Both variants share the <see cref="IsPonderBeat"/> prefix — keep it word-for-word.</summary>
+        /// Both variants share the <see cref="IsPonderBeat"/> prefix — keep it word-for-word.
+        ///
+        /// IT MUST AGREE WITH THE LINE ABOVE, and for a reason easy to miss: this note is RECORDED, so
+        /// every future ponder reads a stack of the soul's own past reckonings before answering. While
+        /// the line asked for a matter to discuss, the note said they had weighed "true cause" — and
+        /// that phrasing was then handed back to them, in their own voice, once per remembered hour. A
+        /// bar softened only in the live line would have gone on being re-argued by the memory of it.
+        /// Old notes keep their old words forever, as all recorded beats do; these only shape new ones.</summary>
         public static string ReachOutPonderNote(string playerName, bool stranger = false) => stranger
-            ? $"I marked {playerName} nearby — a stranger to me still — and weighed whether I had true cause to cross to them. I resolved:"
-            : $"I marked {playerName} nearby and weighed whether I had true cause to go to them. I resolved:";
+            ? $"I marked {playerName} nearby — a stranger to me still — and weighed whether I had anything to say to them. I resolved:"
+            : $"I marked {playerName} nearby and weighed whether I had anything to say to them. I resolved:";
 
         // The word-for-word prefix of every recorded ponder note; the chat window folds such a beat —
         // reckoning and resolution both — into one soft line of narration (nothing spoken happened).

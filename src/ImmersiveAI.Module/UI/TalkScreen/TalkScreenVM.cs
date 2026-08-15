@@ -124,8 +124,15 @@ namespace ImmersiveAI.UI.TalkScreen
             var keepFolder = _selected?.Folder;
             _allContacts.Clear();
 
+            // THE HEARTH SORTS FIRST — above near-or-far, above everything (Anton, 2026.08.15: "she is
+            // the hearth of this mod"). The one the player is wed to heads the list wherever in
+            // Calradia she stands, then their own household, then the world in the old order. It is
+            // the same ranking that decides who is likeliest to come to them, on purpose: pinning her
+            // to the top while she never knocked would be the mod saying two things about one bond.
+            // It also settles what opens on the hotkey, since the first row is what gets chosen.
             foreach (var info in ImmersiveChatBehavior.ContactsForTalk()
-                         .OrderByDescending(i => i.IsHere)
+                         .OrderByDescending(i => ImmersiveChatBehavior.HearthRank(i.Hero))
+                         .ThenByDescending(i => i.IsHere)
                          .ThenByDescending(i => !i.IsGone)
                          .ThenByDescending(i => i.HasHistory || i.HasLetters)
                          .ThenByDescending(i => i.LastSpokenGameDay)
@@ -493,16 +500,10 @@ namespace ImmersiveAI.UI.TalkScreen
                 : ImmersiveChatBehavior.PromptPreviewFor(_selected.Hero, IsAway);
             if (preview == null) return;
 
-            messages.Add(new ChatMessageVM(
-                IsAway ? $"▲ What {npcName} will read your letter with" : $"▲ What {npcName} will hear you with",
-                "Everything below is given to them the moment you write — in this order, and in their "
-                + "own voice. Nothing here is spoken aloud; it is simply who they are when your words "
-                + "arrive. Keep scrolling down for the conversation itself.",
-                isNarration: true, PromptFrameColor));
-
-            foreach (var block in SplitIntoBlocks(preview.Sheet))
-                messages.Add(new ChatMessageVM(string.Empty, block, isNarration: true, PromptSheetColor));
-
+            // THE HANDS COME FIRST (Anton, 2026.08.15). They used to sit between the sheet and the
+            // conversation, which buried them: the sheet runs to thousands of words, so a reader
+            // scrolling up met an unbroken wall of prose and gave up before reaching the tools. At
+            // the very top they are the first thing found, and the sheet reads on beneath them.
             if (preview.Tools.Count > 0)
             {
                 messages.Add(new ChatMessageVM("✦ What they may reach for while answering",
@@ -521,6 +522,16 @@ namespace ImmersiveAI.UI.TalkScreen
                         isNarration: true, PromptToolColor));
                 }
             }
+
+            messages.Add(new ChatMessageVM(
+                IsAway ? $"▲ What {npcName} will read your letter with" : $"▲ What {npcName} will hear you with",
+                "Everything below is given to them the moment you write — in their own voice. Nothing "
+                + "here is spoken aloud; it is simply who they are when your words arrive. Keep "
+                + "scrolling down for the conversation itself.",
+                isNarration: true, PromptFrameColor));
+
+            foreach (var block in SplitIntoBlocks(preview.Sheet))
+                messages.Add(new ChatMessageVM(string.Empty, block, isNarration: true, PromptSheetColor));
 
             messages.Add(new ChatMessageVM("▼ And then everything between you",
                 "Every word below is remembered, and rides along with the rest.",

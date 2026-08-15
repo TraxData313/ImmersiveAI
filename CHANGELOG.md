@@ -67,6 +67,21 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Changed: "Speak freely with me." on the map now opens that screen on whoever you clicked, instead of running the talk in the old dialog box. Inside a town's own streets the old panel still carries the conversation.
 - Changed: both old keys (O and Y) open the one screen, so nobody's habits break.
 - Changed: someone who has died stays in the list, marked "(gone)" — their letters remain readable forever.
+- Fixed: someone whose band you have ridden right up to on the open map now counts as standing with you — they show as "here", you can simply speak to them, and they can come to you unbidden. Until now only your own party and the town you were standing in counted, so a lord one step away was "too far for words". Anyone marching in your army counts too. You have to be all but touching them, not merely in sight — the range is the game's own "close enough to bump into each other", which is wider at sea where ships are.
+- Changed: the settlement menu now offers one door — "Speak with those you know" — instead of a line for speaking and another for letters, since both opened the same screen.
+- Changed: someone who comes to you unbidden now opens the talk screen when you answer their knock, where you can see them, rather than the old dialog box.
+- Changed: scrolling up past the oldest word now shows what they may reach for while answering FIRST, above their own mind, so it is found instead of buried under thousands of words.
+- Fixed: clicking a party on the map, speaking freely, and closing the screen no longer left you standing in a stand-off with them.
+
+### Coming to you
+- New: the one you are wed to comes to you far more readily than anyone else — three times as often as a companion who shares the same amount of story with you, and she will cross a room to begin even if the two of you have never spoken.
+- New: your own household — companions, kin, the lords of your clan — are somewhat likelier to come to you than the nobles and townsfolk around them. A nudge, not a landslide.
+- New: your spouse now heads the talk screen's list wherever in Calradia she is, and is who the screen opens on.
+- Fixed: people almost never came to you any more. When they noticed you nearby they were asking themselves whether they had a *matter to discuss* — and hardly anyone has one on a given hour, so the answer was always no. They now ask whether there is anything they want to tell you or ask you, which still needs something real to say but lets a remark or a question through.
+
+### The post
+- Fixed: a courier now always outrides you. You could beat your own letter to its reader, and then stand in front of them with it still on the road between you — which also barred you from writing again.
+- Fixed: a letter still travelling to someone you have since ridden up to is handed over on the spot, whenever the two of you meet.
 
 ### The birth chronicle
 - New: every child born to you is written down in two parts — the hour of it, set down in the mother's own voice and belonging to the two of you, and the feast that welcomed the child, which everyone who stood at it remembers ever after.

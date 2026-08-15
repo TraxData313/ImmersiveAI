@@ -509,18 +509,25 @@ public class PromptBuilderTests
 
 
     [Fact]
-    public void ReachOutPonderLine_AsksOnlyWhetherThereIsSomethingToDiscuss()
+    public void ReachOutPonderLine_AsksOnlyWhetherThereIsAnythingToSay()
     {
-        // One simple nudge — "is there something I want to discuss?" — and nothing telling them what
-        // a worthy topic is (a list there made every soul answer the same; Anton, 2026.07.27). The
-        // only fact kept: a stranger has no shared past to imagine.
+        // One simple nudge — "anything I want to tell them, or to ask them?" — and nothing telling
+        // them what a worthy topic is (a list there made every soul answer the same; Anton,
+        // 2026.07.27). The only fact kept: a stranger has no shared past to imagine.
+        //
+        // The verb is load-bearing (2026.08.15). "Discuss" asks for a matter of business, and almost
+        // nobody has one on a given hour, so every ponder came back NO and the feature only spent
+        // tokens. Tell/ask still demand real content but let a remark or a question through.
         var stranger = PromptBuilder.ReachOutPonderLine("Vulgrim", stranger: true);
         var friend = PromptBuilder.ReachOutPonderLine("Vulgrim");
 
         Assert.Contains("we have never spoken", stranger);
         Assert.DoesNotContain("we have never spoken", friend);
-        Assert.Contains("discuss", stranger);
-        Assert.Contains("discuss", friend);
+        Assert.Contains("tell them", stranger);
+        Assert.Contains("ask them", stranger);
+        Assert.Contains("tell them", friend);
+        Assert.Contains("ask them", friend);
+        Assert.DoesNotContain("discuss", friend);
         // No topic-policing survives.
         Assert.DoesNotContain("no cause", stranger);
         Assert.DoesNotContain("no cause", friend);

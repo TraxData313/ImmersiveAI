@@ -92,10 +92,22 @@ namespace ImmersiveAI.UI
 
         // ------------------------------ opening (the chosen shape) ------------------------------
 
+        /// <summary>The post catches up before the list is drawn. A letter still on the road toward
+        /// someone the player has since ridden up to is handed over the moment they meet (see
+        /// ImmersiveChatBehavior.HandOverLettersWhoseEndsHaveMet) — but the hourly tick that does it
+        /// cannot fire while the talk screen holds the world still, and until it lands the bond is
+        /// shown as having a courier out and cannot be written to. So every opening asks first.</summary>
+        private static void LetTheCouriersCatchUp()
+        {
+            try { ImmersiveChatBehavior.DeliverLettersWhoseEndsHaveMet(); }
+            catch { /* the post is never worth a door that will not open */ }
+        }
+
         /// <summary>Opens the conversation surface, optionally on one soul's thread. With the talk
         /// screen in use this is the ONE door for both speaking and letters.</summary>
         internal static void Open(Hero? preselect = null)
         {
+            LetTheCouriersCatchUp();
             if (UsesTalkScreen)
             {
                 TalkScreen.TalkScreenManager.Open(preselect);
@@ -111,6 +123,7 @@ namespace ImmersiveAI.UI
         /// Returns false when nothing could be raised (the caller falls back to its popups).</summary>
         internal static bool OpenForLetters(Hero? preselect = null)
         {
+            LetTheCouriersCatchUp();
             if (UsesTalkScreen)
             {
                 TalkScreen.TalkScreenManager.Open(preselect);
@@ -126,6 +139,7 @@ namespace ImmersiveAI.UI
         /// runs only if the wait ran out.</summary>
         internal static void OpenWhenClear(Hero npc, Action<Hero>? fallback = null)
         {
+            LetTheCouriersCatchUp();
             if (UsesTalkScreen) { TalkScreen.TalkScreenManager.OpenWhenClear(npc, fallback); return; }
             LetterWindow.LetterWindowManager.OpenWhenClear(npc, fallback);
         }

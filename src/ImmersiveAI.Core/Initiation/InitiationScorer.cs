@@ -63,6 +63,19 @@ namespace ImmersiveAI.Core.Initiation
         /// affection, so even a near-neutral standing keeps the field reports coming.</summary>
         public const double DutyClosenessFloor = 0.5;
 
+        /// <summary>How much likelier the one the player is WED TO is to come to them than a companion
+        /// of the very same shared story — Anton's number, 2026.08.15: "she is the hearth of this mod".
+        /// Three times <see cref="CompanionHearthFactor"/>. Unlike every other factor in this class it
+        /// is not earned by anything: it multiplies the stranger's presence floor too, so a wife the
+        /// player has never once spoken with still crosses the room to begin their story.</summary>
+        public const double SpouseHearthFactor = 4.5;
+
+        /// <summary>The second hearth: the player's own household — their companions, and the kin and
+        /// lords of their clan — are likelier to come than the nobles and townsfolk around them.
+        /// Deliberately a nudge and not a landslide (Anton: "not as dramatically… maybe touch them a
+        /// bit"), because who they are is already carried by the bond itself.</summary>
+        public const double CompanionHearthFactor = 1.5;
+
         /// <summary>Days a soul rests after ANY outreach of their own (even a welcomed one) before their
         /// pull fully returns — a visit paid is a visit paid; no one knocks twice in the same afternoon.</summary>
         public const double OutreachCooldownDays = 0.75;

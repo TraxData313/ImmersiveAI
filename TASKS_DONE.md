@@ -319,3 +319,161 @@
     name nobody chose. The player-facing Name is untouched. Pinned by a test built from that case.
     2026.08.15 10.04.26
 
+
+---
+
+## Six playtest fixes: the map neighbour, the buried tools, the knock, the stand-off, the post, the double door
+
+Anton's playtest list, all six in one pass (2026.08.15).
+
+1. **"When I'm close to a party and press O I don't see the guy near me."** The root cause was
+   older than the talk screen: `IsCoLocated` knew exactly TWO roads — riding in the player's own
+   party, or standing in the same `Settlement` — and no distance branch at all. On the open map
+   `playerSettlement == null` short-circuited to false, so a lord whose band you had ridden right
+   up to was "away across the map": greyed out of the list, answerable only by courier, and never
+   able to knock. Added a third road, `IsWithinSpeakingDistance`: their own band, neither end
+   inside walls, within `SpeakingDistance` (5 map units — the mod's own "close at hand" band from
+   FieldCraft.DistanceWords, about an hour's ride), plus a free pass for anyone marching in the
+   same army whatever the spacing that frame. A soul inside SOME OTHER settlement is deliberately
+   still out of reach however near its walls stand — that is what the settlement branch is for —
+   while a party camped outside the gates of the town you are in has no settlement of its own and
+   is simply close by. One edit, ~20 call sites: the talk screen, reach-outs, the nights, the
+   births, the courtships all agree at once. `NearbyHeroesForChat` gained two detail lines for the
+   new case ("marches in your army", "close at hand, with their own band") because `Place()` would
+   only have answered "here in the road".
+
+2. **The tool list moved to the very top of the scrollback.** It sat between the sheet and the
+   conversation, which buried it: the sheet runs to thousands of words, so scrolling up hit an
+   unbroken wall of prose and nobody reached the hands. Order is now tools, then sheet, then the
+   talk.
+
+3. **A knock now opens the talk screen, not the vanilla panel.** `UsesFaceToFaceInitiations` is
+   `OpenInitiationsFaceToFace && !TalkUI.UsesTalkScreen`. The setting was written when the
+   alternative was a small widget over the map and the panel was the richer of the two; the screen
+   is where the person is actually DRAWN now. Deliberately gated rather than migrated in
+   config.json — it is the right answer again the moment the screen bows out.
+
+4. **The stand-off after closing the screen.** Clicking a band on the map opens a `PlayerEncounter`
+   and the conversation runs inside it; every vanilla parting sets `LeaveEncounter`, ours only
+   closed the window, so the encounter sat in Wait and raised its menu the moment the map was live
+   again — the screen had merely been covering it. `PartFromMapEncounter` sets the flag, but NOT
+   while at war, NOT once a MapEvent exists, and NOT from inside walls: there it would be a free
+   escape from a fight the player rode into, and the stand-off menu is the honest state.
+
+5. **The post.** Two halves of one law — a courier must never be slower than the player.
+   `UnitsPerDay` 150 → 300 (a column makes 100-140, light cavalry ~190) and `MinDays` 0.25 → 0.1,
+   so he can no longer be outrun; and `HandOverLettersWhoseEndsHaveMet` pulls a letter's arrival
+   forward to now whenever its other end is co-located, in both directions. That second half is
+   what actually fixes Anton's case, because the talk screen HOLDS THE WORLD STILL — the hourly
+   tick cannot fire while it is up — so `TalkUI` knocks on it at every opening as well. Until the
+   letter lands the bond counts as having a courier out and cannot be written to, which is the
+   "bugs out the chat" he saw. Test added: the courier beats 190 units/day over every road worth
+   riding.
+
+6. **One door in the settlement menu.** "Speak with those near you" and "Send a letter by courier"
+   both raised the same screen. Under the talk screen there is now a single
+   "Speak with those you know"; the old pair still shows when the classic windows are in use
+   (`UseClassicChatWindow`, or the screen having bowed out this session), where they really are two
+   different windows. Conditions, not registration, so the session fallback flips it live.
+
+    2026.08.15 14.32.10
+
+---
+
+## The speaking range was ten times too far — take the game's number, not a nice-sounding one
+
+Follow-up to the six-fix pass the same day (2026.08.15). Anton's screenshot: his party and a 109-man
+band with a clear gap of daylight between them on screen, and the mod already counted them as standing
+together. "I want them to become available only when we are really close."
+
+The 5 map units came from `FieldCraft.DistanceWords`, where anything under 5 is narrated as "close at
+hand". That band exists to DESCRIBE a distance to a person in a sentence; it was never a measurement,
+and using it as one was a category error.
+
+The engine already owned the honest number:
+`EncounterModel.NeededMaximumLandDistanceForEncounteringMobileParty` = **0.5** (DefaultEncounterModel),
+`NeededMaximumNavalDistanceForEncounteringMobileParty` = **1.5** (NavalDLCEncounterModel; the base model
+answers 0), `MaximumAllowedLandDistanceForEncounteringMobilePartyInArmy` = 1.5. That is the radius at
+which two parties BUMP INTO each other — the game's own definition of touching. So the guess was 10× the
+land radius.
+
+`SpeakingDistance()` now reads the live model and returns that radius × 2 (hailing is a little further
+than colliding), branching on `IsCurrentlyAtSea` exactly as the engine's own callers do, floored at 1 so
+a missing or zero-valued model never means "nobody is ever near". It follows the sea, and it follows any
+mod that reshapes the encounter model.
+
+    2026.08.15 15.58.42
+
+---
+
+## The reach-out ponder: the verb was the dial, and it had been turned all the way up
+
+Anton, 2026.08.15: "before they were just saying hi how are you, and now they always pass because the
+prompt reads do you want to discuss something — they always pass and just waste tokens."
+
+Both halves of that sentence are the same dial at its two ends. The line asked "is there something I
+want to DISCUSS with them just now?", raised on 2026.07.26 precisely to kill courtesy visits (the
+steward asking how you feel, the quartermaster's "troops are good, how are you today"). It worked far
+too well: *discuss* asks for a MATTER, an item of business, and almost nobody has one on a given hour —
+so the ponder came back NO every time and the whole feature became a tax paid in tokens for something
+that never happened.
+
+Anton's own proposal was the right one, and better than the alternative he offered beside it ("ONLY IF
+YOU HAVE SOMETHING REAL TO DISCUSS", which is the same bar with a louder voice): **tell / ask**. They
+are plain speech acts, so they still demand real content — nobody can tell another person nothing —
+while a remark, a question, or a thing noticed on the road all clear them. No list of worthy topics was
+added; that was settled on 2026.07.27 and stays settled.
+
+TWO PLACES, NOT ONE — the second is the easy one to miss. `ReachOutPonderNote` is RECORDED, so every
+future ponder reads a stack of the soul's own past reckonings before answering, and it said they had
+weighed whether they had "TRUE CAUSE" to go. Softening only the live line would have left the memory
+re-arguing the old bar back in their own voice, once per remembered hour. Both moved together; old
+recorded notes keep their original words forever, as all beats do.
+
+Deliberately NOT re-raised as a guard against courtesy visits: the actual cause of the 2026.07.26 spam
+was a FEEDBACK LOOP (outreach beats raising their own richness/recency), and `OutreachDamping` fixed it
+at the source. The bar was doing that job a second time. If courtesy visits return in volume, damp them
+there. The letter-side desire line ("Do I wish to write?") was left alone — different bar, no complaint.
+
+Test renamed and re-pointed; the "no topic-policing" and YES/NO-not-STAY/GO assertions stand.
+
+    2026.08.15 16.41.05
+
+---
+
+## The two hearths: the wedded one, the household, and everyone else
+
+Anton, 2026.08.15: "increase the chances of the wife to come see you even if no history and maybe 3
+times as likely as a companion with the same richness… make the wife come to the top of the window
+always, and open by default when I hit O, she is the hearth of this mod. Companions are the second
+hearth, so their chances must be bigger than the nobles and the other people, not as dramatically."
+
+`InitiationScorer.SpouseHearthFactor` = 4.5, `CompanionHearthFactor` = 1.5 — a Core test pins
+spouse == 3 × companion, because that ratio is a stated requirement and not a knob free to drift.
+`ImmersiveChatBehavior.HearthRank(Hero)` reads 2 / 1 / 0 and `HearthFactor` maps it.
+
+THREE THINGS WORTH REMEMBERING ABOUT THE SHAPE:
+
+1. **`FamilyBuilder.AreWed`, never a bare `Spouse` check.** Marry Anyone parks living wives in
+   `ExSpouses`, and a second wife is precisely the soul this rank exists for.
+
+2. **It multiplies the WHOLE pull, presence floor included** — that is what makes "even if no history"
+   true, since a soul with zero richness gets `floor * hearth` and never reaches `InitiationScorer.Pull`
+   at all (which returns 0 below richness 1). `StrangerStationFactor` is skipped for rank > 0: you do
+   not hold a queen's rank against your own wife. `OutreachDamping` still bites, because it multiplies
+   toward zero and 4.5 × nothing is nothing — the hearth makes her likelier to come, never able to
+   knock twice in an afternoon.
+
+3. **ONE ranking, TWO masters, deliberately.** The same `HearthRank` sorts the talk screen's list —
+   above `IsHere`, above everything — so she heads it wherever in Calradia she stands, and since
+   `TalkScreenManager.Open` builds a fresh VM every time and the VM selects `_allContacts[0]`, that one
+   sort change also answered "open by default when I hit O". Pinning her to the top while she never
+   knocked would have been the mod saying two different things about the same bond.
+
+FACE-TO-FACE ONLY, and this is a judgement rather than an oversight: the letter roll already floors
+her through `DutyRecencyFloor`/`DutyClosenessFloor` (she is in the player's clan), and stacking 4.5× on
+top of those risked a flood of letters nobody asked for. Flagged to Anton as a one-line extension if he
+wants her writing more too. The odds view carries the factor and names it ("wedded to you (pull ×4.5)")
+so "why is it quiet?" keeps telling the truth.
+
+    2026.08.15 17.26.40

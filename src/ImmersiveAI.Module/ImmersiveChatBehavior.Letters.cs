@@ -72,8 +72,52 @@ namespace ImmersiveAI
             if (_letterWorkInFlight && (DateTime.UtcNow - _letterWorkSince) > TimeSpan.FromMinutes(_config.IsLocalBackend ? 12 : 3))
                 _letterWorkInFlight = false;
 
+            HandOverLettersWhoseEndsHaveMet();
             DeliverDueLetters();
             MaybeStartNpcLetter();
+        }
+
+        // THE ROAD ENDS WHEN THE TWO ENDS MEET (Anton, 2026.08.15). A courier is faster than any
+        // column now, but he can still be out with a letter when the player simply rides up to the
+        // person it is addressed to — and then the pair stand face to face with a sealed letter
+        // travelling between them, the bond blocked from writing again (one courier per bond) and
+        // the talk screen showing a road that leads nowhere. Wherever they meet, the letter is
+        // handed over: pull its arrival forward to now and let this same tick deliver it.
+        //
+        // Both directions, and for the same reason — his letter reaches her hand, hers reaches his.
+        //
+        /// <summary>The UI's own knock: hand over any letter whose ends have met and deliver at once,
+        /// so opening the talk screen never shows a courier riding toward someone standing in front
+        /// of you. Game thread; safe to call as often as a door is opened.</summary>
+        internal static void DeliverLettersWhoseEndsHaveMet()
+        {
+            var self = Current;
+            if (self == null || self._config?.EnableLetters != true || self._letterBag == null) return;
+            if (Campaign.Current == null) return;
+
+            self.HandOverLettersWhoseEndsHaveMet();
+            self.DeliverDueLetters();
+        }
+
+        private void HandOverLettersWhoseEndsHaveMet()
+        {
+            if (_letterBag == null) return;
+
+            var now = CampaignTime.Now.ToDays;
+            bool moved = false;
+
+            foreach (var letter in _letterBag.Letters)
+            {
+                if (letter == null || letter.ArriveGameDay <= now) continue;
+
+                var npc = FindAliveHero(letter.NpcId);
+                if (npc == null || !IsCoLocated(npc)) continue;
+
+                letter.ArriveGameDay = now;
+                moved = true;
+            }
+
+            if (moved) SaveLetterBag();
         }
 
         // Hands over every letter whose road has run out — at most one per direction per hour, so
@@ -757,10 +801,15 @@ namespace ImmersiveAI
             OnChooseLetterRecipient();
         }
 
+        // ONE DOOR, NOT TWO (Anton, 2026.08.15). The talk screen merged speaking and letters into a
+        // single list, so a menu offering "speak with those near you" AND "send a letter by courier"
+        // — both raising the very same screen — is just the old seam showing. This option stands only
+        // while the two windows are still the shape in use (UseClassicChatWindow, or the screen
+        // having bowed out this session), where it really does open a different window.
         private bool OnLetterMenuCondition(MenuCallbackArgs args)
         {
             args.optionLeaveType = GameMenuOption.LeaveType.Conversation;
-            return _config.EnableLetters;
+            return _config.EnableLetters && !UI.TalkUI.UsesTalkScreen;
         }
 
         private void OnChooseLetterRecipient()

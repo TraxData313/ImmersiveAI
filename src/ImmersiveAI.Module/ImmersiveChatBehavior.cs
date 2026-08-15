@@ -1353,6 +1353,7 @@ namespace ImmersiveAI
             if (npc == null) return;
 
             // The dialog is closing this very frame; the screen waits for the map to be clear of it.
+            PartFromMapEncounter();
             UI.TalkUI.OpenWhenClear(npc);
 
             if (_config?.EnableConversationRecap != true) return;
@@ -1368,6 +1369,33 @@ namespace ImmersiveAI
             // conversation that is about to carry a real recorded arrival.
             if (PrepareChat() == null) { _quickChatBusy.Remove(npc.StringId); return; }
             _ = GreetOnTalkScreenAsync(npc);
+        }
+
+        // STEPPING OUT OF THE DIALOG MUST ALSO STEP OUT OF THE ENCOUNTER (Anton's playtest,
+        // 2026.08.15: "I click a party, speak freely, close the screen — and we are in a fighting
+        // encounter"). Clicking a band on the map opens a PlayerEncounter and the conversation runs
+        // inside it; vanilla's own partings all set LeaveEncounter, so the encounter finishes with the
+        // dialog. Ours only closed the window, leaving the encounter in Wait — which raises the
+        // stand-off menu the moment the map is live again, and the talk screen was simply covering it.
+        //
+        // NOT while at war and NOT once blades are out: there LeaveEncounter would be a free escape
+        // from a fight the player rode into, and the stand-off menu is the honest state, not a bug.
+        // (Nor from inside walls — that talk owns no encounter to leave.)
+        private static void PartFromMapEncounter()
+        {
+            try
+            {
+                if (PlayerEncounter.Current == null) return;
+                if (Settlement.CurrentSettlement != null) return;
+                if (MobileParty.MainParty?.MapEvent != null) return;
+
+                var theirFaction = PlayerEncounter.EncounteredParty?.MapFaction;
+                var ourFaction = Hero.MainHero?.MapFaction;
+                if (theirFaction != null && ourFaction != null && theirFaction.IsAtWarWith(ourFaction)) return;
+
+                PlayerEncounter.LeaveEncounter = true;
+            }
+            catch { /* a talk that cannot tidy the map still gets to happen */ }
         }
 
         /// <summary>
@@ -2332,11 +2360,16 @@ namespace ImmersiveAI
         private double CoLocatedPull(Hero hero, double nowDay)
         {
             double floor = _config.InitiationPullFloor;
+            double hearth = HearthFactor(hero);
 
             // The cached index instead of re-parsing the file every hour (self-invalidates on
             // the file's write stamp, so a just-saved exchange is seen at once).
             var known = MemoryIndex.Get(NpcPaths.MemoryFile(hero), _memoryStore);
-            if (known == null || known.Richness <= 0) return floor * StrangerStationFactor(hero);
+            if (known == null || known.Richness <= 0)
+                // Station never stands between the player and their own household — you do not hold a
+                // queen's rank against your own wife, and a stranger-wife is precisely who the hearth
+                // factor exists to bring across the room.
+                return floor * hearth * (hearth > 1.0 ? 1.0 : StrangerStationFactor(hero));
 
             double daysSince = known.LastTalkGameDay >= 0
                 ? Math.Max(0, nowDay - known.LastTalkGameDay)
@@ -2346,13 +2379,53 @@ namespace ImmersiveAI
             // repetition the damping exists to stop (the 2026.07.26 tune-down).
             return Math.Max(floor, InitiationScorer.Pull(known.Richness, GetStanding(hero), daysSince))
                  * InitiationScorer.OutreachDamping(
-                       DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
+                       DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach)
+                 * hearth;
         }
 
         // Days since a remembered game-day stamp, or -1 ("never") when the stamp itself is -1/unset —
         // the shape InitiationScorer.OutreachDamping distinguishes on.
         private static double DaysSinceOrNever(double gameDay, double nowDay)
             => gameDay >= 0 ? Math.Max(0, nowDay - gameDay) : -1;
+
+        // ------------------------------ the two hearths ------------------------------
+        //
+        // Not everyone near the player stands at the same distance from their fire (Anton, 2026.08.15).
+        // The one they are WED TO is the hearth of this whole mod, and a companion is the second; the
+        // nobles and townsfolk about them are simply the world. ONE ranking serves two masters on
+        // purpose — how likely they are to come, and where they sit in the talk screen's list — because
+        // the player seeing the wife pinned to the top and then never hearing from her would be the
+        // mod saying two different things about the same relationship.
+
+        /// <summary>0 = the world, 1 = the player's own household, 2 = the one they are wed to.</summary>
+        internal static int HearthRank(Hero? hero)
+        {
+            try
+            {
+                if (hero == null || hero == Hero.MainHero || !hero.IsAlive) return 0;
+
+                // NEVER a bare Spouse check: a polygamy mod parks living wives in ExSpouses, and the
+                // second wife is exactly the soul this rank exists for (see FamilyBuilder.AreWed).
+                if (Personas.FamilyBuilder.AreWed(hero, Hero.MainHero)) return 2;
+
+                return hero.Clan != null && hero.Clan == Clan.PlayerClan ? 1 : 0;
+            }
+            catch { return 0; }
+        }
+
+        /// <summary>What that rank multiplies a soul's pull by. Applied to the WHOLE pull, presence
+        /// floor included, so "even with no history" is true — and after the outreach damping, which
+        /// still bites: the damping multiplies toward zero, and 4.5 × nothing is nothing. A wife who
+        /// knocked an hour ago is as quiet as anyone else who did.</summary>
+        private static double HearthFactor(Hero? hero)
+        {
+            switch (HearthRank(hero))
+            {
+                case 2: return InitiationScorer.SpouseHearthFactor;
+                case 1: return InitiationScorer.CompanionHearthFactor;
+                default: return 1.0;
+            }
+        }
 
         // How readily a STRANGER of this station approaches the player: 1 for equals and commoners,
         // fading for great lords far above an unknown player (two tiers → 0.4, more → 0.25; a crowned
@@ -2378,9 +2451,49 @@ namespace ImmersiveAI
             catch { return null; }
         }
 
-        // "Same place" as the player: travelling in the player's own party (companions, family), or present
-        // in the same settlement the player is currently in. This keeps a reached-out conversation naturally
-        // face-to-face — anyone farther away writes instead (the letter flow in the Letters partial).
+        // HOW NEAR IS NEAR ENOUGH TO HAIL SOMEBODY. Not a number of ours — the GAME'S own, doubled.
+        //
+        // The first cut guessed 5 map units from the mod's "close at hand" prose band, and that was
+        // ten times too far: two bands with a plain gap of daylight between them on screen counted as
+        // standing together (Anton's playtest, 2026.08.15). The honest measure was already in the
+        // engine — EncounterModel.NeededMaximum*DistanceForEncounteringMobileParty is the radius at
+        // which two parties BUMP INTO each other: 0.5 on land, 1.5 at sea for ships. Hailing someone
+        // should be just a little further than colliding with them, so it is that radius doubled,
+        // which also means it follows the sea, and follows any mod that reshapes the model.
+        private const float HailReachOverBumpRadius = 2f;
+
+        /// <summary>Floor for the above, and the answer when the model cannot be read at all — the
+        /// base game's own land radius doubled, so a missing model never means "nobody is ever near".</summary>
+        private const float MinSpeakingDistance = 1f;
+
+        private static float SpeakingDistance()
+        {
+            try
+            {
+                var model = Campaign.Current?.Models?.EncounterModel;
+                if (model == null) return MinSpeakingDistance;
+
+                var main = MobileParty.MainParty;
+                float bump = main != null && main.IsCurrentlyAtSea
+                    ? model.NeededMaximumNavalDistanceForEncounteringMobileParty
+                    : model.NeededMaximumLandDistanceForEncounteringMobileParty;
+
+                float reach = bump * HailReachOverBumpRadius;
+                return reach < MinSpeakingDistance ? MinSpeakingDistance : reach;
+            }
+            catch { return MinSpeakingDistance; }
+        }
+
+        // "Same place" as the player: travelling in the player's own party (companions, family), present
+        // in the same settlement the player is currently in, or — since 2026.08.15 — riding their own
+        // band all but touching yours on the open map. That third road was missing entirely: the check
+        // knew only parties and settlements, so a lord whose party you had ridden right up to was "away
+        // across the map", greyed out of the talk screen and answerable only by courier (Anton's
+        // playtest). It is deliberately a HAIL, not a shout across a valley — see SpeakingDistance.
+        //
+        // A soul inside SOME OTHER settlement is deliberately not reached this way, however near its
+        // walls stand — that is what the settlement branch above is for. Anyone camped outside the gates
+        // of the town the player is in, though, has no settlement of their own and is simply close by.
         private static bool IsCoLocated(Hero npc)
         {
             try
@@ -2392,11 +2505,25 @@ namespace ImmersiveAI
 
                 var playerSettlement = Hero.MainHero?.CurrentSettlement ?? main.CurrentSettlement;
                 var npcSettlement = npc.CurrentSettlement ?? npc.PartyBelongedTo?.CurrentSettlement;
-                if (playerSettlement == null || npcSettlement == null || playerSettlement != npcSettlement)
-                    return false;
-                return !IsBehindClosedDoors(npc, npcSettlement);
+                if (playerSettlement != null && npcSettlement != null)
+                    return playerSettlement == npcSettlement && !IsBehindClosedDoors(npc, npcSettlement);
+
+                return IsWithinSpeakingDistance(npc, main);
             }
             catch { return false; }
+        }
+
+        // The open-road branch: their own band, out under the same sky, near enough to ride over. An
+        // army marching together counts whatever the spacing of its parties happens to be that frame.
+        private static bool IsWithinSpeakingDistance(Hero npc, MobileParty main)
+        {
+            var theirs = npc?.PartyBelongedTo;
+            if (theirs == null || theirs.CurrentSettlement != null || npc!.CurrentSettlement != null)
+                return false;
+
+            if (theirs.Army != null && theirs.Army == main.Army) return true;
+
+            return theirs.Position.Distance(main.Position) <= SpeakingDistance();
         }
 
         // A soul may share the settlement yet sit behind doors the guards will not open: the lord's
@@ -3027,9 +3154,16 @@ namespace ImmersiveAI
                             DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
                         pull *= damping;
                         if (!coLocated) pull *= Core.Letters.LetterCourier.StoryDepthFactor(known.Richness);
+                        // The two hearths — the wedded one, then the household. Face-to-face only, the
+                        // same as the live roll; the post keeps its own duty floors instead.
+                        double hearth = coLocated ? HearthFactor(hero) : 1.0;
+                        pull *= hearth;
                         double alone = Math.Min(1, _config.DailyInitiationRate * pull);
                         (coLocated ? herePulls : awayPulls).Add(pull);
 
+                        string hearthNote = hearth > 1.0
+                            ? $", {(HearthRank(hero) == 2 ? "wedded to you" : "of your own household")} (pull ×{hearth:0.0})"
+                            : string.Empty;
                         string quietNote = known.UnansweredOutreach > 0
                             ? $", {known.UnansweredOutreach} outreach{(known.UnansweredOutreach == 1 ? "" : "es")} of theirs unanswered (pull damped ×{damping:0.00})"
                             : damping < 0.999 ? $", resting after reaching out (pull damped ×{damping:0.00})" : "";
@@ -3037,7 +3171,7 @@ namespace ImmersiveAI
                             ? $", heart's road: {Core.Courtship.CourtshipRoad.StageName((Core.Courtship.CourtshipStage)known.CourtshipStage)}"
                             : string.Empty;
                         sb.AppendLine($"• {name}: {(coLocated ? "HERE with you" : "elsewhere (may write a letter)")}, " +
-                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago{quietNote}{roadNote}");
+                                      $"standing {relation}, richness {known.Richness}, last spoke {daysSince:0.#}d ago{hearthNote}{quietNote}{roadNote}");
                         if (coLocated)
                             sb.AppendLine($"    → pull {pull * 100:0.0}% of a full bond (alone that would be ~{alone:0.00} visits/day; here it is their share of the group's total)");
                         else
@@ -3061,7 +3195,9 @@ namespace ImmersiveAI
                         if (knownIds.Contains(hero.StringId)) continue;
                         if (!IsCoLocated(hero)) continue;
                         strangersHere++;
-                        herePulls.Add(floor * StrangerStationFactor(hero));
+                        double strangerHearth = HearthFactor(hero);
+                        herePulls.Add(floor * strangerHearth
+                                      * (strangerHearth > 1.0 ? 1.0 : StrangerStationFactor(hero)));
                     }
                     if (strangersHere > 0)
                         sb.AppendLine($"• …and {strangersHere} more soul{(strangersHere == 1 ? "" : "s")} here with you, not yet truly spoken with — each at the newcomer's pull of {floor * 100:0.#}%.");
@@ -3276,7 +3412,15 @@ namespace ImmersiveAI
         // the old-style face-to-face conversation (no accept/decline), and dismissing it simply leaves the
         // greeting unanswered in memory. Takes precedence over the chat-window-message shape (Anton's ask,
         // 2026.07.11). Either way the first word is recorded, so both use DeliverFirstWordAsync.
-        private bool UsesFaceToFaceInitiations => _config.OpenInitiationsFaceToFace;
+        //
+        // THE TALK SCREEN OVERRULES IT (Anton, 2026.08.15). The setting was written when the alternative
+        // was a small widget over the map and the vanilla panel was the richer of the two; the screen has
+        // since become the place where the person is actually DRAWN, so answering a knock in the old panel
+        // is now strictly the poorer road. The flag still governs the classic windows, where it means what
+        // it always meant — and it is deliberately not migrated in config.json, because it is once again
+        // the right answer the moment the screen bows out.
+        private bool UsesFaceToFaceInitiations =>
+            _config.OpenInitiationsFaceToFace && !UI.TalkUI.UsesTalkScreen;
 
         // Both reach-out shapes that speak first (record the greeting, park a notice) rather than offering
         // an accept/decline. Face-to-face wins for what the click does; the message shape is the fallback.
@@ -3338,6 +3482,12 @@ namespace ImmersiveAI
                         var duty = SituationBuilder.PartyDuty(hero, MobileParty.MainParty);
                         detail = duty == null ? "rides with you" : $"rides with you — your {duty}";
                     }
+                    else if (hero.PartyBelongedTo != null && hero.PartyBelongedTo.Army != null
+                             && hero.PartyBelongedTo.Army == MobileParty.MainParty?.Army)
+                        detail = "marches in your army";
+                    else if (hero.CurrentSettlement == null && hero.PartyBelongedTo?.CurrentSettlement == null)
+                        // Out under the same sky as you — Place() would only answer "the road" here.
+                        detail = "close at hand, with their own band";
                     else
                         detail = "here in " + SituationBuilder.Place(hero);
                     result.Add(new ChatContactInfo(hero, hasHistory, lastDay, detail, isHere: true));
@@ -3563,22 +3713,35 @@ namespace ImmersiveAI
             catch { /* the flag is a courtesy to vanilla dialog; never let it cost the exchange */ }
         }
 
-        // "Speak with those near you" beside the courier option in every settlement menu — the same
-        // window the hotkey opens, for players who never learn the key.
+        // The settlement-menu door, for players who never learn the hotkey. TWO SHAPES, one showing
+        // at a time (Anton, 2026.08.15): the talk screen merged speaking and letters, so under it
+        // there is ONE option — offering both would have been two lines opening the same screen. The
+        // old pair (this one beside the courier option in the Letters partial) stands only while the
+        // classic windows are in use, where they really are two different windows.
         private void AddChatWindowMenus(CampaignGameStarter starter)
         {
             foreach (var menuId in new[] { "town", "castle", "village" })
             {
+                starter.AddGameMenuOption(menuId, "immersiveai_talk_screen_" + menuId,
+                    "{=ImmersiveAI_TalkScreen}Speak with those you know",
+                    OnTalkScreenMenuCondition, _ => UI.TalkUI.Open(), false, -1, false, null);
+
                 starter.AddGameMenuOption(menuId, "immersiveai_chat_window_" + menuId,
                     "{=ImmersiveAI_ChatWindow}Speak with those near you",
                     OnChatWindowMenuCondition, _ => UI.TalkUI.Open(), false, -1, false, null);
             }
         }
 
+        private bool OnTalkScreenMenuCondition(TaleWorlds.CampaignSystem.GameMenus.MenuCallbackArgs args)
+        {
+            args.optionLeaveType = TaleWorlds.CampaignSystem.GameMenus.GameMenuOption.LeaveType.Conversation;
+            return _config.EnableChatWindow && UI.TalkUI.UsesTalkScreen;
+        }
+
         private bool OnChatWindowMenuCondition(TaleWorlds.CampaignSystem.GameMenus.MenuCallbackArgs args)
         {
             args.optionLeaveType = TaleWorlds.CampaignSystem.GameMenus.GameMenuOption.LeaveType.Conversation;
-            return _config.EnableChatWindow;
+            return _config.EnableChatWindow && !UI.TalkUI.UsesTalkScreen;
         }
 
         // A notification banner carrying the NPC's own portrait as its face — the same faced toast the game

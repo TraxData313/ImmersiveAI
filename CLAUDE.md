@@ -31,7 +31,14 @@ You usually only need to open:
   It MERGED the chat window and the letter window: one list of everyone you know (here / away /
   gone), the chosen one drawn alive in the middle by the game's own map-conversation tableau, and
   one thread where letters sit among the spoken words. Scrolling UP past the oldest word shows the
-  real next prompt (sheet + tool list), for every player, no button. Everything reaches it through
+  real next prompt — **tool list FIRST, then the sheet** (2026.08.15: the hands used to sit between
+  the sheet and the talk, and the sheet's thousands of words buried them) — for every player, no button.
+  **Leaving the vanilla dialog for the screen must also leave the ENCOUNTER** (`PartFromMapEncounter`,
+  2026.08.15): clicking a band on the map opens a `PlayerEncounter` and the talk runs inside it, and
+  every vanilla parting sets `LeaveEncounter` — ours only closed the window, so the encounter sat in
+  Wait and raised its stand-off menu the instant the map was live again, the screen merely covering it.
+  NOT while at war, NOT once a `MapEvent` exists, NOT from inside walls: there it would be a free escape
+  from a fight the player rode into, and the menu is the honest state rather than a bug. Everything reaches it through
   the `UI\TalkUI.cs` façade — notices fan out to all shapes, opening goes to the chosen one — so
   retiring the old windows later is a ONE-FILE change. The old windows are kept whole behind
   `UseClassicChatWindow` (default false) and an automatic session fallback.
@@ -622,7 +629,12 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `OpenInitiationsFaceToFace` (default on, takes precedence over `SendInitiationsToChatWindow` for what
   a reach-out notice CLICK does: opens the OLD-STYLE face-to-face conversation showing the greeting the
   NPC already spoke — no accept/decline; X'ing the notice just leaves that recorded greeting unanswered,
-  the stamps telling the silence; the chat window is still reachable by hotkey to reply there instead),
+  the stamps telling the silence; the chat window is still reachable by hotkey to reply there instead.
+  **THE TALK SCREEN OVERRULES IT** — 2026.08.15, Anton's ask: `UsesFaceToFaceInitiations` is now
+  `OpenInitiationsFaceToFace && !UI.TalkUI.UsesTalkScreen`, so a knock opens the screen where the soul is
+  actually DRAWN. The setting was written when the alternative was a small widget over the map and the
+  panel was the richer of the two. Deliberately GATED, not migrated in config.json — it is the right
+  answer again the moment the screen bows out),
   `UseMapNoticeForInitiations` (NPC offers as persistent portrait notices in the right-side map stack
   instead of an immediate popup; default on, falls back to the popup if the notice UI is unavailable;
   the click opens the face-to-face conversation, the chat window, or the accept/decline offer per the
@@ -976,7 +988,21 @@ briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2
 
 **NPCs reaching out on their own.** The first way the NPCs *act* instead of only answering. Each hour
 (`OnHourlyTick`), **every hero co-located** with the player right now (`IsCoLocated` — in the player's
-party, or the same settlement AND not behind the keep's closed doors: `IsBehindClosedDoors` (2026.07.12)
+party; **or close at hand on the open map** — 2026.08.15, Anton's playtest: the check knew only parties
+and settlements, so `playerSettlement == null` short-circuited to false and a lord whose band you had
+ridden right up to was "away across the map", greyed out of the talk screen and answerable only by
+courier. `IsWithinSpeakingDistance` adds the third road: their own band, NEITHER end inside walls, within
+`SpeakingDistance()`, plus a free pass for the player's own army whatever the parties' spacing that frame.
+**THE RANGE IS THE GAME'S OWN NUMBER, DOUBLED — do not guess one.** The first cut took 5 map units from
+FieldCraft's "close at hand" prose band and it was TEN TIMES too far (Anton, same day: two bands with
+daylight between them on screen counted as standing together). The honest measure was already in the
+engine: `EncounterModel.NeededMaximum{Land,Naval}DistanceForEncounteringMobileParty` is the radius at
+which two parties BUMP INTO each other — **0.5 on land, 1.5 at sea** (NavalDLC; the base model answers 0).
+Hailing is that radius × 2, floored at 1, so it follows the sea and follows any mod reshaping the model. A soul inside SOME OTHER
+settlement stays out of reach however near its walls — that is the settlement branch's job — while a
+party camped outside the gates of the town you stand in has no settlement of its own and is simply near.
+This one edit moves ~20 call sites at once: the talk screen, reach-outs, the nights, the births, the
+courtships; or the same settlement AND not behind the keep's closed doors: `IsBehindClosedDoors` (2026.07.12)
 asks the game's own `SettlementAccessModel.CanMainHeroEnterLordsHall` (+ `Settlement.BribePaid` vs the
 bribe price, vanilla's own paid-bribe rule) for anyone the `LocationComplex` places in "lordshall"/
 "prison" — no leave to enter the keep means its souls are out of chat's and reach-outs' range, though a
@@ -1009,7 +1035,29 @@ a meeting note, reading the player's letter, or the player's letter leaving the 
 themselves via `AppendRecordedTurn`'s `OutreachMark` (Reached / Considered / PlayerEngaged — desire
 weighings and invited replies rest without the pride wound). The damping multiplies AFTER the presence
 floor (else the floor re-arms the spam); `MemoryIndex` carries both fields so the hourly rolls stay
-cheap, and BondStatsLabel/the odds view show the damped truth ("awaits your answer (2 unanswered)"). Firing only happens at *safe* moments
+cheap, and BondStatsLabel/the odds view show the damped truth ("awaits your answer (2 unanswered)").
+**THE PONDER'S VERB IS THE OTHER DIAL, and it belongs at the low end** (2026.08.15): the line asked "is
+there something I want to DISCUSS", raised in this same 2026.07.26 wave to stop courtesy visits, and it
+overshot — *discuss* wants a MATTER, almost nobody has one on a given hour, so every ponder answered NO
+and the feature only spent tokens. It now asks whether there is anything to **tell** or to **ask**:
+plain speech acts, still needing real content, but a remark or a question clears them. The recorded
+`ReachOutPonderNote` moved with it ("true cause" → "anything to say") because it is READ BACK at every
+later ponder, so a bar softened only in the live line goes on being re-argued by the memory of it.
+Spam belongs to `OutreachDamping`, which fixed the real cause (a feedback loop); never re-raise the
+verb to do that job twice.
+**THE TWO HEARTHS** (2026.08.15, Anton: "she is the hearth of this mod"): `ImmersiveChatBehavior.HearthRank`
+— 2 for the one the player is WED TO (`FamilyBuilder.AreWed`, never a bare `Spouse` check: a polygamy
+mod parks living wives in ExSpouses and the second wife is exactly who this is for), 1 for the player's
+own clan, 0 for the world — multiplies the co-located pull by `InitiationScorer.SpouseHearthFactor` (4.5)
+/ `CompanionHearthFactor` (1.5); a test pins spouse = 3 × companion, Anton's stated rule. It multiplies
+the WHOLE pull, presence floor included, so a wife never once spoken with still crosses the room ("even
+if no history"), and `StrangerStationFactor` is skipped for rank > 0 — you do not hold a queen's rank
+against your own wife. The damping still bites (4.5 × nothing is nothing). ONE ranking serves two
+masters ON PURPOSE: it also sorts the talk screen's list above near-or-far, so the wife heads it
+wherever she stands and is what the hotkey opens on — pinning her to the top while she never knocked
+would be the mod saying two things about one bond. **Face-to-face only, deliberately**: the post keeps
+its own `DutyRecencyFloor`/`DutyClosenessFloor` instead, and stacking 4.5× on those risked a flood of
+letters nobody asked for. Firing only happens at *safe* moments
 (`IsSafeToInitiate`/`InitiationBlockReason`: on the map, not in a scene/battle or a *non-settlement*
 encounter, not already talking — being **inside a settlement is fine**, that's where co-located NPCs are).
 **The world sleeps at night** (2026.07.11, Anton's ask): the group hourly chance is multiplied by
@@ -1032,7 +1080,7 @@ anywhere). The situation for these beats is the **NEARBY shape**
 (`SituationBuilder.BuildNearby` — "X is nearby, about their own affairs"), because the meeting shape's
 closing "And now X comes to me" contradicted the question of whether to go. The beats:
 (1) `PromptBuilder.BuildInnerPrompt` with `PromptBuilder.ReachOutPonderLine` — the full sheet (news, mood,
-duty, memory) plus ONE simple nudge: "Is there something I want to discuss with them just now?" — answered
+duty, memory) plus ONE simple nudge: **"Is there anything I want to tell them, or to ask them?"** — answered
 **NO or "YES: the something"** (`InitiationParser.WantsToGo`, word-boundary-safe, old STAY/GO still read;
 unreadable answers fall back to plain yes/no, then NO). Deliberately NO instruction about what a worthy
 topic is — the first cut listed causes and banned courtesy, and that made every soul answer the same
@@ -1324,17 +1372,29 @@ appended AFTER the marker fragment so recorded beats stay recognized). **A lette
 it arrives** (2026.07.12): `Letter.Logged` defers the letters.txt entry to delivery (default true so old
 bags never double-log; dead writers' folders resolved by identity), and the chat window seals an
 in-flight compose beat ("it is sealed, and rides toward you still" — `IsLetterOnRoadToPlayer`). The letter rides real in-game
-days by map distance (Core `LetterCourier`: 150 units/day, 0.25–10 day rails) and persists across
+days by map distance (Core `LetterCourier`: **300 units/day, 0.1–10 day rails**) and persists across
 save/load in `campaign_<id>\_letters.json` (Core `LetterBag`, atomic writes) — a letter is a promise,
-unlike a live chat. **Arrival knocks like a chat now** (2026.07.22, Anton's ask): faced toast + a
+unlike a live chat. **THE ONE LAW OF THE POST (2026.08.15, Anton's playtest): a courier is never slower
+than the player.** At 150/day he was exactly a marching column's pace, so the player could outrun his own
+letter, arrive first, and stand before the reader with it still on the road between them — which also
+barred the bond from writing again (one courier per bond). Two halves, both needed: the speed went to
+300/day (a column makes 100–140, light cavalry ~190; a test pins the rule) with the floor at 0.1 days —
+long enough to find a rider, no longer; and `HandOverLettersWhoseEndsHaveMet` pulls a letter's arrival
+forward to NOW whenever its other end is co-located, both directions. The second half is the real fix,
+and it cannot live on the hourly tick alone — **the talk screen holds the world still, so no hour ever
+ticks while it is up** — hence `TalkUI` knocks on `DeliverLettersWhoseEndsHaveMet()` at every opening. **Arrival knocks like a chat now** (2026.07.22, Anton's ask): faced toast + a
 persistent portrait map notice ("A letter has come", `ImmersiveLetterMapNotification` — saveable type
 id 2 in the definer, keep registered forever — + `ImmersiveLetterNotificationItemVM`), whose click
 opens the LETTER WINDOW on the writer's thread (`OpenWhenClear`, composer popups as fallback); the
 letter is logged to letters.txt BEFORE the notice goes up, so X ("set it aside") or a reload loses
 nothing — the words wait in the window. The old pausing inquiry ("Write back"/"Set it aside") remains
 only for dead writers or when the notice UI / letter window is unavailable. The
-player can also send first: a "Send a letter by courier" option in every town/castle/village menu opens
-the LETTER WINDOW itself (2026.07.12 — the same one the letter hotkey opens; the old recipient-picker popups
+player can also send first: a settlement-menu option opens the LETTER WINDOW itself — but under the talk
+screen the two menu lines were MERGED into one, "Speak with those you know" (2026.08.15: "Speak with
+those near you" and "Send a letter by courier" both raised the same screen). Both shapes are registered
+and separated by their CONDITIONS (`UI.TalkUI.UsesTalkScreen`), not by registration, so the session
+fallback flips them live; the old pair returns whole with the classic windows
+(2026.07.12 — the same one the letter hotkey opens; the old recipient-picker popups
 remain only as the fallback when `EnableLetterWindow` is off or the window cannot come up; one courier
 per bond at a time, co-located people pointed to go and speak). When the player's letter reaches the NPC, *reading it is a recorded moment* (the body
 lives inside the recorded line, so it enters memory even if they let it lie), and they may answer at most
