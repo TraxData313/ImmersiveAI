@@ -203,6 +203,11 @@ namespace ImmersiveAI.Mcm
         // per NPC", both retired with the lists they capped. The gap is deliberate — the remaining
         // orders keep their places rather than shuffling under a returning player's eye.
 
+        [SettingPropertyBool("Notice the gear you give them", Order = 7, RequireRestart = false,
+            HintText = "Someone riding with you notices when you change their gear - what you put into their hands, what you took, and what each piece is worth - written into their own memory when you close the inventory. Nothing is written for gear the game changes itself, nor for a session you cancel.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableGearNotes { get; set; } = true;
+
         [SettingPropertyBool("Hiring by handshake", Order = 8, RequireRestart = false,
             HintText = "An unhired wanderer you talk terms with may strike the hiring bargain in the conversation itself. Nothing is settled by talk alone: a popup names the exact price, and only your click pays and hires — the same rules as the tavern dialog (enough gold, room in your company).")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]

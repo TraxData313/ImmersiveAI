@@ -51,6 +51,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 - New: an answer now speaks itself even with the screen shut, so you can send a line and hear the reply while you ride on. The ping and the unread mark still show you the way back to it. A switch under Voices puts it back the old way.
 
+### What they notice
+- New: someone riding with you now notices when you change their gear — what you put into their hands, what you took, and what each piece is worth. A companion has no other way of knowing whether the mail you just gave her is a courtesy or a fortune; now she does, measured against her own wage when the sum is large. Nothing is said about gear the game changes on its own, nor about a session you cancel, and trying a helmet on and taking it off again is not a change. Switch under "Life of the NPCs".
+
 ### Between us
 - Fixed: on the older chat window the "Between us" page told you a child of yours had never been owned before the world and gave you no button to do it. The act now has its door on both windows.
 

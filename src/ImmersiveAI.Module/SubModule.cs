@@ -101,6 +101,23 @@ namespace ImmersiveAI
             base.OnGameEnd(game);
         }
 
+        // Whether the inventory screen was up on the LAST frame. The baseline is taken on the
+        // rising edge alone: taking it every frame would mean diffing against the half-finished
+        // state the player is in the middle of arranging.
+        private static bool _inventoryWasOpen;
+
+        private static void TickInventoryWatch()
+        {
+            try
+            {
+                bool open = Game.Current?.GameStateManager?.ActiveState
+                            is TaleWorlds.CampaignSystem.GameState.InventoryState;
+                if (open && !_inventoryWasOpen) ImmersiveChatBehavior.NoteInventoryOpened();
+                _inventoryWasOpen = open;
+            }
+            catch { /* a lost note must never touch the frame */ }
+        }
+
         protected override void OnApplicationTick(float dt)
         {
             base.OnApplicationTick(dt);
@@ -121,6 +138,9 @@ namespace ImmersiveAI
             // no-op whenever nothing is speaking, which is almost always — and called EVERY FRAME on
             // purpose: the handover is timed by the clock, and a frame is the precision it gets.
             Voice.VoicePlayback.Tick();
+            // The inventory screen coming up: the moment a soul's gear is about to change, and the
+            // only place to stand to find out what it was before.
+            TickInventoryWatch();
             // And the one key that must work no matter what is on the screen.
             TickPanicKey();
         }

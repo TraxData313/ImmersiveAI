@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ImmersiveAI.Core.Journey;
@@ -82,6 +82,12 @@ namespace ImmersiveAI
         {
             try
             {
+                // The gear notes ride this same event, and deliberately BEFORE the journal's own
+                // gates: this fires on every close of the inventory screen, trade or none, which is
+                // exactly the moment a soul's kit has finished changing (2026.08.16).
+                try { NoteGearChanges(); }
+                catch (Exception ex) { ModLog.Error("noting a change of gear", ex); }
+
                 if (!JournalOn || !isTrading) return;
                 if ((purchased == null || purchased.Count == 0) && (sold == null || sold.Count == 0)) return;
 

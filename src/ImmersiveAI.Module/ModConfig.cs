@@ -825,6 +825,19 @@ namespace ImmersiveAI
         /// </summary>
         public bool EnableVoice { get; set; }
 
+        /// <summary>
+        /// When true, a soul riding with you NOTICES when you change their gear — what you put into
+        /// their hands, what you took, and what each piece is worth — set down in their own memory
+        /// the moment you close the inventory. Anton's reason for the numbers (2026.08.16): they
+        /// have no other way of knowing whether what they were handed is a courtesy or a fortune.
+        /// <para>
+        /// Nothing is written for gear the GAME changes by itself (coming of age, a companion raised
+        /// to lordship at her wedding, the sweep every load makes), nor for a session you cancel: it
+        /// compares only what stood when the screen opened against what stands when it closes.
+        /// </para>
+        /// </summary>
+        public bool EnableGearNotes { get; set; } = true;
+
         /// <summary>When true, a reply speaks the moment it arrives. False keeps every voice but
         /// waits to be asked for it, which is the quieter way to read at your own pace.</summary>
         public bool VoiceAutoSpeak { get; set; } = true;

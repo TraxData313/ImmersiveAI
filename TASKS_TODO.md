@@ -136,6 +136,38 @@ BUGS:
       for a calmer house is `ConceptionChanceMultiplier`, which now cleanly scales the exponent
       (0.5 -> ~81% a cycle, 0.25 -> ~56%). Design record updated with the whole derivation.
 
+- [x] COMPANIONS NOTICE THE GEAR YOU GIVE THEM — BUILT 2026.08.16 (Anton's ask: "tell them if I
+      take off an item, if I add item… add the item values, cause they might not know it and its
+      giving info on how vaiable it is"). Core `Gear\` (`GearChange`/`GearChangeSet`, `GearText` —
+      the beat, the marker, the tally, all unit-tested) + Module
+      `ImmersiveChatBehavior.Gear.cs` + `EnableGearNotes` (config + MCM, default on).
+      THE HOOK IS A BRACKET, and that IS the design. There is no equipment-changed event on this
+      version — the only three naming Equipment are smelting, a caravan sale, and a GATE. So the
+      baseline is taken when `InventoryState` becomes the active state (frame tick, rising edge
+      only) and the diff when the screen CLOSES, riding the `PlayerInventoryExchange` we already
+      subscribe to — it fires unconditionally from `DoneLogic`, trade or none.
+      WHY NOT A REMEMBERED BASELINE: the game rewrites equipment by itself at coming-of-age, at
+      becoming a ruler, when OUR OWN courtship raises a companion to lord, and over every hero on
+      every load (`CheckInvalidEquipmentsAndReplaceIfNeeded`). A persisted baseline would answer
+      "he took my helmet" for half the roster after any of that. A bracket cannot see any of it.
+      Cancelling the screen also rolls equipment back BEFORE the event, so a cancelled session
+      diffs to nothing for free.
+      AND THE BRACKET IS THE DEDUPE: trying a helmet on and off is start==end and silent; three
+      swords through one slot is one line; reordering her weapons says nothing, because ARMS ARE A
+      MULTISET. No timer, no cap, no per-day merge — that lever is deliberately held back.
+      ANTON'S OWN DOUBT ABOUT WEAPON SLOTS WAS RIGHT and is answered by not asking the slot: armour
+      slots each admit exactly one kind of thing so the slot IS the word ("my head", "my hands"),
+      while the four weapon slots admit anything — so weapons are gathered under "for arms" and
+      named by the ITEM, whose own name already says what it is.
+      THE NUMBER IS `ItemValue` (worth, modifier included), NOT a trade price: a price swings with
+      the town's stock and the player's haggling, and a woman wearing a sword does not experience
+      that. Worth belongs to the person; prices belong to the market tool. Beside a great sum sits
+      ONE yardstick, her own daily wage from `TroopWage` (never `GetCharacterWage`, which answers 1
+      for heroes) — and nothing else: no judgment word, ever, guarded by its own test. She is handed
+      the figure and feels about it herself.
+      Deliberately NO situation block: she already recites her whole kit every reply, and a "lately
+      given" paragraph would be the third telling of the same sword. UNPLAYTESTED.
+
 NEXT UPDATE:
 - [~] THE STAGE — all three entries BUILT 2026.08.16, none of them played.
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means

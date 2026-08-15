@@ -245,7 +245,7 @@ namespace ImmersiveAI.Mcm
                 s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch,
-                s.EnableConversationHiring, s.ConversationHiringHagglePercent,
+                s.EnableGearNotes, s.EnableConversationHiring, s.ConversationHiringHagglePercent,
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 s.EnableLoversRoad, s.LoverRansomHagglePercent, s.EnableClosedDoors, s.AllowDutyNights,
@@ -279,7 +279,7 @@ namespace ImmersiveAI.Mcm
                 c.EnableChatWindow, c.ChatWindowHotkey, c.LetterWindowHotkey,
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
                 c.EnableLetters, c.EnableWorldRecall, c.EnableWebSearch,
-                c.EnableConversationHiring, c.ConversationHiringHagglePercent,
+                c.EnableGearNotes, c.EnableConversationHiring, c.ConversationHiringHagglePercent,
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.EnableLoversRoad, c.LoverRansomHagglePercent, c.EnableClosedDoors, c.AllowDutyNights,
@@ -339,6 +339,7 @@ namespace ImmersiveAI.Mcm
             s.EnableLetters = c.EnableLetters;
             s.EnableWorldRecall = c.EnableWorldRecall;
             s.EnableWebSearch = c.EnableWebSearch;
+            s.EnableGearNotes = c.EnableGearNotes;
             s.EnableConversationHiring = c.EnableConversationHiring;
             s.ConversationHiringHagglePercent = Clamp(c.ConversationHiringHagglePercent, 0, 90);
             s.EnableConversationMarriage = c.EnableConversationMarriage;
@@ -449,6 +450,7 @@ namespace ImmersiveAI.Mcm
             c.EnableLetters = s.EnableLetters;
             c.EnableWorldRecall = s.EnableWorldRecall;
             c.EnableWebSearch = s.EnableWebSearch;
+            c.EnableGearNotes = s.EnableGearNotes;
             c.EnableConversationHiring = s.EnableConversationHiring;
             c.ConversationHiringHagglePercent = s.ConversationHiringHagglePercent;
             c.EnableConversationMarriage = s.EnableConversationMarriage;
