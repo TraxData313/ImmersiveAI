@@ -51,6 +51,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 - New: an answer now speaks itself even with the screen shut, so you can send a line and hear the reply while you ride on. The ping and the unread mark still show you the way back to it. A switch under Voices puts it back the old way.
 
+### The road journal
+- Fixed: a town stop no longer lists the same goods over and over ("Silver Ore ×6, Cow ×4, Salt ×19…" four times in one breath). The journal was writing an open stop into its file twice, and reading it back appended that stop's goods to themselves — so every save and load while you stood in a town doubled the list again. Journals already swollen this way tidy themselves the next time they are read.
+
 ### The nights
 - Changed: the night's clock now keeps the sun instead of counting hours. One night an evening, and the house is ready again at the same hour every afternoon — whatever time you kept the night before. Before, a late night pushed the next one later still, until the evening's question came round while you were not ready yet and the day was simply lost. A night after midnight now belongs to the evening it grew out of rather than to the morning it landed in. The hour is yours to set in the options.
 
