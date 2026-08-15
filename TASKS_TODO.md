@@ -119,16 +119,36 @@ BUGS:
       (0.5 -> ~81% a cycle, 0.25 -> ~56%). Design record updated with the whole derivation.
 
 NEXT UPDATE:
-- [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
+- [~] THE STAGE — all three entries BUILT 2026.08.16, none of them played.
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means
       solving the scene question three times. The design record's own section is
       docs/after-the-wedding-design.md → "The hearth window becomes a stage"; READ THE WARNING
       UNDER IT — that section is a CONCEPT and not a build-ready design, and the three questions
       it does not answer are listed there.
-    - [ ] Rebuild the hearth window (H) in the talk screen's shape: wives and lovers LEFT, the
-          chosen one ALIVE in the centre via the tableau, settings RIGHT. The batch's largest UI
-          job; four documented tableau traps plus one nobody has solved (two screens over ONE
-          shared cached scene); failure mode is a hard native crash, not a wrong sentence.
+    - [x] THE HEARTH IS A STAGE — BUILT 2026.08.16. H raises the ONE screen turned to the hearth:
+          the women of it listed left, the chosen one ALIVE in the middle in her own place, her page
+          on the right. A button in the bar ("The hearth" / "Talk") turns it either way.
+          THE UNSOLVED QUESTION WAS NEVER ANSWERED — IT WAS DISSOLVED. Two tableau-hosting screens
+          over one shared cached scene is where the hard native crash lives; a MODE of the existing
+          screen never creates that situation. Same layer, same host, same stub, same teardown, and
+          the four documented traps stay paid for exactly once by code that already works. The
+          design record's own banner suspected this shape; it is the right one.
+          WHAT IS ON THE RIGHT: everything the old window carried, nothing dropped — her season, her
+          state, the odds, the two switches, the rolling fortnight with the children's cards among
+          them, and the Go button. It is `NightWindowVM` ITSELF, hung as a nested `{Hearth}` data
+          source rather than reimplemented: every one of those readings was already right and
+          already playtested, and copying them would have meant maintaining two answers to one
+          question. Its own contact list simply goes unbound. Tabs were considered and refused — the
+          hearth is the one page written for the player as an OPERATOR, and an operator's page must
+          not hide half its state behind a click.
+          THREE THINGS A READER SHOULD KNOW: the circle is FILTERED, not gathered afresh (same souls,
+          same stage); the mode is set BEFORE the first selection so the soul chosen is one of the
+          women; and `ExecuteGo` now closes the talk screen too, because that screen HOLDS THE WORLD
+          STILL and a night that cannot let an hour pass is a night that never settles.
+          The old window is whole behind `UseClassicChatWindow` and the session fallback.
+          UNPLAYTESTED, AND UNVERIFIABLE WITHOUT PLAY. It compiles and the Core suite is green, but
+          nothing here is Core: layout margins, whether the nested data source binds, and whether the
+          stage behaves when the mode turns are all things only the game can answer.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),
           where it had been passing null. NOTE the tableau wants the room's own StringId as a

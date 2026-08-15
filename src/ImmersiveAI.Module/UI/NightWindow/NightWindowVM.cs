@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ImmersiveAI.UI.ChatWindow;
@@ -135,7 +135,13 @@ namespace ImmersiveAI.UI.NightWindow
         {
             var hero = _selected?.Hero;
             if (hero == null || !_canGo) return;
+            // Close whichever page is showing this button. Since 2026.08.16 that may be the TALK
+            // SCREEN's hearth side rather than this window, and it must go down first for two
+            // reasons: the evening's popups ride a layer above it either way, but the screen also
+            // HOLDS THE WORLD STILL while it is up, and a night that cannot let an hour pass is a
+            // night that never settles. Both closes are no-ops when that screen is not the one open.
             NightWindowManager.Close();
+            TalkScreen.TalkScreenManager.Close();
             ImmersiveChatBehavior.GoToHerFromWindow(hero);
         }
 

@@ -718,6 +718,7 @@ namespace ImmersiveAI.UI.TalkScreen
             // rooms or out on the road with none, and the controller has just dropped any move.
             OnPropertyChanged("CanChangeSet");
             OnPropertyChanged("SetButtonText");
+            SyncHearth();
             OnPropertyChanged("MessagesBottomMargin");
             OnPropertyChanged("HasDraft");
 
@@ -1792,6 +1793,49 @@ namespace ImmersiveAI.UI.TalkScreen
         // paid for exactly once by code that already works.
 
         private bool _hearthMode;
+        private NightWindow.NightWindowVM? _hearth;
+
+        /// <summary>
+        /// Her own page, on the right, in hearth mode: her season in words, the switches, the rolling
+        /// fortnight of nights and the children's cards — everything the old H window carried, and
+        /// nothing dropped (that was Anton's question to answer and he handed it back: "do it the way
+        /// you like, I will look at it live").
+        /// <para>
+        /// It is the H WINDOW'S OWN view model, hung here as a nested data source rather than
+        /// reimplemented. Every one of those readings is already computed there, correctly, and had
+        /// been playtested; copying them into this file would have meant maintaining two answers to
+        /// the same question. Its own contact list simply goes unbound — the talk screen's list is
+        /// the one on screen, and the two are kept in step by <see cref="SyncHearth"/>.
+        /// </para>
+        /// <para>
+        /// TABS WERE THE OBVIOUS ALTERNATIVE AND ARE THE WRONG ANSWER HERE: the hearth is the one
+        /// page in this mod written for the player as an operator (its own help text says so), and an
+        /// operator's page must not hide half its state behind a click. One scrolling column, as long
+        /// as it needs to be.
+        /// </para>
+        /// </summary>
+        [DataSourceProperty]
+        public NightWindow.NightWindowVM? Hearth
+        {
+            get => _hearth;
+            private set { if (!ReferenceEquals(value, _hearth)) { _hearth = value; OnPropertyChangedWithValue(value, "Hearth"); } }
+        }
+
+        /// <summary>Keeps her page pointed at whoever is on stage. Built lazily: a player who never
+        /// opens the hearth never pays for it.</summary>
+        private void SyncHearth()
+        {
+            try
+            {
+                if (!_hearthMode) return;
+                var hero = _selected?.Hero;
+                if (hero == null) return;
+                if (_hearth == null) Hearth = new NightWindow.NightWindowVM(_config);
+                _hearth!.TrySelect(hero);
+            }
+            catch (Exception ex) { ModLog.Error("turning the hearth page", ex); }
+        }
+
 
         [DataSourceProperty]
         public bool IsHearth
@@ -1804,7 +1848,11 @@ namespace ImmersiveAI.UI.TalkScreen
                 OnPropertyChangedWithValue(value, "IsHearth");
                 OnPropertyChanged("IsTalking");
                 OnPropertyChanged("ModeButtonText");
+                OnPropertyChanged("ShowThink");
+                OnPropertyChanged("CanEdit");
+                OnPropertyChanged("CanSend");
                 RefreshContacts();
+                SyncHearth();
             }
         }
 
@@ -1880,7 +1928,7 @@ namespace ImmersiveAI.UI.TalkScreen
         }
 
         [DataSourceProperty]
-        public bool CanEdit => HasSelection && _selected?.Hero != null;
+        public bool CanEdit => HasSelection && _selected?.Hero != null && !_hearthMode;
 
         [DataSourceProperty]
         public bool CanSend => CanEdit && !_isWish && !string.IsNullOrWhiteSpace(_inputText)
@@ -1910,7 +1958,9 @@ namespace ImmersiveAI.UI.TalkScreen
         /// <summary>Whether the whole thing is offered at all (config) — the two little buttons and
         /// the menu hide together when it is not.</summary>
         [DataSourceProperty]
-        public bool ShowThink => _config.EnableThinkForMe;
+        // The writing row belongs to the talk side: on her page there is nothing to send, and a
+        // box sitting under the fortnight would invite words that go nowhere.
+        public bool ShowThink => _config.EnableThinkForMe && !_hearthMode;
 
         /// <summary>The button, in the player's own voice — never a machine's name (Anton,
         /// 2026.08.10: "Think (AI) ще е имържън брейкър"). It says what it is doing while it does it.</summary>
