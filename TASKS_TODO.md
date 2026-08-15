@@ -59,6 +59,23 @@ BUGS:
       back a live reference makes the round trip MUTATE what it was only meant to describe.
       Existing corrupted journals heal themselves on the next load. 802 Core tests green.
 
+- [x] SCOUTS COULD NOT SEE PRISONERS OR WOUNDED — FIXED 2026.08.16 (Anton asked his scout whether a
+      band they were closing on held captives; she could not tell him something he could read off
+      the game's own nameplate).
+      It was never divination withheld: `FieldCraft` simply never looked. It read `TotalManCount`
+      and nothing else about a band's people — a count that INCLUDES the wounded and says nothing
+      of the prison train. Both `survey_surroundings` and `weigh_battle` now carry the hurt and the
+      bound, with captive lords NAMED (the game's own tooltip names them, so it is a face and not a
+      number). Counts are coarsened on the SAME Scouting bands the head-count already used (125 /
+      50, no number at all below that), with one guard that matters: a count smaller than the
+      rounding step is told true, because `RoundTo` floors at its own step and rounding three
+      prisoners would print ten — inventing rather than coarsening.
+      TWO THINGS TO KNOW IF THIS IS TOUCHED AGAIN: `wholeArmy` must always mirror whatever body of
+      men the head-count beside it covers, or the two numbers argue with each other (that is why the
+      army test is hoisted out of the Try in `WeighAgainstParty`); and BOTH TOOL DESCRIPTIONS were
+      widened to say the eyes now cover this — a tool's contract lives in its schema and its
+      description, and a capability nobody is told about is one nobody reaches for. UNPLAYTESTED.
+
 NEXT UPDATE:
 - [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means

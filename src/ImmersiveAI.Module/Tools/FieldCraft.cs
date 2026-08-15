@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -37,7 +37,8 @@ namespace ImmersiveAI.Tools
             new ToolDefinition(SurveySurroundings,
                 "From where my company stands I cast my eyes over the country about — every band, caravan, " +
                 "and army moving within sight: whose they are, which way they lie, how strong as well as my " +
-                "eyes can count, friend or foe, what they are about, and whether I or they are the swifter. " +
+                "eyes can count, friend or foe, what they are about, whether I or they are the swifter, " +
+                "how many of them go wounded, and whether they drag prisoners bound in their train. " +
                 "Also the villages, towns and castles within sight and how they fare — burning under a raid, " +
                 "lying under siege, lately plundered — any den of brigands my company has spotted nearby, " +
                 "and my own pace and what weighs on it. I always look before I speak of who or what is near, " +
@@ -46,7 +47,8 @@ namespace ImmersiveAI.Tools
 
             new ToolDefinition(WeighBattle,
                 "I set any foe upon the scales against my own company before a fight is joined: their " +
-                "numbers and kinds of fighters against mine, and how the day would likely go. Works against " +
+                "numbers and kinds of fighters against mine, how many on each side are too hurt to stand in a " +
+                "line, what prisoners they drag with them, and how the day would likely go. Works against " +
                 "a band or army moving in the country, against the garrison of a named town or castle, " +
                 "against a village and whoever is putting it to the torch, or against a spotted den of " +
                 "brigands. I always weigh before I speak of the odds of battle, or counsel battle or retreat.",
@@ -254,6 +256,32 @@ namespace ImmersiveAI.Tools
                 if (eyes >= 125) sb.Append($", {men} strong");
                 else if (eyes >= 50) sb.Append($", some {RoundTo(men, 5)} strong");
                 else sb.Append($", perhaps {RoundTo(men, 10)} strong");
+            });
+
+            // The hurt they drag and the prisoners in their train — both plain to any eye (litters
+            // and bandages; roped men walking in the middle of a column), and both what a scout was
+            // asked for and could not answer (2026.08.16). Placed BEFORE the foe/friend clause so
+            // the sentence still ends on where they are. wholeArmy: false deliberately — the
+            // head-count above is this party's own roster even when it leads an army, and these must
+            // be reckoned over the same men or the numbers argue with each other.
+            Try(() =>
+            {
+                int hurt = WoundedIn(p, false);
+                if (hurt <= 0) return;
+                var n = Counted(hurt, eyes, 5);
+                sb.Append(n.Length > 0 ? $", {n} of them nursing wounds" : ", and hurt men go among them");
+            });
+
+            Try(() =>
+            {
+                int bound = PrisonersIn(p, false);
+                if (bound <= 0) return;
+                var n = Counted(bound, eyes, 5);
+                sb.Append(n.Length > 0
+                    ? $", and {n} prisoners walk bound in their train"
+                    : ", and prisoners walk bound in their train");
+                var faces = NamedCaptives(p);
+                if (faces.Length > 0) sb.Append($" (among them {faces})");
             });
 
             Try(() =>
@@ -491,9 +519,12 @@ namespace ImmersiveAI.Tools
         private static string WeighAgainstParty(MobileParty target, MobileParty ours, Hero asker, float ourStrength, int ourMen, string ourWord)
         {
             float theirs = 0; int theirMen = 0; string theirWord = "them";
+            // Hoisted out of the Try so the hurt and the bound below are reckoned over the same body
+            // of men as the head-count they ride in.
+            bool theirArmy = Safe(() => target.Army != null && target.Army.LeaderParty == target, false);
             Try(() =>
             {
-                if (target.Army != null && target.Army.LeaderParty == target)
+                if (theirArmy)
                 {
                     theirs = target.Army.Parties?.Sum(p => Safe(() => p.Party?.EstimatedStrength ?? 0f, 0f)) ?? 0f;
                     theirMen = target.Army.TotalManCount;
@@ -508,13 +539,25 @@ namespace ImmersiveAI.Tools
                 }
             });
 
+            // The hurt on both sides, each reckoned over the same body of men as the head-count it
+            // rides in — and the captives, which change what a fight is FOR as much as what it costs.
+            int theirHurt = WoundedIn(target, theirArmy);
+            int ourHurt = WoundedIn(ours, Safe(() => ours.Army != null && ours.Army.LeaderParty == ours, false));
+            int theirBound = PrisonersIn(target, theirArmy);
+
             var lines = new List<string>
             {
                 $"I set {theirWord} upon the scales against {ourWord}.",
-                $"Mine: {ourMen} souls. Theirs: {theirMen}.",
+                $"Mine: {ourMen} souls{Hurt(ourHurt)}. Theirs: {theirMen}{Hurt(theirHurt)}.",
             };
             Try(() => lines.Add("My ranks: " + Composition(ours.MemberRoster) + "."));
             Try(() => lines.Add("Their ranks: " + Composition(target.MemberRoster) + "."));
+            if (theirBound > 0)
+            {
+                var faces = NamedCaptives(target);
+                lines.Add($"They drag {theirBound} prisoners bound in their train — mouths to guard, not hands to fight"
+                          + (faces.Length > 0 ? $", and among them {faces}." : "."));
+            }
             lines.Add(Verdict(ourStrength, theirs, asker));
             return string.Join(" ", lines);
         }
@@ -760,6 +803,61 @@ namespace ImmersiveAI.Tools
         }
 
         private static int RoundTo(int n, int step) => Math.Max(step, (int)(Math.Round(n / (double)step) * step));
+
+        // ---- what a band carries besides its fighters (2026.08.16) ----
+        //
+        // Anton asked his scout whether a band they were closing on had prisoners, and she could not
+        // tell him — while the game draws the hurt and the bound on that band's own nameplate and
+        // names captive lords in its tooltip. This was never divination withheld; the eyes simply
+        // never looked. Only the COUNT is the eye's business, and it is coarsened on the same
+        // Scouting bands the head-count beside it already uses.
+
+        /// <summary>The hurt they drag with them. <paramref name="wholeArmy"/> must mirror whatever
+        /// body of men the head-count beside it covers, or the two numbers contradict each other.</summary>
+        private static int WoundedIn(MobileParty p, bool wholeArmy) => wholeArmy
+            ? Safe(() => p.Army.TotalManCount - p.Army.TotalHealthyMembers, 0)
+            : Safe(() => p.MemberRoster?.TotalWounded ?? 0, 0);
+
+        /// <summary>The prisoners bound in their train.</summary>
+        private static int PrisonersIn(MobileParty p, bool wholeArmy) => wholeArmy
+            ? Safe(() => (p.Army.LeaderParty.PrisonRoster?.TotalManCount ?? 0)
+                + p.Army.LeaderParty.AttachedParties.Sum(x => x.PrisonRoster?.TotalManCount ?? 0), 0)
+            : Safe(() => p.PrisonRoster?.TotalManCount ?? 0, 0);
+
+        /// <summary>A count in the eyes' own words. Below the middling band no number is given at
+        /// all — the shapes, not the counts. A count SMALLER than the rounding step is told true:
+        /// <see cref="RoundTo"/> floors at its own step, so rounding three would print ten, which
+        /// is inventing rather than coarsening.</summary>
+        private static string Counted(int n, int eyes, int step)
+        {
+            if (eyes >= 125 || n < step) return n.ToString();
+            if (eyes >= 50) return "some " + RoundTo(n, step);
+            return string.Empty;
+        }
+
+        /// <summary>A noble in chains is a face, not a number — the game's own tooltip names captive
+        /// heroes outright. Two is all a spoken line can carry.</summary>
+        private static string NamedCaptives(MobileParty p)
+        {
+            try
+            {
+                var names = p.PrisonRoster?.GetTroopRoster()
+                    ?.Where(e => Safe(() => e.Character != null && e.Character.IsHero && e.Number > 0, false))
+                    .Select(e => Safe(() => e.Character.HeroObject?.Name?.ToString() ?? string.Empty, string.Empty))
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Take(2)
+                    .ToList();
+                if (names == null || names.Count == 0) return string.Empty;
+                return names.Count == 1 ? names[0] : names[0] + " and " + names[1];
+            }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>Wounded men do not stand in a line, and the game agrees: its own reckoning of
+        /// strength counts only the hale. A head-count that hides them contradicts the verdict
+        /// printed underneath it.</summary>
+        private static string Hurt(int wounded) =>
+            wounded > 0 ? $" ({wounded} of them too hurt to stand in a line)" : string.Empty;
 
         // Speed-explanation names arrive with game markup at times; keep only the plain words.
         private static string Plain(string s)

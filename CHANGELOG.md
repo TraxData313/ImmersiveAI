@@ -51,6 +51,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 - New: an answer now speaks itself even with the screen shut, so you can send a line and hear the reply while you ride on. The ping and the unread mark still show you the way back to it. A switch under Voices puts it back the old way.
 
+### What they can see for you
+- Fixed: your scouts can now tell you how many of a band go wounded and whether it drags prisoners — naming captive lords among them — where before they could not report what you can read off the party's own nameplate. The same facts ride into weighing a battle, on both sides, since men too hurt to stand in a line are not men you are fighting.
+
 ### The road journal
 - Fixed: a town stop no longer lists the same goods over and over ("Silver Ore ×6, Cow ×4, Salt ×19…" four times in one breath). The journal was writing an open stop into its file twice, and reading it back appended that stop's goods to themselves — so every save and load while you stood in a town doubled the list again. Journals already swollen this way tidy themselves the next time they are read.
 
