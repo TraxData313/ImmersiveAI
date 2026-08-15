@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using ImmersiveAI.Core.Voices;
 
 namespace ImmersiveAI.Core.Tests;
@@ -249,5 +249,63 @@ public class WavFilesTests : IDisposable
         Assert.True(WavFiles.Join(new[] { a, b, c }, joined));
 
         Assert.Equal(0.3, WavFiles.TryRead(joined)!.Duration.TotalSeconds, 3);
+    }
+
+    // ---- the buzz: a piece poured before it was finished ---------------------------------------
+
+    [Fact]
+    public void Join_RefusesAPieceStillBeingWritten()
+    {
+        // THE BUG ANTON HEARD (2026.08.16). Streaming publishes a piece the moment it EXISTS, and
+        // TryRead clamps an over-long declared size down to what is really there — so a half-written
+        // piece reads back as a healthy short clip. Poured after another piece it byte-shifts
+        // everything downstream, which is not a click but a drone for the rest of the take.
+        var whole = WriteWav("000.wav", 24000, 1, 16, 24000);
+        var half = WriteWav("001.wav", 24000, 1, 16, 24000);
+
+        // Cut the bytes off the end WITHOUT touching the header — exactly a write in progress.
+        var bytes = File.ReadAllBytes(half);
+        File.WriteAllBytes(half, bytes.Take(bytes.Length / 2).ToArray());
+
+        var info = WavFiles.TryRead(half);
+        Assert.NotNull(info);
+        Assert.True(info!.LooksUnfinished);
+
+        var joined = Path.Combine(_folder, "joined.wav");
+        Assert.False(WavFiles.Join(new[] { whole, half }, joined));
+        Assert.False(File.Exists(joined));      // a seam is a smaller wound than a buzz
+    }
+
+    [Fact]
+    public void Join_IsNotFooledByTheStreamingPlaceholder()
+    {
+        // 0xFFFFFFFF means "I do not know yet", not "I was cut short". A hosted service writes it
+        // on purpose, and reading it as a truncation would refuse a perfectly good file.
+        var a = WriteWav("000.wav", 24000, 1, 16, 24000);
+        var b = WriteWav("001.wav", 24000, 1, 16, 12000);
+        PokeUInt32(b, 40, uint.MaxValue);
+
+        var info = WavFiles.TryRead(b);
+        Assert.NotNull(info);
+        Assert.False(info!.LooksUnfinished);
+
+        var joined = Path.Combine(_folder, "joined.wav");
+        Assert.True(WavFiles.Join(new[] { a, b }, joined));
+    }
+
+    [Fact]
+    public void Join_PoursOnlyWholeSampleFrames()
+    {
+        // Even a well-formed file can end on half a sample if something upstream miscounted. One
+        // stray byte shifts all of it, so the remainder is dropped instead.
+        var a = WriteWav("000.wav", 24000, 2, 16, 1000);      // 4 bytes a frame
+        var b = WriteWav("001.wav", 24000, 2, 16, 1000);
+
+        var joined = Path.Combine(_folder, "joined.wav");
+        Assert.True(WavFiles.Join(new[] { a, b }, joined));
+
+        var info = WavFiles.TryRead(joined);
+        Assert.NotNull(info);
+        Assert.Equal(0, info!.DataBytes % info.BlockAlign);
     }
 }

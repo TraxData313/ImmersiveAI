@@ -19,6 +19,27 @@ namespace ImmersiveAI.Core.Voices
 
         public int ByteRate { get; set; }
 
+        /// <summary>What the data chunk's header CLAIMED, before it was clamped to the bytes that are
+        /// really there. Kept because the difference is the whole diagnosis of a file still being
+        /// written — see <see cref="WavFiles.Join"/>.</summary>
+        public long DeclaredDataBytes { get; set; }
+
+        /// <summary>Bytes one sample frame occupies. Audio may only ever be cut on a multiple of
+        /// this: a cut anywhere else shifts every sample after it by a byte or three, which is heard
+        /// not as a click but as a loud buzz over the rest of the take.</summary>
+        public int BlockAlign => Math.Max(1, Channels * BitsPerSample / 8);
+
+        /// <summary>True when the header promised more audio than the file holds. Either the write
+        /// is still going on, or it stopped badly. Both mean the same thing to a joiner: this piece
+        /// is not finished and its bytes may not be poured after anything else.
+        /// <para>
+        /// A hosted service that streams its answer writes <c>0xFFFFFFFF</c> as "I do not know yet",
+        /// which is not a truncation and must not be read as one.
+        /// </para>
+        /// </summary>
+        public bool LooksUnfinished =>
+            DeclaredDataBytes > DataBytes && DeclaredDataBytes != uint.MaxValue;
+
         /// <summary>How long it plays, from its own numbers.</summary>
         public TimeSpan Duration =>
             ByteRate <= 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(DataBytes / (double)ByteRate);
@@ -103,8 +124,11 @@ namespace ImmersiveAI.Core.Voices
                             if (!haveFormat) return null;
                             info.DataOffset = stream.Position;
                             // A size that runs past the end of the file is a truncated write, not a
-                            // lie worth believing: take what is actually there.
+                            // lie worth believing: take what is actually there. But REMEMBER that it
+                            // happened — the clamp is what lets a half-written piece look perfectly
+                            // healthy, and a joiner must be able to tell.
                             var available = stream.Length - stream.Position;
+                            info.DeclaredDataBytes = size;
                             info.DataBytes = size > available ? available : size;
                             return info.DataBytes > 0 ? info : null;
                         }
@@ -198,6 +222,24 @@ namespace ImmersiveAI.Core.Voices
         /// never open a half-poured file. That matters more here than it looks: the thing that reads
         /// this file is the game's own audio engine, on the very next frame.
         /// </para>
+        /// <para>
+        /// TWO REFUSALS, AND THEY ARE THE FIX FOR THE BUZZ (Anton, 2026.08.16 — a long reply came out
+        /// as "buuuuu", mostly at the paragraph breaks, and Full read of the same words was clean).
+        /// Streaming publishes a piece the instant it EXISTS on disk, not the instant it is finished,
+        /// and the reader above deliberately clamps an over-long declared size down to the bytes
+        /// actually written — so a piece caught mid-write reads back as a perfectly healthy short
+        /// clip. Pour that after another piece and everything downstream of it is byte-shifted:
+        /// sixteen-bit samples read half a sample out are not a click, they are a loud drone for the
+        /// rest of the take. Full read never showed it because the host joins its own pieces and only
+        /// announces a file that is closed.
+        /// <list type="number">
+        /// <item>A piece whose header promised more than it holds is UNFINISHED — refuse the whole
+        /// join and let the pieces play one at a time. A seam is a far smaller wound than a buzz.</item>
+        /// <item>Every piece is poured on a whole number of sample FRAMES. Even a well-formed file
+        /// can end on a half sample if something upstream miscounted, and one stray byte is enough
+        /// to shift all of it.</item>
+        /// </list>
+        /// </para>
         /// </summary>
         public static bool Join(IReadOnlyList<string> inputs, string outputPath)
         {
@@ -211,11 +253,18 @@ namespace ImmersiveAI.Core.Voices
             {
                 var info = TryRead(path);
                 if (info == null) return false;                       // a hole would be worse than a seam
+                if (info.LooksUnfinished) return false;               // still being written — see above
                 if (first == null) first = info;
                 else if (info.SampleRate != first.SampleRate
                          || info.Channels != first.Channels
                          || info.BitsPerSample != first.BitsPerSample)
                     return false;                                     // never resample; just do not join
+
+                // Only whole sample frames may be poured. The remainder is at most three bytes —
+                // inaudible — where keeping it would shift every sample that follows.
+                var aligned = info.DataBytes - info.DataBytes % info.BlockAlign;
+                if (aligned <= 0) return false;
+                info.DataBytes = aligned;
 
                 pieces.Add(new KeyValuePair<string, WavInfo>(path, info));
             }

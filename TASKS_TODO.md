@@ -8,31 +8,33 @@
   UNVERIFIED review leads; twenty untriaged), and CLAUDE.md (the standing laws).
 
 BUGS:
-- [ ] THE VOICE BUZZES ON A NIGHT ACCOUNT (Anton, 2026.08.15, reproduced twice). Pressing ♪ on the
-      ☾ night-account card ("The Jug by the Fire") plays a "buuuuu" noise where the first part
-      should be.
-      NARROWED BUT NOT FIXED (2026.08.16). **Suspect one is dead** — do not spend time there again.
-      The ☾ account card hands `WithVoice` the CLEAN account and nothing else: `TalkScreenVM` draws
-      the stamp line as its own separate narration row, which carries no ▶ at all, and passes
-      `nightStory` to the card, which is `NightRecord.Story` straight from the ledger. No stamp, no
-      ☾ glyph, no furniture ever reaches the engine.
-      **Suspect two is the live one, and it is bigger than a ceiling.** On the Streaming and FullRead
-      roads `VoiceService.RunJobAsync` sends `plan.Text` — the WHOLE account — as ONE generation;
-      `plan.Bites` is used only on the retired ByLine road. So an ordinary reply (capped at MaxTokens
-      400) and a night account (`AccountCharBudget` runs to ~2000-2600 characters, and the roll's own
-      `DefaultFullAccountBudget` is 2600) are handed to the model as the same shape of request at
-      wildly different sizes. Two consequences, either of which fits a buzz at the START:
-        · past roughly 2350 characters `VoiceBudget.MaxTokensFor` CLAMPS to `EngineMaxTokens` (4096),
-          which is the engine's own rail — and this project's own rule is that a generation running
-          to its whole ceiling is judged a runaway on that fact alone.
-        · docs/voiceover-engine-notes.md says outright, from the measuring session: "Sentence
-          chunking is a reliability feature, not only a latency one. A derail costs one sentence, not
-          a whole reply." Streaming traded that away for gaplessness, and the longest text in the mod
-          is where the bill came due.
-      LIKELY FIX, UNPROVEN: group `plan.Bites` into generations bounded by characters (~600-900) and
-      chain them — one generation for an ordinary reply, so today's behaviour and the "one generation
-      or she changes person" lesson are untouched, and a handful for an account, where a slight seam
-      beats a buzz. Drive the real engine before believing any of it: measure, do not reason.
+- [x] THE VOICE BUZZES ON A LONG READING — FIXED 2026.08.16 (Anton, reproduced twice on a night
+      account, then confirmed general: "when the message is too long it bugs, most places between
+      new lines... when I turn the whole thing to be loaded it works fine").
+      NOT the text, and not the budget. Both earlier suspects are dead and should not be read again:
+      the moon card hands `WithVoice` the CLEAN account (the stamp is its own narration row with no
+      play mark), and Full read of the SAME words is clean, which clears the words themselves.
+      THE CAUSE IS THE JOIN. Streaming publishes a piece the instant it EXISTS on disk, not the
+      instant it is finished (`File.Exists`, VoiceService.RunJobAsync's onChunk), and `WavFiles
+      .TryRead` deliberately clamps an over-long declared data size down to the bytes really there —
+      so a piece caught mid-write reads back as a perfectly healthy SHORT clip. Pour that after
+      another piece and every sample downstream is byte-shifted: sixteen-bit samples read half a
+      frame out are not a click, they are a drone for the rest of the take. Full read never showed
+      it because the host joins its own pieces and only announces a closed file. Longer readings
+      have more pieces and so more chances to catch one — which is exactly the length correlation.
+      THE FIX, in Core `WavFiles` with three tests: `WavInfo` remembers what the header CLAIMED
+      (`DeclaredDataBytes`) beside what it clamped to, `LooksUnfinished` tells the two apart —
+      carefully NOT fooled by the `0xFFFFFFFF` "I do not know yet" a streaming writer leaves — and
+      `Join` refuses the whole join if any piece is unfinished, falling back to playing them one at
+      a time. A seam is a far smaller wound than a buzz. Every piece is also poured on a whole
+      number of sample FRAMES, so one stray byte can never shift the rest.
+      The lesson was already written in that same file, one method up: "a lenient reader is a good
+      thing, but it HIDES malformed input from everything downstream that is not lenient."
+      STILL WORTH DOING, not blocking: the join could WAIT for an unfinished piece and re-join
+      rather than giving up on the take, and the publish could hold a piece back until the host says
+      it is closed. Both want the real engine in front of them. UNPLAYTESTED — Anton should hear a
+      long reply on Streaming and say whether it is now one clean take, seams and all.
+
 - [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN → moved into **THE STAGE** below. It is the same
       file as two other open items and must not be fixed alone.
 
