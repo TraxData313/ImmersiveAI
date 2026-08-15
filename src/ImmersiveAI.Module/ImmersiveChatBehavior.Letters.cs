@@ -204,7 +204,14 @@ namespace ImmersiveAI
                 // difference once a campaign carries hundreds of remembered souls.
                 foreach (var known in MemoryIndex.All(root, NpcPaths.MemoryFileName, _memoryStore))
                 {
-                    if (known.Richness <= 0) continue;
+                    // THE MORNING AFTER REACHES THE POST TOO (2026.08.16). The design says she comes
+                    // to you in the morning "or writes if apart", and apart is the commoner case by
+                    // far — the wife is in the town with the house while he is wherever he was. Read
+                    // before the depth gate on purpose: a woman wed through the game's own barter and
+                    // never yet spoken with has no story to fill pages, and she is exactly the one
+                    // this is for.
+                    double spike = WoundSpikeFor(known, nowDay);
+                    if (known.Richness <= 0 && spike <= 0) continue;
                     if (_letterBag!.HasInFlightWith(known.NpcId)) continue;
 
                     var hero = FindAliveHero(known.NpcId);
@@ -226,6 +233,12 @@ namespace ImmersiveAI
                     pull *= LetterCourier.StoryDepthFactor(known.Richness)
                           * InitiationScorer.OutreachDamping(
                                 DaysSinceOrNever(known.LastOutreachGameDay, nowDay), known.UnansweredOutreach);
+                    // A FLOOR over the damped pull, exactly as the co-located roll applies it and
+                    // for exactly the same reason: multiplying a near-zero pull leaves a near-zero
+                    // pull, and the one moment this feature exists for would be eaten by ordinary
+                    // bookkeeping. The group-total law is untouched — WriteRateFactor still halves
+                    // the whole post's rate, and a louder pull only pushes UnionPull nearer 1.
+                    pull = Math.Max(pull, spike);
                     if (pull <= 0) continue;
 
                     eligible.Add(hero);

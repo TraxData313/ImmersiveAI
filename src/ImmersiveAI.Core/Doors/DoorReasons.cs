@@ -147,17 +147,32 @@ namespace ImmersiveAI.Core.Doors
             return true;
         }
 
-        /// <summary>She rewords one — the thing under it has changed shape, which is what happens to
-        /// a grievance that gets talked about without being resolved.</summary>
+        /// <summary>
+        /// She rewords one — the thing under it has changed shape, which is what happens to a
+        /// grievance that gets talked about without being resolved.
+        ///
+        /// <paramref name="which"/> names the one she means and <paramref name="text"/> is its NEW
+        /// wording, and they are two different things: handed the same string for both (as the
+        /// resolver did until 2026.08.16) this can only ever rewrite something to itself and then
+        /// report success, which is the one shape of failure this whole system cannot afford — a
+        /// silent lie about what she just decided. It also refuses a revise that would change
+        /// NOTHING, for the same reason the misgivings' own revise never blanks: "I have reworded
+        /// it" over an untouched line is that same lie wearing a politer face.
+        /// </summary>
         public static bool Revise(List<DoorReason> reasons, string which, string text, string opens,
             out string trouble)
         {
             trouble = string.Empty;
+            var body = Tidy(text);
+            var road = Tidy(opens);
+            if (body.Length == 0 && road.Length == 0)
+            {
+                trouble = "no new words were given for it";
+                return false;
+            }
             var found = Find(reasons, which, standingOnly: false);
             if (found == null) { trouble = "no reason of hers matches those words"; return false; }
-            var body = Tidy(text);
             if (body.Length > 0) found.Text = body;
-            var road = Tidy(opens);
             if (road.Length > 0) found.Opens = road;
             return true;
         }

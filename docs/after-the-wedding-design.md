@@ -329,6 +329,33 @@ brother, not a new organism.
   must yield to each other exactly as the two old windows' managers already do — and NEVER
   while a real conversation is active.
 
+> **THIS SECTION IS A CONCEPT, NOT A BUILD-READY DESIGN** (noted honestly 2026.08.16, by the
+> session that built the rest of the batch and deliberately did not build this). It states the
+> shape, one rule and one constraint, and it leaves the three questions that will actually consume
+> the work unanswered. Answer them BEFORE writing code, or they get answered badly at 2am:
+>
+> 1. **How do two tableau-hosting screens arbitrate the ONE shared cached scene?** The line above
+>    says "exactly as the two old windows' managers already do" — and that is the weak point of
+>    the whole section, because those two windows never hosted a tableau. Yielding a Gauntlet
+>    layer is trivial. Yielding a cached NATIVE scene, mid-teardown, with a render-to-texture
+>    camera still pointed at it, is where the hard crash lives. Nobody has solved this yet. It is
+>    the real content of the job and the reason the job was left. Consider seriously whether the
+>    answer is "they do not share — the hearth REUSES the talk screen's host and swaps its panels",
+>    which sidesteps the question entirely and may be the right shape anyway.
+> 2. **What does the right-hand panel actually hold?** Today's H window carries the visit/prevent
+>    switches, the whole rolling fortnight of nights, and the children's cards. "General +
+>    per-woman settings RIGHT" covers the switches and silently drops the other two, which are the
+>    bulk of the window's content. Where do the fortnight and the births go in the new shape? This
+>    one is ANTON'S to answer, not the implementer's — it is what the window is *for*.
+> 3. **Does it reuse the talk screen's machinery, or duplicate it?** "The talk screen's brother,
+>    not a new organism" is a sentiment. Subclass the manager? Share it with a mode flag? Copy the
+>    VM? The answer decides how much of question 1 even arises.
+>
+> Two smaller items in TASKS_TODO now ride with this one, deliberately: the wanderer drawn in the
+> town instead of the tavern, and Anton's ask to change the set inside a town. Both are the same
+> file (`ConversationSceneBuilder`), both are far simpler, and doing them FIRST teaches the scene
+> selection that the stage then has to arbitrate.
+
 ### Small UI debts
 
 - **The purple empty notification circle** gets an icon/portrait — same family as the portrait

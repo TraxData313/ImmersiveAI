@@ -212,8 +212,22 @@ namespace ImmersiveAI
                         ok = DoorReasons.Release(memory.DoorReasons, matter, out trouble);
                         break;
                     case DoorReasons.ActRevise:
-                        ok = DoorReasons.Revise(memory.DoorReasons, matter, matter, opens, out trouble);
+                    {
+                        // TWO strings, and they were the same one until 2026.08.16: `matter` names
+                        // which of hers she means, `reworded` is what it now says. Handed `matter`
+                        // for both, a revise could only ever rewrite a thing to itself and then
+                        // report that it had reworded it.
+                        var reworded = Tools.DoorTool.ParseReworded(call);
+                        // And they come in swapped here as readily as on a settle — the new wording
+                        // is what a model has most to say, so it lands in the first field going.
+                        // standingOnly:false, because a settled reason may be reworded too.
+                        if (DoorReasons.HandsCameSwapped(memory.DoorReasons, matter, reworded, standingOnly: false))
+                        {
+                            var swap = matter; matter = reworded; reworded = swap;
+                        }
+                        ok = DoorReasons.Revise(memory.DoorReasons, matter, reworded, opens, out trouble);
                         break;
+                    }
                     case DoorReasons.ActReopen:
                         ok = DoorReasons.Reopen(memory.DoorReasons, matter, now, out trouble);
                         break;

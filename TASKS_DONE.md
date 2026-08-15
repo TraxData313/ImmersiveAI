@@ -559,3 +559,51 @@ Births have **no scene replay yet** — vanilla ships `NewBornSceneNotificationI
 job whenever it is wanted.
 
     2026.08.15 22.05.00
+
+## The two known-broken pieces of the after-the-wedding batch
+
+Both were found by the adversarial review pass of 2026.08.15 and left flagged-but-unfixed when that
+run died on a session limit. Both are of the same family: a hand a woman reaches for that could not
+have moved anything.
+
+**`weigh_what_stands`'s revise could only rewrite a thing to itself.** The resolver called
+`DoorReasons.Revise(list, matter, matter, opens)` — the same field passed as both *which one I mean*
+and *the new wording* — so a model sending the new text matched nothing, and one sending the old
+text rewrote the line to itself and was told "I have reworded it". The silent-success half is the
+bad one: this system's whole promise is that what she decided is what is written down.
+
+- The tool gained **its own `reworded` field**, named for what it holds per the standing law rather
+  than folded into `note` the way the misgivings' older tool folds it — but `ParseReworded` falls
+  back to `note` anyway, since the two tools ride the same souls and `note` means nothing on a
+  revise otherwise.
+- The resolver runs the same **narrow swap guard** a settle does (`HandsCameSwapped`, standingOnly
+  false so a settled reason may be reworded too): the new wording is what a model has most to say,
+  so it lands in the first field going, which is exactly how the misgivings' settle failed live.
+- Core's `Revise` now **refuses a revise that would change nothing** — the misgivings' own revise has
+  never let a blanking through, and "I have reworded it" over an untouched line is the same lie in a
+  politer coat. Refusing out loud also lets the tool loop correct itself, which doing nothing did not.
+
+**The morning after never reached the post.** `InitiationScorer.WoundSpike` was read only in
+`CoLocatedPull`, so a wounded woman who was away — and away is the commoner case, since the wife is
+in the town with the house while he is wherever he was — never wrote about it, though the design
+record and the changelog pill both say "she comes to you in the morning, or writes if apart".
+
+- The letter roll applies the same floor over the damped pull, for the same documented reason
+  (multiplying a near-zero pull leaves a near-zero pull). The group-total law is untouched:
+  `WriteRateFactor` still halves the post's whole rate and a louder pull only pushes `UnionPull`
+  nearer 1.
+- It reads the wound **before** the story-depth gate. A woman wed through the game's own barter and
+  never yet spoken with has no story to fill pages — and she is precisely who this is for.
+- The same floor was missing from `CoLocatedPull`'s own richness-0 early return
+  (`docs/review-findings-2026-08-15.md:267`, the same bug wearing the other coat), which skipped the
+  spike for exactly the soul `WoundSpikeAtOnce`'s own comment names: "the woman who most needs to
+  say something is very often the one who has been talked to least". Fixed with it.
+- The spike is still spent exactly once. The letter ponder records `Considered` and the write
+  records `Reached`, and both clear the stamp — so a ponder that answers no does not leave her hot
+  for another thirty-six hours of hourly re-picks.
+
+No changelog pills: both make an existing `[Unreleased]` line true rather than changing anything a
+player has ever seen, and a "Fixed:" note about a version that never shipped is the ghost the
+release ritual warns about.
+
+    2026.08.16 00.00.00

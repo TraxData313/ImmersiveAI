@@ -2410,11 +2410,16 @@ namespace ImmersiveAI
             // The cached index instead of re-parsing the file every hour (self-invalidates on
             // the file's write stamp, so a just-saved exchange is seen at once).
             var known = MemoryIndex.Get(NpcPaths.MemoryFile(hero), _memoryStore);
+            double spike = WoundSpikeFor(known, nowDay);
             if (known == null || known.Richness <= 0)
                 // Station never stands between the player and their own household — you do not hold a
                 // queen's rank against your own wife, and a stranger-wife is precisely who the hearth
                 // factor exists to bring across the room.
-                return floor * hearth * (hearth > 1.0 ? 1.0 : StrangerStationFactor(hero));
+                // The wound floors this branch too (2026.08.16): the spike's own comment says it is
+                // for the bond with almost no pull of its own, "because the woman who most needs to
+                // say something is very often the one who has been talked to least" — and she is
+                // precisely who lands here, since learning of it is what created her file at all.
+                return Math.Max(floor * hearth * (hearth > 1.0 ? 1.0 : StrangerStationFactor(hero)), spike);
 
             double daysSince = known.LastTalkGameDay >= 0
                 ? Math.Max(0, nowDay - known.LastTalkGameDay)
@@ -2433,7 +2438,7 @@ namespace ImmersiveAI
             // yesterday — otherwise the single most important moment this feature has is silently
             // eaten by ordinary bookkeeping. It is spent the instant she goes (NoteOutreach clears
             // the stamp), so it can move her once and never twice.
-            return Math.Max(pull, WoundSpikeFor(known, nowDay));
+            return Math.Max(pull, spike);
         }
 
         /// <summary>How hard a fresh wound is pushing her right now; 0 when nothing is fresh. Read

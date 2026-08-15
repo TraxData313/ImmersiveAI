@@ -105,6 +105,50 @@ public class DoorTests
         Assert.DoesNotContain(reasons, r => r.Text == "settled matter number 0");
     }
 
+    [Fact]
+    public void AReviseTakesTwoStrings_AndRefusesToRewriteAThingToItself()
+    {
+        // THE BUG THIS PINS (found by review 2026.08.15, fixed 2026.08.16): the resolver handed the
+        // SAME field as both "which one I mean" and "the new wording", so a revise could only ever
+        // rewrite a line to itself — and then report that it had reworded it. A silent lie about
+        // what she just decided is the one failure this system cannot carry.
+        var reasons = Fresh();
+        DoorReasons.SetDown(reasons, "You gave the jewel to Ira before the whole house", "tell me first", 10, out _);
+
+        Assert.True(DoorReasons.Revise(reasons, "the jewel you gave Ira",
+            "It is not the jewel. It is that I heard of it from other mouths.", "", out _));
+        Assert.Equal("It is not the jewel. It is that I heard of it from other mouths.", reasons[0].Text);
+        Assert.Equal("tell me first", reasons[0].Opens);   // untouched: she reworded only the matter
+
+        // Nothing new to say is not a revise, whatever it reports. The misgivings' own revise has
+        // refused a blanking since it shipped; this one used to succeed and announce a rewording.
+        Assert.False(DoorReasons.Revise(reasons, "heard of it from other mouths", "", "", out var nothing));
+        Assert.Contains("no new words", nothing);
+
+        // The road back alone is a real revise — the matter stands, what would answer it has moved.
+        Assert.True(DoorReasons.Revise(reasons, "heard of it from other mouths", "", "say it to me yourself", out _));
+        Assert.Equal("say it to me yourself", reasons[0].Opens);
+        Assert.Equal("It is not the jewel. It is that I heard of it from other mouths.", reasons[0].Text);
+    }
+
+    [Fact]
+    public void AReviseWhoseHandsCameSwappedIsStillRead()
+    {
+        // The new wording is what a model has most to say, so it lands in the first field going —
+        // the misgivings' settle verb did exactly this on every call it made. The guard is narrow
+        // on purpose: it swaps ONLY when the matter names nothing and the other field names one.
+        var reasons = Fresh();
+        DoorReasons.SetDown(reasons, "You left me in Ortysia through the whole of the winter", "", 10, out _);
+
+        const string wording = "Left through the winter, and not one letter came";
+        Assert.True(DoorReasons.HandsCameSwapped(reasons, wording, "left me in Ortysia the whole winter",
+            standingOnly: false));
+
+        // Read the right way round it names nothing to swap.
+        Assert.False(DoorReasons.HandsCameSwapped(reasons, "left me in Ortysia the whole winter", wording,
+            standingOnly: false));
+    }
+
     // ------------------------------ the verb table ------------------------------
 
     [Fact]

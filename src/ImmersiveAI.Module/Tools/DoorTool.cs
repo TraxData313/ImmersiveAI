@@ -64,6 +64,16 @@ namespace ImmersiveAI.Tools
                     "thing that now stands. For every other deed, enough of the one I mean that it " +
                     "can be told apart from the rest. This is NEVER my answer to them, never my " +
                     "reply in the conversation, and never how I feel about it — only the matter."),
+                // ITS OWN FIELD, and it must stay one (2026.08.16). Revising takes TWO strings —
+                // which one I mean, and what it now says — and the resolver was handing `matter`
+                // for both, so a revise could only ever rewrite a thing to itself and then report
+                // that it had reworded it. Named for what it holds, per the standing law, rather
+                // than folded into `note` the way the misgivings' older tool folds it.
+                new ToolParameter("reworded",
+                    "Only for 'revise': what the matter NOW says, in my own voice, one sentence — " +
+                    "its new wording, never the old one and never my reply to them. The 'matter' " +
+                    "field still names which one I mean; this is what it becomes.",
+                    required: false),
                 new ToolParameter("opens",
                     "Only for 'set_down' and 'revise': what would truly answer this, in my own " +
                     "words. Leave it out entirely if I do not know — 'I do not know what would fix " +
@@ -96,6 +106,16 @@ namespace ImmersiveAI.Tools
         public static string ParseMatter(ToolCall call) => Field(call, "matter");
         public static string ParseOpens(ToolCall call) => Field(call, "opens");
         public static string ParseNote(ToolCall call) => Field(call, "note");
+
+        /// <summary>The matter's new wording, for a revise. Falls back to `note`, which is where
+        /// the misgivings' own tool has always kept it — a model that has learned that shape (and
+        /// they ride the same souls) costs nothing to honour, and `note` means nothing on a revise
+        /// otherwise.</summary>
+        public static string ParseReworded(ToolCall call)
+        {
+            var said = Field(call, "reworded");
+            return said.Length > 0 ? said : Field(call, "note");
+        }
 
         private static string Field(ToolCall call, string name)
         {

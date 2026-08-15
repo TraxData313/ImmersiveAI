@@ -1,4 +1,13 @@
-﻿BUGS:
+﻿WHERE THINGS STAND (2026.08.16)
+  The whole post-marriage batch is built, committed and deployed, and 784 Core tests are green —
+  and almost none of it has been played. If you are picking this up cold, read
+  docs/next-session-handoff.md: it carries Anton's own playtest findings and a list of what wants
+  checking, RANKED BY WHAT HURTS MOST IF IT IS WRONG rather than by likelihood.
+  Three docs hold the rest: docs/after-the-wedding-design.md (the design record — its SPIRIT
+  section is the feature and must be read whole), docs/review-findings-2026-08-15.md (35 raw,
+  UNVERIFIED review leads; twenty untriaged), and CLAUDE.md (the standing laws).
+
+BUGS:
 - [ ] THE VOICE BUZZES ON A NIGHT ACCOUNT (Anton, 2026.08.15, reproduced twice). Pressing ♪ on the
       ☾ night-account card ("The Jug by the Fire") plays a "buuuuu" noise where the first part
       should be. Suspects in order: the card's body carries furniture the words never should — the
@@ -7,11 +16,27 @@
       length trips VoiceBudget's ceiling and the runaway guard cuts mid-stream. Start at
       ChatMessageVM.WithVoice and what body the ☾ card hands it; docs/voiceover-engine-notes.md has
       the derail numbers.
-- [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN, not the tavern (Anton, 2026.08.15). Vanilla's
-      own Talk puts her in the tavern set; our tableau picks by culture and settlement only. SAME
-      ROOT as "change the set" below, same file: ConversationSceneBuilder.
+- [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN → moved into **THE STAGE** below. It is the same
+      file as two other open items and must not be fixed alone.
 
 NEXT UPDATE:
+- [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
+      Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means
+      solving the scene question three times. The design record's own section is
+      docs/after-the-wedding-design.md → "The hearth window becomes a stage"; READ THE WARNING
+      UNDER IT — that section is a CONCEPT and not a build-ready design, and the three questions
+      it does not answer are listed there.
+    - [ ] Rebuild the hearth window (H) in the talk screen's shape: wives and lovers LEFT, the
+          chosen one ALIVE in the centre via the tableau, settings RIGHT. The batch's largest UI
+          job; four documented tableau traps plus one nobody has solved (two screens over ONE
+          shared cached scene); failure mode is a hard native crash, not a wrong sentence.
+    - [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN (Anton, 2026.08.15). Vanilla's own Talk puts
+          her in the tavern set; our tableau picks by culture and settlement only.
+    - [ ] CHANGE THE SET INSIDE A TOWN (Anton's ask, same evening) — the town, the tavern, or the
+          keep when it is open to you, and note who else is standing there.
+      DO THEM TOGETHER, and in that order: the two smaller ones teach the scene selection that the
+      stage then has to arbitrate between two screens.
+
 - [ ] REVIEW FINDINGS STILL OPEN (adversarial pass over the after-the-wedding batch, 2026.08.15).
       ALL 35 RAW FINDINGS ARE IN docs/review-findings-2026-08-15.md — recovered from the run's
       journal, with file:line and a scenario each, grouped high/medium/low. They are UNVERIFIED:
@@ -19,14 +44,18 @@ NEXT UPDATE:
       so the run's "0 confirmed" means nothing. Ten were checked by hand and fixed the same day;
       the five below were judged plausible; the remaining twenty have not been triaged at all.
       A finding there is not a bug until someone reads the code.
-    - [ ] `weigh_what_stands` REVISE cannot work as wired. The resolver calls
-          `DoorReasons.Revise(list, matter, matter, opens)` — the same field as both "which one I
-          mean" and "the new wording" — so a model that sends the NEW text finds nothing and a
-          model that sends the OLD text rewrites it to itself. The tool needs a second field (the
-          misgivings' own tool has one), or revise should be dropped from the deed enum.
-    - [ ] The fresh-wound spike is read only in `CoLocatedPull`, so a wounded woman who is far away
-          never writes about it. The design says "she comes to you in the morning, or writes if
-          apart" — the letter path needs the same floor.
+    - [x] `weigh_what_stands` REVISE cannot work as wired — FIXED 2026.08.16. The tool gained its
+          own `reworded` field (falling back to `note`, where the misgivings' older tool keeps it),
+          the resolver passes the two strings separately and runs the same narrow swap guard a
+          settle does, and Core's `Revise` now REFUSES a revise that would change nothing rather
+          than reporting a rewording it did not do.
+    - [x] The fresh-wound spike was read only in `CoLocatedPull` — FIXED 2026.08.16. The letter roll
+          applies the same floor over the damped pull, and reads the wound BEFORE the story-depth
+          gate so a woman wed through vanilla and never spoken with can still write. The same
+          floor was missing from `CoLocatedPull`'s own richness-0 early return (raw finding at
+          docs/review-findings-2026-08-15.md:267, which is the same bug wearing the other coat) —
+          fixed with it. The spike is still spent exactly once: the letter ponder marks
+          `Considered` and the write marks `Reached`, and both clear the stamp.
     - [ ] The duty-night spiral stops biting at `DoorReasons.MaxStandingOpen` (5). After about five
           duty nights nothing further is laid down. Commented as deliberate; the guardrail says
           "if playtests show it farmable, deepen the closure" — so this is a tuning question to
@@ -44,10 +73,8 @@ NEXT UPDATE:
           Touches NightCooldownHours / CooldownHoursLeft / IsWithinEveningWindow / _nightAskedOnDay.
           Read the "LATE IN THE EVENING AND NOT BEFORE" and "IT IS A WINDOW OF HOURS" comments in
           ImmersiveChatBehavior.Nights.cs first — both were hard-won and this must not undo them.
-    - [ ] CHANGE THE SET INSIDE A TOWN — talk with your men in the town, the tavern, or the keep
-          when it is open to you (and note who else is standing there). ConversationSceneBuilder,
-          which today picks a hall interior by culture alone. Pairs with the tavern bug above and
-          with the hearth-as-stage job; do them together.
+    - [ ] CHANGE THE SET INSIDE A TOWN → moved into **THE STAGE** above, with the tavern bug and
+          the hearth rebuild. Same file; do not do it alone.
     - [ ] LET THE VOICES READ THE *ACTED* PARTS, with an MCM toggle ON by default that turns it
           back off. Core Voices\SpeakableText is where words and gestures are told apart today;
           the split itself is Core EmoteText's strict single-asterisk grammar.
@@ -77,12 +104,20 @@ NEXT UPDATE:
           (recall_house itself deferred; the family lines carry the public state)
     - [x] 7. Heart-bands + the era norm + spark muse cards — built 2026.08.15, UNPLAYTESTED
     - [x] 8. "Between us" — one permanent door, composed page — built 2026.08.15, UNPLAYTESTED
-    - [~] 9. Small UI debts BUILT (the empty purple notice circle now wears her face; wife pinned
-          top, lovers under her; settlement menus teach their hotkeys and carry a hearth door).
-          THE HEARTH-AS-TABLEAU-STAGE IS NOT BUILT — the one piece deliberately left. It is the
-          batch's largest UI job, it carries the four tableau traps plus a new one (two screens
-          over ONE shared cached scene), and its failure mode is a hard native crash. Not worth
-          shipping blind before a single playtest of anything above it. Start the next pass here.
+    - [x] 9a. Small UI debts — built 2026.08.15. The empty purple notice circle now wears her face
+          (Anton's screenshot: the evening's notice was the only one of the three carrying no Hero
+          at all, so the portrait widget had nothing to bind to); wife pinned top of the contact
+          list with lovers under her; the settlement menus teach their hotkeys and carry a second
+          door to the hearth.
+    - [ ] 9b. THE HEARTH-AS-TABLEAU-STAGE → moved OUT to **THE STAGE** at the top of NEXT UPDATE,
+          because it is one job with the tavern bug and "change the set", and because buried as the
+          last line of a batch whose other eight items are [x] nobody would ever find it.
+
+      WHAT IS UNPLAYTESTED, which is nearly all of it: every one of items 1–8 shipped without a
+      single minute in the game. docs/next-session-handoff.md ranks what to check by what hurts
+      most if it is wrong — the world-mutating lover buyout and a lover's child first, then whether
+      she reaches for the door's hand at all, then whether the era norm makes every woman sound the
+      same (that last one is the founding rule of the mod and only real play can answer it).
       The post-marriage batch: temptation that comes to you, the lover road (buyout from her clan,
       the father's letter, outside the companion limit), doors-with-reasons (misgivings applied to
       the night — SUPERSEDES the nights doc's no-refusals rule, the asking happened), leaks → the
