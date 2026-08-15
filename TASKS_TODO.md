@@ -35,6 +35,30 @@ BUGS:
       it is closed. Both want the real engine in front of them. UNPLAYTESTED — Anton should hear a
       long reply on Streaming and say whether it is now one clean take, seams and all.
 
+- [x] THE ITEM FLOOD IN TOWNS — FIXED 2026.08.16 (Anton's screenshot: one town stop listing
+      "Silver Ore x6, Cow x4, Salt x19, Scarf, Curved Boots, Rugged Saddle" four times over).
+      NOT the writer, and not the prose. A JSON ROUND-TRIP ARTIFACT: `JourneyLog.OpenVisit` is a
+      computed get-only property that ALIASES a live element of `Visits`. Newtonsoft serialized it,
+      so an open stop was written to the file TWICE; and on the way back in, its default
+      `ObjectCreationHandling.Auto` does not skip a readable-but-not-writable member holding a
+      non-null object — it POPULATES the instance already there, which is that same visit, appending
+      its piece-lists to themselves. Every save-then-load with a stop open doubled them again, which
+      is why it is towns and why it grows. Proved against Anton's own snapshots (Akkalat at four
+      copies; Odokh, never open at a save, clean).
+      THE FIX: `[JsonIgnore]` on every computed view over persisted state — `OpenVisit`,
+      `OpenQuests`, `ResolvedQuests`, `JourneyVisit.HasAnyDoings` — plus `DropReplayedLines()`,
+      called from `LoadFrom` BEFORE `MergeContinuedStays` (order is load-bearing: the merge SUMS by
+      name, so healing after it would turn the flood into inflated counts, which looks plausible and
+      is worse). The heal rides one invariant: every honest write goes through `AddCounted`, which
+      merges by name, so a repeated NAME is proof of a replayed copy and the first carries the true
+      count. Repeats are DROPPED, never summed — summing would invent goods that never changed hands.
+      WHY THE SUITE NEVER CAUGHT IT: every existing round-trip test closes its stops before saving,
+      so `OpenVisit` was null and the second copy was never written. The new test saves with a stop
+      OPEN, four times over. THE GENERAL LESSON, written at the site: on a persisted type a computed
+      view must be JsonIgnore'd — it is not merely dead weight in the file, because a view handing
+      back a live reference makes the round trip MUTATE what it was only meant to describe.
+      Existing corrupted journals heal themselves on the next load. 802 Core tests green.
+
 NEXT UPDATE:
 - [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means
@@ -56,7 +80,10 @@ NEXT UPDATE:
           exist. UNPLAYTESTED — worth a look in a tavern, a keep, and a War Sails town (which should
           still be drawn out of doors).
     - [ ] CHANGE THE SET INSIDE A TOWN (Anton's ask, same evening) — the town, the tavern, or the
-          keep when it is open to you, and note who else is standing there.
+          keep when it is open to you. The original ask closed "and note who else is standing there";
+          Anton WITHDREW that on 2026.08.16 when asked which of the two it meant ("no, I dont care
+          if they see who else is in the tavern"). So: neither other souls drawn into the scene, nor
+          a line telling her who else is present. Do not reinstate it as a missing requirement.
       DO THEM TOGETHER, and in that order: the two smaller ones teach the scene selection that the
       stage then has to arbitrate between two screens.
 

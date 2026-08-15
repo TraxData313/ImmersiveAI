@@ -1,4 +1,4 @@
-using ImmersiveAI.Core.Journey;
+﻿using ImmersiveAI.Core.Journey;
 
 namespace ImmersiveAI.Core.Tests;
 
@@ -233,5 +233,79 @@ public class JourneyLogTests
         {
             try { Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); } catch { }
         }
+    }
+
+    // ---- the item flood: a computed view that aliased persisted state -------------------------
+
+    [Fact]
+    public void AnOpenStopIsNotWrittenTwiceAndDoesNotGrowOnEveryRoundTrip()
+    {
+        // THE BUG (Anton, 2026.08.16): OpenVisit aliases a live element of Visits. Serialized, the
+        // file carried that visit twice; on load, Newtonsoft populated the instance it already had
+        // — the same visit — appending its piece-lists to themselves. Every save-then-load with a
+        // stop OPEN doubled them. Every existing round-trip test closed its stops first, which is
+        // exactly why the suite never saw it.
+        var file = Path.Combine(Path.GetTempPath(), "iai_journey_" + Guid.NewGuid().ToString("N"), "_journey.json");
+
+        var log = new JourneyLog();
+        var visit = log.BeginVisit("Akkalat", JourneyVisit.Kinds.Town, 10.0, "Winter 12");
+        JourneyVisit.AddCounted(visit.SoldNotable, "Silver Ore", 6);
+        JourneyVisit.AddCounted(visit.SoldNotable, "Cow", 4);
+        JourneyVisit.AddCounted(visit.BoughtNotable, "Barbed Arrows", 1);
+        visit.SoldValue = 4802;
+        Assert.NotNull(log.OpenVisit);          // the stop is OPEN — the whole point
+
+        for (var round = 0; round < 4; round++)
+        {
+            log.SaveTo(file);
+            log = JourneyLog.LoadFrom(file);
+        }
+
+        var back = log.Visits.Single();
+        Assert.Equal(new[] { "Silver Ore ×6", "Cow ×4" }, back.SoldNotable.ToArray());
+        Assert.Equal(new[] { "Barbed Arrows" }, back.BoughtNotable.ToArray());
+        Assert.Equal(4802, back.SoldValue);
+    }
+
+    [Fact]
+    public void AJournalAlreadyFloodedIsHealedOnLoad()
+    {
+        // Fixing the writer mends nothing already on disk, and Anton has a live campaign. An honest
+        // list can never hold one NAME twice — every write merges through AddCounted — so a repeat
+        // is proof of a replayed copy, and the first of them carries the true count.
+        var file = Path.Combine(Path.GetTempPath(), "iai_journey_" + Guid.NewGuid().ToString("N"), "_journey.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, @"{
+          ""Visits"": [{
+            ""Place"": ""Akkalat"", ""Kind"": ""town"", ""ArriveDay"": 10.0, ""LeaveDay"": 10.5,
+            ""SoldValue"": 4802,
+            ""SoldNotable"": [""Silver Ore ×6"", ""Cow ×4"", ""Silver Ore ×6"", ""Cow ×4"", ""Silver Ore ×6""],
+            ""BoughtNotable"": [""Barbed Arrows"", ""Barbed Arrows""],
+            ""Recruited"": [], ""LeftInGarrison"": []
+          }],
+          ""Quests"": []
+        }");
+
+        var log = JourneyLog.LoadFrom(file);
+        var visit = log.Visits.Single();
+
+        // Dropped, never summed: summing would invent goods that never changed hands.
+        Assert.Equal(new[] { "Silver Ore ×6", "Cow ×4" }, visit.SoldNotable.ToArray());
+        Assert.Equal(new[] { "Barbed Arrows" }, visit.BoughtNotable.ToArray());
+        Assert.Equal(4802, visit.SoldValue);
+    }
+
+    [Fact]
+    public void TheHealLeavesAnHonestJournalExactlyAsItWas()
+    {
+        var log = new JourneyLog();
+        var visit = log.BeginVisit("Odokh", JourneyVisit.Kinds.Town, 3.0, "Winter 5");
+        JourneyVisit.AddCounted(visit.SoldNotable, "Wool", 24);
+        JourneyVisit.AddCounted(visit.SoldNotable, "Salt", 19);
+        JourneyVisit.AddCounted(visit.SoldNotable, "Wool", 6);      // merges by name, as it always has
+        log.CloseOpenVisit(3.5);
+
+        log.DropReplayedLines();
+        Assert.Equal(new[] { "Wool ×30", "Salt ×19" }, log.Visits.Single().SoldNotable.ToArray());
     }
 }

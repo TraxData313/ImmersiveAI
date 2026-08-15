@@ -29,7 +29,26 @@ namespace ImmersiveAI.Core.Journey
         public List<JourneyVisit> Visits { get; set; } = new List<JourneyVisit>();
         public List<JourneyQuest> Quests { get; set; } = new List<JourneyQuest>();
 
-        /// <summary>The stop we are presently at (or the open road-bucket), if any.</summary>
+        /// <summary>
+        /// The stop we are presently at (or the open road-bucket), if any.
+        /// <para>
+        /// NEVER PERSISTED, and that attribute is a BUG FIX rather than tidiness (the item flood,
+        /// Anton 2026.08.16 — a town stop listing "Silver Ore x6, Cow x4, Salt x19…" four times
+        /// over). This property ALIASES a live element of <see cref="Visits"/>. Serialized, the file
+        /// carries that visit twice; and on the way back in, Newtonsoft's default
+        /// <c>ObjectCreationHandling.Auto</c> does not skip a readable-but-not-writable member
+        /// holding a non-null object — it POPULATES the instance it already has, which is the very
+        /// same visit, appending its piece-lists to themselves. Every save-then-load with a stop
+        /// open doubled them again.
+        /// </para>
+        /// <para>
+        /// THE GENERAL LESSON, worth more than this one field: on a persisted type, a computed view
+        /// over persisted state must be <see cref="JsonIgnoreAttribute"/>d. It is not merely dead
+        /// weight in the file — if it hands back a live reference, the round trip mutates the thing
+        /// it was only supposed to describe.
+        /// </para>
+        /// </summary>
+        [JsonIgnore]
         public JourneyVisit? OpenVisit =>
             Visits.LastOrDefault(v => v != null && v.LeaveDay < 0);
 
@@ -123,9 +142,12 @@ namespace ImmersiveAI.Core.Journey
             return open;
         }
 
+        // Computed views, never persisted — see OpenVisit above for why that matters here.
+        [JsonIgnore]
         public IReadOnlyList<JourneyQuest> OpenQuests =>
             Quests.Where(q => q != null && q.Outcome.Length == 0).ToList();
 
+        [JsonIgnore]
         public IReadOnlyList<JourneyQuest> ResolvedQuests =>
             Quests.Where(q => q != null && q.Outcome.Length > 0).ToList();
 
@@ -169,6 +191,52 @@ namespace ImmersiveAI.Core.Journey
                 Quests.Remove(resolved[i]);
         }
 
+        /// <summary>
+        /// Heals piece-lists that the old <c>OpenVisit</c> round trip doubled (the item flood,
+        /// 2026.08.16 — see that property for the cause). A journal on disk may already carry a
+        /// stop's goods four or eight times over, and no amount of fixing the writer mends what is
+        /// already written.
+        /// <para>
+        /// It rides one invariant, and only works because of it: EVERY honest write goes through
+        /// <see cref="JourneyVisit.AddCounted"/>, which merges by name and returns — so an honest
+        /// list can never hold the same name twice, and a repeated name is therefore proof of a
+        /// replayed copy. The FIRST of them carries the true count.
+        /// </para>
+        /// <para>
+        /// Repeats are DROPPED, never summed. Summing would turn "Silver Ore x6" seen four times
+        /// into "Silver Ore x24" — inventing goods that never changed hands, and doing it in a form
+        /// nobody could later tell from the truth.
+        /// </para>
+        /// </summary>
+        public void DropReplayedLines()
+        {
+            foreach (var visit in Visits)
+            {
+                if (visit == null) continue;
+                DropRepeatedNames(visit.BoughtNotable);
+                DropRepeatedNames(visit.SoldNotable);
+                DropRepeatedNames(visit.Recruited);
+                DropRepeatedNames(visit.LeftInGarrison);
+            }
+        }
+
+        // "Wool x24" and "Wool x3" are the same GOOD twice over: compare the name, not the line.
+        private static void DropRepeatedNames(List<string> lines)
+        {
+            if (lines == null || lines.Count < 2) return;
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < lines.Count; i++)
+            {
+                var line = lines[i] ?? string.Empty;
+                var cut = line.LastIndexOf(" ×", StringComparison.Ordinal);
+                var name = cut > 0 ? line.Substring(0, cut) : line;
+                if (seen.Add(name)) continue;
+                lines.RemoveAt(i);
+                i--;
+            }
+        }
+
         // ------------------------------ persistence ------------------------------
 
         /// <summary>Loads a journal; a missing or unreadable file is an empty journal, never an error.</summary>
@@ -181,6 +249,11 @@ namespace ImmersiveAI.Core.Journey
                 if (log == null) return new JourneyLog();
                 log.Visits = log.Visits?.Where(v => v != null).ToList() ?? new List<JourneyVisit>();
                 log.Quests = log.Quests?.Where(q => q != null).ToList() ?? new List<JourneyQuest>();
+                // ORDER IS LOAD-BEARING: heal the replayed lines FIRST. MergeContinuedStays folds
+                // same-place stays through AddCountedLine, which SUMS by name — so merging two
+                // doubled stays would turn the flood into inflated counts, which is worse than the
+                // flood because it looks plausible.
+                log.DropReplayedLines();
                 log.MergeContinuedStays();
                 return log;
             }
@@ -242,6 +315,7 @@ namespace ImmersiveAI.Core.Journey
         /// memories — a resumed stay closed twice must not be remembered twice.</summary>
         public bool BeatDone { get; set; }
 
+        [JsonIgnore]
         public bool HasAnyDoings =>
             BoughtValue > 0 || SoldValue > 0 || Recruited.Count > 0
             || LeftInGarrison.Count > 0 || PrisonersSold > 0 || PrisonersDonated > 0;
