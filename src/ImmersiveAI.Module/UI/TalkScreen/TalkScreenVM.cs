@@ -322,8 +322,8 @@ namespace ImmersiveAI.UI.TalkScreen
                                 WithStamp(stamp, $"✉ {npcName} takes up the quill and writes to you:"),
                                 isNarration: true, Colors.White));
                             if (!string.IsNullOrWhiteSpace(turn.NpcLine))
-                                messages.Add(new ChatMessageVM($"{npcName} ✉ by letter",
-                                    turn.NpcLine, isNarration: false, NpcHeaderColor));
+                                messages.Add(Voiced(new ChatMessageVM($"{npcName} ✉ by letter",
+                                    turn.NpcLine, isNarration: false, NpcHeaderColor), false, turn.NpcLine));
                             continue;
                         }
                         if (Core.Prompts.PromptBuilder.TryExtractReceivedLetter(turn.PlayerLine, out var letterBody))
@@ -331,8 +331,8 @@ namespace ImmersiveAI.UI.TalkScreen
                             messages.Add(new ChatMessageVM(string.Empty,
                                 WithStamp(stamp, $"✉ Your letter reaches {npcName}:"),
                                 isNarration: true, Colors.White));
-                            messages.Add(new ChatMessageVM($"{playerName} ✉ by letter",
-                                letterBody, isNarration: false, PlayerHeaderColor));
+                            messages.Add(Voiced(new ChatMessageVM($"{playerName} ✉ by letter",
+                                letterBody, isNarration: false, PlayerHeaderColor), true, letterBody));
                             if (!string.IsNullOrWhiteSpace(turn.NpcLine))
                                 messages.Add(new ChatMessageVM(string.Empty,
                                     $"({npcName}, on whether to answer: {turn.NpcLine})",
@@ -352,9 +352,9 @@ namespace ImmersiveAI.UI.TalkScreen
                                 WithStamp(stamp, "☾ " + turn.PlayerLine),
                                 isNarration: true, Colors.White));
                             if (!string.IsNullOrWhiteSpace(nightStory))
-                                messages.Add(new ChatMessageVM(
+                                messages.Add(Voiced(new ChatMessageVM(
                                     string.IsNullOrWhiteSpace(nightName) ? $"☾ {npcName} — that night" : "☾ " + nightName,
-                                    nightStory, isNarration: false, LineHeaderColor));
+                                    nightStory, isNarration: false, LineHeaderColor), false, nightStory));
                             continue;
                         }
 
@@ -372,9 +372,9 @@ namespace ImmersiveAI.UI.TalkScreen
                                     WithStamp(stamp, $"❦ {npcName} remembers the night that followed — theirs alone."),
                                     isNarration: true, Colors.White));
                             if (!string.IsNullOrWhiteSpace(weddingAccount))
-                                messages.Add(new ChatMessageVM(
+                                messages.Add(Voiced(new ChatMessageVM(
                                     isNight ? $"❦ {npcName} — that night" : "❦ The wedding day",
-                                    weddingAccount, isNarration: false, WeddingHeaderColor));
+                                    weddingAccount, isNarration: false, WeddingHeaderColor), false, weddingAccount));
                             continue;
                         }
 
@@ -390,9 +390,9 @@ namespace ImmersiveAI.UI.TalkScreen
                                     messages.Add(new ChatMessageVM(string.Empty, WithStamp(stamp, "❧ " + birthFrame),
                                         isNarration: true, Colors.White));
                                 if (!string.IsNullOrWhiteSpace(birthAccount))
-                                    messages.Add(new ChatMessageVM(
+                                    messages.Add(Voiced(new ChatMessageVM(
                                         isHour ? $"❧ {npcName} — that hour" : "❧ The feast for the child",
-                                        birthAccount, isNarration: false, CradleHeaderColor));
+                                        birthAccount, isNarration: false, CradleHeaderColor), false, birthAccount));
                             }
                             else
                             {
@@ -413,24 +413,26 @@ namespace ImmersiveAI.UI.TalkScreen
                         else if (Core.Prompts.PromptBuilder.IsPonderBeat(turn.PlayerLine))
                         {
                             // A ponder is wholly inner — reckoning and resolution fold into one soft
-                            // line, nothing was spoken aloud.
-                            messages.Add(new ChatMessageVM(string.Empty,
-                                WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine} {turn.NpcLine})".TrimEnd()),
-                                isNarration: true, Colors.White));
+                            // line, nothing was spoken aloud. It still carries a ▶: it is her own
+                            // mind in her own first person, and hearing it is exactly the ask.
+                            var pondered = $"{turn.PlayerLine} {turn.NpcLine}".Trim();
+                            messages.Add(Voiced(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, $"({npcName}, within: {pondered})"),
+                                isNarration: true, Colors.White), false, pondered));
                             continue;
                         }
                         else
                         {
                             // Her own mind at work — an arrival met, an approach made, a bargain
                             // lived; the words she actually spoke stand as a spoken card below.
-                            messages.Add(new ChatMessageVM(string.Empty,
+                            messages.Add(Voiced(new ChatMessageVM(string.Empty,
                                 WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine})"),
-                                isNarration: true, Colors.White));
+                                isNarration: true, Colors.White), false, turn.PlayerLine));
                         }
                     }
                     else
                     {
-                        AddSpoken(messages, WithStamp(stamp, playerName), turn.PlayerLine, PlayerHeaderColor);
+                        AddSpoken(messages, WithStamp(stamp, playerName), turn.PlayerLine, PlayerHeaderColor, byPlayer: true);
                     }
 
                     if (!string.IsNullOrWhiteSpace(turn.NpcLine))
@@ -445,7 +447,7 @@ namespace ImmersiveAI.UI.TalkScreen
             if (busy)
             {
                 if (_pendingLines.TryGetValue(npc.StringId, out var pendingLine))
-                    AddSpoken(messages, playerName, pendingLine, PlayerHeaderColor);
+                    AddSpoken(messages, playerName, pendingLine, PlayerHeaderColor, byPlayer: true);
                 messages.Add(new ChatMessageVM(string.Empty, $"({npcName} considers your words…)", isNarration: true, Colors.White));
             }
             else
@@ -591,25 +593,72 @@ namespace ImmersiveAI.UI.TalkScreen
         // grammar — EmoteText): the words draw as the spoken card, each gesture as a soft narration
         // line in its place. The header rides the first segment whatever it is — a reply that is all
         // gesture still says whose act it was.
-        private static void AddSpoken(
-            MBBindingList<ChatMessageVM> messages, string header, string body, Color headerColor)
+        //
+        // The ▶ rides the FIRST segment too, and speaks the WHOLE message: the gestures are acted,
+        // not read aloud (SpeakableText strips them), so one mark for the message is the truth of it
+        // rather than a mark per fragment.
+        private void AddSpoken(
+            MBBindingList<ChatMessageVM> messages, string header, string body, Color headerColor,
+            bool byPlayer = false)
         {
             var segments = Core.Prompts.EmoteText.Split(body);
             if (segments.Count == 0)
             {
-                messages.Add(new ChatMessageVM(header, body, isNarration: false, headerColor));
+                messages.Add(Voiced(new ChatMessageVM(header, body, isNarration: false, headerColor), byPlayer, body));
                 return;
             }
             bool first = true;
             foreach (var seg in segments)
             {
                 var head = first ? header : string.Empty;
-                if (seg.IsGesture)
-                    messages.Add(new ChatMessageVM(head, $"*{seg.Text}*", isNarration: true, headerColor));
-                else
-                    messages.Add(new ChatMessageVM(head, seg.Text, isNarration: false, headerColor));
+                var row = seg.IsGesture
+                    ? new ChatMessageVM(head, $"*{seg.Text}*", isNarration: true, headerColor)
+                    : new ChatMessageVM(head, seg.Text, isNarration: false, headerColor);
+                messages.Add(first ? Voiced(row, byPlayer, body) : row);
                 first = false;
             }
+        }
+
+        /// <summary>
+        /// Hangs a ▶ on a row: these words, in this soul's voice (or the player's own).
+        /// <para>
+        /// Asked for on every kind of row and not only on spoken replies (Anton, 2026.08.14) — her
+        /// inner-mind beats and the letters too, which is why this is a helper rather than something
+        /// buried in one branch. The mark shows for everybody; whether it makes a sound depends on
+        /// whether voices are on, which the panel explains.
+        /// </para>
+        /// </summary>
+        private ChatMessageVM Voiced(ChatMessageVM row, bool byPlayer, string? spokenText)
+        {
+            var hero = _selected?.Hero;
+            if (hero == null) return row;
+            return row.WithVoice(byPlayer, spokenText, SpeakRow);
+        }
+
+        /// <summary>One row asked to be heard. The newest words always win — starting a line cuts off
+        /// whatever was being said, which is the same rule everywhere else in the voice.</summary>
+        private void SpeakRow(bool byPlayer, string text)
+        {
+            var who = byPlayer ? Hero.MainHero : _selected?.Hero;
+            if (who == null || string.IsNullOrWhiteSpace(text)) return;
+
+            // Said plainly rather than by a mark that does nothing: a dead button teaches the player
+            // the feature is broken (the bargain lesson, and the one before it).
+            if (!Voice.VoiceService.IsAvailable)
+            {
+                var why = Voice.VoiceService.UnavailableReason;
+                InformationManager.DisplayMessage(new InformationMessage(
+                    why.Length > 0 ? "No voice just now — " + why + "." : "No voice just now.", PromptFrameColor));
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(Voice.VoiceService.VoiceIdFor(who)))
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"{who.Name} has no voice cast — open Voices and choose one.", PromptFrameColor));
+                return;
+            }
+
+            Voice.VoiceService.Speak(who, text);
         }
 
         private void RefreshSelectionState()
@@ -625,6 +674,14 @@ namespace ImmersiveAI.UI.TalkScreen
 
             OnPropertyChanged("HasSelection");
             OnPropertyChanged("DevTitleText");
+            // The Voices page names the person it will cast onto. It was computed once and never
+            // told to look again, so after switching contacts the button still read the PREVIOUS
+            // name while cheerfully casting onto the new one (Anton, 2026.08.15 — the button said
+            // "Aran Ironeye" and gave the voice to Sibylla). The deed was right; only the word was
+            // stale, which is the worse kind of wrong: it teaches the player to distrust the button.
+            OnPropertyChanged("VoiceForThemText");
+            OnPropertyChanged("CanCastOnThem");
+            if (_isVoiceShown) RefreshVoices();   // and the marks under the names follow the person
             OnPropertyChanged("IsAway");
             OnPropertyChanged("IsGone");
             OnPropertyChanged("SendText");
@@ -876,6 +933,7 @@ namespace ImmersiveAI.UI.TalkScreen
             else if (IsPresetEditShown) IsPresetEditShown = false;
             else if (IsPresetsShown) IsPresetsShown = false;
             else if (IsDevShown) IsDevShown = false;
+            else if (IsVoiceShown) IsVoiceShown = false;
             else if (IsMisgivingsShown) IsMisgivingsShown = false;
             else if (IsInfoShown) IsInfoShown = false;
         }
@@ -962,6 +1020,212 @@ namespace ImmersiveAI.UI.TalkScreen
 
             IsMisgivingsShown = !IsMisgivingsShown;
         }
+
+        // ------------------------------ the voices ------------------------------
+        //
+        // THE PANEL EVERY PLAYER SEES (2026.08.15). Voices are OFF by default and must stay a thing
+        // you discover rather than a thing you have to turn off — but a feature nobody can find is a
+        // feature nobody has, so the button sits in the bar for everybody and this page explains
+        // itself: what it is, what it wants, and how to hear one before committing to it.
+        //
+        // Everything here goes through VoiceService, which owns the casting sheet. Nothing in this
+        // file writes a file or touches an engine.
+
+        private MBBindingList<VoiceRowVM> _voiceRows = new MBBindingList<VoiceRowVM>();
+        private VoiceRowVM? _voicePick;
+        private bool _isVoiceShown;
+        private string _voiceStatusText = string.Empty;
+
+        public void ExecuteToggleVoice()
+        {
+            if (!_isVoiceShown) RefreshVoices();
+            IsVoiceShown = !_isVoiceShown;
+        }
+
+        /// <summary>Rebuilds the shelf and everything said about it. Cheap, and called after every
+        /// change so the marks under the names are never stale.</summary>
+        private void RefreshVoices()
+        {
+            try
+            {
+                var shelf = Voice.VoiceService.Shelf();
+                var chosen = _selected?.Hero;
+                var forThem = chosen == null ? string.Empty : Voice.VoiceService.VoiceIdFor(chosen);
+                var female = Voice.VoiceService.DefaultFemaleId;
+                var male = Voice.VoiceService.DefaultMaleId;
+                var mine = Voice.VoiceService.PlayerVoiceId;
+                var cloudReady = Voice.VoiceService.CloudReady;
+                var localReady = Voice.VoiceService.LocalReady;
+
+                var keep = _voicePick?.Id;
+                var rows = new MBBindingList<VoiceRowVM>();
+
+                foreach (var voice in shelf)
+                {
+                    var marks = new List<string>(4);
+                    if (chosen != null && string.Equals(voice.Id, forThem, StringComparison.OrdinalIgnoreCase))
+                        marks.Add("· " + chosen.Name);
+                    if (string.Equals(voice.Id, female, StringComparison.OrdinalIgnoreCase)) marks.Add("· all women");
+                    if (string.Equals(voice.Id, male, StringComparison.OrdinalIgnoreCase)) marks.Add("· all men");
+                    if (string.Equals(voice.Id, mine, StringComparison.OrdinalIgnoreCase)) marks.Add("· you");
+
+                    var hosted = voice.Backend == Core.Voices.VoiceBackend.Remote;
+                    var ready = hosted ? cloudReady : localReady;
+                    var wants = ready ? string.Empty
+                        : hosted ? "needs a key for the hosted voices"
+                                 : "needs the speech engine installed";
+
+                    var row = new VoiceRowVM(voice, string.Join("  ", marks), ready, wants, PickVoice, HearVoice);
+                    if (string.Equals(voice.Id, keep, StringComparison.OrdinalIgnoreCase)) row.IsSelected = true;
+                    rows.Add(row);
+                }
+
+                VoiceRows = rows;
+                _voicePick = rows.FirstOrDefault(r => r.IsSelected);
+                VoiceStatusText = BuildVoiceStatus(localReady, cloudReady);
+                OnPropertyChanged("HasVoicePick");
+                OnPropertyChanged("VoiceGiveText");
+                OnPropertyChanged("VoiceEnabledText");
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("voice: building the voices panel", ex);
+                VoiceStatusText = "The voices could not be read just now.";
+            }
+        }
+
+        private string BuildVoiceStatus(bool localReady, bool cloudReady)
+        {
+            var config = _config;
+            var lines = new List<string>(4);
+
+            if (config == null || !config.EnableVoice)
+                lines.Add("Voices are OFF. Nothing is spoken aloud, and nothing here costs anything until you turn them on.");
+            else if (!localReady && !cloudReady)
+                lines.Add("Voices are on, but there is no way to make them yet — either install the speech engine, or put a key for a hosted service in config.json.");
+            else if (localReady && cloudReady)
+                lines.Add("Voices are on, made on this machine (free) or by the hosted service (billed by the minute).");
+            else if (localReady)
+                lines.Add("Voices are on, made on this machine. Free, and nothing leaves your computer.");
+            else
+                lines.Add("Voices are on, made by the hosted service — billed by the minute, and shown in the cost line like everything else.");
+
+            var chosen = _selected?.Hero;
+            if (chosen != null)
+            {
+                var id = Voice.VoiceService.VoiceIdFor(chosen);
+                var voice = Voice.VoiceService.Shelf()
+                    .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
+                lines.Add(voice == null
+                    ? $"{chosen.Name} has no voice yet."
+                    : Voice.VoiceService.IsCastByHand(chosen)
+                        ? $"{chosen.Name} speaks with {voice.Name} — chosen for them."
+                        : $"{chosen.Name} speaks with {voice.Name} — whatever their kind is given.");
+            }
+
+            return string.Join("\n", lines);
+        }
+
+        private void PickVoice(VoiceRowVM row)
+        {
+            foreach (var other in _voiceRows) other.IsSelected = other == row;
+            _voicePick = row;
+            OnPropertyChanged("HasVoicePick");
+            OnPropertyChanged("VoiceGiveText");
+        }
+
+        /// <summary>Hear it before committing to it — the whole reason a shelf of five near-identical
+        /// voices is bearable.</summary>
+        private void HearVoice(VoiceRowVM row)
+        {
+            if (row == null) return;
+            PickVoice(row);
+
+            if (_config != null && !_config.EnableVoice)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "Voices are off — turn them on here first, and this will speak.", PromptFrameColor));
+                return;
+            }
+            if (!row.IsReady)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    row.Name + " cannot speak yet — " + row.Wants + ".", PromptFrameColor));
+                return;
+            }
+            Voice.VoiceService.Preview(row.Voice);
+        }
+
+        /// <summary>Turns the whole thing on or off, right here — the one switch that matters, in the
+        /// one place a player will be standing when they want it.</summary>
+        public void ExecuteVoiceToggleEnabled()
+        {
+            if (_config == null) return;
+            _config.EnableVoice = !_config.EnableVoice;
+            _config.Save();
+
+            if (!_config.EnableVoice) Voice.VoiceService.Stop();
+            else Voice.VoiceService.Rediscover();
+
+            InformationManager.DisplayMessage(new InformationMessage(
+                _config.EnableVoice
+                    ? "Voices are on. Choose a voice below and press ▶ to hear it."
+                    : "Voices are off.", PromptFrameColor));
+            RefreshVoices();
+        }
+
+        public void ExecuteVoiceGiveToThem() => GiveVoice(id => Voice.VoiceService.Cast(_selected?.Hero, id),
+                                                          _selected?.Hero?.Name?.ToString() ?? "them");
+        public void ExecuteVoiceAllWomen() => GiveVoice(Voice.VoiceService.SetDefaultFemale, "every woman");
+        public void ExecuteVoiceAllMen() => GiveVoice(Voice.VoiceService.SetDefaultMale, "every man");
+        public void ExecuteVoiceMine() => GiveVoice(Voice.VoiceService.SetPlayerVoice, "you");
+
+        private void GiveVoice(Action<string?> give, string whom)
+        {
+            var row = _voicePick;
+            if (row == null)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "Choose a voice from the list first.", PromptFrameColor));
+                return;
+            }
+            give(row.Id);
+            InformationManager.DisplayMessage(new InformationMessage(
+                $"{row.Name} is now the voice of {whom}.", PromptFrameColor));
+            RefreshVoices();
+        }
+
+        /// <summary>Silence for this soul — which means "back to whatever your kind is given", not
+        /// "never speak", because that is what an empty casting has always meant.</summary>
+        public void ExecuteVoiceClear()
+        {
+            var npc = _selected?.Hero;
+            if (npc == null) return;
+            Voice.VoiceService.Cast(npc, null);
+            InformationManager.DisplayMessage(new InformationMessage(
+                $"{npc.Name} goes back to the usual voice for their kind.", PromptFrameColor));
+            RefreshVoices();
+        }
+
+        /// <summary>Brings over everything made in Qwen-TTS Studio that is not here already. With
+        /// cloning in game deferred, this IS the road from "I made a voice" to "she speaks with it".</summary>
+        public void ExecuteVoiceImport()
+        {
+            var brought = Voice.VoiceService.ImportFromStudio(out var trouble);
+            InformationManager.DisplayMessage(new InformationMessage(
+                brought > 0
+                    ? $"Brought over {brought} voice{(brought == 1 ? string.Empty : "s")} from Qwen-TTS Studio."
+                    : trouble.Length > 0 ? "Nothing to bring over — " + trouble
+                                         : "Nothing new to bring over; every voice there is already here.",
+                PromptFrameColor));
+            RefreshVoices();
+        }
+
+        public void ExecuteVoiceOpenFolder() => Voice.VoiceService.OpenVoicesFolder();
+
+        /// <summary>The stop control for the ordinary case — the panic KEY is for the case where
+        /// opening a window is already too slow.</summary>
+        public void ExecuteVoiceStop() => Voice.VoiceService.Stop();
 
         // ------------------------------ the dev panel ------------------------------
 
@@ -1487,6 +1751,103 @@ namespace ImmersiveAI.UI.TalkScreen
         [DataSourceProperty]
         public string DevHintText =>
             "The same test levers as the face-to-face menu, without the walk over. Popups open above this screen; levers that start something async (reach-out, letter, spark) show their result as it lands.";
+
+        // ------------------------------ the voices overlay ------------------------------
+
+        /// <summary>The Voices button, and it shows for EVERYBODY — not only when voices are on.
+        /// That is the whole discovery story: off by default, never nagging, but findable by anyone
+        /// who looks at the bar (Anton, 2026.08.15).</summary>
+        [DataSourceProperty]
+        public string VoiceButtonText => "Voices";
+
+        [DataSourceProperty]
+        public bool IsVoiceShown
+        {
+            get => _isVoiceShown;
+            set { if (value != _isVoiceShown) { _isVoiceShown = value; OnPropertyChangedWithValue(value, "IsVoiceShown"); } }
+        }
+
+        [DataSourceProperty]
+        public MBBindingList<VoiceRowVM> VoiceRows
+        {
+            get => _voiceRows;
+            set { if (value != _voiceRows) { _voiceRows = value; OnPropertyChangedWithValue(value, "VoiceRows"); OnPropertyChanged("HasVoices"); OnPropertyChanged("NoVoicesText"); } }
+        }
+
+        [DataSourceProperty]
+        public bool HasVoices => _voiceRows.Count > 0;
+
+        [DataSourceProperty]
+        public string NoVoicesText => _voiceRows.Count > 0
+            ? string.Empty
+            : "No voices yet. Make one in Qwen-TTS Studio and press \"Bring over from Studio\", or drop a voice folder somebody shared with you into the voices folder.";
+
+        [DataSourceProperty]
+        public string VoiceTitleText => "Voices";
+
+        [DataSourceProperty]
+        public string VoiceStatusText
+        {
+            get => _voiceStatusText;
+            set { if (value != _voiceStatusText) { _voiceStatusText = value; OnPropertyChangedWithValue(value, "VoiceStatusText"); } }
+        }
+
+        [DataSourceProperty]
+        public string VoiceHintText =>
+            "Every soul can be given a voice. Press ▶ beside a voice to hear it, then give it to whoever you like — "
+            + "and the same ▶ beside any words in the conversation reads them aloud, letters and their own quiet "
+            + "thoughts included.\n"
+            + "Voices made on this machine are free and private but want the speech engine and a real graphics card; "
+            + "hosted voices want only a key, cannot be cloned to sound like anyone in particular, and are billed by the minute.";
+
+        [DataSourceProperty]
+        public bool HasVoicePick => _voicePick != null;
+
+        [DataSourceProperty]
+        public string VoiceGiveText => _voicePick == null ? "Give this voice to…" : $"Give {_voicePick.Name} to…";
+
+        [DataSourceProperty]
+        public string VoiceForThemText => _selected?.Hero == null ? "this soul" : SelectedName;
+
+        [DataSourceProperty]
+        public bool CanCastOnThem => _selected?.Hero != null;
+
+        [DataSourceProperty]
+        public string VoiceEnabledText => _config != null && _config.EnableVoice ? "Turn voices off" : "Turn voices on";
+
+        [DataSourceProperty]
+        public string VoiceImportText => "Bring over from Studio";
+
+        [DataSourceProperty]
+        public string VoiceFolderText => "Open the voices folder";
+
+        [DataSourceProperty]
+        public string VoiceAllWomenText => "all women";
+
+        [DataSourceProperty]
+        public string VoiceAllMenText => "all men";
+
+        [DataSourceProperty]
+        public string VoiceMineText => "me";
+
+        [DataSourceProperty]
+        public string VoiceClearText => "Take it away";
+
+        /// <summary>The stop button, shown ONLY while something is actually speaking — so it is
+        /// never a dead control, and its appearing is itself the hint that it exists. Kept in step by
+        /// the manager's own tick.</summary>
+        [DataSourceProperty]
+        public bool IsVoicePlaying
+        {
+            get => _isVoicePlaying;
+            set { if (value != _isVoicePlaying) { _isVoicePlaying = value; OnPropertyChangedWithValue(value, "IsVoicePlaying"); } }
+        }
+
+        private bool _isVoicePlaying;
+
+        /// <summary>No square: Geometric Shapes draws as "?" here (see VoiceRowVM.HearText).</summary>
+        [DataSourceProperty]
+        public string VoiceStopText => "Stop";
 
         // ------------------------------ the prompt editor overlay ------------------------------
 

@@ -187,6 +187,7 @@ public static class Program
             OutPath = outPath!,
             LanguageId = Wire.Int(root, "languageId", -1),
             Whole = Wire.Bool(root, "whole", false),
+            MaxTokens = Wire.Int(root, "maxTokens", 0),
         };
 
         if (root.TryGetProperty("voice", out var voice) && voice.ValueKind == JsonValueKind.Object)
@@ -280,11 +281,24 @@ public static class Program
                 // time, because it re-paid the prefill and the speaker encode for each sentence.
                 // Each piece is announced the moment it is written, so the game can begin speaking
                 // while the rest is still being made.
-                outcome = _engine!.SynthesizeStreaming(req, (index, path, samples) =>
+                void Announce(int index, string path, int samples)
                 {
                     try { Wire.Chunk(req.Id, index, path, samples, _engine!.Rate); }
                     catch (Exception ex) { HostLog.Error("could not announce a piece of " + req.Id, ex); }
-                });
+                }
+
+                // A WHOLE reply has not been heard by anybody until it is written, so a runaway on
+                // the first go costs nothing to throw away and try again: at ~3x realtime a second
+                // attempt is a second or two, and the player never learns the first one happened.
+                // A STREAMED reply cannot do this - its pieces are already in the air - so it keeps
+                // what it has and simply stops. Either way the clip is marked so the game does not
+                // cache it: one bad synthesis replayed forever is the bug worth avoiding.
+                outcome = _engine!.SynthesizeStreaming(req, Announce, keepDerailed: !req.Whole);
+                if (outcome.Derailed && !outcome.Ok && req.Whole)
+                {
+                    HostLog.Warn("the reading ran away, trying once more: " + req.Id);
+                    outcome = _engine!.SynthesizeStreaming(req, Announce, keepDerailed: true);
+                }
             }
             catch (Exception ex)
             {
@@ -298,7 +312,7 @@ public static class Program
                 lock (Gate) _running = null;
             }
 
-            if (outcome.Ok) Wire.Ok(req.Id, outcome.Path, outcome.Ms, outcome.Samples, outcome.Rate);
+            if (outcome.Ok) Wire.Ok(req.Id, outcome.Path, outcome.Ms, outcome.Samples, outcome.Rate, outcome.Derailed);
             else
             {
                 HostLog.Warn($"failed {req.Id}: {outcome.Error}");

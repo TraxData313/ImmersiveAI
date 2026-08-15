@@ -50,6 +50,19 @@ namespace ImmersiveAI.Core.Voices
         /// speaker, say). Empty for a local clone, which is identified by its embedding file.</summary>
         public string RemoteVoiceId { get; set; } = string.Empty;
 
+        /// <summary>
+        /// For one of the speech model's OWN built-in speakers: its name, as the model knows it.
+        /// Empty for everything else.
+        /// <para>
+        /// These exist only on the <c>customvoice</c> model — the <c>base</c> model that does the
+        /// cloning reports none at all — which is the wrinkle worth knowing about: a player who
+        /// fetched the cloning model and has made no voice of their own has nothing to speak with
+        /// until they make one. Nothing is stored on disk for these; they are offered when the
+        /// loaded model is one that carries them.
+        /// </para>
+        /// </summary>
+        public string SpeakerName { get; set; } = string.Empty;
+
         /// <summary>Speaker-embedding width the engine was asked for — Studio writes both 1024 and
         /// 2048 and the model picks by its own size. We keep the one that was actually chosen.</summary>
         public int Dimension { get; set; } = 2048;
@@ -96,6 +109,8 @@ namespace ImmersiveAI.Core.Voices
         public bool IsSpeakable =>
             Backend == VoiceBackend.Remote
                 ? !string.IsNullOrWhiteSpace(RemoteVoiceId)
-                : !string.IsNullOrWhiteSpace(EmbeddingPath) || !string.IsNullOrWhiteSpace(IclPromptPath);
+                : !string.IsNullOrWhiteSpace(EmbeddingPath)
+                  || !string.IsNullOrWhiteSpace(IclPromptPath)
+                  || !string.IsNullOrWhiteSpace(SpeakerName);
     }
 }

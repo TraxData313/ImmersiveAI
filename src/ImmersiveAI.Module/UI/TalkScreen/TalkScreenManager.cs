@@ -503,6 +503,7 @@ namespace ImmersiveAI.UI.TalkScreen
                     else if (_vm != null && _vm.IsPresetEditShown) _vm.IsPresetEditShown = false;
                     else if (_vm != null && _vm.IsPresetsShown) _vm.IsPresetsShown = false;
                     else if (_vm != null && _vm.IsDevShown) _vm.IsDevShown = false;
+                    else if (_vm != null && _vm.IsVoiceShown) _vm.IsVoiceShown = false;
                     else if (_vm != null && _vm.IsMisgivingsShown) _vm.IsMisgivingsShown = false;
                     else if (_vm != null && _vm.IsInfoShown) _vm.IsInfoShown = false;
                     else Close();
@@ -511,6 +512,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 if ((input.IsKeyReleased(InputKey.Enter) || input.IsKeyReleased(InputKey.NumpadEnter))
                     && _vm?.IsInfoShown != true && _vm?.IsPromptEditShown != true
                     && _vm?.IsDevShown != true && _vm?.IsMisgivingsShown != true
+                    && _vm?.IsVoiceShown != true
                     && _vm?.IsPresetsShown != true && _vm?.IsPresetEditShown != true)
                 {
                     // Two fixed keys, and nothing clever (Anton, 2026.08.10): ENTER sends, SHIFT+ENTER
@@ -524,6 +526,15 @@ namespace ImmersiveAI.UI.TalkScreen
 
             if (_scrollCountdown > 0 && --_scrollCountdown == 0)
                 ScrollMessagesToBottom();
+
+            // The stop button appears only while something is actually speaking — never a dead
+            // control, and its appearing IS the hint that it is there. One bool per frame, and the
+            // VM only raises a change when it truly changed.
+            try
+            {
+                if (_vm != null) _vm.IsVoicePlaying = Voice.VoicePlayback.IsSpeaking;
+            }
+            catch { /* the button is a courtesy */ }
 
             // The map keeps running under this screen, so a road that counts DAYS ("Preparations 1/3")
             // would sit stale until the player clicked away and back — and a button that does not move

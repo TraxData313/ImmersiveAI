@@ -211,7 +211,11 @@ namespace ImmersiveAI.Mcm
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
             if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
-            if (s.VoiceDelivery == null) { s.VoiceDelivery = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 0); repaired = true; }
+            if (s.VoiceDelivery == null) { s.VoiceDelivery = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 1); repaired = true; }
+            if (s.VoiceForWomen == null) { s.VoiceForWomen = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
+            if (s.VoiceForMen == null) { s.VoiceForMen = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
+            if (s.VoiceForMe == null) { s.VoiceForMe = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
+            if (s.VoicePanicKey == null) { s.VoicePanicKey = new Dropdown<string>(McmChoiceLists.PanicKeys, 0); repaired = true; }
             if (s.NightWindowHotkey == null) { s.NightWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 9); repaired = true; }
             if (repaired)
                 ModLog.Warn("MCM served an uninitialized settings instance — dropdowns rebuilt by hand " +
@@ -248,6 +252,8 @@ namespace ImmersiveAI.Mcm
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 SelectedOf(s.PersonaSparkMode),
                 s.EnableVoice, s.VoiceAutoSpeak, SelectedOf(s.VoiceDelivery),
+                SelectedOf(s.VoiceForWomen), SelectedOf(s.VoiceForMen), SelectedOf(s.VoiceForMe),
+                s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.CloudVoiceApiKey,
                 s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightCooldownHours,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
                 s.EnableNightWindow, SelectedOf(s.NightWindowHotkey),
@@ -277,6 +283,11 @@ namespace ImmersiveAI.Mcm
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.PersonaSparkMode,
                 c.EnableVoice, c.VoiceAutoSpeak, c.VoiceDelivery,
+                // The castings live in the voices' own sheet, not in config.json — so the signature
+                // asks the service for them, and a voice given in the talk screen's panel shows up
+                // in the menu on the next poll without either side owning the truth twice.
+                Voice.VoiceService.DefaultFemaleId, Voice.VoiceService.DefaultMaleId, Voice.VoiceService.PlayerVoiceId,
+                c.VoiceSpeakReachOuts, c.VoicePanicKey, c.CloudVoiceApiKey,
                 c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightCooldownHours,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
                 c.EnableNightWindow, c.NightWindowHotkey,
@@ -337,6 +348,10 @@ namespace ImmersiveAI.Mcm
             s.EnableVoice = c.EnableVoice;
             s.VoiceAutoSpeak = c.VoiceAutoSpeak;
             Select(s.VoiceDelivery, VoiceDeliveryLabel(c.VoiceDelivery));
+            s.VoiceSpeakReachOuts = c.VoiceSpeakReachOuts;
+            SelectOrAdd(s.VoicePanicKey, c.VoicePanicKey);
+            s.CloudVoiceApiKey = c.CloudVoiceApiKey ?? string.Empty;
+            PushVoiceCastings(s);
             s.EnableNights = c.EnableNights;
             s.NightsAutoVisit = c.NightsAutoVisit;
             s.NightsPreventChild = c.NightsPreventChild;
@@ -435,6 +450,10 @@ namespace ImmersiveAI.Mcm
             c.EnableVoice = s.EnableVoice;
             c.VoiceAutoSpeak = s.VoiceAutoSpeak;
             c.VoiceDelivery = VoiceDeliveryValue(SelectedOf(s.VoiceDelivery)) ?? c.VoiceDelivery;
+            c.VoiceSpeakReachOuts = s.VoiceSpeakReachOuts;
+            c.VoicePanicKey = SelectedOf(s.VoicePanicKey) ?? c.VoicePanicKey;
+            c.CloudVoiceApiKey = s.CloudVoiceApiKey ?? string.Empty;
+            PullVoiceCastings(s);
             c.EnableNights = s.EnableNights;
             c.NightsAutoVisit = s.NightsAutoVisit;
             c.NightsPreventChild = s.NightsPreventChild;
@@ -466,6 +485,138 @@ namespace ImmersiveAI.Mcm
                 c.TalkScreenFpsLimit = s.TalkScreenFpsLimit;
 
             c.DevMode = s.DevMode;
+        }
+
+        // ── The voice castings ──────────────────────────────────────────────────────
+        //
+        // The one pair of dropdowns in this menu whose CHOICES are not a fixed vocabulary: they are
+        // whatever voices the player has made or been given, which can change between one session and
+        // the next — and MCM persists a dropdown as an INDEX into its list. An index into a list that
+        // has grown a voice at the top is a different voice; silently recasting everybody because a
+        // folder was added is exactly the sort of bug nobody would think to report.
+        //
+        // So: the lists are rebuilt from the live shelf here, the selection is made BY VOICE ID, and
+        // whatever index MCM restored is thrown away. The truth lives in the voices' own sheet
+        // (assignments.json), never in config.json — the panel in the talk screen writes the same
+        // sheet, so the two doors agree without either owning it.
+        //
+        // The names shown are the voices' own; two voices may share one (nothing stops a player
+        // naming two folders "Sibylla"), so the mapping back is by POSITION in the list we just
+        // built, which is exact for as long as it is on screen.
+
+        /// <summary>The shelf as the menu last showed it, in order, so a chosen row maps back to the
+        /// voice it named rather than to a name that might be shared.</summary>
+        private static List<string> _voiceIdsInMenuOrder = new List<string>();
+        private static string _voiceShelfShape = string.Empty;
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void PushVoiceCastings(ImmersiveAiMcmSettings s)
+        {
+            try
+            {
+                var shelf = Voice.VoiceService.Shelf();
+
+                var labels = new List<string> { McmChoiceLists.NoVoiceLabel };
+                var ids = new List<string> { string.Empty };
+                foreach (var voice in shelf)
+                {
+                    labels.Add(voice.Name);
+                    ids.Add(voice.Id);
+                }
+
+                // Only build NEW dropdowns when the shelf itself has changed. A push happens
+                // whenever any watched setting moves, and handing MCM three fresh Dropdown objects
+                // every time would throw away a selection the player is in the middle of making —
+                // and, on some MCM builds, not refresh the visible list anyway. Selecting inside the
+                // dropdown we already gave it is both cheaper and better behaved.
+                var shape = string.Join("|", ids);
+                var rebuild = shape != _voiceShelfShape;
+                _voiceShelfShape = shape;
+                _voiceIdsInMenuOrder = ids;
+
+                if (rebuild)
+                {
+                    s.VoiceForWomen = Rebuilt(labels, ids, Voice.VoiceService.DefaultFemaleId);
+                    s.VoiceForMen = Rebuilt(labels, ids, Voice.VoiceService.DefaultMaleId);
+                    s.VoiceForMe = Rebuilt(labels, ids, Voice.VoiceService.PlayerVoiceId);
+                    return;
+                }
+
+                SelectById(s.VoiceForWomen, labels, ids, Voice.VoiceService.DefaultFemaleId);
+                SelectById(s.VoiceForMen, labels, ids, Voice.VoiceService.DefaultMaleId);
+                SelectById(s.VoiceForMe, labels, ids, Voice.VoiceService.PlayerVoiceId);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Warn("MCM: the voice lists could not be built — " + ex.Message);
+            }
+        }
+
+        /// <summary>Moves an existing dropdown onto the voice with this id — BY ID, never by the
+        /// index MCM happens to have stored.</summary>
+        private static void SelectById(Dropdown<string>? dropdown, List<string> labels, List<string> ids, string chosenId)
+        {
+            try
+            {
+                if (dropdown == null) return;
+                for (var i = 0; i < ids.Count; i++)
+                {
+                    var match = string.IsNullOrEmpty(chosenId)
+                        ? string.IsNullOrEmpty(ids[i])
+                        : string.Equals(ids[i], chosenId, StringComparison.OrdinalIgnoreCase);
+                    if (!match) continue;
+                    if (dropdown.SelectedIndex != i) dropdown.SelectedIndex = i;
+                    return;
+                }
+            }
+            catch { /* an unhealthy dropdown is never worth a failed sync */ }
+        }
+
+        private static Dropdown<string> Rebuilt(List<string> labels, List<string> ids, string chosenId)
+        {
+            var at = 0;
+            for (var i = 0; i < ids.Count; i++)
+                if (!string.IsNullOrEmpty(ids[i]) && string.Equals(ids[i], chosenId, StringComparison.OrdinalIgnoreCase))
+                { at = i; break; }
+            return new Dropdown<string>(labels, at);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void PullVoiceCastings(ImmersiveAiMcmSettings s)
+        {
+            try
+            {
+                // Before the lists have ever been built, the menu holds only the placeholder — and
+                // reading a casting out of THAT would clear all three. Nothing to pull yet.
+                if (_voiceIdsInMenuOrder.Count <= 1) return;
+
+                var female = IdOfSelected(s.VoiceForWomen);
+                var male = IdOfSelected(s.VoiceForMen);
+                var mine = IdOfSelected(s.VoiceForMe);
+
+                if (female != null && female != Voice.VoiceService.DefaultFemaleId) Voice.VoiceService.SetDefaultFemale(female);
+                if (male != null && male != Voice.VoiceService.DefaultMaleId) Voice.VoiceService.SetDefaultMale(male);
+                if (mine != null && mine != Voice.VoiceService.PlayerVoiceId) Voice.VoiceService.SetPlayerVoice(mine);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Warn("MCM: a voice casting could not be read — " + ex.Message);
+            }
+        }
+
+        /// <summary>The voice id a dropdown's selection means. Null when it cannot be read at all —
+        /// which must never be treated as "no voice", or an unhealthy dropdown would silence
+        /// everybody. Empty string IS a real answer: the player chose "(none)".</summary>
+        private static string? IdOfSelected(Dropdown<string>? dropdown)
+        {
+            try
+            {
+                if (dropdown == null) return null;
+                var at = dropdown.SelectedIndex;
+                if (at < 0 || at >= _voiceIdsInMenuOrder.Count) return null;
+                return _voiceIdsInMenuOrder[at];
+            }
+            catch { return null; }
         }
 
         // ── The store-file rescue ───────────────────────────────────────────────────

@@ -789,12 +789,12 @@ namespace ImmersiveAI
         /// everything for ever, which on a large disk is a perfectly good answer.</summary>
         public int VoiceCacheBudgetMb { get; set; } = 2048;
 
-        /// <summary>The FMOD event a spoken line is handed to. Leave as it is unless the voices are
-        /// too quiet or silent: the game defines no "event:/Extra/voiceover" of its own — that name
-        /// is ours and FMOD accepts it as a programmer sound — so it may not ride the game's own
-        /// vca:/Voiceover fader. Events the game DOES define, worth trying in that case:
-        /// "event:/mod/mission/voice", "event:/mod/mission/voice_shout",
-        /// "event:/mod/mission/voice_trivial". Takes hold on the next line spoken.</summary>
+        /// <summary>The FMOD event a spoken line is handed to. Leave it alone unless the voices are
+        /// silent or oddly quiet. This is the game's OWN event for audio it did not ship (verified
+        /// 2026.08.15 in its event table, beside "event:/Extra/external" and
+        /// "event:/Extra/voicechat"), so it already rides the game's own routing and volume. If it
+        /// ever needs moving, "event:/Extra/external" is the nearest sibling. Takes hold on the next
+        /// line spoken.</summary>
         public string VoiceSoundEvent { get; set; } = "event:/Extra/voiceover";
 
         /// <summary>
@@ -813,7 +813,61 @@ namespace ImmersiveAI
         /// </list>
         /// Takes hold on the next line spoken; no restart.
         /// </summary>
-        public string VoiceDelivery { get; set; } = "FullRead";
+        public string VoiceDelivery { get; set; } = "Streaming";
+
+        /// <summary>
+        /// The key that stops a voice DEAD, wherever you are — on the map, in a battle, with every
+        /// window shut. It exists because of the one thing this feature can do that nothing else in
+        /// the mod can: a speech model that misses its own ending keeps generating, and what comes
+        /// out is babbling or screeching that will not stop on its own.
+        /// <para>
+        /// There are two rails above this one — every line is given an audio ceiling worked out from
+        /// its own length, and a reading that runs past it is cut off and never kept — so this should
+        /// stay a key nobody has to press. It is here for the day they do.
+        /// </para>
+        /// </summary>
+        public string VoicePanicKey { get; set; } = "Backspace";
+
+        /// <summary>When true, a soul who comes to you unbidden speaks their first words aloud as
+        /// they arrive. Off by default and deliberately: several souls may reach out in the same
+        /// stretch of map, and one voice cutting off another mid-sentence is worse than silence.
+        /// Their words can always be heard with the little ▶ beside them.</summary>
+        public bool VoiceSpeakReachOuts { get; set; }
+
+        /// <summary>
+        /// A hosted speech service, for the far more common player who has no graphics card to spare
+        /// and no wish to download several gigabytes. Empty = the local engine only.
+        /// <para>
+        /// It cannot clone anybody, which is exactly why it is the stranger's road and the Qwen
+        /// engine is the author's: you pick from a fixed shelf of voices instead of making your own.
+        /// Billed per minute of speech to whichever key you put here, and every line is written down
+        /// in the same cost ledger as everything else.
+        /// </para>
+        /// </summary>
+        public string CloudVoiceApiKey { get; set; } = string.Empty;
+
+        /// <summary>Where the hosted speech service lives. The default is OpenAI's own; any service
+        /// that speaks the same shape works, which is the same courtesy the LLM side extends.</summary>
+        public string CloudVoiceEndpoint { get; set; } = DefaultCloudVoiceEndpoint;
+
+        /// <summary>OpenAI's own speech endpoint — verified against the live documentation
+        /// 2026.08.15, along with the thirteen voice names and the WAV response format.</summary>
+        public const string DefaultCloudVoiceEndpoint = "https://api.openai.com/v1/audio/speech";
+
+        /// <summary>Which hosted model speaks. gpt-4o-mini-tts is the cheapest of them and carries
+        /// all thirteen voices; tts-1 is quicker and older and carries nine.</summary>
+        public string CloudVoiceModel { get; set; } = "gpt-4o-mini-tts";
+
+        /// <summary>What a minute of hosted speech costs, in dollars, for the cost notices. OpenAI's
+        /// own published figure for gpt-4o-mini-tts is $0.015 a minute. We know exactly how many
+        /// seconds came back, so this is measured rather than estimated — edit it if you speak with
+        /// somebody else's service.</summary>
+        public double CloudVoicePricePerMinute { get; set; } = 0.015;
+
+        /// <summary>The once-per-install nudge that the voices exist at all has been shown. Voices
+        /// are off by default and must never become a thing the player has to turn off to be left
+        /// alone — so this is said once, softly, and never again.</summary>
+        public bool VoiceHintShown { get; set; }
 
         /// <summary>The built-in model → context-window table. Longest key contained in the model id
         /// wins, so "gpt-5.1" beats "gpt-5" for gpt-5.1-mini. Users edit/extend the copy in their
@@ -1001,6 +1055,21 @@ namespace ImmersiveAI
                 ConfigVersion = 4;
             }
 
+            // V5 (2026.08.15): "FullRead" existed for ONE reason — playing a streamed reply as N
+            // separate sounds left a frame of silence inside every second of speech, and waiting for
+            // the whole reading was the only way to be sure of no seam. That defect is fixed (the
+            // pieces are now poured into one file and handed over by the clock, see VoicePlayback),
+            // and with it gone Full read is strictly worse: same audio, four seconds later.
+            // So it migrates like the memory budget did — a mode that exists only to dodge a defect
+            // is not taste — and ONLY where it still holds the exact old default. Anyone who chose
+            // Full read by hand chose it, and keeps it.
+            if (ConfigVersion < 5)
+            {
+                if (string.Equals(VoiceDelivery, "FullRead", StringComparison.Ordinal))
+                    VoiceDelivery = "Streaming";
+                ConfigVersion = 5;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The spark mode knows exactly three spellings; anything else (typos, old hand edits)
@@ -1113,7 +1182,7 @@ namespace ImmersiveAI
             if (!road.Equals("FullRead", StringComparison.OrdinalIgnoreCase)
                 && !road.Equals("Streaming", StringComparison.OrdinalIgnoreCase)
                 && !road.Equals("ByLine", StringComparison.OrdinalIgnoreCase))
-                VoiceDelivery = "FullRead";
+                VoiceDelivery = "Streaming";
             else
                 VoiceDelivery = road.Equals("FullRead", StringComparison.OrdinalIgnoreCase) ? "FullRead"
                               : road.Equals("Streaming", StringComparison.OrdinalIgnoreCase) ? "Streaming"
@@ -1121,6 +1190,20 @@ namespace ImmersiveAI
 
             if (VoiceCacheBudgetMb < 0) VoiceCacheBudgetMb = 0;
             if (VoiceCacheBudgetMb > 200000) VoiceCacheBudgetMb = 200000;
+
+            // The panic key: an unreadable name would leave the player with no way to stop a voice
+            // at all, which is the one failure this feature must not have.
+            if (string.IsNullOrWhiteSpace(VoicePanicKey)) VoicePanicKey = "Backspace";
+            VoicePanicKey = VoicePanicKey.Trim();
+
+            // The hosted road: the key is the player's own words, and the endpoint is completed the
+            // same way every other pasted base URL in this file is.
+            CloudVoiceApiKey = (CloudVoiceApiKey ?? string.Empty).Trim();
+            CloudVoiceModel = (CloudVoiceModel ?? string.Empty).Trim();
+            if (CloudVoiceModel.Length == 0) CloudVoiceModel = "gpt-4o-mini-tts";
+            CloudVoiceEndpoint = (CloudVoiceEndpoint ?? string.Empty).Trim();
+            if (CloudVoiceEndpoint.Length == 0) CloudVoiceEndpoint = DefaultCloudVoiceEndpoint;
+            if (CloudVoicePricePerMinute < 0) CloudVoicePricePerMinute = 0;
 
             // The model table: never null, and every built-in entry present (so new defaults reach
             // configs written before them); user edits to existing keys are honored as-is.

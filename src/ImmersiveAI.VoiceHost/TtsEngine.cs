@@ -12,6 +12,11 @@ public sealed class SynthOutcome
     public long Ms;
     public int Samples;
     public int Rate;
+
+    /// <summary>The generation was cut short for producing far more audio than the words could
+    /// justify. Not a failure — what was made before the runaway is good speech — but a "do not
+    /// keep this".</summary>
+    public bool Derailed;
 }
 
 /// <summary>
@@ -108,7 +113,10 @@ public sealed class TtsEngine : IDisposable
             return outcome;
         }
 
-        var p = QwenParams.StudioDefaults(req.LanguageId, _maxAudioTokens);
+        int plainTokens = req.MaxTokens > 0 ? req.MaxTokens : _maxAudioTokens;
+        if (plainTokens < MinRequestTokens) plainTokens = MinRequestTokens;
+        if (plainTokens > MaxRequestTokens) plainTokens = MaxRequestTokens;
+        var p = QwenParams.StudioDefaults(req.LanguageId, plainTokens);
 
         // A reply is spoken in several calls, one per sentence, and Studio's 0.9 sampling makes each
         // call a fresh roll of the dice — so the same embedding came back as a recognisably DIFFERENT
@@ -298,7 +306,12 @@ public sealed class TtsEngine : IDisposable
     /// game down with it.
     /// </para>
     /// </summary>
-    public SynthOutcome SynthesizeStreaming(SynthRequest req, Action<int, string, int> onChunk)
+    /// <param name="keepDerailed">What to do when the line runs away. False (the first attempt at a
+    /// WHOLE reply) throws the audio away so the caller can try again with nobody the wiser; true
+    /// keeps whatever was made — which is the only honest answer once pieces have already been
+    /// announced, and the right one on a retry that derailed as well.</param>
+    public SynthOutcome SynthesizeStreaming(SynthRequest req, Action<int, string, int> onChunk,
+                                            bool keepDerailed = true)
     {
         var outcome = new SynthOutcome { Rate = Rate };
         if (_ctx == IntPtr.Zero) { outcome.Error = "the engine is not loaded"; return outcome; }
@@ -329,12 +342,30 @@ public sealed class TtsEngine : IDisposable
             var stem = Path.GetFileNameWithoutExtension(firstPath);
             if (!int.TryParse(stem, out baseIndex) || baseIndex < 0) baseIndex = 0;
         }
-        var p = QwenParams.StudioDefaults(req.LanguageId, _maxAudioTokens);
+        // THE CEILING, and it is the whole anti-derail story (measured 2026.08.15 — see
+        // SynthRequest.MaxTokens). The game works out from the line's own length how many 80 ms
+        // tokens an honest reading could possibly need and asks for exactly that; the engine honours
+        // it to the sample. Without it every line is allowed the engine's own 4096 tokens — 327.68
+        // seconds — which is what a runaway actually takes when it happens.
+        int tokens = req.MaxTokens > 0 ? req.MaxTokens : _maxAudioTokens;
+        if (tokens < MinRequestTokens) tokens = MinRequestTokens;
+        if (tokens > MaxRequestTokens) tokens = MaxRequestTokens;
+
+        var p = QwenParams.StudioDefaults(req.LanguageId, tokens);
         p.Temperature = 0.55f;      // see Synthesize: cooler sampling holds the timbre steady
         p.TopP = 0.85f;
         p.ChunkSeconds = ChunkSeconds;
         p.LeftContextSeconds = LeftContextSeconds;
         p.CollectAudio = 0;         // the chunks ARE the output; no need to keep a second copy
+
+        // THE SECOND LINE OF DEFENCE, and the one that does not trust anybody: we count what we are
+        // actually handed and pull the cord ourselves. The ceiling above depends on the engine
+        // honouring a field; this depends on nothing. It is set a tenth above the asked-for ceiling
+        // plus a chunk's slack, so in the ordinary case the engine's own exact rail is what stops
+        // the generation and this never fires — it is here for the day a model arrives with a
+        // different token rate, when the field would silently mean something else.
+        long sampleBudget = (long)(tokens * (double)SamplesPerToken * 1.1) + Rate;
+        bool derailed = false;
 
         int index = 0, totalSamples = 0, rate = Rate;
         float gain = 0f;            // decided by the first chunk, then held for the whole reply
@@ -368,13 +399,26 @@ public sealed class TtsEngine : IDisposable
                     // until the last sample exists, so there is no seam to hear.
                     whole.AddRange(buf);
                     index++;
-                    return 1;
+                }
+                else
+                {
+                    string path = Path.Combine(dir, $"{baseIndex + index:000}.wav");
+                    Wav.WritePcm16Atomic(path, buf, rate);
+                    onChunk(index, path, buf.Length);
+                    index++;
                 }
 
-                string path = Path.Combine(dir, $"{baseIndex + index:000}.wav");
-                Wav.WritePcm16Atomic(path, buf, rate);
-                onChunk(index, path, buf.Length);
-                index++;
+                // Past the budget: stop it here. Returning zero is the engine's own documented way
+                // of being asked to stop early, and truncation is SAFE — every derail observed
+                // begins as correct speech and drifts later, so everything handed over so far is
+                // good and only what would have come next is noise.
+                if (totalSamples > sampleBudget)
+                {
+                    derailed = true;
+                    HostLog.Warn($"derail guard: {req.Id} passed {totalSamples} samples for " +
+                                 $"{req.Text.Length} characters (budget {sampleBudget}) - stopping it here");
+                    return 0;
+                }
                 return 1;
             }
             catch (Exception ex)
@@ -408,12 +452,35 @@ public sealed class TtsEngine : IDisposable
             if (inCallback is not null)
             { outcome.Error = "a piece of the reply could not be written: " + inCallback.Message; return outcome; }
 
-            if (result.Success == 0)
+            // Stopped exactly ON the ceiling. A sentence that ends of its own accord practically
+            // never lands on the rail to the token, so this means the model never emitted its
+            // end-of-speech and was still going when the rail cut it: a derail that the ceiling
+            // caught instead of the guard above. Without this, the commonest shape of runaway — the
+            // one that stops itself — would be judged a clean reply and cached forever.
+            if (!derailed && totalSamples >= (long)tokens * SamplesPerToken - SamplesPerToken * 2)
+            {
+                derailed = true;
+                HostLog.Warn($"derail guard: {req.Id} ran to its whole ceiling of {tokens} tokens " +
+                             $"({totalSamples} samples for {req.Text.Length} characters) - treating it as a runaway");
+            }
+
+            // The engine reports a stop-early as a failure; that is our own doing, not a fault.
+            if (result.Success == 0 && !derailed)
             {
                 outcome.Error = Native.PtrToUtf8(result.Error) ?? "the engine gave no reason";
                 return outcome;
             }
             if (index == 0) { outcome.Error = "the engine produced no audio"; return outcome; }
+
+            // A runaway on the FIRST attempt at a whole reply is simply thrown away: nobody has
+            // heard a note of it, and at ~3x realtime another go costs a second or two. The caller
+            // retries once and the player never learns it happened.
+            if (derailed && !keepDerailed)
+            {
+                outcome.Derailed = true;
+                outcome.Error = "the reading ran away";
+                return outcome;
+            }
 
             if (whole != null)
             {
@@ -430,11 +497,13 @@ public sealed class TtsEngine : IDisposable
             outcome.Ms = sw.ElapsedMilliseconds;
             outcome.Samples = totalSamples;
             outcome.Rate = rate;
+            outcome.Derailed = derailed;
 
             double secs = (double)totalSamples / Math.Max(1, rate);
             double rtf = sw.Elapsed.TotalSeconds > 0 ? secs / sw.Elapsed.TotalSeconds : 0;
             HostLog.Info($"streamed {req.Id}: {secs:F2}s of audio in {sw.ElapsedMilliseconds} ms ({rtf:F2}x) " +
-                         $"in {index} pieces{(req.Whole ? ", joined into one" : "")}, gain={gain:F2}");
+                         $"in {index} pieces{(req.Whole ? ", joined into one" : "")}, gain={gain:F2}" +
+                         $"{(derailed ? " [DERAILED - cut short, not to be kept]" : "")}");
             return outcome;
         }
         catch (Exception ex)
@@ -459,4 +528,21 @@ public sealed class TtsEngine : IDisposable
     /// <summary>How much already-spoken audio the engine keeps as context for the next piece. This
     /// is what carries the voice across the seams.</summary>
     public static float LeftContextSeconds = 2.0f;
+
+    /// <summary>
+    /// Samples one audio token is worth, at the engine's own 24 kHz. MEASURED, 2026.08.15, and the
+    /// one number the whole derail guard rests on: asked for 256 tokens, the engine returned
+    /// 491,520 samples — 20.48 s — twice, from two different texts. 1920 samples is 80 ms, i.e. a
+    /// 12.5 Hz codec, which is what the tokenizer's own name (qwen-tokenizer-12hz) implies.
+    /// </summary>
+    public const int SamplesPerToken = 1920;
+
+    /// <summary>Floor for a per-request ceiling: 3.2 s, enough for the shortest honest line. The
+    /// SESSION default (HostOptions) keeps its own floor of 256 — that one is a fallback for a line
+    /// that arrived without a ceiling, and must stay generous.</summary>
+    public const int MinRequestTokens = 40;
+
+    /// <summary>The engine's own ceiling. 4096 tokens is 327.68 s — the length a real runaway
+    /// reached on the evening this was measured.</summary>
+    public const int MaxRequestTokens = 4096;
 }

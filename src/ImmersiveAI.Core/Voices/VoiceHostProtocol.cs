@@ -65,6 +65,18 @@ namespace ImmersiveAI.Core.Voices
         /// <summary>Asks the host to write a reply as one file instead of as pieces.</summary>
         public const string FieldWhole = "whole";
 
+        /// <summary>The audio-token ceiling for ONE line, worked out from that line's own length —
+        /// see <see cref="VoiceBudget"/>. The anti-derail rail, and the reason it lives on the
+        /// request rather than on the host's command line: a ceiling that fits a whole session fits
+        /// no single sentence in it. Absent or 0 means "whatever the host was started with".</summary>
+        public const string FieldMaxTokens = "maxTokens";
+
+        /// <summary>Set on a result the host does not trust: far more audio came back than the words
+        /// could justify, so the generation was cut short. The words already spoken are good — every
+        /// derail measured begins correctly and runs away later — but the clip must never be CACHED,
+        /// or one bad synthesis is replayed for the rest of the campaign.</summary>
+        public const string FieldDerailed = "derailed";
+
         public const string OpSynthesize = "synthesize";
         public const string OpCancel = "cancel";
         public const string OpPing = "ping";
@@ -123,6 +135,7 @@ namespace ImmersiveAI.Core.Voices
                         Voice = VoiceSource.FromToken(o[FieldVoice]),
                         LanguageId = (int)Num(o, FieldLanguageId, NoLanguage),
                         Whole = Bool(o, FieldWhole, false),
+                        MaxTokens = (int)Num(o, FieldMaxTokens, 0),
                     };
 
                 case OpCancel:
@@ -210,6 +223,7 @@ namespace ImmersiveAI.Core.Voices
                 Samples = Num(o, FieldSamples, 0),
                 Rate = (int)Num(o, FieldRate, DefaultSampleRate),
                 Error = Str(o, FieldError),
+                Derailed = Bool(o, FieldDerailed, false),
             };
         }
 
@@ -501,6 +515,11 @@ namespace ImmersiveAI.Core.Voices
         /// and a frame of silence between every second of speech is heard as the voice breaking up.</summary>
         public bool Whole { get; set; }
 
+        /// <summary>The audio-token ceiling for this line — <see cref="VoiceBudget.MaxTokensFor"/>.
+        /// 0 leaves it to the host's own setting. One token is 80 ms of audio, measured, so this is
+        /// how many seconds a runaway is allowed before the engine stops it.</summary>
+        public int MaxTokens { get; set; }
+
         /// <summary>
         /// Whether this request can actually be served, and if not, in what words to say so.
         /// <para>
@@ -536,6 +555,7 @@ namespace ImmersiveAI.Core.Voices
             o[VoiceHostProtocol.FieldVoice] = (Voice ?? new VoiceSource()).ToJson();
             o[VoiceHostProtocol.FieldLanguageId] = LanguageId;
             o[VoiceHostProtocol.FieldWhole] = Whole;
+            if (MaxTokens > 0) o[VoiceHostProtocol.FieldMaxTokens] = MaxTokens;
             return o;
         }
     }
@@ -685,8 +705,17 @@ namespace ImmersiveAI.Core.Voices
         /// <summary>Why not, in plain words. Empty on success.</summary>
         public string Error { get; set; } = string.Empty;
 
+        /// <summary>
+        /// True when the host cut this generation short because it was producing far more audio than
+        /// the words could justify. It is NOT a failure: what was made before the runaway is good
+        /// speech and worth playing — every derail measured begins correctly and drifts later. It is
+        /// a "do not keep this", and the cache is where that must be obeyed.
+        /// </summary>
+        public bool Derailed { get; set; }
+
         public static VoiceSynthesisResult Success(string id, string path, int ms, long samples,
-                                                   int rate = VoiceHostProtocol.DefaultSampleRate)
+                                                   int rate = VoiceHostProtocol.DefaultSampleRate,
+                                                   bool derailed = false)
             => new VoiceSynthesisResult
             {
                 Id = id ?? string.Empty,
@@ -695,6 +724,7 @@ namespace ImmersiveAI.Core.Voices
                 Ms = ms,
                 Samples = samples,
                 Rate = rate,
+                Derailed = derailed,
             };
 
         public static VoiceSynthesisResult Failure(string id, string error)
@@ -717,6 +747,7 @@ namespace ImmersiveAI.Core.Voices
                 o[VoiceHostProtocol.FieldMs] = Ms;
                 o[VoiceHostProtocol.FieldSamples] = Samples;
                 o[VoiceHostProtocol.FieldRate] = Rate;
+                if (Derailed) o[VoiceHostProtocol.FieldDerailed] = true;
             }
             else
             {

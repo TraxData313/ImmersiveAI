@@ -54,6 +54,18 @@ You usually only need to open:
 - **The nights of a marriage & THE LINE** → Core `Nights\` + `Together\TogetherLine` (the line since we were last alone) (`NightRecord`/`NightLedger` `_nights.json` + `nights.txt`, `NightGifts` the 0/10/100/300/1000 tiers, `NightOdds` the fertility-spread arithmetic, `NightText` — the short Song-of-Songs prompt, the permanent beat marks, the roll; unit-tested) + `MoodTides.Fertility` + the `ImmersiveChatBehavior.Nights.cs` partial + `Nights\PregnancyPatch` (the SECOND Harmony touch) + `UI\NightWindow\` (hotkey H). Decision record docs/nights-and-conception-design.md.
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 
+- **THE VOICES** (they can be HEARD, 2026.08.14–15) → Core `Voices\` (`SpeakableText` the words vs the
+  gestures, `VoiceCacheKey` the identity of one utterance, `VoiceBudget` the anti-derail arithmetic,
+  `WavFiles` the joiner that makes streaming gapless, `VoiceLibrary`/`VoicePreset`/`VoiceAssignments`
+  the shelf and the casting sheet, `VoiceHostProtocol` the wire) + Module `Voice\` (`VoiceService`
+  the one door, `VoicePlayback` the chain, `VoiceHostClient` the sidecar, `CloudVoiceClient` the
+  hosted road, `VoiceCache`, `VoiceEngineDiscovery`, `VoiceEngineGate`) + the separate net8
+  `ImmersiveAI.VoiceHost` process + `UI\TalkScreen\VoiceRowVM` and the panel in `TalkScreenVM`.
+  **OFF by default and it must stay that way** (`EnableVoice`), found through the "Voices" button
+  that shows for everybody. Read `docs/voiceover-engine-notes.md` before touching any of it — every
+  number in it was measured against the real engine, including the two that matter most: **one audio
+  token is exactly 80 ms**, and **a real derail ran 202 characters of Bulgarian to 327.68 seconds**.
+
 Ship it in one line (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1` —
 installs as **"Immersive AI (dev)"** (`Modules\ImmersiveAI.Dev`), its own identity beside the Steam
 Workshop copy (item 3764210301); enable one or the other in the launcher, never both.
@@ -1558,6 +1570,84 @@ modelled and a female player is only kept from crashing (`MotherOf`), his explic
 `UI\NightWindow\`, hotkey **H** (I and P are vanilla Inventory/Party). Toggle `EnableNights`;
 DevMode lever in the chat window's Dev panel ("Spend a night with them now"). Full record:
 docs/nights-and-conception-design.md.
+
+**THE VOICES (2026.08.14 the pipeline, 2026.08.15 the rest of it).** They can be HEARD: a speech
+engine on the player's own machine turns a reply into a voice they cast, or — for the far more
+common player with no card to spare — a hosted service does it on a key they already have. **OFF by
+default (`EnableVoice`) and that must never change**: it wants gigabytes and a GPU, and nobody should
+have a feature they cannot run switched on for them. Found through the **"Voices" button in the talk
+screen's bar, which shows for everybody**, plus ONE soft once-per-install notice after a reply
+(`VoiceHintShown`, written the instant it is shown so it can never repeat). The engine lives OUT OF
+PROCESS in `ImmersiveAI.VoiceHost` (net8, single file) because ggml answers bad input with
+`GGML_ASSERT → abort()`, which on the game's runtime is uncatchable — out there a crash costs a
+session's voices, in here it would cost the campaign. **Do not "simplify" it back in-process.**
+Everything degrades to silence + one log line; a voice problem never costs a word.
+- **THE ONE DOOR** is `VoiceService`: `Prewarm` (make it while they read), `Speak` (newest words win),
+  `Stop`, plus the panel's own API (`Shelf`/`Cast`/`SetDefault*`/`Preview`/`ImportFromStudio`). A
+  GENERATION COUNTER makes late audio harmless: every request carries the counter it was born under
+  and a stale one is dropped rather than played over whatever is happening now.
+- **WHICH ROAD is decided by the VOICE, never by a setting** — a cloned voice can only be spoken by
+  the engine holding its embedding, a hosted one only by the service that owns it — so a player may
+  have both and cast either on anybody. `VoicePreset.Backend` + `SpeakerName` (the model's own
+  built-ins) + `RemoteVoiceId` (hosted) are the three shapes.
+- **THE SEAM AND HOW IT WAS CLOSED** (`VoicePlayback`, rewritten 2026.08.15). A streamed reply
+  arrives a second at a time and playing N sounds left a frame of silence inside every second —
+  which is the whole reason `FullRead` existed. Three things together: the waiting pieces are POURED
+  into one file (`WavFiles.Join`, Core, unit-tested), the next sound is BUILT while the current one
+  plays, and the handover is scheduled BY THE CLOCK from the WAV's own header instead of polling
+  `IsPlaying()`, which only answers a frame late — that lateness WAS the seam. Pouring happens on a
+  background task; only the sound event is made on the game thread. **THE ENGINE IS TOUCHED FROM THE
+  GAME THREAD AND NOWHERE ELSE** — `Begin`/`StopAll` set a flag and let the next `Tick` do it.
+  With that, Streaming is strictly better than Full read and is the default (ConfigVersion **V5**
+  migrates only a config still holding the exact old default).
+- **THE DERAIL, AND THE THREE RAILS AGAINST IT.** An autoregressive model that misses its
+  end-of-speech token generates until it hits its own ceiling. This is not theoretical — it happened
+  while the numbers were being measured: **202 characters of Bulgarian became 327.68 seconds of
+  audio**, which is exactly 4096 tokens. Core `VoiceBudget` works a token ceiling out of the line's
+  own length (13 chars/second, 1.5 s grace, ×1.8) and the engine honours it TO THE SAMPLE; the host
+  also counts what it is handed and pulls the cord itself; and a generation that runs to its WHOLE
+  ceiling is judged a runaway on that fact alone, because a sentence that ends by itself practically
+  never lands on the rail to the token. A whole reply discards and retries ONCE; **a derailed clip is
+  never sealed into the cache**, or one bad synthesis is replayed for the rest of the campaign.
+  Above all that sits the player's own **panic key (`VoicePanicKey`, Backspace)**, read from the raw
+  keyboard in `SubModule.OnApplicationTick` so it works on the map, in a battle, with every window
+  shut — and only while something is speaking, so it steals nobody's Backspace.
+- **THE MEASUREMENTS ARE THE DESIGN.** One audio token = 1920 samples = **80 ms**. Streaming's first
+  audio in **427 ms**, generating ~2.5× faster than it plays. Steady state ~3.0× realtime, and the
+  FIRST call after a model load is slower — never measure once. Real speech runs 13–17 characters a
+  second, Cyrillic no slower per character. All in `docs/voiceover-engine-notes.md`; re-measure
+  before assuming any of it holds on a weaker card.
+- **`event:/Extra/voiceover` IS the game's own event** (its event table, guid
+  `{2a2e4e13-…}`, beside `Extra/external` and `Extra/voicechat`). The earlier note that the name was
+  ours and FMOD merely tolerated it was WRONG — so the first playtest's quietness had one cause, the
+  engine's own 10-20 dB low output, which the host normalises. `VoiceSoundEvent` keeps it a config
+  edit if it ever needs moving.
+- **THE HOSTED ROAD** (`CloudVoiceClient`, live-tested): OpenAI `/v1/audio/speech`, `gpt-4o-mini-tts`,
+  thirteen voices, `response_format: "wav"` → **24 kHz 16-bit mono, the same shape the local engine
+  makes**, so the cache, the joiner and the playback chain are shared with no special cases. Billed
+  through `UsageLedger.NoteVoiceMinutes` **by the minute of audio actually received** (read from the
+  WAV header), so the cost line is measured rather than estimated. **Hosted voices are never
+  PREWARMED** — audio made ahead for a ▶ nobody presses is money spent on silence — while local ones
+  stay eager.
+- **THE MODEL WRINKLE:** the nine built-in speakers live on `qwen-talker-1.7b-customvoice`, NOT on
+  the `base` model that clones and that the setup page tells people to fetch. So a player who
+  followed the instructions and made no voice of their own would find an empty shelf. `VoiceService.
+  BuiltInShelf` offers those nine when the loaded model's name says customvoice, and
+  `voiceover-setup.md` says it plainly.
+- **NEVER BUNDLE THE AUTHOR'S OWN VOICES.** Sibylla and Achilles are cloned from Jessica Alba and
+  Brad Pitt; they live on his machine and must not ship (memory note `voice-shipping-constraint`).
+- **A ▶ RIDES EVERY THREAD ROW** — replies, letters, her own inner beats, wedding/birth/night
+  accounts — via `ChatMessageVM.WithVoice`. The row holds NO audio state, on purpose: `RefreshThread`
+  allocates a fresh list on every change, so the audio is re-derived from the words with
+  `VoiceCacheKey`, which is exactly what that key exists for. Letters and inner beats speak the WORDS,
+  never the envelope furniture around them.
+- Config: `EnableVoice`, `VoiceAutoSpeak`, `VoiceDelivery` (Streaming default), `VoicePanicKey`,
+  `VoiceSpeakReachOuts` (off — one queue, several souls, one voice would cut off another),
+  `CloudVoice*`, `VoiceCacheBudgetMb`, `VoiceSoundEvent`, `VoiceEnginePath`/`VoiceModelDir`/
+  `VoiceModelName`. The casting sheet is `Voices\assignments.json` and is deliberately NOT inside the
+  campaign folder: the save-scoped snapshots photograph that folder, and rewinding a save must never
+  silently recast anybody. The test for any new file: *would rewinding this with the save be a
+  feature or a defect?*
 
 ## Work flow for the TASKs
 - Get the taks you work on from TASKS_TODO.md

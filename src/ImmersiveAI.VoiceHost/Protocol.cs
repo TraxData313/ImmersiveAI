@@ -24,9 +24,24 @@ public sealed class SynthRequest
     /// silence between every second of speech is heard as the voice breaking up.</summary>
     public bool Whole;
 
+    /// <summary>
+    /// The audio-token ceiling for THIS line, worked out by the game from the line's own length
+    /// (Core's VoiceBudget). 0 = whatever the host was started with.
+    /// <para>
+    /// This is the anti-derail rail, and it is per-request because a ceiling that suits a session
+    /// suits no sentence in it. Measured 2026.08.15 on qwen-talker-1.7b-base: one audio token is
+    /// exactly 1920 samples at 24 kHz — 80 ms — and the ceiling is honoured to the sample (256 tokens
+    /// came back as 20.48 s twice, from different texts). The engine's own default of 4096 is
+    /// therefore 327.68 s, which is precisely where a real derail stopped that same evening: 202
+    /// characters of Bulgarian became five and a half minutes of noise.
+    /// </para>
+    /// </summary>
+    public int MaxTokens;
+
     public override string ToString() =>
         $"id={Id} kind={Kind} voice={(VoicePath is null ? Speaker ?? "-" : Path.GetFileName(VoicePath))} " +
-        $"lang={LanguageId} whole={Whole} chars={Text.Length} out={OutPath}";
+        $"lang={LanguageId} whole={Whole} maxTokens={(MaxTokens > 0 ? MaxTokens.ToString() : "host")} " +
+        $"chars={Text.Length} out={OutPath}";
 }
 
 /// <summary>
@@ -76,7 +91,11 @@ public static class Wire
             w.WriteNumber("rate", rate);
         });
 
-    public static void Ok(string id, string path, long ms, int samples, int rate) =>
+    /// <summary><paramref name="derailed"/> says "play this if you like, but do not KEEP it": the
+    /// generation was cut short for running away, so the words are good up to the cut and the clip
+    /// must never reach the cache — one bad synthesis replayed forever is far worse than one bad
+    /// synthesis.</summary>
+    public static void Ok(string id, string path, long ms, int samples, int rate, bool derailed = false) =>
         Send(w =>
         {
             w.WriteString("id", id);
@@ -85,6 +104,7 @@ public static class Wire
             w.WriteNumber("ms", ms);
             w.WriteNumber("samples", samples);
             w.WriteNumber("rate", rate);
+            if (derailed) w.WriteBoolean("derailed", true);
         });
 
     public static void Fail(string? id, string error) =>

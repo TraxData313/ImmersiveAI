@@ -133,6 +133,47 @@ namespace ImmersiveAI
             catch { /* bookkeeping only */ }
         }
 
+        /// <summary>
+        /// A HOSTED VOICE spoke, and it is billed by the minute rather than by the token — which is
+        /// the honest shape here, and unusually an exact one: we read the length out of the WAV that
+        /// came back, so this is measured rather than estimated. (The local engine costs nothing and
+        /// is never billed at all.)
+        /// <para>
+        /// It rides the same ledger as everything else on purpose. Speech is roughly ten times the
+        /// price of the words themselves, and a player who has just turned voices on deserves to see
+        /// that in the same place, in the same shape, as every other penny this mod spends.
+        /// </para>
+        /// </summary>
+        public static void NoteVoiceMinutes(ModConfig? config, TimeSpan audio, string model)
+        {
+            try
+            {
+                if (audio <= TimeSpan.Zero) return;
+                var perMinute = config?.CloudVoicePricePerMinute ?? 0;
+                var cost = audio.TotalMinutes * perMinute;
+
+                lock (Gate)
+                {
+                    RollDate();
+                    _today.Requests++;
+                    _today.CostUsd += cost;
+                    _sessionCalls++;
+                    _sessionCost += cost;
+                    SaveDaily();
+                }
+
+                var scope = Ambient.Value;
+                if (scope != null)
+                {
+                    scope.Calls++;
+                    scope.CostUsd += cost;
+                }
+
+                ModLog.Info($"voice: {audio.TotalSeconds:0.0}s spoken by {model}, ~${cost.ToString("0.0000", CultureInfo.InvariantCulture)}");
+            }
+            catch { /* bookkeeping only */ }
+        }
+
         /// <summary>Opens one interaction's bill: everything the enclosed async flow spends —
         /// tool rounds, the feeling question, memory work — lands on it, and disposing it shows
         /// the one soft notice. Kind is a short player-facing word ("message", "letter"...).

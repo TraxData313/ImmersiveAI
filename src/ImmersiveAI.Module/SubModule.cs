@@ -1,6 +1,7 @@
 ﻿using System;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
+using TaleWorlds.InputSystem;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 
@@ -116,9 +117,59 @@ namespace ImmersiveAI
             UI.NightWindow.NightWindowManager.Tick();
             // The socialness control: appears with the map, folds away everywhere else.
             UI.Socialness.SocialnessManager.Tick();
-            // Chains the next sentence of a spoken reply when the one before it finishes. A no-op
-            // whenever nothing is speaking, which is almost always.
+            // Hands the next piece of a spoken reply over the instant the one before it ends. A
+            // no-op whenever nothing is speaking, which is almost always — and called EVERY FRAME on
+            // purpose: the handover is timed by the clock, and a frame is the precision it gets.
             Voice.VoicePlayback.Tick();
+            // And the one key that must work no matter what is on the screen.
+            TickPanicKey();
         }
+
+        /// <summary>
+        /// THE PANIC STOP (2026.08.15). One key, live everywhere — on the map, inside a battle, at a
+        /// menu, with every window of ours shut — that silences a voice at once.
+        /// <para>
+        /// It exists because of the one thing speech can do that no other part of this mod can: an
+        /// autoregressive model that misses its own ending keeps generating, and what comes out is
+        /// babbling or screeching. Two rails above this one make that rare (every line carries an
+        /// audio ceiling worked out from its own length, and a reading that runs past it is cut off
+        /// and never kept) — but a stop button you have to open a window to reach is not a stop
+        /// button, so this one is bound to a key and read from the raw keyboard.
+        /// </para>
+        /// <para>
+        /// Deliberately NOT gated on the map, a campaign, or anything else: the whole value is that
+        /// it works at the moment everything else has gone wrong. It is only read while something is
+        /// actually speaking, so it costs nothing and steals nobody's Backspace the rest of the time.
+        /// </para>
+        /// </summary>
+        private static void TickPanicKey()
+        {
+            try
+            {
+                if (!Voice.VoicePlayback.IsSpeaking) return;
+
+                var name = Config?.VoicePanicKey;
+                if (string.IsNullOrWhiteSpace(name)) return;
+
+                if (!_panicKeyParsed || !string.Equals(name, _panicKeyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    _panicKeyName = name!;
+                    _panicKeyParsed = Enum.TryParse<InputKey>(name!.Trim(), ignoreCase: true, out _panicKey);
+                    if (!_panicKeyParsed)
+                        ModLog.Warn($"voice: \"{name}\" is not a key I know — the panic stop is unbound.");
+                }
+                if (!_panicKeyParsed) return;
+
+                if (!Input.IsKeyPressed(_panicKey)) return;
+
+                Voice.VoiceService.Stop();
+                InformationManager.DisplayMessage(new InformationMessage("The voice is stopped."));
+            }
+            catch { /* a stop key that throws would be its own small disaster */ }
+        }
+
+        private static InputKey _panicKey;
+        private static string _panicKeyName = string.Empty;
+        private static bool _panicKeyParsed;
     }
 }

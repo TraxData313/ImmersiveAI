@@ -34,6 +34,54 @@ Output is **16-bit mono PCM at 24000 Hz**, from a vocoder with 16 codebooks.
 so chunked synthesis is the right shape. **Re-measure before assuming this holds on weaker cards** —
 the whole design of the playback layer keys off this number.
 
+## Measured again, 2026.08.15 — the numbers the playback layer actually uses
+
+Same card, game closed, driving the shipped host over its own protocol. These are the ones that
+decided the streaming design, the derail guard, and which delivery mode is the default.
+
+| | |
+|---|---|
+| Throughput, steady state | **~3.0× realtime** (13.4 s of audio in 4.4 s, twice) |
+| Throughput, FIRST call after load | 2.26× — there is a real warm-up; do not measure once |
+| **Time to first streamed piece** | **427 ms** |
+| Streamed piece cadence | ~420 ms per 1.04 s of audio — the generator stays ~2.5× ahead of playback |
+| Speech rate | **13–17 characters a second** (224 EN → 13.4 s · 202 BG → 15.3 s · 55 EN → 4.2 s) |
+| **One audio token** | **exactly 1920 samples = 80 ms** (12.5 Hz) |
+
+Two consequences, both load-bearing:
+
+**Streaming can be the default.** It begins in under half a second and never starves — the
+generator runs at two and a half times the speed the audio is consumed. Full read's four-second
+wait buys nothing once the seams are gone (see `WavFiles.Join` and `VoicePlayback`).
+
+**`MaxAudioTokens` is exact, and it is the anti-derail knob after all.** Asked for 256 tokens, the
+engine returned 20.48 s — to the sample, from two different texts. So a per-line ceiling worked out
+from the line's own length (Core `VoiceBudget`) truncates a runaway precisely, and the engine's own
+default of 4096 tokens is 327.68 s.
+
+> **Watch the host's own clamp.** `HostOptions` refuses a session default below 256 and silently
+> rewrites it to 4096. A cap of 64 passed on the command line therefore did nothing at all, which
+> is what made the first attempt look like the field was ignored. The PER-REQUEST ceiling has its
+> own floor (40 tokens) and is the one the game uses.
+
+## The derail, observed
+
+It happened, unprompted, while the table above was being measured — which is worth recording because
+it is otherwise a thing we only had second-hand:
+
+> 202 characters of Bulgarian → **327.68 seconds of audio** (5½ minutes), 139 seconds of GPU.
+
+327.68 s is 4096 × 80 ms exactly: the model missed its end-of-speech token and generated until it
+hit its own ceiling. The same text with a sane ceiling read cleanly in 15.3 s a minute later, so it
+is a dice roll, not a property of the text.
+
+**Both guards are now in and both are proven live** (`guard-hit`, `guard-whole`, 2026.08.15):
+a per-line token ceiling that the engine honours to the sample, and the host's own sample counter
+that stops the generation itself if that ceiling ever stops meaning what it means. A generation that
+runs to its whole ceiling is treated as a runaway on that fact alone — a sentence that ends by
+itself practically never lands on the rail to the token — and a WHOLE reply retries once from
+scratch before keeping anything. **A derailed clip is never cached**, which was always the point.
+
 ## The two models are not interchangeable
 
 - `qwen-talker-1.7b-base` — the **cloning** road. Speaker embeddings and ICL prompts.
@@ -117,6 +165,18 @@ isBlocking: false)` then `.Play()` — **confirmed working**, played aloud in a 
 2026.08.14 with a 9.76 s 24 kHz mono WAV. This rides FMOD's own voice-over bus, so the player's
 volume sliders, mute-on-alt-tab and the game's ducking all come free.
 
+**And the event is REAL — corrected 2026.08.15.** This page previously said the game defines no
+`event:/Extra/voiceover` and that FMOD merely tolerated a name of ours. It does define it:
+`Modules\Native\ModuleData\sound_event_data.gen.xml`, guid
+`{2a2e4e13-d391-41bd-bf9e-91891d2c63f4}`, sitting beside `event:/Extra/external` (10 s) and
+`event:/Extra/voicechat` / `voicechat3D`. That whole `Extra/` family is what the engine keeps for
+audio the game did not ship, which is precisely our case.
+
+So the first playtest's "veeeery quietly, can barely hear her" had **one** cause and not two: the
+engine's own output sits 10-20 dB under a speaking level. The host normalises it now and that is the
+end of it. If the event ever does need moving, `event:/Extra/external` is the nearest sibling and
+allows a longer sound; it is a config edit (`VoiceSoundEvent`), not a rebuild.
+
 `CreateEventFromSoundBuffer(..., byte[], ...)` **constructs successfully** but was never played (one
 at a time). It has zero callers in the shipped game, so TaleWorlds never tested it. If it ever proves
 to play, it would remove the disk-cache file-handle problem — but the cache is wanted anyway for
@@ -142,11 +202,28 @@ That is *drift*, not bad conditioning, and three things follow:
 Set `MaxAudioTokens` from the text's own length (roughly 3× the expected duration) so a runaway is
 guillotined at ten seconds rather than running to 4096 tokens.
 
+## The hosted road, measured too (2026.08.15)
+
+Live against OpenAI's `/v1/audio/speech`, `gpt-4o-mini-tts`, on the author's own key:
+
+| | |
+|---|---|
+| English, 104 characters | 7.6 s of audio in **2586 ms** (~2.9× realtime) |
+| Bulgarian, non-ASCII escaped as `\uXXXX` | 4.1 s in **1377 ms** — the escaping road works |
+| Format returned for `response_format: "wav"` | **24 kHz, 16-bit, mono** |
+| A bad key | HTTP 401, named plainly to the player |
+| Price | **$0.015 a minute** of audio, so a 7.6 s line is two tenths of a cent |
+
+The format is the happy part: **it is byte-for-byte the shape the local engine produces**, so the
+cache, the joiner and the whole playback chain are shared with no conversion and no special cases.
+And because the WAV's own header says how long it is, the cost notice is measured rather than
+estimated — see `UsageLedger.NoteVoiceMinutes`.
+
 ## Still unmeasured
 
-- **Streaming.** `synthesize_*_streaming` takes a chunk callback; the M0 spike hung before proving
-  time-to-first-chunk. That number decides whether a line can begin speaking before it is fully
-  generated. The harness's `Streaming.cs` is a starting point, not a result.
 - **Weaker hardware.** Every number above is one laptop with a 5080. An 8 GB card sharing VRAM with
   Bannerlord is the case that decides whether the 0.6b model becomes the recommended default.
 - **Whether `CreateEventFromSoundBuffer` actually plays.**
+- **Whether `event:/Extra/voiceover` is on the same VCA as vanilla speech.** The event exists (above),
+  but the bank's mixer graph is compressed and was not read. It matters only if somebody reports the
+  voices ignoring their speech slider.

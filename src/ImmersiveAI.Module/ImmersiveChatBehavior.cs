@@ -2001,6 +2001,7 @@ namespace ImmersiveAI
 
         private void NotifyReplyReady(Hero npc)
         {
+            NudgeAboutVoicesOnce();
             if (!_config.NotifyWhenReplyReady) return;
             try
             {
@@ -2008,6 +2009,37 @@ namespace ImmersiveAI
                 InformationManager.DisplayMessage(new InformationMessage($"{name} has answered.", ReplyReadyColor));
             }
             catch { /* the notice is a nicety; never let it break a turn */ }
+        }
+
+        /// <summary>
+        /// ONCE, EVER, PER INSTALL: a soft line saying the words can also be heard.
+        /// <para>
+        /// Voices are off by default and must never become a thing a player has to turn off to be
+        /// left alone (Anton, 2026.08.15) — but a feature nobody knows about is a feature nobody has,
+        /// and the store page is not where somebody mid-conversation is looking. So it is said once,
+        /// after an answer has actually arrived (the moment it is obvious what would be spoken), and
+        /// then never again — the flag is written to config.json the same instant, so it survives a
+        /// crash and cannot repeat.
+        /// </para>
+        /// <para>
+        /// Deliberately quiet about HOW: it names the button, not the setup. Anyone curious opens
+        /// Voices and the panel explains itself; anyone who is not, never hears about it again.
+        /// </para>
+        /// </summary>
+        private void NudgeAboutVoicesOnce()
+        {
+            try
+            {
+                if (_config == null || _config.VoiceHintShown || _config.EnableVoice) return;
+
+                _config.VoiceHintShown = true;
+                _config.Save();
+
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "Their words can also be heard aloud — see \"Voices\" when you next speak with someone.",
+                    ActivityColor));
+            }
+            catch { /* a hint that cannot be shown is not worth a second thought */ }
         }
 
         // Optionally writes an NPC's spoken line to the message log (opt-in via ShowConversationInMessageLog,
@@ -3379,6 +3411,17 @@ namespace ImmersiveAI
                     var name = npc.Name?.ToString() ?? "Someone";
                     var opening = stranger ? $"{name} approaches you and says:" : $"{name} sees you and says:";
                     NotifyWithFace(npc, $"{opening} “{Snippet(words)}”");
+
+                    // HERE is where a reach-out speaks, and nowhere earlier: the words were made
+                    // some seconds ago on a background thread, and a voice arriving before the toast
+                    // that explains it would be a stranger talking out of an empty map.
+                    //
+                    // OFF by default, though (VoiceSpeakReachOuts), and that is a judgement rather
+                    // than caution: several souls may be moved within the same stretch of riding,
+                    // there is one queue for all of them, and Ava cutting Sibylla off mid-sentence
+                    // is worse than a quiet map. The ▶ beside her words is always there.
+                    if (_config.VoiceSpeakReachOuts && Voice.VoiceService.AutoSpeakEnabled)
+                        Voice.VoiceService.Speak(npc, words);
 
                     bool viewing = UI.TalkUI.IsViewing(npc);
                     UI.TalkUI.OnThreadChanged(npc, markUnread: true);

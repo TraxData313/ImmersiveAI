@@ -196,3 +196,78 @@
 - [x] THE BIRTH CHRONICLE — the wedding's own shape turned on the next day of a life (Anton, 2026.08.10: "истории, подобни на тази на сватбата, за раждане на детенце, пак организиране за празненство за раждането, подобно на това за сватбата на тиери, може да се преизползва много от същата логика"). Core `Births\` (`BirthRecord`/`BirthLedger` JSON-per-birth in `_births` + `births.txt`, `BirthTiers`, `BirthText` — the two prompts, the permanent marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Births.cs` partial + `Tools\CradleTool` (`recall_birth`). TWO PARTS, and here they are split IN TIME as well as register: THE HOUR is written the moment the child comes, in the mother's own first person, in the register of Rachel and Hannah and the stable — "her hour came upon her", the women about her, FEAR NOT, the first cry, and she called his name — under the nights' own two-halves rule wearing different clothes (nothing clinical, no anatomy, no physician's word; and equally nothing coy, "do not skip past the pain and the fear to arrive at a clean, tidy joy"). THE FEAST is the wedding day's register, third person, and is written only if one is bought — which may be DAYS later, because a father away at war is asked when he finally rides in (`AwaitingFeastOffer`, a 30-day window, one question an hour, and a "no" is remembered so he is not asked again every hour he stands beside her). THE PRIVACY LINE RUNS BETWEEN PARENTS AND WITNESSES, in code and not in prose: the hour reaches the mother's memory alone, the father gets the FACT and his own presence or absence but NEVER her first person (planting her private "I" in his memory would be exactly the small lie this mod exists not to tell), and `CradleTool` hands him the hour framed as what she told him of it afterwards. A child who did not live is never sent to the chronicler, never feasted, never announced gladly — one mark, written by hand. THE HOOK is `CampaignEvents.OnGivenBirthEvent` and three decompiled facts made it safe: the subscribe method is `AddNonSerializedListener` (there IS no `AddListener` on IMbEvent in this version — the compile error the research was run to prevent); vanilla rolls a 1.5% DEATH IN LABOUR for the mother immediately AFTER the event, so every fact is captured synchronously exactly as the wedding's clan-change taught; and this version never asks the player to name the newborn (byte-scanned, "Naming Newborn" is dead content), so our feast popup collides with nothing. Reuse where Anton asked for it: witness gathering moved WHOLE into the shared `ImmersiveChatBehavior.Celebrations.cs` + Core `Celebrations\GuestRules`, and the birth ladder is the wedding's own ladder denar for denar — while paying about a third of its renown, because a child is joy and not an alliance, and children are far easier to come by than weddings. 25 new tests, 450 green. (2026.08.11 00.02.00)
 - [x] THE INVITED WEDDING BECAME A GUEST LIST (Anton, 2026.08.10, reading his own chronicle back: "за тиера от 1 000 нека не идват непознати и нобели, нека са познатите ни, дори да не са с нас, викнати, без непознати" — his hall in Baltakhand held five townsfolk he had never spoken a word to). At the thousand-denar rung couriers now ride to the player's OWN HOUSE and to every soul with a real shared story, however far — and to nobody else: no notables of the place, no lords come to be seen. The chronicler is told so in the same breath ("NO ONE ELSE stood in that hall"), because a hall it is not told about is a hall it furnishes itself. THE FLAG DELIBERATELY DOES NOT CLIMB: `GuestRules.LocalsPresent` runs true → false → true up the ladder, and that is the shape of the thing — a day nobody was called to is witnessed by whoever happened to stand there, but the moment couriers go out the day has a guest list, and a guest list is a thing that EXCLUDES; higher still the country itself is called and the place fills again. The move also fixed an ordering flaw the old code carried: the invited guests are now taken BEFORE the townsfolk, so a crowded market day can never eat the cap with millers before the friend who rode a week to be there is reached. (2026.08.11 00.04.00)
 - [x] THE BIRTH CHRONICLE, ROUND TWO — the live probe, the image deck, both houses, and 34 review findings (2026.08.10 night, Anton: "направи още един хубав оглед и бъг хънт... ако трябва викай гпт луна колкото трябва"). A SCRATCHPAD PROBE HARNESS was built first and it earned itself immediately: a net8.0 console referencing Core, calling the REAL prompt builders (a hand-written copy of a prompt validates nothing) with Anton's OWN Sibylla read out of his runtime folder — her custom_instructions, her rolling summary, her last ten spoken turns — against gpt-5.6-luna on his own key. Four findings no amount of reading would have produced: (1) the 1000-denar night came back at 1582 characters, which the old flat 1600-char tamer would have clipped by a hair — the fix shipped hours earlier was load-bearing after all; (2) THE NAMED IMAGE CAME BACK VERBATIM in two nights running (the bird startled in the brush) DESPITE the sentence beside it saying "not wording to lift" — so the fixed images were replaced by `NightText.ImageDeck` + `DrawImages(seed)`, ~18 of Scripture's own images with three DEALT per night, stably from the night's id (each card its own hash: the first cut walked a fixed stride from one hashed start, giving 18 possible hands instead of 800, and the unit test caught it the minute it existed); (3) all three probed jewel nights put a PURSE OF COINS on the table, traced to the tier note's "and it was laid down before anything else" — the price is a MEASURE of the gift now, never a prop in the room; (4) at three sentences the whole act arrived as one run-on chain of clauses, so the prompt now asks for whole sentences and says to say less rather than pack more. Also live-validated: the birth's hour ("Водата в мен се разля като счупен съд… тесните врати на живота" — told, and told through an image, exactly the ask), and the feast, which repeated the guest-list rule back unprompted ("нямаше чужди хора, нито господари, дошли да се покажат"). ANTON'S TWO CALLS: the biblical METHOD is now stated outright in both the nights and the birth — "the particular thing is always TOLD, and always told AS AN IMAGE" — and BOTH FAMILIES are called at the invited rung ("нека дойде и нейния род"), which needed `OtherHouseOf`: vanilla's `GetClanAfterMarriage` returns the PLAYER'S clan whenever either party is the player, so a wife's `Clan` reads as ours ever after and passing it named our own house twice — her house is resolved from BLOOD (father, mother, siblings) at a cradle and from her current clan at a wedding, where the hook still fires before the clan change. TWO ADVERSARIAL REVIEW ROUNDS ran over the whole thing (26 + 23 agents): 19 confirmed findings in the first, 15 in the second, all fixed. The worst of the first: the mother's private hour was being handed to the PUBLIC feast prompt with a polite request to keep it secret, while that answer is copied verbatim into up to sixty witnesses' memories. The worst of the second was MY OWN FIX FROM THE FIRST — the `if (anyOpen)` gate meant a player holding under 100 denars declined a world-pausing feast popup that then re-fired EVERY IN-GAME HOUR for thirty days; an all-greyed question is now never shown at all and a decline always settles. Also fixed round two: the facts are scoped per prompt in Core (`AppendFacts(forFeast)`) so the hour never sees a guest list and the feast never sees her self-text or deep memory (the feast prompt shrank 6704→5170 characters, a saving on every one); a day seals on BOTH sides being settled rather than on a written hour, so a feast actually paid for could no longer vanish from births.txt; a feast kept days later is written in the place it was kept, not the town the mother left; a mother lost in labour no longer holds her child's day unsealed for a month; the sweep gives the father his mark too; a failed disk write can no longer strand the in-flight guard for a session; and the children were moved to the FOOT of the hearth window because that panel is bottom-anchored and Anton wanted to SEE them on opening. 456 tests green. (2026.08.11 03.40.00)
+
+- [x] THE VOICEOVER, THE REST OF IT (the whole roadmap in one night, 2026.08.15)
+    Waves 1-5 of docs/voiceover-roadmap.md, built in one pass and none of it playtested. What
+    shipped: a play mark on EVERY thread row (replies, letters, inner beats, wedding/birth/night
+    accounts) via ChatMessageVM.WithVoice + TalkScreenVM.Voiced, deriving the audio from the words
+    with VoiceCacheKey rather than holding state on a row the thread rebuilds; the panic stop in
+    three layers (Backspace anywhere from SubModule's tick, a Stop button that only exists while
+    something speaks, and a per-line audio ceiling); the voice panel in the talk-screen bar for
+    EVERY player (pick / hear / give to them, all women, all men, me / import / open the folder /
+    turn it on) joined into the Escape chain in all three places; Studio import behind a button;
+    the player's own voice; male/female/player defaults in MCM stored and matched BY ID with the
+    index treated as disposable; reach-outs able to speak at their presentation point (off by
+    default); and the hosted rung.
+
+    THE FOUR THINGS MEASURED AGAINST THE REAL ENGINE, all new and none of them documented anywhere:
+    (1) ONE AUDIO TOKEN IS EXACTLY 1920 SAMPLES = 80 ms. A ceiling of 256 tokens returns 20.48 s to
+        the sample, twice, from two texts. So the engine's own 4096 default is 327.68 s.
+    (2) THE DERAIL IS REAL AND IT HAPPENED HERE: 202 characters of Bulgarian became 327.68 s of
+        audio — exactly 4096 tokens — costing 139 s of GPU. The same text read cleanly a minute
+        later, so it is a dice roll, not a property of the text.
+    (3) A NOTE THAT WAS WRONG: "MaxAudioTokens does nothing" came from passing 64 on the command
+        line, which HostOptions silently rewrites to 4096 (its floor is 256). The field is exact.
+        The per-request ceiling has its own floor of 40 and is what the game now uses.
+    (4) STREAMING: first audio in 427 ms, and the engine generates ~2.5x faster than the audio
+        plays, so it never starves. Steady-state throughput ~3.0x realtime; the FIRST call after a
+        model load is slower (2.26x), so never measure once.
+
+    THE SEAM, FIXED THREE WAYS AT ONCE (VoicePlayback, rewritten): the waiting pieces are POURED
+    into one file (Core WavFiles.Join, unit-tested) so most seams stop existing; the next sound is
+    BUILT while the current one plays, so the handover is one Play() call; and the handover is
+    scheduled BY THE CLOCK from the WAV's own header rather than by polling IsPlaying(), which only
+    answers a frame late — which was the seam. The pouring happens on a background task and only
+    the sound event is made on the game thread, so no file copying lands in a frame. With that
+    done, Streaming is strictly better than Full read and becomes the default (ConfigVersion V5
+    migrates only a config still holding the exact old default).
+
+    THE DERAIL GUARD, PROVED LIVE (guard-hit / guard-whole): Core VoiceBudget works a token ceiling
+    out of the line's own length (13 chars/second, 1.5 s of grace, 1.8x) and the host honours it to
+    the sample; the host also counts what it is actually handed and pulls the cord itself if that
+    ceiling ever stops meaning what it means; a generation that runs to its WHOLE ceiling is treated
+    as a runaway on that fact alone, because a sentence that ends by itself practically never lands
+    on the rail to the token; a WHOLE reply discards and retries once before keeping anything; and a
+    derailed clip is never sealed into the cache. Verified: the cap truncated at exactly 8.00 s, the
+    retry fired, and the flag reached the game.
+
+    THE QUIETNESS, SETTLED FROM THE GAME'S OWN FILES: event:/Extra/voiceover IS a real game event
+    (Modules\Native\ModuleData\sound_event_data.gen.xml, guid {2a2e4e13-d391-41bd-bf9e-91891d2c63f4},
+    beside Extra/external and Extra/voicechat — the family the engine keeps for audio it did not
+    ship). The earlier note saying the name was ours and FMOD merely tolerated it was wrong, so the
+    first playtest's quietness had ONE cause and not two: the engine's own 10-20 dB low output,
+    which the host already normalises.
+
+    THE HOSTED RUNG, LIVE-TESTED on Anton's own key with his blessing (three calls, ~.003):
+    OpenAI /v1/audio/speech, gpt-4o-mini-tts, thirteen voices, and — the happy part — WAV comes back
+    as 24 kHz 16-bit MONO, byte-for-byte the shape the local engine makes, so the cache, the joiner
+    and the whole playback chain are shared with no special cases. English 7.6 s in 2.6 s; Bulgarian
+    escaped as \uXXXX works; a bad key is a 401 turned into plain words. Billed BY THE MINUTE OF
+    AUDIO ACTUALLY RECEIVED (read from the WAV header), so the cost notice is measured, not guessed.
+    Hosted voices are never PREWARMED — a line made ahead for a play mark nobody presses would be
+    money spent on silence — while local ones stay eager.
+
+    THE MODEL WRINKLE, HANDLED IN CODE AS WELL AS IN WORDS: the nine built-in speakers live on
+    qwen-talker-1.7b-customvoice and NOT on the base model that clones, so a player who followed the
+    setup page and made no voice would find an empty shelf. VoicePreset gained SpeakerName and the
+    shelf offers those nine when the loaded model's name says customvoice.
+
+    OFF BY DEFAULT AND FINDABLE (Anton's ask): EnableVoice stays false, the Voices button is in the
+    bar for everybody, and ONE soft notice after a reply says the words can also be heard — written
+    to config.json the same instant so it can never repeat.
+
+    Also: the real Qwen-TTS Studio link is no longer a TODO (github.com/Danmoreng/qwen-tts-studio,
+    confirmed by matching Anton's own qwen-tts-studio-0.2.9-windows-cuda-bundled.zip against the
+    releases page), docs/voiceover-setup.md is finished and de-drafted, and the engine notes carry
+    every measurement above. 680 Core tests green (VoiceBudget and WavFiles are new and covered).
+    2026.08.15 04.10.00

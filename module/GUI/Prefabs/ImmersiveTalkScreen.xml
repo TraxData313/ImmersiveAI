@@ -169,13 +169,30 @@
                               <Children>
                                 <ListPanel Id="MessagesList" DataSource="{Messages}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
                                   <ItemTemplate>
-                                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="10" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                    <!-- The words, with a ♪ down the right-hand edge. The mark rides
+                                         a fixed right margin so it never crowds the text, and it is
+                                         on EVERY kind of row that somebody said or wrote - spoken
+                                         replies, letters, and their own quiet thoughts alike. -->
+                                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="10">
                                       <Children>
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@Header" IsVisible="@HasHeader" />
-                                        <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Text="@Body" IsHidden="@IsNarration" />
-                                        <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" MarginLeft="14" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@Body" IsVisible="@IsNarration" />
+                                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginRight="34" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                          <Children>
+                                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@Header" IsVisible="@HasHeader" />
+                                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Text="@Body" IsHidden="@IsNarration" />
+                                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" MarginLeft="14" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@Body" IsVisible="@IsNarration" />
+                                          </Children>
+                                        </ListPanel>
+                                        <!-- A NOTE, not a play triangle: U+25B6 drew as "?" here
+                                             (2026.08.15) while this mod's ❦ ❧ ☾ ✉ all draw fine, so
+                                             the engine's glyph fallback covers U+2600/U+2700 and not
+                                             Geometric Shapes. Stay in the blocks already proven. -->
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="28" SuggestedHeight="26" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="2" Command.Click="ExecuteSpeak" IsVisible="@CanSpeak">
+                                          <Children>
+                                            <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#7E8892FF" Brush.TextHorizontalAlignment="Center" Text="♪" />
+                                          </Children>
+                                        </ButtonWidget>
                                       </Children>
-                                    </ListPanel>
+                                    </Widget>
                                   </ItemTemplate>
                                 </ListPanel>
                               </Children>
@@ -242,6 +259,22 @@
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleDev" IsVisible="@IsDevMode">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Dev" />
+                      </Children>
+                    </ButtonWidget>
+                    <!-- Stop: shown only while something is speaking, so it is never a dead button
+                         and its appearing is itself the hint. The panic KEY (config VoicePanicKey,
+                         Backspace by default) is the one for when opening a window is too slow. -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="90" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceStop" IsVisible="@IsVoicePlaying">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceStopText" />
+                      </Children>
+                    </ButtonWidget>
+                    <!-- Voices: shown to EVERYBODY, always. Voices are off by default, so this button
+                         is the whole discovery story - the page behind it explains what it is and
+                         turns it on. -->
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="110" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleVoice">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceButtonText" />
                       </Children>
                     </ButtonWidget>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@CanEdit">
@@ -452,6 +485,134 @@
                   </Children>
                 </Widget>
                 <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="16" MarginRight="20" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
+                  </Children>
+                </ButtonWidget>
+              </Children>
+            </Widget>
+          </Children>
+        </Widget>
+
+        <!-- ==================== the voices ====================
+             Off by default and never nagging, so this page has to explain itself: what a voice is,
+             what it wants, how to hear one before committing, and the switch that turns the whole
+             thing on. Reachable by everybody from the bar. -->
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsVoiceShown">
+          <Children>
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#000000FF" AlphaFactor="0.75" />
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="980" SuggestedHeight="680" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Children>
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#0B0906FF" AlphaFactor="0.99" />
+
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="14" MarginLeft="20" MarginRight="20" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@VoiceTitleText" />
+                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="54" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceStatusText" />
+                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="104" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceHintText" />
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="176" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@NoVoicesText" IsHidden="@HasVoices" />
+
+                <!-- the shelf -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="196" MarginBottom="140" MarginLeft="20" MarginRight="20">
+                  <Children>
+                    <ScrollablePanel Id="VoicesScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="VoicesClip" InnerPanel="VoicesClip\VoicesList" VerticalScrollbar="..\VoicesScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                      <Children>
+                        <Widget Id="VoicesClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                          <Children>
+                            <ListPanel Id="VoicesList" DataSource="{VoiceRows}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
+                              <ItemTemplate>
+                                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="56">
+                                  <Children>
+                                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="44" Command.Click="ExecuteSelect">
+                                      <Children>
+                                        <Widget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#FFFFFFFF" AlphaFactor="0.10" IsVisible="@IsSelected" />
+                                        <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="10" MarginRight="10" StackLayout.LayoutMethod="VerticalTopToBottom">
+                                          <Children>
+                                            <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                                              <Children>
+                                                <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#D8CBA8FF" Brush.TextHorizontalAlignment="Left" Text="@Name" />
+                                                <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="@MarksColor" Brush.TextHorizontalAlignment="Left" Text="@Marks" IsVisible="@HasMarks" />
+                                                <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="@WantsColor" Brush.TextHorizontalAlignment="Left" Text="@Wants" IsVisible="@HasWants" />
+                                              </Children>
+                                            </ListPanel>
+                                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@Detail" />
+                                          </Children>
+                                        </ListPanel>
+                                      </Children>
+                                    </ButtonWidget>
+                                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="34" HorizontalAlignment="Left" VerticalAlignment="Center" Brush="Popup.Cancel.Button" Command.Click="ExecuteHear">
+                                      <Children>
+                                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@HearText" />
+                                      </Children>
+                                    </ButtonWidget>
+                                  </Children>
+                                </Widget>
+                              </ItemTemplate>
+                            </ListPanel>
+                          </Children>
+                        </Widget>
+                      </Children>
+                    </ScrollablePanel>
+                    <ScrollbarWidget Id="VoicesScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="VoicesScrollbarHandle" MinValue="0" MaxValue="100">
+                      <Children>
+                        <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                        <BrushWidget Id="VoicesScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                      </Children>
+                    </ScrollbarWidget>
+                  </Children>
+                </Widget>
+
+                <!-- give the chosen voice to somebody -->
+                <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="30" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="94" MarginLeft="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceGiveText" />
+                <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="36" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="90" MarginRight="20" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                  <Children>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="180" SuggestedHeight="36" MarginRight="8" Brush="Popup.Done.Button" Command.Click="ExecuteVoiceGiveToThem" IsEnabled="@CanCastOnThem">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceForThemText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="36" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceAllWomen">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceAllWomenText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="36" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceAllMen">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceAllMenText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="90" SuggestedHeight="36" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceMine">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceMineText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="36" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceClear" IsEnabled="@CanCastOnThem">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceClearText" />
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </ListPanel>
+
+                <!-- the shelf's own housekeeping, and the way out -->
+                <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="20" MarginLeft="20" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                  <Children>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="170" SuggestedHeight="40" MarginRight="10" Brush="Popup.Done.Button" Command.Click="ExecuteVoiceToggleEnabled">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceEnabledText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="40" MarginRight="10" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceImport">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceImportText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="40" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceOpenFolder">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceFolderText" />
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </ListPanel>
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="20" MarginRight="20" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
                   <Children>
                     <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@BackText" />
                   </Children>

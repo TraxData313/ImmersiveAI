@@ -20,6 +20,10 @@ namespace ImmersiveAI.Voice
         public long Samples { get; set; }
         public int Rate { get; set; }
 
+        /// <summary>The host cut this reading short for running away. Play it — what was made before
+        /// the runaway is good — but never keep it.</summary>
+        public bool Derailed { get; set; }
+
         public static VoiceHostReply Failed(string error) => new VoiceHostReply { Ok = false, Error = error };
     }
 
@@ -322,7 +326,8 @@ namespace ImmersiveAI.Voice
             VoiceEngineSetup setup,
             CancellationToken cancel = default,
             Action<int, string, long>? onChunk = null,
-            bool whole = false)
+            bool whole = false,
+            int maxTokens = 0)
         {
             if (string.IsNullOrWhiteSpace(id)) return VoiceHostReply.Failed("no id");
             if (string.IsNullOrWhiteSpace(text)) return VoiceHostReply.Failed("nothing to say");
@@ -350,6 +355,7 @@ namespace ImmersiveAI.Voice
                     },
                     LanguageId = languageId,
                     Whole = whole,
+                    MaxTokens = maxTokens,
                 };
 
                 // Caught here rather than at the far end of a pipe: the host would answer the same
@@ -485,6 +491,7 @@ namespace ImmersiveAI.Voice
                 Ms = result.Ms,
                 Samples = result.Samples,
                 Rate = result.Rate,
+                Derailed = result.Derailed,
             });
         }
 

@@ -67,6 +67,10 @@ namespace ImmersiveAI.Voice
             if (!string.IsNullOrWhiteSpace(config?.VoiceSoundEvent))
                 VoicePlayback.SoundEventName = config!.VoiceSoundEvent.Trim();
             HookShutdownOnce();
+
+            // Poured-together pieces are deleted as they finish playing; a crash mid-sentence would
+            // leave one behind. Swept once, at the start, rather than tracked forever.
+            try { VoicePlayback.SweepJoined(); } catch { /* housekeeping */ }
         }
 
         private static ModConfig? Config => _config ?? SubModule.Config;
@@ -79,7 +83,9 @@ namespace ImmersiveAI.Voice
         /// silently recast anybody. Memory is a thing to rewind; a voice is not.</summary>
         public static string CastingFilePath => Path.Combine(VoicesRoot, "assignments.json");
 
-        /// <summary>Whether a line could be spoken right now, engine and all.</summary>
+        /// <summary>Whether a line could be spoken right now — by EITHER road. The two are equals
+        /// here: an engine on the player's own machine, or a hosted service on a key they already
+        /// have. Everything above this point is indifferent to which.</summary>
         public static bool IsAvailable
         {
             get
@@ -87,11 +93,24 @@ namespace ImmersiveAI.Voice
                 try
                 {
                     if (!EnabledQuick) return false;
-                    return VoiceEngineDiscovery.Resolve(Config).IsComplete;
+                    return LocalReady || CloudVoiceClient.IsConfigured(Config);
                 }
                 catch { return false; }
             }
         }
+
+        /// <summary>Whether the player's own machine can speak: the engine is installed and found.</summary>
+        public static bool LocalReady
+        {
+            get
+            {
+                try { return VoiceEngineDiscovery.Resolve(Config).IsComplete; }
+                catch { return false; }
+            }
+        }
+
+        /// <summary>Whether the hosted road is open: a key is set.</summary>
+        public static bool CloudReady => CloudVoiceClient.IsConfigured(Config);
 
         /// <summary>Plainly why not, when <see cref="IsAvailable"/> is false. Empty when it is true.</summary>
         public static string UnavailableReason
@@ -107,7 +126,12 @@ namespace ImmersiveAI.Voice
                     if (VoiceEngineGate.Quiet) return "the voices are resting after a run of failures";
 
                     var setup = VoiceEngineDiscovery.Resolve(config);
-                    return setup.IsComplete ? string.Empty : setup.Missing;
+                    if (setup.IsComplete) return string.Empty;
+                    if (CloudVoiceClient.IsConfigured(config)) return string.Empty;
+
+                    // Neither road. Name BOTH ways out, because "install a speech engine" is a poor
+                    // answer for somebody whose machine will never run one.
+                    return setup.Missing + " — or use a hosted voice instead (a key in the Voices panel)";
                 }
                 catch (Exception ex) { return ex.Message; }
             }
@@ -159,6 +183,13 @@ namespace ImmersiveAI.Voice
                         if (plan == null) return;
                         if (VoiceCache.TryHit(plan.Voice.Id, plan.Key) != null) return;
 
+                        // A HOSTED voice is never made ahead of time, and this is the whole of the
+                        // cost argument: making audio on the player's own machine costs a second of
+                        // a graphics card nobody was using, but making it out there costs MONEY —
+                        // and a line prepared for a ▶ that is never pressed would be money spent on
+                        // silence. The local road stays eager, so a cast local voice is instant.
+                        if (plan.Voice.Backend == VoiceBackend.Remote) return;
+
                         // Pinned: made for the cache, so it is worth finishing even if nobody is
                         // listening by the time it lands. That is the whole point of a prewarm.
                         StartJob(plan, pinned: true, playbackGeneration: 0);
@@ -193,14 +224,28 @@ namespace ImmersiveAI.Voice
                     try
                     {
                         var plan = Plan(who, text);
-                        if (plan == null) return;
+                        if (plan == null)
+                        {
+                            // The commonest reason for "I pressed it and nothing happened", and it
+                            // was silent until now: no voice cast for this soul, or the road that
+                            // voice needs is not open.
+                            ModLog.Info($"voice: nothing to speak with for {who.Id} — "
+                                        + (UnavailableReason.Length > 0 ? UnavailableReason : "no voice is cast for them")
+                                        + ".");
+                            return;
+                        }
 
                         var cached = VoiceCache.TryHit(plan.Voice.Id, plan.Key);
                         if (cached != null)
                         {
+                            ModLog.Info($"voice: {plan.Voice.Name} speaks {cached.Count} piece(s) from the cache.");
                             foreach (var file in cached) VoicePlayback.Enqueue(generation, file);
                             return;
                         }
+
+                        ModLog.Info($"voice: making a line for {plan.Voice.Name} "
+                                    + $"({(plan.Voice.Backend == VoiceBackend.Remote ? "hosted" : "this machine")}, "
+                                    + $"{plan.Text.Length} chars, moment {generation}).");
 
                         var job = StartJob(plan, pinned: false, playbackGeneration: generation);
                         opened = false;    // the job's own finisher closes the sequence
@@ -337,10 +382,38 @@ namespace ImmersiveAI.Voice
 
         private static SpeechPlan? Plan(Speaker who, string text)
         {
-            if (!IsAvailable) return null;
+            if (!EnabledQuick) return null;
 
             var voice = VoiceFor(who);
             if (voice == null) return null;
+            return PlanFor(voice, text);
+        }
+
+        /// <summary>The same plan, for a voice chosen directly rather than by whose it is — what the
+        /// panel's "hear it" button needs.</summary>
+        private static SpeechPlan? PlanFor(VoicePreset voice, string text)
+        {
+            if (voice == null) return null;
+
+            // WHICH ROAD is decided by the voice itself, not by a setting: a cloned voice can only be
+            // spoken by the engine that holds its embedding, and a hosted voice only by the service
+            // that owns it. So a player may have both and cast either on anybody.
+            if (voice.Backend == VoiceBackend.Remote)
+            {
+                if (!CloudVoiceClient.IsConfigured(Config))
+                {
+                    if (!_warnedRemote)
+                    {
+                        _warnedRemote = true;
+                        ModLog.Warn($"voice: \"{voice.Name}\" is a hosted voice, but no key is set for one.");
+                    }
+                    return null;
+                }
+            }
+            else if (!LocalReady)
+            {
+                return null;
+            }
 
             if (!TryVoiceArguments(voice, out var kind, out var voicePath, out var speakerName))
                 return null;
@@ -394,14 +467,11 @@ namespace ImmersiveAI.Voice
 
             if (voice.Backend == VoiceBackend.Remote)
             {
-                // A hosted speech endpoint is a different road entirely and not one this local host
-                // travels. Said once, in the log, rather than failing quietly for every line.
-                if (!_warnedRemote)
-                {
-                    _warnedRemote = true;
-                    ModLog.Warn($"voice: \"{voice.Name}\" is a hosted voice; the local engine cannot speak it.");
-                }
-                return false;
+                // A hosted voice is named, not made: it carries no embedding of its own, only the
+                // service's own name for it. The local engine never sees this road at all.
+                kind = "remote";
+                speaker = voice.RemoteVoiceId;
+                return !string.IsNullOrWhiteSpace(speaker);
             }
 
             // THE EMBEDDING FIRST, and this order is measured rather than reasoned. Against the real
@@ -426,6 +496,16 @@ namespace ImmersiveAI.Voice
             {
                 kind = "icl";
                 path = voice.IclPromptPath;
+                return true;
+            }
+
+            // One of the model's OWN built-in speakers — nothing on disk, just a name the model
+            // knows. Only the customvoice model carries any (nine of them); the base model that
+            // does the cloning reports none, which is why these are offered by model name.
+            if (!string.IsNullOrWhiteSpace(voice.SpeakerName))
+            {
+                kind = "speaker";
+                speaker = voice.SpeakerName;
                 return true;
             }
 
@@ -455,8 +535,21 @@ namespace ImmersiveAI.Voice
                     var root = VoicesRoot;
                     Directory.CreateDirectory(root);
 
-                    _shelf = VoiceLibrary.Load(root, out var skipped);
+                    var made = VoiceLibrary.Load(root, out var skipped);
                     foreach (var problem in skipped) ModLog.Warn("voice: " + problem);
+
+                    // The player's own voices FIRST, then the hosted shelf. Order matters twice: a
+                    // default is filled from the first voice of the right kind, and a player who has
+                    // made a voice should never be handed a stranger's instead.
+                    //
+                    // The hosted ones are listed even with no key set, deliberately. They cost
+                    // nothing to hold (they are made in memory, not on disk), the panel can then
+                    // explain what they want, and — the real reason — a casting is never quietly
+                    // forgotten because a key was removed for an evening.
+                    var shelf = new List<VoicePreset>(made);
+                    shelf.AddRange(BuiltInShelf());
+                    shelf.AddRange(CloudVoiceClient.Shelf());
+                    _shelf = shelf;
 
                     _casting = VoiceAssignments.Load(CastingFilePath);
                     var dropped = _casting.ForgetMissing(_shelf.Select(v => v.Id));
@@ -480,6 +573,69 @@ namespace ImmersiveAI.Voice
                     _shelfStampUtc = stamp;
                 }
             }
+        }
+
+        /// <summary>
+        /// The speech model's OWN voices — the ones that need no download beyond the model itself.
+        /// <para>
+        /// THE WRINKLE THIS EXISTS FOR: they live on <c>qwen-talker-1.7b-customvoice</c> and NOT on
+        /// <c>qwen-talker-1.7b-base</c>, which is the model that does the cloning and the one the
+        /// setup page tells people to fetch. So a player who followed the instructions, made no
+        /// voice of their own and turned voices on would find a shelf with nothing on it — a feature
+        /// that appears simply not to work. Offering these when (and only when) the loaded model is
+        /// one that carries them makes the shelf tell the truth about what the player has.
+        /// </para>
+        /// <para>
+        /// The nine names are the model's own, read from it on 2026.08.14 (<c>caps.speakers == 9</c>).
+        /// They were auditioned as shippable defaults and Anton's verdict was "they are very stupid
+        /// all of them" — which is a fair reason not to CAST one by default, and no reason at all to
+        /// hide them from somebody who has nothing else.
+        /// </para>
+        /// </summary>
+        private static IReadOnlyList<VoicePreset> BuiltInShelf()
+        {
+            var shelf = new List<VoicePreset>();
+            try
+            {
+                var model = ModelName();
+                if (model.IndexOf("customvoice", StringComparison.OrdinalIgnoreCase) < 0) return shelf;
+
+                foreach (var pair in BuiltInSpeakers)
+                    shelf.Add(new VoicePreset
+                    {
+                        Id = "builtin-" + pair.Key,
+                        Name = Pretty(pair.Key) + " (built-in)",
+                        Backend = VoiceBackend.QwenLocal,
+                        SpeakerName = pair.Key,
+                        Gender = pair.Value,
+                        Source = "the speech model's own voices",
+                    });
+            }
+            catch (Exception ex) { ModLog.Error("voice: reading the model's own voices", ex); }
+            return shelf;
+        }
+
+        /// <summary>The nine the customvoice model carries, with only a hint at which kind of soul
+        /// they suit — a hint is all a gender ever is here.</summary>
+        private static readonly List<KeyValuePair<string, VoiceGender>> BuiltInSpeakers =
+            new List<KeyValuePair<string, VoiceGender>>
+            {
+                new KeyValuePair<string, VoiceGender>("serena", VoiceGender.Female),
+                new KeyValuePair<string, VoiceGender>("vivian", VoiceGender.Female),
+                new KeyValuePair<string, VoiceGender>("sohee", VoiceGender.Female),
+                new KeyValuePair<string, VoiceGender>("ono_anna", VoiceGender.Female),
+                new KeyValuePair<string, VoiceGender>("aiden", VoiceGender.Male),
+                new KeyValuePair<string, VoiceGender>("dylan", VoiceGender.Male),
+                new KeyValuePair<string, VoiceGender>("eric", VoiceGender.Male),
+                new KeyValuePair<string, VoiceGender>("ryan", VoiceGender.Male),
+                new KeyValuePair<string, VoiceGender>("uncle_fu", VoiceGender.Male),
+            };
+
+        private static string Pretty(string speaker)
+        {
+            var s = (speaker ?? string.Empty).Replace('_', ' ').Trim();
+            if (s.Length == 0) return string.Empty;
+            return char.ToUpperInvariant(s[0]) + s.Substring(1);
         }
 
         private static DateTime ShelfStamp()
@@ -629,6 +785,49 @@ namespace ImmersiveAI.Voice
                 folder = VoiceCache.PrepareFolder(plan.Voice.Id, plan.Key);
                 if (folder.Length == 0) return;
 
+                // THE HOSTED ROAD, and it is short: one request, one WAV, done. No child process, no
+                // model, no chunking — the whole reply arrives at once because that is what a
+                // hosted service hands over. Everything downstream (the cache, the playback chain,
+                // the ▶ marks) cannot tell which road made the file.
+                if (plan.Voice.Backend == VoiceBackend.Remote)
+                {
+                    var config = Config;
+                    if (config == null) return;
+
+                    var path = VoiceCache.ChunkPath(folder, 0);
+                    var spoken = await CloudVoiceClient
+                        .SynthesizeAsync(config, plan.SpeakerName, plan.Text, path)
+                        .ConfigureAwait(false);
+
+                    if (!spoken.Ok) { VoiceEngineGate.ReportFailure(spoken.Error); return; }
+                    if (VoiceBudget.LooksTruncated(plan.Text, spoken.Samples, spoken.Rate))
+                    {
+                        VoiceEngineGate.ReportFailure(
+                            $"the hosted voice answered with {spoken.Samples} samples for {plan.Text.Length} characters");
+                        return;
+                    }
+
+                    VoiceEngineGate.ReportSuccess();
+                    if (job.Abandoned)
+                        ModLog.Info("voice: the hosted line was made, but the moment had passed before it arrived.");
+                    else
+                        job.Publish(path);
+
+                    VoiceCache.Seal(folder, new VoiceCacheManifest
+                    {
+                        Key = plan.Key,
+                        VoiceId = plan.Voice.Id,
+                        Model = config.CloudVoiceModel,
+                        LanguageId = AutoLanguage,
+                        Chunks = 1,
+                        Text = plan.Text,
+                    });
+
+                    ok = true;
+                    VoiceCache.PruneSoon(BudgetBytes());
+                    return;
+                }
+
                 var client = EnsureClient();
                 var setup = VoiceEngineDiscovery.Resolve(Config);
                 if (!setup.IsComplete) { VoiceEngineGate.ReportDown(setup.Missing); return; }
@@ -638,6 +837,12 @@ namespace ImmersiveAI.Voice
                 // replay from cache is identical whichever made it.
                 var road = DeliveryRoad();
                 var made = 0;
+
+                // Set true when the host tells us it cut a reading short for running away. The clip
+                // is still PLAYED — everything before the runaway is good speech — but it must never
+                // be sealed into the cache, or one bad synthesis is replayed every time that line is
+                // scrolled back to, for the rest of the campaign.
+                var derailed = false;
 
                 if (road == Delivery.ByLine)
                 {
@@ -660,6 +865,7 @@ namespace ImmersiveAI.Voice
                             speaker: plan.SpeakerName,
                             languageId: AutoLanguage,
                             setup: setup,
+                            maxTokens: VoiceBudget.MaxTokensFor(bite),
                             onChunk: (_, path, __) =>
                             {
                                 if (job.Abandoned) return;
@@ -669,7 +875,8 @@ namespace ImmersiveAI.Voice
                             }).ConfigureAwait(false);
 
                         if (!reply.Ok) { VoiceEngineGate.ReportFailure(reply.Error); return; }
-                        if (IsTooShortToBeReal(reply, bite))
+                        if (reply.Derailed) derailed = true;
+                        if (VoiceBudget.LooksTruncated(bite, reply.Samples, reply.Rate))
                         {
                             VoiceEngineGate.ReportFailure(
                                 $"the engine answered with {reply.Samples} samples for {bite.Length} characters");
@@ -712,6 +919,7 @@ namespace ImmersiveAI.Voice
                         languageId: AutoLanguage,
                         setup: setup,
                         whole: joined,
+                        maxTokens: VoiceBudget.MaxTokensFor(plan.Text),
                         onChunk: (index, path, samples) =>
                         {
                             // Streaming: a piece per second. Joined: this fires ONCE, at the end,
@@ -723,12 +931,13 @@ namespace ImmersiveAI.Voice
                         }).ConfigureAwait(false);
 
                     if (!reply.Ok) { VoiceEngineGate.ReportFailure(reply.Error); return; }
+                    if (reply.Derailed) derailed = true;
                     if (made == 0)
                     {
                         VoiceEngineGate.ReportFailure("the engine reported a reply it did not write");
                         return;
                     }
-                    if (IsTooShortToBeReal(reply, plan.Text))
+                    if (VoiceBudget.LooksTruncated(plan.Text, reply.Samples, reply.Rate))
                     {
                         VoiceEngineGate.ReportFailure(
                             $"the engine answered with {reply.Samples} samples for {plan.Text.Length} characters");
@@ -739,6 +948,14 @@ namespace ImmersiveAI.Voice
                 }
 
                 if (made == 0) return;
+
+                // A reading that ran away is heard once and never again. ok stays false, so the
+                // folder is left unsealed and the next attempt at these words starts clean.
+                if (derailed)
+                {
+                    ModLog.Warn("voice: a reading ran away and was cut short — it will not be kept.");
+                    return;
+                }
 
                 VoiceCache.Seal(folder, new VoiceCacheManifest
                 {
@@ -767,20 +984,6 @@ namespace ImmersiveAI.Voice
             }
         }
 
-        /// <summary>
-        /// Whether an "ok" is too short to be a real reading of these words. Deliberately a floor
-        /// and not a ratio: real speech varies enormously with language and voice, and rejecting a
-        /// merely brisk reading would be a worse bug than the one this catches. It only fires on
-        /// audio so short that no reading of the words could fit inside it.
-        /// </summary>
-        private static bool IsTooShortToBeReal(VoiceHostReply reply, string bite)
-        {
-            if (reply.Rate <= 0 || reply.Samples <= 0) return false;   // nothing to judge it by
-            if (bite == null || bite.Trim().Length < 20) return false; // short enough to be honest
-
-            return reply.Samples / (double)reply.Rate < 0.25;
-        }
-
         private static long BudgetBytes()
         {
             var mb = Config?.VoiceCacheBudgetMb ?? 0;
@@ -798,6 +1001,204 @@ namespace ImmersiveAI.Voice
 
             fresh.Dispose();
             return won;
+        }
+
+        // ------------------------------------------------------------------
+        // What the voice panel needs — casting, hearing, and bringing voices over
+        // ------------------------------------------------------------------
+
+        /// <summary>Every voice that could speak: the player's own folders first, then the hosted
+        /// shelf. Fresh from disk when the folder has changed since it was last read.</summary>
+        public static IReadOnlyList<VoicePreset> Shelf()
+        {
+            EnsureShelf();
+            lock (ShelfGate) return _shelf;
+        }
+
+        /// <summary>The voice a soul actually speaks with right now, or empty for silence.</summary>
+        public static string VoiceIdFor(Hero? npc)
+        {
+            var who = Describe(npc);
+            if (who == null) return string.Empty;
+
+            EnsureShelf();
+            lock (ShelfGate)
+                return who.IsPlayer ? _casting.Player : _casting.VoiceFor(who.Id, who.IsFemale);
+        }
+
+        /// <summary>Whether this soul was cast BY HAND, rather than falling to their kind's default —
+        /// the panel says which, so "chosen" can be told from "whatever women get".</summary>
+        public static bool IsCastByHand(Hero? npc)
+        {
+            if (npc == null) return false;
+            EnsureShelf();
+            lock (ShelfGate) return _casting.IsCast(npc.StringId);
+        }
+
+        /// <summary>The two defaults and the player's own slot, for the panel and for MCM.</summary>
+        public static string DefaultFemaleId { get { EnsureShelf(); lock (ShelfGate) return _casting.DefaultFemale ?? string.Empty; } }
+        public static string DefaultMaleId { get { EnsureShelf(); lock (ShelfGate) return _casting.DefaultMale ?? string.Empty; } }
+        public static string PlayerVoiceId { get { EnsureShelf(); lock (ShelfGate) return _casting.Player ?? string.Empty; } }
+
+        /// <summary>Casts a soul. An empty voice id clears the casting and drops them back to their
+        /// kind's default — that is how "use the usual voice again" is said.</summary>
+        public static void Cast(Hero? npc, string? voiceId)
+        {
+            if (npc == null) return;
+            Change(sheet => sheet.Cast(npc.StringId, voiceId));
+        }
+
+        public static void SetDefaultFemale(string? voiceId) => Change(sheet => sheet.DefaultFemale = (voiceId ?? string.Empty).Trim());
+        public static void SetDefaultMale(string? voiceId) => Change(sheet => sheet.DefaultMale = (voiceId ?? string.Empty).Trim());
+
+        /// <summary>The player's own voice for their own lines. Empty is the honest default: most
+        /// people do not want to hear themselves read their own words back.</summary>
+        public static void SetPlayerVoice(string? voiceId) => Change(sheet => sheet.Player = (voiceId ?? string.Empty).Trim());
+
+        private static void Change(Action<VoiceAssignments> edit)
+        {
+            try
+            {
+                EnsureShelf();
+                lock (ShelfGate)
+                {
+                    edit(_casting);
+                    _casting.Save(CastingFilePath);
+                    // Taken after the save, or the sheet we just wrote reads as somebody else's edit
+                    // and the shelf is needlessly re-read on the next line.
+                    _shelfStampUtc = ShelfStamp();
+                }
+            }
+            catch (Exception ex) { ModLog.Error("voice: writing the casting sheet", ex); }
+        }
+
+        /// <summary>What a voice says when the player asks to hear it. Deliberately in the world's
+        /// own words and not "testing, one two three" — the point is to judge whether this is the
+        /// person, and a line of Calradia is the only fair test of that.</summary>
+        public const string PreviewLine =
+            "We have ridden a long way together, you and I. Whatever comes of tomorrow, I am glad it is you beside me.";
+
+        /// <summary>Speaks a sample in one voice, whoever it belongs to. Cuts off whatever was being
+        /// said, exactly as a new line does.</summary>
+        public static void Preview(VoicePreset? voice, string? line = null)
+        {
+            try
+            {
+                if (voice == null || !EnabledQuick) return;
+                var text = string.IsNullOrWhiteSpace(line) ? PreviewLine : line!.Trim();
+
+                var generation = Interlocked.Increment(ref _generation);
+                VoicePlayback.Begin(generation);
+
+                Task.Run(() =>
+                {
+                    var opened = true;
+                    try
+                    {
+                        var plan = PlanFor(voice, text);
+                        if (plan == null)
+                        {
+                            ModLog.Info($"voice: {voice.Name} cannot speak — "
+                                        + (UnavailableReason.Length > 0 ? UnavailableReason : "its road is not open") + ".");
+                            return;
+                        }
+
+                        var cached = VoiceCache.TryHit(plan.Voice.Id, plan.Key);
+                        if (cached != null)
+                        {
+                            ModLog.Info($"voice: hearing {plan.Voice.Name} from the cache.");
+                            foreach (var file in cached) VoicePlayback.Enqueue(generation, file);
+                            return;
+                        }
+
+                        ModLog.Info($"voice: hearing {plan.Voice.Name} "
+                                    + $"({(plan.Voice.Backend == VoiceBackend.Remote ? "hosted" : "this machine")}, moment {generation}).");
+
+                        var job = StartJob(plan, pinned: false, playbackGeneration: generation);
+                        opened = false;
+                        job.Subscribe(
+                            path => VoicePlayback.Enqueue(generation, path),
+                            _ => VoicePlayback.Complete(generation));
+                    }
+                    catch (Exception ex) { ModLog.Error("voice: hearing a voice", ex); }
+                    finally { if (opened) VoicePlayback.Complete(generation); }
+                });
+            }
+            catch (Exception ex) { ModLog.Error("voice: hearing a voice", ex); }
+        }
+
+        /// <summary>
+        /// Brings over every voice made in Qwen-TTS Studio that is not on the shelf already, matched
+        /// by NAME — so the button can be pressed again after making another one and only the new
+        /// ones arrive. Copies, never moves: Studio goes on working exactly as it did.
+        /// <para>
+        /// Numbered retakes are kept rather than dropped ("Sibylla", "Sibylla 2" … "Sibylla 5" are
+        /// five attempts at one person and the whole point is to hear them against each other). The
+        /// panel is where an unwanted one is deleted.
+        /// </para>
+        /// </summary>
+        public static int ImportFromStudio(out string trouble)
+        {
+            trouble = string.Empty;
+            try
+            {
+                var studioFolder = VoiceLibrary.DefaultStudioDataFolder();
+                var tsv = Path.Combine(studioFolder, "voice-presets.tsv");
+                if (!File.Exists(tsv))
+                {
+                    trouble = "no voices found — Qwen-TTS Studio keeps them in " + studioFolder;
+                    return 0;
+                }
+
+                var found = VoiceLibrary.ReadStudioPresets(tsv);
+                if (found.Count == 0) { trouble = "Studio's list of voices is empty."; return 0; }
+
+                var root = VoicesRoot;
+                Directory.CreateDirectory(root);
+
+                var already = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+                foreach (var voice in VoiceLibrary.Load(root)) already.Add(voice.Name.Trim());
+
+                var brought = 0;
+                foreach (var studio in found)
+                {
+                    if (already.Contains(studio.Name.Trim())) continue;
+                    try
+                    {
+                        VoiceLibrary.ImportFromStudio(studio, root);
+                        brought++;
+                    }
+                    catch (Exception ex)
+                    {
+                        ModLog.Warn($"voice: could not bring over \"{studio.Name}\" — {ex.Message}");
+                    }
+                }
+
+                if (brought > 0) Rediscover();
+                return brought;
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("voice: bringing voices over from Studio", ex);
+                trouble = ex.Message;
+                return 0;
+            }
+        }
+
+        /// <summary>Opens the voices folder in Explorer — the one place a voice can be dropped in,
+        /// zipped up, or handed to a friend.</summary>
+        public static void OpenVoicesFolder()
+        {
+            try
+            {
+                Directory.CreateDirectory(VoicesRoot);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = VoicesRoot,
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception ex) { ModLog.Error("voice: opening the voices folder", ex); }
         }
 
         /// <summary>The child must not outlive us. It watches our pid and leaves on its own, but

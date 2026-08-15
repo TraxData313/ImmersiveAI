@@ -1,8 +1,9 @@
-﻿<!-- DRAFT while the feature is being built (started 2026.08.14). The hardware numbers, the folder
-     layout and the cloning rules are measured/decided and safe. Anything marked (coming) is not
-     shipped yet — hotkey names, exact option labels and the hosted rung firm up as they land, and
-     the markers come out before this is linked from the store pages. Keep this URL path stable:
-     README and all three store pages point at it. -->
+﻿<!-- Written 2026.08.14; finished 2026.08.15 when the rest of the feature landed. The play marks,
+     the panic key, the Studio import button, the voice panel, the hosted road and the built-in
+     speakers are all shipped, and this page now describes them as they are rather than as planned.
+     NOT yet playtested in a live campaign: if a label here disagrees with the game, the game is
+     right and this page is stale. Keep this URL path stable — README and all three store pages
+     point at it. -->
 
 # Hearing them speak
 
@@ -21,7 +22,7 @@ and a graphics card. Everything below is about whether that trade is worth it to
 |---|---|---|
 | **Any voice at all** | A graphics card and ~7 GB free | free, runs on your PC |
 | **Your own cloned voices** | The same, plus a clip of the voice | free |
-| **No download, no GPU** | The hosted option *(coming)* | pennies per line |
+| **No download, no GPU** | A key for a hosted speech service | ~1½ cents a minute of speech |
 | **No voices** | Nothing — leave it off | — |
 
 The local road is the good one: it is free forever, it never sends a word off your machine, and it
@@ -50,22 +51,68 @@ something said an hour ago and it plays instantly; nothing is generated twice.
 
 ---
 
+## The other road: no download, no graphics card
+
+If none of the above is going to happen on your machine, put a key for a hosted speech service into
+**Voices → Hosted voices: API key** (in the mod's settings), and thirteen voices appear in the panel
+alongside your own. Nothing is downloaded and nothing is loaded onto your card.
+
+What it costs, and what it costs you:
+
+- **About 1½ cents per minute of speech** — roughly two tenths of a cent for a typical reply. It is
+  billed to your key and shown in the same cost line as everything else the mod spends.
+- **It cannot clone anybody.** You choose from a fixed shelf; the whole point of the local engine is
+  that it can be made to sound like a particular person, and this cannot.
+- **The words leave your machine**, exactly as they already do if you are using a cloud AI for the
+  conversations themselves.
+
+Both roads can be used at once: cloned voices for the people you care about, hosted ones for
+everybody else. Which road a voice takes is decided by the voice, never by a setting.
+
+---
+
 ## Setting it up
 
-1. **Install Qwen-TTS Studio** *(free)*. <!-- TODO before shipping: the real download link. Anton
-   installed it from somewhere; the app itself only reveals where its MODELS come from. Do not
-   invent this URL. --> Immersive AI uses its speech engine and its models — you do not have to
-   keep the app open, it just needs to have been installed once so both exist on your disk.
+1. **Install Qwen-TTS Studio** *(free)* — [github.com/Danmoreng/qwen-tts-studio](https://github.com/Danmoreng/qwen-tts-studio/releases).
+   On the releases page take **`windows-cuda-bundled`** unless you already have the NVIDIA CUDA
+   toolkit installed, in which case the smaller `windows-cuda-system` will do. Immersive AI uses its
+   speech engine and its models — you never have to keep the app open, it just has to have been
+   installed once so both exist on your disk.
 2. **Download a model in it.** `qwen-talker-1.7b-base` is the one to get; it will also fetch the
    tokenizer that goes with it. Studio pulls these from
    [Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF) on Hugging Face.
-3. **Turn voices on** in the mod's options *(coming — the exact label)*. Immersive AI finds the
-   engine and models by itself; if it cannot, it tells you plainly where it looked.
-4. **Pick who speaks.** Open the talk screen, hit the **Voice** button, and set a default voice for
-   women and one for men. That is enough to start.
+   *(If you want to hear something before cloning anything of your own, fetch
+   `qwen-talker-1.7b-customvoice` as well — see "Voices without cloning" below.)*
+3. **Turn voices on.** Open the talk screen (**O**), press **Voices**, and press **Turn voices on**.
+   Immersive AI finds the engine and models by itself; if it cannot, that same page says plainly
+   what is missing.
+4. **Pick who speaks.** In the same panel: press **Bring over from Studio** to pull in the voices you
+   made there, press **▶** beside one to hear it, then give it to **all women**, **all men**, or to
+   the person you are talking to. That is enough to start.
 
 If anything is missing, voices simply stay quiet and one grey line tells you why. **A voice problem
 never blocks, delays or loses a reply** — the words always arrive, whatever the sound is doing.
+
+### Voices without cloning anything
+
+The cloning model (`qwen-talker-1.7b-base`) carries **no ready-made voices at all** — it is a model
+for making them, not for having them. If you want to hear something the moment you turn voices on,
+also download **`qwen-talker-1.7b-customvoice`** in Studio and select it there: it carries nine
+built-in speakers (Serena, Vivian, Sohee, Ono Anna, Aiden, Dylan, Eric, Ryan, Uncle Fu), and they
+appear in the Voices panel by themselves when that model is the one loaded. They are serviceable
+rather than good. One model is loaded at a time, so this is a choice between *ready-made* voices and
+*your own* — and your own is the better road if you have five minutes.
+
+### If a voice ever goes wrong
+
+Speech models very occasionally miss their own ending and ramble. Three things guard against it, and
+you only ever need the third:
+
+- Every line is given an audio ceiling worked out from its own length, so a runaway is cut off in
+  seconds rather than minutes, and the ruined clip is never kept.
+- **Stop** appears in the talk screen's top bar whenever anything is speaking.
+- **Backspace** silences a voice instantly, anywhere — on the map, in a battle, with every window
+  shut. (Change it under Voices in the mod's settings.)
 
 ---
 
@@ -174,9 +221,10 @@ you straight there.
 ## When it goes wrong
 
 **She babbles, screeches, or will not stop.** Speech models occasionally lose their place partway
-through a line. Press the **panic key** *(coming)* and everything stops instantly. The mod also
-watches for it and usually catches a bad line before you ever hear it — it can tell, because a
-derailed line runs far longer than its words justify.
+through a line. Press **Backspace** and everything stops instantly, wherever you are. You should
+rarely need it: every line is given an audio ceiling worked out from its own length, so a runaway is
+cut off after seconds instead of running on — and a line that had to be cut is never kept, so it
+cannot come back the next time you scroll past those words.
 
 **Nothing happens at all.** Check the options are on and the model downloaded. The mod says where
 it looked for the engine; the most common cause is that Qwen-TTS Studio was installed but no model

@@ -226,9 +226,43 @@ namespace ImmersiveAI.Mcm
         public bool VoiceAutoSpeak { get; set; } = true;
 
         [SettingPropertyDropdown("How a reply is spoken", Order = 2, RequireRestart = false,
-            HintText = "Full read: the whole reply is made before a word is heard - steadiest voice, no gaps, longest wait. Streaming: the same single reading, played as it is made - starts in under a second, but a busy graphics card leaves gaps. By line: a separate reading per sentence - starts quickly under load, but the voice changes character at every sentence.")]
+            HintText = "Streaming (recommended): one reading, played as it is made - the first words come in well under a second and the pieces are joined so there is no seam. Full read: waits for the whole reading before a word is heard; slower to start, and now no steadier. By line: a separate reading per sentence - the voice changes character at every sentence, kept only for comparison.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
-        public Dropdown<string> VoiceDelivery { get; set; } = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 0);
+        public Dropdown<string> VoiceDelivery { get; set; } = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 1);
+
+        // The three castings. The lists are built AT BIND TIME from the player's own voices folder,
+        // which is why they start as a lone placeholder here — and why the bridge always re-selects
+        // them by the voice's ID rather than trusting the index MCM stored last session. A shelf can
+        // gain and lose voices between sessions; an index cannot survive that, and an id can.
+        [SettingPropertyDropdown("The women's voice", Order = 3, RequireRestart = false,
+            HintText = "Which voice every woman speaks with unless you have chosen one for her. The list is your own voices folder plus the hosted voices; a fuller version of this, with a listen button, lives behind the 'Voices' button in the talk screen.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public Dropdown<string> VoiceForWomen { get; set; } = new Dropdown<string>(McmChoiceLists.NoVoice, 0);
+
+        [SettingPropertyDropdown("The men's voice", Order = 4, RequireRestart = false,
+            HintText = "Which voice every man speaks with unless you have chosen one for him.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public Dropdown<string> VoiceForMen { get; set; } = new Dropdown<string>(McmChoiceLists.NoVoice, 0);
+
+        [SettingPropertyDropdown("Your own voice", Order = 5, RequireRestart = false,
+            HintText = "Reads your own lines back to you in a voice you pick. None by default: hearing your own character speak your words is divisive, and it doubles what each exchange costs to make.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public Dropdown<string> VoiceForMe { get; set; } = new Dropdown<string>(McmChoiceLists.NoVoice, 0);
+
+        [SettingPropertyBool("Speak reach-outs aloud", Order = 6, RequireRestart = false,
+            HintText = "When someone comes to you unbidden, their first words are spoken as they arrive. Off by default: several people may approach within a short ride and there is one voice at a time, so one would cut off another. Their words always carry a small play mark you can press instead.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public bool VoiceSpeakReachOuts { get; set; }
+
+        [SettingPropertyDropdown("Stop a voice with", Order = 7, RequireRestart = false,
+            HintText = "The key that silences a voice at once, anywhere - on the map, in a battle, with every window shut. Speech models very occasionally lose their ending and ramble; two safeguards already cut that short, and this is the one you can reach yourself.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public Dropdown<string> VoicePanicKey { get; set; } = new Dropdown<string>(McmChoiceLists.PanicKeys, 0);
+
+        [SettingPropertyText("Hosted voices: API key", Order = 8, RequireRestart = false,
+            HintText = "A key for a hosted speech service (OpenAI's, by default) - the road for a machine that cannot run a speech engine. Nothing is downloaded and no voice can be cloned; you pick from a fixed shelf, billed by the minute and shown in the same cost line as everything else. Leave empty to use only voices made on this machine.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public string CloudVoiceApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Starting personality (the director's spark)", Order = 11, RequireRestart = false,
             HintText = "At a character's first interaction, one small AI call writes them a private starting truth (1-3 sentences - a wound, a habit, a vanity) into their editable prompt file, grown from their real story, traits and your world prompt. 'Ask first' shows a popup per new face; Off leaves souls to begin plain.")]

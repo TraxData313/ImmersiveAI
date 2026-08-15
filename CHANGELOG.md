@@ -18,11 +18,26 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 **DRAFT Nexus changelog — re-check the 255-character cap before shipping:**
 
 ```
-* New: every child you father is written down - the hour, in her own voice
+* New: hear them speak - clone a voice, or use a hosted one
+* A play mark on every line: replies, letters, their own thoughts
+* New: every child you father is written down, in her own voice
 * Choose the feast: bread and salt, or a whole town rejoicing
-* Pay more for a night, get a longer, franker account
-* Invited weddings call both families - no strangers
 ```
+<!-- 251 characters, measured 2026.08.15 (Nexus counts characters, not bytes: this block is pure
+     ASCII so the two agree). Four characters of room. Re-measure after ANY edit here. -->
+
+
+### Hearing them speak
+- New: a small ▶ beside every line in the talk screen reads it aloud — their replies, their letters, and their own quiet thoughts alike. Press it again on anything ever said between you; a line heard once is instant ever after.
+- New: a **Voices** page in the talk screen, there for everyone: pick a voice, hear it before you commit, give it to the person before you, to all women, to all men, or to yourself. It says plainly what is missing when something is.
+- New: one button brings over every voice you made in Qwen-TTS Studio. Press it again after making another and only the new ones arrive.
+- New: **Backspace** silences a voice instantly, wherever you are — on the map, in a battle, with every window shut. A **Stop** button also appears in the talk screen whenever anything is speaking.
+- New: voices without a graphics card. Put a key for a hosted speech service in the settings and thirteen voices appear beside your own — about 1½ cents a minute, shown in the same cost line as everything else. It cannot clone anyone; that is what your own machine is for.
+- New: the speech model's own nine voices show up by themselves if you downloaded the model that carries them, so you can hear something before cloning anything.
+- New: your own lines can be read back to you in a voice you choose. Off by default.
+- New: someone who comes to you unbidden can speak their first words aloud as they arrive (off by default — several may come at once, and one voice would cut off another).
+- Fixed: a spoken reply no longer breaks up. The pieces are now poured together and handed over on the clock instead of a frame late, so a long reply is one unbroken take — and it starts in under half a second, which makes it the right way round for everyone.
+- Fixed: a voice that loses its ending and rambles is now cut off after seconds instead of minutes, and the ruined line is never kept, so it cannot come back the next time you scroll past those words.
 
 ### What they are told about themselves
 - Changed: your own words now have the LAST word. What you write in the world prompt and in a character's own prompt closes their mind instead of sitting in the middle of it, under a line saying plainly that where anything else they remember disagrees, your words stand. Edits there used to lose quietly to a long memory; now they bite.

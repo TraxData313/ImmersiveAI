@@ -69,6 +69,26 @@
         public static readonly string[] VoiceDeliveryModes =
             { "Full read (steadiest)", "Streaming (starts soonest)", "By line (oldest)" };
 
+        /// <summary>
+        /// What a voice dropdown holds before the shelf has been read: the "nobody" entry, which is
+        /// also a real choice (no voice for this kind of soul at all).
+        /// <para>
+        /// The voice lists are the ONE place this file's append-only rule cannot hold, because they
+        /// are not a fixed vocabulary at all — they are whatever the player has made. So they are
+        /// rebuilt from the shelf at every bind and re-selected BY VOICE ID, and the index MCM
+        /// persisted last session is treated as disposable. See McmBridge.RebuildVoiceLists.
+        /// </para>
+        /// </summary>
+        public static readonly string[] NoVoice = { NoVoiceLabel };
+
+        public const string NoVoiceLabel = "(none)";
+
+        /// <summary>Keys offered for the panic stop. Backspace first, and it is the default: nothing
+        /// in the game wants it during play, and it can be hit blind while something is screeching.
+        /// Append-only, like every other list here.</summary>
+        public static readonly string[] PanicKeys =
+            { "Backspace", "Delete", "End", "Home", "Insert", "F8", "F9", "F10", "F11", "F12" };
+
         /// <summary>The value an MCM-persisted dropdown index means, or null when the index falls
         /// outside the list (older/newer store files, or lists grown at runtime by SelectOrAdd).</summary>
         public static string? AtIndex(string[] choices, int? index) =>
