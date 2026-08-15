@@ -1,0 +1,12 @@
+{
+    "Id": "khuzait_female_generic",
+    "Name": "Khuzait Female Generic",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Khuzait woman, everyday, level - eastern, steppe. Median pitch 191 Hz.",
+    "Gender": 1,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

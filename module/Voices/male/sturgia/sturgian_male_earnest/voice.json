@@ -1,0 +1,12 @@
+{
+    "Id": "sturgian_male_earnest",
+    "Name": "Sturgian Male Earnest",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Sturgian man, sincere and measured - northern, Slavic-Scandinavian. Median pitch 126 Hz.",
+    "Gender": 2,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

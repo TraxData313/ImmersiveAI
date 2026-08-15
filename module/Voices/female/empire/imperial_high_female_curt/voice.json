@@ -1,0 +1,12 @@
+{
+    "Id": "imperial_high_female_curt",
+    "Name": "Imperial High Female Curt",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Imperial noble woman, clipped and impatient - upper-class British. Median pitch 234 Hz.",
+    "Gender": 1,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

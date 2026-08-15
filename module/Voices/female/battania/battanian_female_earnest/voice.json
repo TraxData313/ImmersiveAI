@@ -1,0 +1,12 @@
+{
+    "Id": "battanian_female_earnest",
+    "Name": "Battanian Female Earnest",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Battanian woman, sincere and measured - Celtic. Median pitch 162 Hz.",
+    "Gender": 1,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

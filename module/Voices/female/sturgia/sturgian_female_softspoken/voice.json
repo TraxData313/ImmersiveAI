@@ -1,0 +1,12 @@
+{
+    "Id": "sturgian_female_softspoken",
+    "Name": "Sturgian Female Softspoken",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Sturgian woman, quiet and close - northern, Slavic-Scandinavian. Median pitch 156 Hz.",
+    "Gender": 1,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

@@ -1,0 +1,12 @@
+{
+    "Id": "looters_01",
+    "Name": "Looters 01",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Looter man - gutter. Median pitch 163 Hz.",
+    "Gender": 2,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

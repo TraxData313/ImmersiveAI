@@ -1,0 +1,12 @@
+{
+    "Id": "khuzait_male_ironic",
+    "Name": "Khuzait Male Ironic",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Khuzait man, dry and amused - eastern, steppe. Median pitch 140 Hz.",
+    "Gender": 2,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

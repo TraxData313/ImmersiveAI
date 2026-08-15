@@ -1,0 +1,12 @@
+{
+    "Id": "khuzait_female_softspoken__navaldlc",
+    "Name": "Khuzait Female Softspoken (War Sails)",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Khuzait woman, quiet and close - eastern, steppe. War Sails recording. Median pitch 208 Hz.",
+    "Gender": 1,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

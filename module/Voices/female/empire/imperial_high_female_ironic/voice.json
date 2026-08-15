@@ -1,0 +1,12 @@
+{
+    "Id": "imperial_high_female_ironic",
+    "Name": "Imperial High Female Ironic",
+    "Backend": 0,
+    "RemoteVoiceId": "",
+    "Dimension": 2048,
+    "ReferenceText": "Imperial noble woman, dry and amused - upper-class British. Median pitch 231 Hz.",
+    "Gender": 1,
+    "Note": "",
+    "Source": "cloned in Qwen-TTS Studio from free-to-train audio (Hugging Face); accent brief per culture",
+    "CreatedUtc": "2026-08-15T08:48:31.0000000Z"
+}

@@ -79,6 +79,20 @@ Two rules the seeding keeps, and both are about not overruling the player
 A voice that is broken (no embedding, mangled voice.json) is skipped with a line in the log and
 costs nothing but itself - and arrives on the next start once it is mended.
 
+Where the voices in here came from
+---------------------------------
+
+The culture voices were made this way (2026.08.15): the brief was the ACCENT each people should
+read as - Battanian Celtic, Vlandian French-ish, Sturgian and Nord northern, Aserai and Khuzait
+eastern, the Empire British - prompts were drafted from that brief, the source audio was sourced
+on Hugging Face from voices offered free to train on, and the clones were made in Qwen-TTS Studio.
+Each voice.json records it in its own Source line, so the provenance travels with the folder
+instead of living in somebody's memory.
+
+The names and the pitch figures in their descriptions come from a survey of the game's own
+dialogue voiceover, which was used as the SPEC to match against - what a Khuzait curt man should
+sound like - and never as the source audio. That distinction is the whole reason these may ship.
+
 The rule that actually matters
 ------------------------------
 
@@ -88,4 +102,5 @@ CC0-licensed source audio only - kyutai/tts-voices on Hugging Face is 228 clips 
 deliberately for exactly this. Not a celebrity, not an actor, not someone off YouTube.
 
 Anything cloned from a real person's voice without their blessing stays on the machine it was
-made on and never enters this folder.
+made on and never enters this folder. package.ps1 enforces both halves: a name list, and a
+"NOT FOR RELEASE" mark inside voice.json for anything a name list cannot keep up with.
