@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -522,12 +522,16 @@ namespace ImmersiveAI.UI.ChatWindow
                 MisgivingsButtonText = page.Label;
                 MisgivingsTitleText = page.Title;
                 MisgivingsBodyText = page.Body;
+                RoadActionText = page.ActionLabel;
             }
             else
             {
                 MisgivingsButtonText = string.Empty;
+                RoadActionText = string.Empty;
                 IsMisgivingsShown = false;
             }
+            OnPropertyChanged("HasRoadAction");
+            OnPropertyChanged("RoadPageBottomMargin");
             OnPropertyChanged("HasMisgivings");
             OnPropertyChanged("MisgivingsHintText");
         }
@@ -768,6 +772,55 @@ namespace ImmersiveAI.UI.ChatWindow
             try { if (_selected != null) RefreshSelectionState(); }
             catch { }
         }
+
+        /// <summary>
+        /// The one act the "Between us" page carries — today the giving of a name to a child who has
+        /// never had it said before the world.
+        /// <para>
+        /// ADDED 2026.08.16. The page grew this button on the talk screen and the classic window did
+        /// not follow, so for anyone running <c>UseClassicChatWindow</c> — or after the screen's own
+        /// session fallback fires — the page said "you have never owned this child before the world"
+        /// and offered no way on earth to do it. That is a supported path, not a curiosity.
+        /// </para>
+        /// </summary>
+        public void ExecuteRoadAction()
+        {
+            var page = _roadPage;
+            if (page == null) return;
+            var npc = _selected?.Hero;
+            IsMisgivingsShown = false;
+
+            // A child waiting on a name comes first — the rarer, heavier act.
+            if (page.ActionSubject != null)
+            {
+                ImmersiveChatBehavior.DevGiveTheName(page.ActionSubject);
+                RefreshSelectionState();
+                return;
+            }
+            if (npc == null) return;
+            if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Wedding)
+                ImmersiveChatBehavior.OpenWeddingDoorFor(npc);
+            else if (page.Kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay)
+                ImmersiveChatBehavior.ShowWeddingViewFor(npc);
+            RefreshSelectionState();
+        }
+
+        private string _roadActionText = string.Empty;
+
+        [DataSourceProperty]
+        public string RoadActionText
+        {
+            get => _roadActionText;
+            set { if (value != _roadActionText) { _roadActionText = value; OnPropertyChangedWithValue(value, "RoadActionText"); } }
+        }
+
+        [DataSourceProperty]
+        public bool HasRoadAction => !string.IsNullOrEmpty(_roadActionText);
+
+        /// <summary>Room for the action button when there is one, so the page's own list never runs
+        /// underneath it.</summary>
+        [DataSourceProperty]
+        public int RoadPageBottomMargin => HasRoadAction ? 66 : 8;
 
         public void ExecuteToggleMisgivings()
         {

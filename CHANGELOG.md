@@ -51,6 +51,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 - New: an answer now speaks itself even with the screen shut, so you can send a line and hear the reply while you ride on. The ping and the unread mark still show you the way back to it. A switch under Voices puts it back the old way.
 
+### Between us
+- Fixed: on the older chat window the "Between us" page told you a child of yours had never been owned before the world and gave you no button to do it. The act now has its door on both windows.
+
 ### The hearth
 - New: the hearth (H) is now a stage. The women of your house are listed on the left, the one you turn to stands there ALIVE in her own place — the same picture the game uses for talking on the map — and her page is on the right: her season, the fortnight of nights, your children's cards, the two switches, and the one decision. It is the same screen the talking happens on, turned over; a button in the bar moves between the two.
 

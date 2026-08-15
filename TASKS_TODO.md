@@ -245,8 +245,13 @@ NEXT UPDATE:
           duty nights nothing further is laid down. Commented as deliberate; the guardrail says
           "if playtests show it farmable, deepen the closure" — so this is a tuning question to
           settle with real play, not a bug yet.
-    - [ ] The classic chat window (the fallback) has no `RoadActionText`/`HasRoadAction` binding, so
-          the "Between us" page's action button exists only in the talk screen.
+    - [x] The classic chat window had no `RoadActionText`/`HasRoadAction` binding — CONFIRMED REAL
+          and FIXED 2026.08.16. The page named the deed ("You have never owned X before the world…")
+          and offered no way on earth to do it, on a path that is both supported
+          (`UseClassicChatWindow`) and automatic (the talk screen's own session fallback). The window
+          now mirrors the screen's `RoadActionText` / `HasRoadAction` / `ExecuteRoadAction` and its
+          prefab carries the button, inside the page as it is there, with the list's bottom margin
+          making room for it so nothing runs underneath.
     - [ ] A feast/owning offer that lapses past its 30-day window leaves `Owned = NeverArose`, which
           reads as owned. That is the SAFE default and probably right — but it means silence can
           become accidental recognition, and it should be a decision rather than an accident.
