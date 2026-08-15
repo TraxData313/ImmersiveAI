@@ -7,6 +7,17 @@ NEXT UPDATE:
     - [x] Phase 2 — THE SCROLLBACK PROMPT: built + deployed 2026.08.14, UNPLAYTESTED
     - [ ] PLAYTESTS are underway
 
+- [ ] LIFE AFTER THE WEDDING (designed with Anton 2026.08.15 — concept LOCKED, build not started;
+      THE PLAN LIVES IN docs/after-the-wedding-design.md, read its spirit section FIRST and whole)
+      The post-marriage batch: temptation that comes to you, the lover road (buyout from her clan,
+      the father's letter, outside the companion limit), doors-with-reasons (misgivings applied to
+      the night — SUPERSEDES the nights doc's no-refusals rule, the asking happened), leaks → the
+      morning after, duty nights + the spiral ("Go to her anyway" — no narrator, code-enforced),
+      the era norm as world-law + spark muse cards, recognition of a lover's children (blood is
+      the game's, honor is ours) + the child who knows its own story, derived heart-bands (no
+      third number), "Between us" one-door page, hearth window as a tableau stage, Marry Anyone
+      recognized-then-retired. Build order + guardrails + open technical questions are in the doc.
+
 POST V1 or NOT FULLY DECIDED:
 - [ ] Party commands by word and by letter — RESEARCHED, ready to build (see docs/party-commands-research.md)
     Leaders of the player's clan parties take orders through conversation or letters via a
