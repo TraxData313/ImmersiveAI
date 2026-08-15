@@ -225,6 +225,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool VoiceAutoSpeak { get; set; } = true;
 
+        [SettingPropertyBool("Read the acted parts aloud too", Order = 5, RequireRestart = false,
+            HintText = "The small acted parts a character writes between asterisks - *sets down her cup* - are read aloud as narration between the spoken words. The asterisks themselves are never spoken. Off, only what was actually said is read, and a reply that answers with a gesture alone stays silent.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public bool VoiceSpeakActedParts { get; set; } = true;
+
         [SettingPropertyBool("Give everyone a voice of their own people", Order = 2, RequireRestart = false,
             HintText = "Anyone you have not cast yourself is given a voice of their own culture and sex, so a Battanian woman sounds Battanian without you casting every soul by hand. It is worked out from their own name, so it never changes between sessions. Anything you cast yourself, and any voice given to all women or all men, still wins. Off: only your own castings speak.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]

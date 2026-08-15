@@ -75,9 +75,17 @@ NEXT UPDATE:
           ImmersiveChatBehavior.Nights.cs first — both were hard-won and this must not undo them.
     - [ ] CHANGE THE SET INSIDE A TOWN → moved into **THE STAGE** above, with the tavern bug and
           the hearth rebuild. Same file; do not do it alone.
-    - [ ] LET THE VOICES READ THE *ACTED* PARTS, with an MCM toggle ON by default that turns it
-          back off. Core Voices\SpeakableText is where words and gestures are told apart today;
-          the split itself is Core EmoteText's strict single-asterisk grammar.
+    - [x] LET THE VOICES READ THE *ACTED* PARTS — BUILT 2026.08.16. `VoiceSpeakActedParts` (config
+          + MCM "Read the acted parts aloud too", live, default ON) picks between
+          `SpeakableText.SpokenOnly` and `SpokenWithGestures` in `VoiceService.PlanFor`, and
+          `BitesFor` takes the same flag. THREE THINGS WORTH KNOWING: the asterisks never reach the
+          engine (EmoteText hands back the gesture's CONTENT, so it was already safe); a gesture
+          ending on a word is now CLOSED with a stop, or it runs into the sentence after it and the
+          reading has nowhere to breathe; and the cache needed NOTHING — `VoiceCacheKey` is built
+          from the spoken text itself, so the two settings key differently for free. A reply that
+          answers only with *turns away without a word* is now speakable where it used to be silent.
+          UNPLAYTESTED: nobody has heard a gesture read aloud yet, and whether it lands as narration
+          or as a robot reading stage directions is exactly the kind of thing only listening answers.
     - [ ] SPEAK HER ANSWER WHEN THE CHAT IS CLOSED, so it can be listened to while doing something
           else. Today VoiceAutoSpeak only speaks into an open thread; the reply-ready notice path
           is where a closed-window answer already lands.

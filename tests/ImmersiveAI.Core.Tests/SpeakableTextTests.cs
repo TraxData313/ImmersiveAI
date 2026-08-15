@@ -31,8 +31,43 @@ public class SpeakableTextTests
     [Fact]
     public void SpokenWithGestures_KeepsThemInOrder()
     {
+        // The gesture is CLOSED, or it runs into the line after it and the whole thing is read as
+        // one breathless sentence with no place to breathe.
         var said = SpeakableText.SpokenWithGestures("Sit with me. *I pour the wine* It was a hard day.");
-        Assert.Equal("Sit with me. I pour the wine It was a hard day.", said);
+        Assert.Equal("Sit with me. I pour the wine. It was a hard day.", said);
+    }
+
+    [Fact]
+    public void SpokenWithGestures_ClosesAGestureThatEndsOnAWord()
+    {
+        var said = SpeakableText.SpokenWithGestures("*she looks up, slowly* Well?");
+        Assert.Equal("she looks up, slowly. Well?", said);
+    }
+
+    [Fact]
+    public void SpokenWithGestures_LeavesTheWritersOwnPunctuationAlone()
+    {
+        // Already ended — a second stop would be the mod correcting her writing.
+        var said = SpeakableText.SpokenWithGestures("*she laughs!* Well?");
+        Assert.Equal("she laughs! Well?", said);
+    }
+
+    [Fact]
+    public void SpokenWithGestures_NeverSpeaksTheAsterisks()
+    {
+        var said = SpeakableText.SpokenWithGestures("*sets down her cup* Say it again.");
+        Assert.DoesNotContain("*", said);
+    }
+
+    [Fact]
+    public void BitesFor_WithGestures_CarriesWhatSpokenOnlyDrops()
+    {
+        var without = SpeakableText.BitesFor("*turns away without a word*");
+        Assert.Empty(without);
+
+        var with = SpeakableText.BitesFor("*turns away without a word*", includeGestures: true);
+        Assert.Single(with);
+        Assert.Contains("turns away", with[0]);
     }
 
     [Fact]

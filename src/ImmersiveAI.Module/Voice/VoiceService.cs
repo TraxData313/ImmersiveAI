@@ -503,12 +503,19 @@ namespace ImmersiveAI.Voice
             if (!TryVoiceArguments(voice, out var kind, out var voicePath, out var speakerName))
                 return null;
 
-            // The gestures are acted, not read aloud: a voice reciting *sets down her cup* is
-            // instantly a machine reading stage directions.
-            var spoken = SpeakableText.SpokenOnly(text);
+            // Whether the acted parts are read aloud is the player's call (Anton, 2026.08.15), and it
+            // is ON by default: a reply that answers only with *turns away without a word* was
+            // otherwise silent, which is the opposite of what a voice is for. Off, the old rule
+            // stands — a voice reciting *sets down her cup* is a machine reading stage directions.
+            //
+            // Nothing else has to know: the cache key is built from the SPOKEN text below, so the two
+            // settings key differently and flipping the toggle can never replay a clip made under the
+            // other one.
+            var acted = Config?.VoiceSpeakActedParts ?? true;
+            var spoken = acted ? SpeakableText.SpokenWithGestures(text) : SpeakableText.SpokenOnly(text);
             if (spoken.Length == 0) return null;
 
-            var bites = SpeakableText.BitesFor(text);
+            var bites = SpeakableText.BitesFor(text, includeGestures: acted);
             if (bites.Count == 0) return null;
 
             return new SpeechPlan

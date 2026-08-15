@@ -816,6 +816,20 @@ namespace ImmersiveAI
         public bool VoiceAutoSpeak { get; set; } = true;
 
         /// <summary>
+        /// When true, the small acted parts between *asterisks* are read aloud too, as narration
+        /// between the spoken words. On by default (Anton, 2026.08.15): a reply whose whole answer is
+        /// *turns away without a word* was simply silent before, and half of what a soul does never
+        /// reached the ear at all.
+        /// <para>
+        /// The asterisks themselves are never spoken, and a gesture that ends on a word is closed
+        /// with a stop so it does not run into the sentence after it. Turn it off and the voice reads
+        /// only what was actually said — the older behaviour, and the right one for anyone who finds
+        /// stage directions in a voice jarring.
+        /// </para>
+        /// </summary>
+        public bool VoiceSpeakActedParts { get; set; } = true;
+
+        /// <summary>
         /// When true, anyone you have not cast by hand is given a voice of their own people and
         /// their own sex — so a Battanian woman sounds Battanian without you casting five hundred
         /// souls one at a time.

@@ -48,6 +48,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Fixed: a spoken reply no longer breaks up. The pieces are now poured together and handed over on the clock instead of a frame late, so a long reply is one unbroken take — and it starts in under half a second, which makes it the right way round for everyone.
 - Fixed: a voice that loses its ending and rambles is now cut off after seconds instead of minutes, and the ruined line is never kept, so it cannot come back the next time you scroll past those words.
 - Changed: every voice on the shelf now says where it comes from — "(Qwen TTS Studio)" for the ones made on your own machine, "(Qwen TTS, built-in)" for the speech model's own, "(OpenAI)" for the hosted ones. Before, only the hosted ones were marked, which read as though the rest came from nowhere.
+- New: the small acted parts — *sets down her cup* — are now read aloud too, as narration between the spoken words, so a reply that answers with a gesture alone is no longer silence. The asterisks themselves are never spoken. There is a switch under Voices if you would rather hear only what was said.
 
 ### What they are told about themselves
 - Changed: your own words now have the LAST word. What you write in the world prompt and in a character's own prompt closes their mind instead of sitting in the middle of it, under a line saying plainly that where anything else they remember disagrees, your words stand. Edits there used to lose quietly to a long memory; now they bite.

@@ -40,13 +40,34 @@ namespace ImmersiveAI.Core.Voices
             return Collapse(string.Join(" ", spoken));
         }
 
-        /// <summary>The whole message including its gestures, for a player who would rather hear
-        /// them read as narration than lose them. Kept as a deliberate option, never the default.</summary>
+        /// <summary>
+        /// The whole message including its gestures, for a player who would rather hear them read as
+        /// narration than lose them (Anton, 2026.08.15 — a toggle, on by default).
+        /// <para>
+        /// The asterisks themselves never reach the engine: <see cref="EmoteText"/> hands back the
+        /// gesture's CONTENT, so what is read aloud is "I pour the wine", never "asterisk I pour the
+        /// wine asterisk". And a segment that ends on a word is closed with a full stop, because
+        /// otherwise a gesture runs straight into the sentence after it — "I pour the wine It was a
+        /// hard day" — which reads as one breathless line and gives <see cref="Chunk"/> nowhere to
+        /// breathe. Punctuation already there is left exactly as it stands.
+        /// </para>
+        /// </summary>
         public static string SpokenWithGestures(string? body)
         {
             var segments = EmoteText.Split(body);
             if (segments.Count == 0) return string.Empty;
-            return Collapse(string.Join(" ", segments.Select(s => s.Text)));
+            return Collapse(string.Join(" ", segments.Select(s => Closed(s.Text))));
+        }
+
+        /// <summary>Gives a segment an ending when it has none, so the next one does not run into it.
+        /// Only a segment finishing on a letter or a digit is touched — a comma, a dash or a question
+        /// mark is the writer's own choice and is left alone.</summary>
+        private static string Closed(string text)
+        {
+            var t = (text ?? string.Empty).TrimEnd();
+            if (t.Length == 0) return t;
+            var last = t[t.Length - 1];
+            return char.IsLetterOrDigit(last) ? t + "." : t;
         }
 
         /// <summary>True when this body has words worth sending to an engine at all.</summary>
