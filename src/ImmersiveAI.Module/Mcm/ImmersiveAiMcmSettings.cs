@@ -225,6 +225,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool VoiceAutoSpeak { get; set; } = true;
 
+        [SettingPropertyBool("Speak answers you are not watching", Order = 6, RequireRestart = false,
+            HintText = "An answer speaks itself even with the screen shut, so you can send a line and listen while you ride. Needs 'Speak without being asked'. There is one voice at a time, so two answers landing together means the second cuts off the first - Backspace silences it. With a hosted voice this is billed without you pressing anything.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public bool VoiceSpeakWhenClosed { get; set; } = true;
+
         [SettingPropertyBool("Read the acted parts aloud too", Order = 5, RequireRestart = false,
             HintText = "The small acted parts a character writes between asterisks - *sets down her cup* - are read aloud as narration between the spoken words. The asterisks themselves are never spoken. Off, only what was actually said is read, and a reply that answers with a gesture alone stays silent.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]

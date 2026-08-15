@@ -816,6 +816,22 @@ namespace ImmersiveAI
         public bool VoiceAutoSpeak { get; set; } = true;
 
         /// <summary>
+        /// When true, a reply speaks itself even if you have closed the window or wandered off to
+        /// another thread — so an answer can be LISTENED to while you ride, trade or fight (Anton,
+        /// 2026.08.15). Rides <see cref="VoiceAutoSpeak"/>: with that off nothing speaks by itself
+        /// anywhere, which is what that switch says on the tin.
+        /// <para>
+        /// This deliberately reverses an earlier rule ("a voice from a conversation they walked away
+        /// from is a ghost in the room") because the asking happened. The old hazard is real and
+        /// unchanged: there is one voice at a time, so if two answers land close together the second
+        /// cuts off the first — Backspace silences either, and the words keep their play mark. For a
+        /// HOSTED voice this also means a line is made, and billed, without anyone pressing anything;
+        /// turn it off if you would rather pay only for what you ask to hear.
+        /// </para>
+        /// </summary>
+        public bool VoiceSpeakWhenClosed { get; set; } = true;
+
+        /// <summary>
         /// When true, the small acted parts between *asterisks* are read aloud too, as narration
         /// between the spoken words. On by default (Anton, 2026.08.15): a reply whose whole answer is
         /// *turns away without a word* was simply silent before, and half of what a soul does never

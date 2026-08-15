@@ -86,9 +86,19 @@ NEXT UPDATE:
           answers only with *turns away without a word* is now speakable where it used to be silent.
           UNPLAYTESTED: nobody has heard a gesture read aloud yet, and whether it lands as narration
           or as a robot reading stage directions is exactly the kind of thing only listening answers.
-    - [ ] SPEAK HER ANSWER WHEN THE CHAT IS CLOSED, so it can be listened to while doing something
-          else. Today VoiceAutoSpeak only speaks into an open thread; the reply-ready notice path
-          is where a closed-window answer already lands.
+    - [x] SPEAK HER ANSWER WHEN THE CHAT IS CLOSED — BUILT 2026.08.16. `VoiceSpeakWhenClosed`
+          (config + MCM "Speak answers you are not watching", live, default ON) and one shared rule,
+          `ImmersiveChatBehavior.ShouldSpeakNow(viewing)`, now read by BOTH gated sites — the quick-
+          chat reply and the opening greeting. It RIDES `VoiceAutoSpeak`: with that off nothing
+          anywhere speaks unasked, which is what that switch promises. The ready-ping still fires
+          when she is not being watched whether or not it also speaks — the notice is the way BACK
+          to the thread, and hearing her is no substitute for finding her. The prewarm above the
+          call already made the sound for a local voice, so a closed-window answer speaks at once.
+          NOTE this deliberately reverses a written rule ("a voice from a conversation they walked
+          away from is a ghost in the room"); the asking happened, so it is a switch of its own
+          rather than an edit of the old one. TWO KNOWN COSTS, both stated in the hint: one voice at
+          a time, so two answers landing together means the second cuts off the first; and a HOSTED
+          voice is billed without anyone pressing anything. UNPLAYTESTED.
 
 - [ ] THE ONE SCREEN REWORK (2026.08.14, Anton's big batch — THE PLAN LIVES IN docs/one-screen-plan.md,
       read it first; research in docs/talk-screen-research.md + docs/prompt-text-inventory.md)

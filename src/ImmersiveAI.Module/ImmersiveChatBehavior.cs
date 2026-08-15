@@ -1315,6 +1315,24 @@ namespace ImmersiveAI
             return string.IsNullOrWhiteSpace(last) ? hint : last.Trim() + "\n\n" + hint;
         }
 
+        /// <summary>
+        /// Whether an answer that has just landed should say itself, given whether the player is
+        /// looking at that thread.
+        /// <para>
+        /// Watching, it always may: the words are on screen and the voice belongs to them. NOT
+        /// watching used to mean silence — "a voice from a conversation they walked away from is a
+        /// ghost in the room" — and Anton asked for the reverse (2026.08.15): he wants to send a
+        /// line, shut the screen, ride on, and HEAR the answer. So it is a switch of its own
+        /// (<see cref="ModConfig.VoiceSpeakWhenClosed"/>) rather than a change of the old rule, and
+        /// it rides the auto-speak switch above it — with that off, nothing anywhere speaks unasked.
+        /// </para>
+        /// </summary>
+        private bool ShouldSpeakNow(bool viewing)
+        {
+            if (!Voice.VoiceService.AutoSpeakEnabled) return false;
+            return viewing || _config.VoiceSpeakWhenClosed;
+        }
+
         /// <summary>Speaks the words the panel is showing this very moment, once, if a voice was cast
         /// for them — the reply line's consequence. Everything about it is guarded: this runs inside
         /// the engine's own conversation state machine, where a thrown exception is not a mute NPC but
@@ -1455,12 +1473,13 @@ namespace ImmersiveAI
                     MarkMetInWorldsEyes(npc);
                     UI.TalkUI.OnThreadChanged(npc, markUnread: false);
 
-                    // Spoken only if they are actually looking at this thread — the same rule a
-                    // reply follows. The screen was asked for, so they usually are.
-                    if (UI.TalkUI.IsViewing(npc) && Voice.VoiceService.AutoSpeakEnabled)
+                    // The same rule a reply follows. The ready-ping still fires when they are not
+                    // looking, whether or not it also speaks: the notice is the way BACK to the
+                    // thread, and hearing a greeting is no substitute for being able to find it.
+                    bool watching = UI.TalkUI.IsViewing(npc);
+                    if (!watching) NotifyReplyReady(npc);
+                    if (ShouldSpeakNow(watching))
                         Voice.VoiceService.Speak(npc, greeting);
-                    else
-                        NotifyReplyReady(npc);
                 });
             }
             catch (Exception ex)
@@ -3685,11 +3704,9 @@ namespace ImmersiveAI
                     if (!viewing) NotifyReplyReady(npc);
                     LogConversationLine(npc, outcome.Reply);
 
-                    // Here the words ARE on screen the moment they land, so this is the visible
-                    // moment. Only when the player is actually reading this thread: a voice from a
-                    // conversation they walked away from is a ghost in the room. They can always
-                    // play it themselves from the thread.
-                    if (viewing && Voice.VoiceService.AutoSpeakEnabled)
+                    // Watched or not (Anton, 2026.08.15 — see ShouldSpeakNow). The prewarm above has
+                    // usually made the sound already, so a closed-window answer speaks at once.
+                    if (ShouldSpeakNow(viewing))
                         Voice.VoiceService.Speak(npc, outcome.Reply);
                     // A bargain laid in the window is presented the same way: after the words, the
                     // seal — the native inquiry rides its own global layer (order 19501) above the

@@ -250,7 +250,7 @@ namespace ImmersiveAI.Mcm
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 s.EnableLoversRoad, s.LoverRansomHagglePercent, s.EnableClosedDoors, s.AllowDutyNights,
                 SelectedOf(s.PersonaSparkMode),
-                s.EnableVoice, s.VoiceAutoSpeak, s.VoiceSpeakActedParts, s.VoiceAutoCast,
+                s.EnableVoice, s.VoiceAutoSpeak, s.VoiceSpeakWhenClosed, s.VoiceSpeakActedParts, s.VoiceAutoCast,
                 SelectedOf(s.VoiceDelivery),
                 SelectedOf(s.VoiceForMe),
                 s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.CloudVoiceApiKey,
@@ -284,7 +284,7 @@ namespace ImmersiveAI.Mcm
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.EnableLoversRoad, c.LoverRansomHagglePercent, c.EnableClosedDoors, c.AllowDutyNights,
                 c.PersonaSparkMode,
-                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceSpeakActedParts, c.VoiceAutoCast, c.VoiceDelivery,
+                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceSpeakWhenClosed, c.VoiceSpeakActedParts, c.VoiceAutoCast, c.VoiceDelivery,
                 // The castings live in the voices' own sheet, not in config.json — so the signature
                 // asks the service for them, and a voice given in the talk screen's panel shows up
                 // in the menu on the next poll without either side owning the truth twice.
@@ -354,6 +354,7 @@ namespace ImmersiveAI.Mcm
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.EnableVoice = c.EnableVoice;
             s.VoiceAutoSpeak = c.VoiceAutoSpeak;
+            s.VoiceSpeakWhenClosed = c.VoiceSpeakWhenClosed;
             s.VoiceSpeakActedParts = c.VoiceSpeakActedParts;
             s.VoiceAutoCast = c.VoiceAutoCast;
             Select(s.VoiceDelivery, VoiceDeliveryLabel(c.VoiceDelivery));
@@ -463,6 +464,7 @@ namespace ImmersiveAI.Mcm
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.EnableVoice = s.EnableVoice;
             c.VoiceAutoSpeak = s.VoiceAutoSpeak;
+            c.VoiceSpeakWhenClosed = s.VoiceSpeakWhenClosed;
             c.VoiceSpeakActedParts = s.VoiceSpeakActedParts;
             c.VoiceAutoCast = s.VoiceAutoCast;
             c.VoiceDelivery = VoiceDeliveryValue(SelectedOf(s.VoiceDelivery)) ?? c.VoiceDelivery;
