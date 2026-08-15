@@ -87,15 +87,46 @@ everybody else. Which road a voice takes is decided by the voice, never by a set
    Immersive AI finds the engine and models by itself; if it cannot, that same page says plainly
    what is missing.
 4. **Pick who speaks.** In the same panel: press **Bring over from Studio** to pull in the voices you
-   made there, press **▶** beside one to hear it, then give it to **all women**, **all men**, or to
-   the person you are talking to. That is enough to start.
+   made there, press **♪** beside one to hear it, then give it to the person you are talking to — or
+   to nobody, and let everyone be given a voice of their own people (see below). That is enough to
+   start.
 
 If anything is missing, voices simply stay quiet and one grey line tells you why. **A voice problem
 never blocks, delays or loses a reply** — the words always arrive, whatever the sound is doing.
 
+### You do not have to cast everybody
+
+Anyone you have not given a voice to yourself is handed one of **their own people and their own
+sex** — so a Battanian woman sounds Battanian and an Aserai lord sounds Aserai, without you casting
+five hundred souls one at a time. Each voice on the shelf says where it belongs:
+`female/battania/Gwen`.
+
+Three things worth knowing:
+
+- **It never changes.** The choice is worked out from the person's own name, not rolled, so they
+  sound the same next session and after any reload.
+- **You always outrank it.** A voice you cast on someone by hand wins, always.
+- **If their people have no voices yet**, one belonging to nobody in particular is used, and failing
+  that, any voice of the right sex. Nobody falls silent for want of a match.
+- **Only voices made on your machine** are given out this way. Hosted voices are billed by the
+  minute, so one is never handed to anybody automatically — put one on somebody yourself and it
+  speaks for them happily.
+- **You get one too**, by the same rule, so your own lines can be read back. Cast yourself something
+  else with **me**, or leave it.
+
+Turn it off under **Voices → give everyone a voice of their own people** if you would rather cast
+every soul yourself.
+
 ### Voices without cloning anything
 
-The cloning model (`qwen-talker-1.7b-base`) carries **no ready-made voices at all** — it is a model
+**The mod brings a few voices with it.** They are put on your shelf the first time you run it, so
+step 4 has something in it before you have made anything. From that moment they are *yours*: rename
+them, give them to whoever you like, or delete the ones you have no use for — a voice you delete
+stays deleted, and one you have edited is never written over when the mod updates. They are cloned
+from freely-licensed audio, which is a real constraint on how good they can be; your own five
+minutes with a clean clip will beat them.
+
+Beyond those, the cloning model (`qwen-talker-1.7b-base`) carries **no ready-made voices at all** — it is a model
 for making them, not for having them. If you want to hear something the moment you turn voices on,
 also download **`qwen-talker-1.7b-customvoice`** in Studio and select it there: it carries nine
 built-in speakers (Serena, Vivian, Sohee, Ono Anna, Aiden, Dylan, Eric, Ryan, Uncle Fu), and they

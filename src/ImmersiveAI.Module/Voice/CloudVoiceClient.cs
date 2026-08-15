@@ -303,7 +303,9 @@ namespace ImmersiveAI.Voice
                 shelf.Add(new VoicePreset
                 {
                     Id = "cloud-" + name,
-                    Name = char.ToUpperInvariant(name[0]) + name.Substring(1) + " (hosted)",
+                    // Bare, on purpose: the panel says where a voice comes from itself, for every
+                    // shelf alike (VoiceRowVM.NameFor), so a mark baked in here would double up.
+                    Name = char.ToUpperInvariant(name[0]) + name.Substring(1),
                     Backend = VoiceBackend.Remote,
                     RemoteVoiceId = name,
                     Source = "hosted speech service",

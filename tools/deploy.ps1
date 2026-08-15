@@ -104,4 +104,21 @@ if (Test-Path $guiSource) {
     Copy-Item (Join-Path $guiSource "*") $guiDest -Recurse -Force
 }
 
+# The voices that ship WITH the mod, so a fresh install is never a shelf with nothing on it. Laid
+# onto the player's own shelf once each by VoiceSeeds; their folder is theirs from then on. Same
+# contents-into-ensured-destination trap as GUI above.
+$voicesSource = Join-Path $repoRoot "module\Voices"
+if (Test-Path $voicesSource) {
+    $voicesDest = Join-Path $moduleDir "Voices"
+    # Cleared first, unlike GUI: a voice that MOVED (female\sibylla -> female\other\sibylla when
+    # the shelf grew a culture rung) would otherwise be left behind at the old path as well, and
+    # the seeder would honestly lay the same voice out twice under two names. This folder is ours
+    # and rebuilt every deploy; the player's own shelf lives in Configs and is never touched.
+    if (Test-Path $voicesDest) { Remove-Item $voicesDest -Recurse -Force }
+    New-Item -ItemType Directory -Force $voicesDest | Out-Null
+    Copy-Item (Join-Path $voicesSource "*") $voicesDest -Recurse -Force
+    $shipped = @(Get-ChildItem $voicesSource -Recurse -Filter "voice.json" -ErrorAction SilentlyContinue).Count
+    Write-Host "Voices shipped with the mod: $shipped"
+}
+
 Write-Host "Deployed to $moduleDir as 'Immersive AI (dev)' - enable it (and disable the Workshop one) in the launcher."

@@ -771,6 +771,19 @@ namespace ImmersiveAI
         /// waits to be asked for it, which is the quieter way to read at your own pace.</summary>
         public bool VoiceAutoSpeak { get; set; } = true;
 
+        /// <summary>
+        /// When true, anyone you have not cast by hand is given a voice of their own people and
+        /// their own sex — so a Battanian woman sounds Battanian without you casting five hundred
+        /// souls one at a time.
+        /// <para>
+        /// The choice is worked out from their own name and never written down, so it is the same
+        /// voice every session and survives every reload. Anything you cast yourself always wins,
+        /// and so does a voice you hand to all women or all men. Turn this off and only your own
+        /// castings speak.
+        /// </para>
+        /// </summary>
+        public bool VoiceAutoCast { get; set; } = true;
+
         /// <summary>Where the speech engine's own files live (the folder holding qwen3_tts.dll and
         /// its companions). Leave empty and it is looked for in the usual places — this is only for
         /// an unusual install, or to point at a second copy.</summary>
@@ -829,10 +842,12 @@ namespace ImmersiveAI
         public string VoicePanicKey { get; set; } = "Backspace";
 
         /// <summary>When true, a soul who comes to you unbidden speaks their first words aloud as
-        /// they arrive. Off by default and deliberately: several souls may reach out in the same
-        /// stretch of map, and one voice cutting off another mid-sentence is worse than silence.
-        /// Their words can always be heard with the little ▶ beside them.</summary>
-        public bool VoiceSpeakReachOuts { get; set; }
+        /// they arrive. ON since 2026.08.15 (Anton's call): being spoken to unprompted is most of
+        /// what makes them feel alive, and it is the moment a voice earns its keep. The known cost
+        /// stands — several souls may reach out within one stretch of map and there is one voice at
+        /// a time, so a second arrival cuts off the first mid-sentence. Backspace silences it, and
+        /// their words keep the play mark beside them either way.</summary>
+        public bool VoiceSpeakReachOuts { get; set; } = true;
 
         /// <summary>
         /// A hosted speech service, for the far more common player who has no graphics card to spare

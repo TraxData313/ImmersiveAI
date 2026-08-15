@@ -75,6 +75,20 @@ namespace ImmersiveAI.Core.Voices
         /// <summary>Only ever a hint for first assignment — see <see cref="VoiceGender"/>.</summary>
         public VoiceGender Gender { get; set; } = VoiceGender.Unknown;
 
+        /// <summary>
+        /// Which people this voice belongs to, as the game's own culture id — <c>battania</c>,
+        /// <c>aserai</c>, <c>empire</c>. Empty means it belongs to nobody in particular, which is
+        /// the honest state of a voice cloned off a friend rather than cast for a nation.
+        /// <para>
+        /// Like <see cref="Gender"/> this is ONLY a hint for choosing a soul's first voice, never a
+        /// rule about the voice itself: the player may put a Battanian voice on an Imperial lady and
+        /// nothing here will argue. It is filled in from the folder a shipped voice arrives in
+        /// (<c>Voices\female\battania\</c>), and it is what lets a fresh install give five hundred
+        /// souls their own voice without anyone casting a single one.
+        /// </para>
+        /// </summary>
+        public string Culture { get; set; } = string.Empty;
+
         /// <summary>The player's own note. Never shown to an NPC, never sent anywhere.</summary>
         public string Note { get; set; } = string.Empty;
 

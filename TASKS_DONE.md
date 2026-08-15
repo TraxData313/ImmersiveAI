@@ -271,3 +271,51 @@
     releases page), docs/voiceover-setup.md is finished and de-drafted, and the engine notes carry
     every measurement above. 680 Core tests green (VoiceBudget and WavFiles are new and covered).
     2026.08.15 04.10.00
+
+--------------------------------------------------------------------------------------------------
+### Voices that ship with the mod — a shelf that is never empty
+    A fresh install turned voices on and found nothing to speak with unless the player had already
+    cloned something in Studio (or fetched the customvoice model, or pasted a hosted key). So the
+    mod now CARRIES voices: module\Voices\ is tracked in git, deploy.ps1 and package.ps1 both copy
+    it to Modules\<id>\Voices, and Core VoiceSeeds.Seed lays each one onto the player's own shelf
+    once, called from VoiceService.EnsureShelf.
+
+    THE WHOLE DESIGN IS TWO RULES ABOUT NOT OVERRULING THE PLAYER, and both are unit-tested (13 new
+    tests, 696 green). A name already on their shelf is never written over, so an edited or
+    re-cloned voice survives every update. And a voice already offered is never offered again,
+    because deleting one has to MEAN something — that is what Voices\_seeded.json is for, and it is
+    why a name is ledgered the moment it is OFFERED rather than the moment it is copied (the
+    already-there case must ledger too, or it is re-examined forever). A voice added to a LATER
+    version still arrives on its own, since the ledger is by name.
+
+    The female\ / male\ subfolders are for our own tidiness, not a schema: an unrecognised group
+    name seeds its voices with no gender hint, and a voice folder may sit loose at the top. The
+    group's gender only FILLS what the voice does not state — a voice.json naming its own gender
+    keeps it whichever folder it was filed under. A broken shipped voice is skipped with a log line
+    and, deliberately NOT ledgered, arrives on the next start once mended.
+
+    The folder ships EMPTY of voices for now (README.txt only, and it is where the constraint is
+    written where it will be read): a voice folder carries the clip it was cloned from, so shipping
+    one hands every player a copy of that. CC0/public-domain source audio only — kyutai/tts-voices.
+    Anton is training the first set from free wavs in another session.
+    2026.08.15 09.56.00
+
+
+--------------------------------------------------------------------------------------------------
+### The packager refuses to ship a voice we may not ship
+    module\Voices\ travels with the mod and a voice folder carries the EMBEDDING ITSELF, so the
+    likeness constraint that had been an agreement since 2026.08.14 acquired a live way to be
+    violated by accident the moment shipped voices existed. package.ps1 now carries a $neverShip
+    list and throws rather than packaging - matching the folder name AND the name/id inside
+    voice.json, so a renamed folder cannot slip past. deploy.ps1 deliberately does NOT check: the
+    local install is exactly where a development clone belongs.
+
+    Verified both directions on Anton's own test voices (Sibylla = Alba, max/"Achilles" = Pitt):
+    refuses with them present, packages clean with them moved out, folders restored afterwards.
+
+    Also settled while probing the two real folders: THE FOLDER NAMES THE VOICE, not the Id inside
+    voice.json. Studio exports carry their own preset ids, so male\max\ would have arrived on the
+    shelf as "achilles" - and the ledger that remembers a deleted voice would have been keyed to a
+    name nobody chose. The player-facing Name is untouched. Pinned by a test built from that case.
+    2026.08.15 10.04.26
+

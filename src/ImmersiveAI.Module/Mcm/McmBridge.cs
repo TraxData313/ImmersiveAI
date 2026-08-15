@@ -212,8 +212,6 @@ namespace ImmersiveAI.Mcm
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
             if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
             if (s.VoiceDelivery == null) { s.VoiceDelivery = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 1); repaired = true; }
-            if (s.VoiceForWomen == null) { s.VoiceForWomen = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
-            if (s.VoiceForMen == null) { s.VoiceForMen = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
             if (s.VoiceForMe == null) { s.VoiceForMe = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
             if (s.VoicePanicKey == null) { s.VoicePanicKey = new Dropdown<string>(McmChoiceLists.PanicKeys, 0); repaired = true; }
             if (s.NightWindowHotkey == null) { s.NightWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 9); repaired = true; }
@@ -251,8 +249,8 @@ namespace ImmersiveAI.Mcm
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 SelectedOf(s.PersonaSparkMode),
-                s.EnableVoice, s.VoiceAutoSpeak, SelectedOf(s.VoiceDelivery),
-                SelectedOf(s.VoiceForWomen), SelectedOf(s.VoiceForMen), SelectedOf(s.VoiceForMe),
+                s.EnableVoice, s.VoiceAutoSpeak, s.VoiceAutoCast, SelectedOf(s.VoiceDelivery),
+                SelectedOf(s.VoiceForMe),
                 s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.CloudVoiceApiKey,
                 s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightCooldownHours,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
@@ -282,11 +280,11 @@ namespace ImmersiveAI.Mcm
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.PersonaSparkMode,
-                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceDelivery,
+                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceAutoCast, c.VoiceDelivery,
                 // The castings live in the voices' own sheet, not in config.json — so the signature
                 // asks the service for them, and a voice given in the talk screen's panel shows up
                 // in the menu on the next poll without either side owning the truth twice.
-                Voice.VoiceService.DefaultFemaleId, Voice.VoiceService.DefaultMaleId, Voice.VoiceService.PlayerVoiceId,
+                Voice.VoiceService.PlayerVoiceId,
                 c.VoiceSpeakReachOuts, c.VoicePanicKey, c.CloudVoiceApiKey,
                 c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightCooldownHours,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
@@ -347,6 +345,7 @@ namespace ImmersiveAI.Mcm
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.EnableVoice = c.EnableVoice;
             s.VoiceAutoSpeak = c.VoiceAutoSpeak;
+            s.VoiceAutoCast = c.VoiceAutoCast;
             Select(s.VoiceDelivery, VoiceDeliveryLabel(c.VoiceDelivery));
             s.VoiceSpeakReachOuts = c.VoiceSpeakReachOuts;
             SelectOrAdd(s.VoicePanicKey, c.VoicePanicKey);
@@ -449,6 +448,7 @@ namespace ImmersiveAI.Mcm
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.EnableVoice = s.EnableVoice;
             c.VoiceAutoSpeak = s.VoiceAutoSpeak;
+            c.VoiceAutoCast = s.VoiceAutoCast;
             c.VoiceDelivery = VoiceDeliveryValue(SelectedOf(s.VoiceDelivery)) ?? c.VoiceDelivery;
             c.VoiceSpeakReachOuts = s.VoiceSpeakReachOuts;
             c.VoicePanicKey = SelectedOf(s.VoicePanicKey) ?? c.VoicePanicKey;
@@ -536,14 +536,10 @@ namespace ImmersiveAI.Mcm
 
                 if (rebuild)
                 {
-                    s.VoiceForWomen = Rebuilt(labels, ids, Voice.VoiceService.DefaultFemaleId);
-                    s.VoiceForMen = Rebuilt(labels, ids, Voice.VoiceService.DefaultMaleId);
                     s.VoiceForMe = Rebuilt(labels, ids, Voice.VoiceService.PlayerVoiceId);
                     return;
                 }
 
-                SelectById(s.VoiceForWomen, labels, ids, Voice.VoiceService.DefaultFemaleId);
-                SelectById(s.VoiceForMen, labels, ids, Voice.VoiceService.DefaultMaleId);
                 SelectById(s.VoiceForMe, labels, ids, Voice.VoiceService.PlayerVoiceId);
             }
             catch (Exception ex)
@@ -590,12 +586,8 @@ namespace ImmersiveAI.Mcm
                 // reading a casting out of THAT would clear all three. Nothing to pull yet.
                 if (_voiceIdsInMenuOrder.Count <= 1) return;
 
-                var female = IdOfSelected(s.VoiceForWomen);
-                var male = IdOfSelected(s.VoiceForMen);
                 var mine = IdOfSelected(s.VoiceForMe);
 
-                if (female != null && female != Voice.VoiceService.DefaultFemaleId) Voice.VoiceService.SetDefaultFemale(female);
-                if (male != null && male != Voice.VoiceService.DefaultMaleId) Voice.VoiceService.SetDefaultMale(male);
                 if (mine != null && mine != Voice.VoiceService.PlayerVoiceId) Voice.VoiceService.SetPlayerVoice(mine);
             }
             catch (Exception ex)

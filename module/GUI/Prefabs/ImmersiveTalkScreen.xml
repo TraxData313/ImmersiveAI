@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   THE TALK SCREEN (2026.08.14) - the chat window and the letter window grown into one place, and
   lifted out of a small box in the middle of the map into something shaped like the game's own Talk:
 
@@ -138,7 +138,12 @@
                   <Children>
 
                     <!-- their name again on this side, so the thread is never anonymous while scrolled -->
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="34" VerticalAlignment="Top" MarginTop="44" MarginRight="200" Brush="Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="34" VerticalAlignment="Top" MarginTop="44" MarginRight="200" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                      <Children>
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="12" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@VoiceBadgeColor" Brush.TextHorizontalAlignment="Left" Text="@VoiceBadgeText" IsVisible="@HasVoiceBadge" />
+                      </Children>
+                    </ListPanel>
 
                     <!-- the road page: her misgivings, her kin's blessing, the days counting down,
                          then the wedding day itself, kept forever -->
@@ -519,7 +524,16 @@
                           <Children>
                             <ListPanel Id="VoicesList" DataSource="{VoiceRows}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
                               <ItemTemplate>
-                                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="56">
+                                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren">
+                                  <Children>
+                                    <!-- a folder: one line, click to fold it shut -->
+                                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="38" VerticalAlignment="Top" IsVisible="@IsHeader" Command.Click="ExecuteSelect">
+                                      <Children>
+                                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="6" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@HeaderText" />
+                                      </Children>
+                                    </ButtonWidget>
+                                    <!-- a voice -->
+                                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="56" VerticalAlignment="Top" IsVisible="@IsVoiceRow">
                                   <Children>
                                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginLeft="44" Command.Click="ExecuteSelect">
                                       <Children>
@@ -543,6 +557,8 @@
                                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@HearText" />
                                       </Children>
                                     </ButtonWidget>
+                                  </Children>
+                                    </Widget>
                                   </Children>
                                 </Widget>
                               </ItemTemplate>
@@ -569,16 +585,6 @@
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceForThemText" />
                       </Children>
                     </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="36" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceAllWomen">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceAllWomenText" />
-                      </Children>
-                    </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="36" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceAllMen">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceAllMenText" />
-                      </Children>
-                    </ButtonWidget>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="90" SuggestedHeight="36" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceMine">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceMineText" />
@@ -600,12 +606,17 @@
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceEnabledText" />
                       </Children>
                     </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" MarginRight="10" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceShowAll">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceShowAllText" />
+                      </Children>
+                    </ButtonWidget>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="40" MarginRight="10" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceImport">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceImportText" />
                       </Children>
                     </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="40" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceOpenFolder">
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="40" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceOpenFolder">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceFolderText" />
                       </Children>

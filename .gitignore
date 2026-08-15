@@ -11,3 +11,20 @@ dist/
 # Droppings of TaleWorlds' Workshop uploader when run from the repo root
 steam_appid.txt
 steam_workshop_uploader.txt
+
+# The voices themselves are NOT tracked, on purpose.
+#
+# Everything currently in module\Voices is cloned either from Bannerlord's own dialogue actors or
+# from real people (Sibylla, Max). Deploying them locally is fine and intended; publishing them is
+# not, and a git history is forever - which makes an accidental "commit all" from a GUI the one
+# mistake that cannot be taken back. package.ps1 already refuses to zip them; this refuses to
+# record them.
+#
+# The folder shape and its README ARE tracked, so the layout ships and stays documented.
+#
+# WHEN THERE ARE VOICES WE MAY GENUINELY SHIP (CC0-sourced - see module\Voices\README.txt), delete
+# these four lines. That deletion is meant to be a deliberate moment, not a default.
+module/Voices/**/voice.json
+module/Voices/**/embedding.json
+module/Voices/**/icl-prompt.json
+module/Voices/**/reference.wav

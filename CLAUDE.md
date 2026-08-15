@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 Guidance for Claude Code when working in this repository.
 
@@ -61,8 +61,41 @@ You usually only need to open:
   the one door, `VoicePlayback` the chain, `VoiceHostClient` the sidecar, `CloudVoiceClient` the
   hosted road, `VoiceCache`, `VoiceEngineDiscovery`, `VoiceEngineGate`) + the separate net8
   `ImmersiveAI.VoiceHost` process + `UI\TalkScreen\VoiceRowVM` and the panel in `TalkScreenVM`.
+  **THE VOICES THAT SHIP WITH THE MOD** live in `module\Voices\` (tracked in git; `female\`/`male\`
+  subfolders are ours alone — any other group name works and simply lends no gender hint, and a
+  voice folder may sit loose at the top). `deploy.ps1` and `package.ps1` both copy it to
+  `Modules\<id>\Voices`, and Core `VoiceSeeds.Seed` lays each one onto the player's shelf ONCE,
+  called from `VoiceService.EnsureShelf` (once a session, ledgered anyway). TWO RULES, both about
+  never overruling the player, both unit-tested: a name already on their shelf is never written
+  over, and a voice already offered is never offered again — deleting one has to MEAN something,
+  which is what `Voices\_seeded.json` records, and why a name is ledgered when it is OFFERED rather
+  than when it is copied. A broken shipped voice costs only itself and arrives once mended. A NEW
+  voice added in a later version arrives on its own. Gender is filled from the group folder ONLY
+  when the voice states none. **Ship only what we have the right to ship** — a voice folder carries
+  the clip it was cloned from, so CC0/public-domain source audio only (kyutai/tts-voices). That is
+  enforced, not merely asked: `package.ps1` carries a `$neverShip` list (matching folder name AND
+  the name/id inside voice.json, so a rename cannot slip past) and REFUSES to package — while
+  `deploy.ps1` deliberately does not check, because the local install is exactly where a
+  development clone belongs. See the memory note `voice-shipping-constraint`.
   **OFF by default and it must stay that way** (`EnableVoice`), found through the "Voices" button
-  that shows for everybody. Read `docs/voiceover-engine-notes.md` before touching any of it — every
+  that shows for everybody. **WHO SPEAKS FOR A SOUL nobody cast** (2026.08.15, Anton's ask) is Core
+  `Voices\VoiceCasting`: cast by hand → **a voice of their own people and sex** → one of no people →
+  anyone of that sex → silence. The **all-women/all-men slots were RETIRED 2026.08.15** (Anton: every
+  Khuzait still speaking with Max): they outranked the per-people pick, an auto-fill used to set them
+  on a fresh shelf, and NOTHING in the panel could undo one — so the buttons, the two MCM dropdowns
+  and the reads are gone, `VoiceAssignments.DefaultFemale/Male` survive as dead compat rails, and
+  `ClearDeadDefaults` empties them once on load. Do not reintroduce them. **Hosted voices are never
+  auto-cast** (billed per minute — an unasked-for bill); they speak only when cast by hand. **The
+  PLAYER is auto-cast too** by the same rule, their own slot only overriding it. The shipped shelf is `module\Voices\<gender>\<culture>\<voice>\`
+  (sex, then the game's own culture id, then the voice; `other\` = belonging to nobody, and both
+  shallower shapes still seed), stamped onto `VoicePreset.Gender`/`Culture` by `VoiceSeeds`, which
+  now also settles ids for the whole batch at once so two peoples may both have a "gwen". The pick
+  is **RENDEZVOUS HASHING over `Hero.StringId`, not random and not hash-modulo-count**: random
+  re-rolls on every load (a companion changing voice after a reload, while the save snapshots rewind
+  her memories — exactly backwards), and modulo would recast every Battanian woman the moment an
+  update added one more. Scoring each candidate and taking the highest moves ~1 soul in n instead.
+  `FillEmptyDefaults` is dead with them. `Speaker` gained `Culture` under the same off-thread test as
+  `IsFemale` (fixed for a hero's life); do not widen it further. Read `docs/voiceover-engine-notes.md` before touching any of it — every
   number in it was measured against the real engine, including the two that matter most: **one audio
   token is exactly 80 ms**, and **a real derail ran 202 characters of Bulgarian to 327.68 seconds**.
 

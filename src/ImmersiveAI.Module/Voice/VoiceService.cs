@@ -112,6 +112,68 @@ namespace ImmersiveAI.Voice
         /// <summary>Whether the hosted road is open: a key is set.</summary>
         public static bool CloudReady => CloudVoiceClient.IsConfigured(Config);
 
+        /// <summary>
+        /// THE NEXT THING TO ACTUALLY DO to get voices on this machine. Empty when the local road is
+        /// already open.
+        /// <para>
+        /// Separate from <see cref="UnavailableReason"/> on purpose: that one says what is wrong
+        /// ("the speech engine (qwen3_tts.dll) was not found"), which is a diagnosis, not an
+        /// instruction. A player who has not read the setup page cannot act on a missing DLL's name.
+        /// So this names the program, where to get it, and which model to pull — the three facts the
+        /// diagnosis leaves out. The once-per-install nudge deliberately says none of this and points
+        /// at the panel instead, so the panel has to be the place that explains itself.
+        /// </para>
+        /// </summary>
+        public static string SetupAdvice
+        {
+            get
+            {
+                try
+                {
+                    var config = Config;
+                    if (config == null) return string.Empty;
+
+                    var setup = VoiceEngineDiscovery.Resolve(config);
+                    if (setup.IsComplete) return string.Empty;
+
+                    // Our own file, not theirs — a different problem with a different remedy, and
+                    // telling someone to install Studio over it would send them the wrong way.
+                    if (setup.HostExePath.Length == 0)
+                        return "The mod's own voice program is missing from its folder — reinstalling Immersive AI puts it back.";
+
+                    if (setup.EnginePath.Length == 0)
+                        return "To make voices on your own machine: install Qwen-TTS Studio (free) from "
+                             + "github.com/Danmoreng/qwen-tts-studio — take the windows-cuda-bundled build — then "
+                             + "download the model qwen-talker-1.7b-base in it. It wants a graphics card and about 7 GB.";
+
+                    // Engine found, no model: they are mid-install and one download from done.
+                    return "Almost there — open Qwen-TTS Studio and download a model. "
+                         + "qwen-talker-1.7b-base is the one that clones voices; qwen-talker-1.7b-customvoice "
+                         + "carries nine ready-made ones instead.";
+                }
+                catch { return string.Empty; }
+            }
+        }
+
+        /// <summary>True when the speech engine is installed but has no model to speak with — the
+        /// one-download-from-done state. A flag rather than a caller matching on the wording of
+        /// <see cref="SetupAdvice"/>, which would quietly change meaning the next time that text is
+        /// reworded.</summary>
+        public static bool EngineWaitsOnAModel
+        {
+            get
+            {
+                try
+                {
+                    var config = Config;
+                    if (config == null) return false;
+                    var setup = VoiceEngineDiscovery.Resolve(config);
+                    return !setup.IsComplete && setup.HostExePath.Length > 0 && setup.EnginePath.Length > 0;
+                }
+                catch { return false; }
+            }
+        }
+
         /// <summary>Plainly why not, when <see cref="IsAvailable"/> is false. Empty when it is true.</summary>
         public static string UnavailableReason
         {
@@ -318,6 +380,17 @@ namespace ImmersiveAI.Voice
         // Working out what is to be made
         // ------------------------------------------------------------------
 
+        /// <summary>Whether souls nobody has cast are given a voice of their own people. Read live,
+        /// like every other voice setting, so turning it off takes hold on the next line.</summary>
+        private static bool AutoCastOn
+        {
+            get
+            {
+                var config = Config;
+                return config == null || config.VoiceAutoCast;
+            }
+        }
+
         private static bool EnabledQuick
         {
             get
@@ -335,6 +408,10 @@ namespace ImmersiveAI.Voice
             public string Id = string.Empty;
             public bool IsFemale;
             public bool IsPlayer;
+
+            /// <summary>Their people, as the game's own culture id. Used only to choose a first
+            /// voice; empty is perfectly fine and simply widens the choice.</summary>
+            public string Culture = string.Empty;
         }
 
         /// <summary>
@@ -353,6 +430,13 @@ namespace ImmersiveAI.Voice
         /// touching live world data on a thread that has no business doing so. If a voice ever needs
         /// more than these three, capture it on the game thread at the call site and pass it in.
         /// </para>
+        /// <para>
+        /// Culture joined them (2026.08.15) under exactly that test and no other: a hero's culture
+        /// is set when they are made and does not move while a talk is running, so reading its
+        /// <c>StringId</c> here is the same kind of read as <c>IsFemale</c>. It is what lets a soul
+        /// be given a voice of their own people. Anything less fixed than this still belongs on the
+        /// game thread.
+        /// </para>
         /// </summary>
         private static Speaker? Describe(Hero? npc)
         {
@@ -364,6 +448,7 @@ namespace ImmersiveAI.Voice
                     Id = npc.StringId ?? string.Empty,
                     IsFemale = npc.IsFemale,
                     IsPlayer = npc == Hero.MainHero,
+                    Culture = npc.Culture?.StringId ?? string.Empty,
                 };
             }
             catch { return null; }
@@ -444,15 +529,34 @@ namespace ImmersiveAI.Voice
             catch { return string.Empty; }
         }
 
+        /// <summary>
+        /// The one place the four tiers are applied, so the panel, the badge and the actual speaking
+        /// can never disagree about who sounds like what. Call under <see cref="ShelfGate"/>.
+        /// <para>
+        /// The player's own slot is separate but is filled the same way when empty (Anton,
+        /// 2026.08.15): their own people, their own sex, chosen from their name. The old behaviour
+        /// was silence on the grounds that "most people do not want to hear themselves" — but with
+        /// a ▶ on every line that is the player's own choice to make each time, and an unassigned
+        /// slot just made their half of the conversation dead.
+        /// </para>
+        /// </summary>
+        private static string ResolveVoiceId(Speaker who)
+        {
+            if (who.IsPlayer && !string.IsNullOrWhiteSpace(_casting.Player)) return _casting.Player;
+
+            // Their own casting is checked inside Pick; the player has no per-soul casting, only
+            // the slot above, so the sheet is not consulted for them.
+            return VoiceCasting.Pick(who.IsPlayer ? null : _casting, _shelf,
+                                     who.Id, who.IsFemale, who.Culture, AutoCastOn);
+        }
+
         private static VoicePreset? VoiceFor(Speaker who)
         {
             EnsureShelf();
 
             lock (ShelfGate)
             {
-                // The player's own voice is its own slot and empty by default — most people do not
-                // want to hear themselves, and that is the honest default rather than an oversight.
-                var id = who.IsPlayer ? _casting.Player : _casting.VoiceFor(who.Id, who.IsFemale);
+                var id = ResolveVoiceId(who);
                 if (string.IsNullOrWhiteSpace(id)) return null;
 
                 return _shelf.FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
@@ -534,6 +638,7 @@ namespace ImmersiveAI.Voice
                 {
                     var root = VoicesRoot;
                     Directory.CreateDirectory(root);
+                    SeedShippedVoices(root);
 
                     var made = VoiceLibrary.Load(root, out var skipped);
                     foreach (var problem in skipped) ModLog.Warn("voice: " + problem);
@@ -553,11 +658,17 @@ namespace ImmersiveAI.Voice
 
                     _casting = VoiceAssignments.Load(CastingFilePath);
                     var dropped = _casting.ForgetMissing(_shelf.Select(v => v.Id));
-                    var filled = _casting.FillEmptyDefaults(_shelf);
-                    if (dropped > 0 || filled)
+
+                    // The retired all-women / all-men slots, emptied once. An old sheet carries them
+                    // filled — often from the automatic fill that used to run on a fresh shelf — and
+                    // while nothing reads them any more, leaving them written is a lie about what
+                    // the shelf is doing.
+                    var cleared = _casting.ClearDeadDefaults();
+                    if (dropped > 0 || cleared)
                     {
                         _casting.Save(CastingFilePath);
-                        ModLog.Info($"voice: casting sheet tidied — {dropped} stale, defaults {(filled ? "filled" : "kept")}.");
+                        ModLog.Info($"voice: casting sheet tidied — {dropped} stale"
+                                    + (cleared ? ", the retired all-women/all-men slots emptied" : "") + ".");
                     }
 
                     _shelfLoaded = true;
@@ -573,6 +684,63 @@ namespace ImmersiveAI.Voice
                     _shelfStampUtc = stamp;
                 }
             }
+        }
+
+        /// <summary>
+        /// Lays the voices that ship WITH the mod onto the player's shelf, once each.
+        /// <para>
+        /// Done here rather than at startup because this is the one place that is guaranteed to run
+        /// before anybody reads the shelf, and it costs nothing on the many passes where there is
+        /// nothing to do. Once per session is plenty: the ledger makes it idempotent anyway, but a
+        /// player is not installing a mod update mid-campaign.
+        /// </para>
+        /// </summary>
+        private static bool _seededThisSession;
+
+        private static void SeedShippedVoices(string root)
+        {
+            if (_seededThisSession) return;
+            _seededThisSession = true;      // set first: a throw must not make us try every few seconds
+
+            try
+            {
+                var shipped = ShippedVoicesFolder();
+                if (shipped.Length == 0) return;
+
+                var report = VoiceSeeds.Seed(shipped, root);
+                foreach (var problem in report.Skipped) ModLog.Warn("voice: shipped voice — " + problem);
+                if (report.DidAnything)
+                    ModLog.Info($"voice: {report.Added.Count} voice(s) came with the mod — {string.Join(", ", report.Added)}.");
+
+                // Said out loud, because from the outside it looks exactly like a broken feature:
+                // the voices are plainly in the module folder and plainly not on the shelf.
+                if (report.AlreadyOffered.Count > 0)
+                    ModLog.Info($"voice: {report.AlreadyOffered.Count} shipped voice(s) were offered once before and not laid out again "
+                                + $"({string.Join(", ", report.AlreadyOffered)}) — delete {Path.Combine(root, VoiceSeeds.LedgerFileName)} to be offered them afresh.");
+            }
+            catch (Exception ex) { ModLog.Error("voice: laying out the voices that ship with the mod", ex); }
+        }
+
+        /// <summary>
+        /// <c>…\Modules\ImmersiveAI\Voices</c> — beside GUI and ModuleData, where the packager put
+        /// it. Found by walking up from our own DLL, exactly as the engine discovery does, because
+        /// the folder this was built in is not the folder it runs in.
+        /// </summary>
+        private static string ShippedVoicesFolder()
+        {
+            try
+            {
+                var location = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (string.IsNullOrEmpty(location)) return string.Empty;
+
+                // …\Modules\ImmersiveAI\bin\Win64_Shipping_Client\ImmersiveAI.dll → …\ImmersiveAI
+                var moduleRoot = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(location)));
+                if (string.IsNullOrEmpty(moduleRoot)) return string.Empty;
+
+                var voices = Path.Combine(moduleRoot, "Voices");
+                return Directory.Exists(voices) ? voices : string.Empty;
+            }
+            catch { return string.Empty; }
         }
 
         /// <summary>
@@ -604,7 +772,7 @@ namespace ImmersiveAI.Voice
                     shelf.Add(new VoicePreset
                     {
                         Id = "builtin-" + pair.Key,
-                        Name = Pretty(pair.Key) + " (built-in)",
+                        Name = Pretty(pair.Key),      // the panel marks the shelf — see VoiceRowVM.NameFor
                         Backend = VoiceBackend.QwenLocal,
                         SpeakerName = pair.Key,
                         Gender = pair.Value,
@@ -1022,8 +1190,38 @@ namespace ImmersiveAI.Voice
             if (who == null) return string.Empty;
 
             EnsureShelf();
+            lock (ShelfGate) return ResolveVoiceId(who);
+        }
+
+        /// <summary>Which of the four tiers actually answered for a soul. See <see cref="OriginFor"/>.</summary>
+        public enum VoiceOrigin { None, Cast, TheirPeople }
+
+        /// <summary>
+        /// WHY this soul speaks with the voice they do — not merely which voice it is.
+        /// <para>
+        /// Worth its own call because the panel was saying "of their people" for a voice that came
+        /// out of the all-men slot, and that one wrong word hid a real problem for a whole session
+        /// (Anton, 2026.08.15: every Khuzait speaking with Max, while the label cheerfully claimed
+        /// they had been given a voice of their own people). A label that guesses at its own
+        /// reasoning is worse than no label at all.
+        /// </para>
+        /// </summary>
+        public static VoiceOrigin OriginFor(Hero? npc)
+        {
+            var who = Describe(npc);
+            if (who == null) return VoiceOrigin.None;
+
+            EnsureShelf();
             lock (ShelfGate)
-                return who.IsPlayer ? _casting.Player : _casting.VoiceFor(who.Id, who.IsFemale);
+            {
+                if (who.IsPlayer)
+                    return !string.IsNullOrWhiteSpace(_casting.Player) ? VoiceOrigin.Cast
+                         : string.IsNullOrWhiteSpace(ResolveVoiceId(who)) ? VoiceOrigin.None
+                         : VoiceOrigin.TheirPeople;
+
+                if (_casting.IsCast(who.Id)) return VoiceOrigin.Cast;
+                return string.IsNullOrWhiteSpace(ResolveVoiceId(who)) ? VoiceOrigin.None : VoiceOrigin.TheirPeople;
+            }
         }
 
         /// <summary>Whether this soul was cast BY HAND, rather than falling to their kind's default —
@@ -1036,8 +1234,6 @@ namespace ImmersiveAI.Voice
         }
 
         /// <summary>The two defaults and the player's own slot, for the panel and for MCM.</summary>
-        public static string DefaultFemaleId { get { EnsureShelf(); lock (ShelfGate) return _casting.DefaultFemale ?? string.Empty; } }
-        public static string DefaultMaleId { get { EnsureShelf(); lock (ShelfGate) return _casting.DefaultMale ?? string.Empty; } }
         public static string PlayerVoiceId { get { EnsureShelf(); lock (ShelfGate) return _casting.Player ?? string.Empty; } }
 
         /// <summary>Casts a soul. An empty voice id clears the casting and drops them back to their
@@ -1048,8 +1244,6 @@ namespace ImmersiveAI.Voice
             Change(sheet => sheet.Cast(npc.StringId, voiceId));
         }
 
-        public static void SetDefaultFemale(string? voiceId) => Change(sheet => sheet.DefaultFemale = (voiceId ?? string.Empty).Trim());
-        public static void SetDefaultMale(string? voiceId) => Change(sheet => sheet.DefaultMale = (voiceId ?? string.Empty).Trim());
 
         /// <summary>The player's own voice for their own lines. Empty is the honest default: most
         /// people do not want to hear themselves read their own words back.</summary>

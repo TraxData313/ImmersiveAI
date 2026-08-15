@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 The player-facing history of Immersive AI — short lines written for players, no file names, no
 internals (the developer's full record is `TASKS_DONE.md`).
@@ -29,15 +29,25 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ### Hearing them speak
 - New: a small ▶ beside every line in the talk screen reads it aloud — their replies, their letters, and their own quiet thoughts alike. Press it again on anything ever said between you; a line heard once is instant ever after.
-- New: a **Voices** page in the talk screen, there for everyone: pick a voice, hear it before you commit, give it to the person before you, to all women, to all men, or to yourself. It says plainly what is missing when something is.
+- New: a **Voices** page in the talk screen, there for everyone: pick a voice, hear it before you commit, give it to the person before you or to yourself. It says plainly what is missing when something is.
+- New: the mod brings a handful of voices with it, laid on your shelf the first time you run it, so turning voices on never shows you an empty list. They are yours from that moment: rename them, recast them, throw them away — one you delete stays deleted, and one you have edited is never written over by an update.
 - New: one button brings over every voice you made in Qwen-TTS Studio. Press it again after making another and only the new ones arrive.
+- New: anyone you have not cast by hand is given a voice of **their own people and their own sex** — a Battanian woman sounds Battanian, without you casting five hundred souls one at a time. The choice is made from their own name, so it is the same voice every session and survives every reload. Anything you cast yourself always wins. You are given one too, so your own lines can be read back.
+- Only voices made on your own machine are handed out this way. A hosted voice is billed by the minute, so one is never given to anybody automatically — put one on someone yourself and it speaks for them happily.
+- Changed: the "all women" and "all men" voice slots are gone, in the talk screen and in the settings. They sat above the voices given by people, so one press left everybody sharing a voice with no way to undo it, and with per-people casting they are simply not needed — a shelf holding one woman's voice already gives it to every woman. Any that were set are emptied once, and voices you cast on individual people are untouched.
+- New: the Voices page now says where each voice sits — `female/battania/Gwen` — and lists them grouped that way, which is how you find one on a shelf of a hundred.
+- New: the Voices page is now in folders — one per people for the voices made on your machine, one for the speech model's own, one for the hosted ones. Click a folder to fold it shut. The folder of whoever you are talking to opens by itself.
+- New: the Voices page shows only voices of the right sex for the person in front of you. "Every voice" lifts that when you want to give someone a voice from outside the usual choice.
+- New: the voice someone speaks with is now written beside their name in the talk screen, so you can tell who they sound like without opening anything — and it says *why* they have it: chosen for them, or given for their own people.
+- Turning voices on without the speech engine installed now tells you what to actually do — which free program to install, where to get it, and which model to download — instead of naming a file you have never heard of. If the engine is there and only a model is missing, it says that instead.
 - New: **Backspace** silences a voice instantly, wherever you are — on the map, in a battle, with every window shut. A **Stop** button also appears in the talk screen whenever anything is speaking.
 - New: voices without a graphics card. Put a key for a hosted speech service in the settings and thirteen voices appear beside your own — about 1½ cents a minute, shown in the same cost line as everything else. It cannot clone anyone; that is what your own machine is for.
 - New: the speech model's own nine voices show up by themselves if you downloaded the model that carries them, so you can hear something before cloning anything.
 - New: your own lines can be read back to you in a voice you choose. Off by default.
-- New: someone who comes to you unbidden can speak their first words aloud as they arrive (off by default — several may come at once, and one voice would cut off another).
+- New: someone who comes to you unbidden speaks their first words aloud as they arrive. If two arrive close together the second cuts off the first — Backspace silences it, and there is a switch under Voices if you would rather they waited to be asked.
 - Fixed: a spoken reply no longer breaks up. The pieces are now poured together and handed over on the clock instead of a frame late, so a long reply is one unbroken take — and it starts in under half a second, which makes it the right way round for everyone.
 - Fixed: a voice that loses its ending and rambles is now cut off after seconds instead of minutes, and the ruined line is never kept, so it cannot come back the next time you scroll past those words.
+- Changed: every voice on the shelf now says where it comes from — "(Qwen TTS Studio)" for the ones made on your own machine, "(Qwen TTS, built-in)" for the speech model's own, "(OpenAI)" for the hosted ones. Before, only the hosted ones were marked, which read as though the rest came from nowhere.
 
 ### What they are told about themselves
 - Changed: your own words now have the LAST word. What you write in the world prompt and in a character's own prompt closes their mind instead of sitting in the middle of it, under a line saying plainly that where anything else they remember disagrees, your words stand. Edits there used to lose quietly to a long memory; now they bite.

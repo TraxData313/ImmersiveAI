@@ -76,6 +76,14 @@ powershell -ExecutionPolicy Bypass -File tools\package.ps1
 ```
 Rebuilds `dist\ImmersiveAI` from scratch and writes `dist\ImmersiveAI_vX.Y.Z.zip`.
 
+**It will refuse to package a voice we may not ship.** `module\Voices\` travels with the mod, and a
+voice folder carries the embedding *itself* — packaging one distributes that person's voice. The
+`$neverShip` list at the top of the voices block in `package.ps1` stops the release dead, matching
+the folder name AND the name/id inside `voice.json` so a rename cannot slip past. Development
+copies are fine (`deploy.ps1` deliberately does not check); they simply may not leave the machine.
+The fix is to move the folder out of the repo, never to soften the guard — unless it genuinely is a
+different voice that merely shares a name.
+
 **Check the package is actually current:** compare the timestamp of
 `dist\ImmersiveAI\bin\Win64_Shipping_Client\ImmersiveAI.dll` against the newest source file. Any
 code change after packaging — even a one-line fix — means packaging again.

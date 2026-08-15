@@ -50,8 +50,13 @@ namespace ImmersiveAI.Core.Voices
                 else if (problem != null) problems.Add(problem);
             }
 
+            // Ordered the way the panel SAYS it — women, then their peoples, then names. With five
+            // voices alphabetical was fine; with a shelf carrying a dozen peoples the player is
+            // scanning for a group, not a name.
             return voices
-                .OrderBy(v => v.Name, StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(v => v.Gender == VoiceGender.Female ? 0 : v.Gender == VoiceGender.Male ? 1 : 2)
+                .ThenBy(v => VoiceCasting.Normalize(v.Culture), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(v => v.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
         }
 

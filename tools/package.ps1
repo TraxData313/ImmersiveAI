@@ -67,6 +67,63 @@ if (Test-Path $guiSource) {
     Copy-Item (Join-Path $guiSource "*") $guiDest -Recurse -Force
 }
 
+# The voices that ship with the mod - see deploy.ps1. ONE RULE, and it is a legal one rather than a
+# technical one: a voice folder carries the clip it was cloned from, so shipping one hands every
+# player a copy of that. Public-domain / CC0 source audio only, never a real person's voice without
+# their blessing. module\Voices\README.txt says the same where it will actually be read.
+$voicesSource = Join-Path $repoRoot "module\Voices"
+
+# Voices that must NEVER leave this machine, by folder name. These are cloned from real people who
+# did not consent (public figures), so they are fine to develop against and unshippable by anyone.
+# Each voice folder carries the embedding itself, so packaging one IS distributing that person's
+# voice - which is why this stops the release dead rather than warning. deploy.ps1 deliberately does
+# NOT check: the local install is exactly where they belong.
+$neverShip = @("sibylla", "achilles", "max")
+
+# A durable mark inside voice.json, for the voices a NAME list cannot keep up with. The 91 cloned
+# from Bannerlord's own dialogue VO wear it: no game audio is redistributed (the folders hold only
+# embeddings), but they are still clones of named actors who never agreed to it - the same rule the
+# Alba/Pitt voices fall under, and the one module\Voices\README.txt states. It survives renaming
+# both the folder and the display name, which a name list does not.
+$neverShipMark = "NOT FOR RELEASE"
+
+if (Test-Path $voicesSource) {
+    # Folder name AND the name/id written inside, so renaming the folder does not slip one past.
+    $blocked = @(Get-ChildItem $voicesSource -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object {
+        $metaPath = Join-Path $_.FullName "voice.json"
+        if (-not (Test-Path $metaPath)) { return $false }
+
+        $words = @($_.Name)
+        $marked = $false
+        try {
+            $meta = Get-Content $metaPath -Raw | ConvertFrom-Json
+            if ($meta.Name) { $words += $meta.Name }
+            if ($meta.Id)   { $words += $meta.Id }
+            if ($meta.Source -and $meta.Source -like "*$neverShipMark*") { $marked = $true }
+        } catch { }   # an unreadable voice.json is judged on its folder name alone
+
+        if ($marked) { return $true }
+
+        $hit = $false
+        foreach ($w in $words) {
+            $plain = ($w -replace '[^a-zA-Z]', '').ToLowerInvariant()
+            foreach ($banned in $neverShip) { if ($plain -like "*$banned*") { $hit = $true } }
+        }
+        return $hit
+    })
+    if ($blocked.Count -gt 0) {
+        $names = ($blocked | ForEach-Object { $_.Name }) -join ", "
+        throw "Refusing to package: module\Voices holds voice(s) marked never-ship - $names. Move them out of the repo (they are fine to deploy locally), or take the name off `$neverShip in this script if it is genuinely a different voice."
+    }
+
+    $voicesDest = Join-Path $moduleDir "Voices"
+    New-Item -ItemType Directory -Force $voicesDest | Out-Null
+    Copy-Item (Join-Path $voicesSource "*") $voicesDest -Recurse -Force
+    $shippedVoices = @(Get-ChildItem $voicesSource -Recurse -Filter "voice.json" -ErrorAction SilentlyContinue).Count
+} else {
+    $shippedVoices = 0
+}
+
 # The version stamp comes from the manifest, so the zip name always tells the truth.
 $version = "unversioned"
 try {
@@ -86,5 +143,6 @@ if ($voiceHostShipped) {
 } else {
     Write-Host "Voice host: NOT included (no project in this tree) - this build ships without voices."
 }
+Write-Host "Voices shipped with the mod: $shippedVoices"
 Write-Host "Zip: $zipPath"
 Write-Host "Workshop upload: point the uploader at the dist\ImmersiveAI folder."

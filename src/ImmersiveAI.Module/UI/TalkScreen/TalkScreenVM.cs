@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -681,6 +681,7 @@ namespace ImmersiveAI.UI.TalkScreen
             // stale, which is the worse kind of wrong: it teaches the player to distrust the button.
             OnPropertyChanged("VoiceForThemText");
             OnPropertyChanged("CanCastOnThem");
+            RefreshVoiceBadge();
             if (_isVoiceShown) RefreshVoices();   // and the marks under the names follow the person
             OnPropertyChanged("IsAway");
             OnPropertyChanged("IsGone");
@@ -1051,8 +1052,6 @@ namespace ImmersiveAI.UI.TalkScreen
                 var shelf = Voice.VoiceService.Shelf();
                 var chosen = _selected?.Hero;
                 var forThem = chosen == null ? string.Empty : Voice.VoiceService.VoiceIdFor(chosen);
-                var female = Voice.VoiceService.DefaultFemaleId;
-                var male = Voice.VoiceService.DefaultMaleId;
                 var mine = Voice.VoiceService.PlayerVoiceId;
                 var cloudReady = Voice.VoiceService.CloudReady;
                 var localReady = Voice.VoiceService.LocalReady;
@@ -1060,13 +1059,43 @@ namespace ImmersiveAI.UI.TalkScreen
                 var keep = _voicePick?.Id;
                 var rows = new MBBindingList<VoiceRowVM>();
 
-                foreach (var voice in shelf)
+                // ONLY THE RIGHT SEX, unless asked otherwise. A shelf carrying every culture is a
+                // hundred voices long and half of them can never be the answer for the person in
+                // front of you (Anton, 2026.08.15 — "hard to look at and choose"). The button stays
+                // for the moments the filter is wrong: giving a voice to all women while talking to
+                // a man, or casting your own.
+                var wantSex = chosen == null ? Core.Voices.VoiceGender.Unknown
+                            : chosen.IsFemale ? Core.Voices.VoiceGender.Female
+                                              : Core.Voices.VoiceGender.Male;
+                var shown = (_showEveryVoice || wantSex == Core.Voices.VoiceGender.Unknown)
+                    ? shelf
+                    : shelf.Where(v => v.Gender == wantSex || v.Gender == Core.Voices.VoiceGender.Unknown).ToList();
+
+                SeedVoiceFolds(shown, chosen, forThem);
+
+                var lastGroup = string.Empty;
+                var folded = false;
+
+                foreach (var voice in Grouped(shown))
                 {
+                    var group = GroupKeyFor(voice);
+                    if (!string.Equals(group, lastGroup, StringComparison.Ordinal))
+                    {
+                        lastGroup = group;
+                        var count = shown.Count(v => string.Equals(GroupKeyFor(v), group, StringComparison.Ordinal));
+                        folded = _foldedVoiceGroups.Contains(group);
+                        rows.Add(new VoiceRowVM(group, $"{GroupLabelFor(group)}  ({count})", folded, ToggleVoiceGroup));
+                    }
+                    if (folded) continue;
                     var marks = new List<string>(4);
                     if (chosen != null && string.Equals(voice.Id, forThem, StringComparison.OrdinalIgnoreCase))
-                        marks.Add("· " + chosen.Name);
-                    if (string.Equals(voice.Id, female, StringComparison.OrdinalIgnoreCase)) marks.Add("· all women");
-                    if (string.Equals(voice.Id, male, StringComparison.OrdinalIgnoreCase)) marks.Add("· all men");
+                    {
+                        // Said apart, because "given to them" and "chosen by you" are different
+                        // facts and the player is about to decide whether to change it.
+                        marks.Add(Voice.VoiceService.IsCastByHand(chosen)
+                            ? "· " + chosen.Name
+                            : "· " + chosen.Name + " (of their people)");
+                    }
                     if (string.Equals(voice.Id, mine, StringComparison.OrdinalIgnoreCase)) marks.Add("· you");
 
                     var hosted = voice.Backend == Core.Voices.VoiceBackend.Remote;
@@ -1094,6 +1123,119 @@ namespace ImmersiveAI.UI.TalkScreen
             }
         }
 
+        /// <summary>
+        /// The voice this soul speaks with, beside their name in the thread — because there is no
+        /// other way to know it without opening the panel, and with voices given out automatically
+        /// the answer is no longer "whatever you chose" (Anton, 2026.08.15: "he had the Max voice I
+        /// think, but I couldn't check").
+        /// <para>
+        /// Silent when voices are off, so it costs nothing to anyone not using them.
+        /// </para>
+        /// </summary>
+        private void RefreshVoiceBadge()
+        {
+            try
+            {
+                var hero = _selected?.Hero;
+                if (hero == null || _config == null || !_config.EnableVoice)
+                {
+                    VoiceBadgeText = string.Empty;
+                    return;
+                }
+
+                var id = Voice.VoiceService.VoiceIdFor(hero);
+                var voice = Voice.VoiceService.Shelf()
+                    .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
+
+                if (voice == null) { VoiceBadgeText = "(no voice)"; return; }
+
+                VoiceBadgeText = Voice.VoiceService.OriginFor(hero) == Voice.VoiceService.VoiceOrigin.Cast
+                    ? "(" + voice.Name + ")"
+                    : "(" + voice.Name + ", of their people)";
+            }
+            catch { VoiceBadgeText = string.Empty; }
+        }
+
+        // ---- the shelf, in folders ----
+        //
+        // Local voices are gathered by the people they belong to, the model's own speakers sit
+        // together, and the hosted ones are one drawer nobody needs to sort (Anton's shape,
+        // 2026.08.15). Which folders are shut is a view thing and lives only here; nothing about it
+        // reaches disk.
+
+        private readonly HashSet<string> _foldedVoiceGroups = new HashSet<string>(StringComparer.Ordinal);
+        private string _voiceFoldSeed = string.Empty;
+        private bool _showEveryVoice;
+
+        private const string HostedGroup = "zz-hosted";
+        private const string BuiltInGroup = "zy-builtin";
+        private const string NoPeopleGroup = "local~";
+
+        private static string GroupKeyFor(Core.Voices.VoicePreset voice)
+        {
+            if (voice.Backend == Core.Voices.VoiceBackend.Remote) return HostedGroup;
+            if (!string.IsNullOrWhiteSpace(voice.SpeakerName)) return BuiltInGroup;
+
+            var culture = Core.Voices.VoiceCasting.Normalize(voice.Culture);
+            return culture.Length == 0 ? NoPeopleGroup : "local:" + culture;
+        }
+
+        private static string GroupLabelFor(string group)
+        {
+            if (group == HostedGroup) return "Hosted · OpenAI";
+            if (group == BuiltInGroup) return "On this machine · the speech model's own";
+            if (group == NoPeopleGroup) return "On this machine · no particular people";
+
+            var culture = group.StartsWith("local:", StringComparison.Ordinal) ? group.Substring(6) : group;
+            if (culture.Length > 0) culture = char.ToUpperInvariant(culture[0]) + culture.Substring(1);
+            return "On this machine · " + culture;
+        }
+
+        /// <summary>The shelf in folder order: peoples first and alphabetically, then the voices of
+        /// no people, then the model's own, then the hosted drawer. Within a folder the shelf's own
+        /// order already stands (see VoiceLibrary.Load).</summary>
+        private static IEnumerable<Core.Voices.VoicePreset> Grouped(IEnumerable<Core.Voices.VoicePreset> shelf)
+            => shelf.OrderBy(GroupKeyFor, StringComparer.Ordinal);
+
+        private void ToggleVoiceGroup(VoiceRowVM header)
+        {
+            if (header == null || !header.IsHeader) return;
+            if (!_foldedVoiceGroups.Remove(header.GroupKey)) _foldedVoiceGroups.Add(header.GroupKey);
+            RefreshVoices();
+        }
+
+        /// <summary>
+        /// Shuts every folder but the one worth opening — the people of the soul in front of you.
+        /// <para>
+        /// Re-seeded when the person or the shelf changes, and never afterwards, so a folder the
+        /// player opened stays open while they browse. Folders exist to make a hundred voices
+        /// approachable; opening all of them on arrival would undo the whole point.
+        /// </para>
+        /// </summary>
+        private void SeedVoiceFolds(IReadOnlyList<Core.Voices.VoicePreset> shown, Hero? chosen, string theirVoiceId)
+        {
+            var seed = (chosen?.StringId ?? "-") + "|" + shown.Count + "|" + theirVoiceId;
+            if (string.Equals(seed, _voiceFoldSeed, StringComparison.Ordinal)) return;
+            _voiceFoldSeed = seed;
+
+            var open = new HashSet<string>(StringComparer.Ordinal);
+            var theirs = shown.FirstOrDefault(v => string.Equals(v.Id, theirVoiceId, StringComparison.OrdinalIgnoreCase));
+            if (theirs != null) open.Add(GroupKeyFor(theirs));      // the one they already speak with
+
+            var culture = Core.Voices.VoiceCasting.Normalize(TryCultureOf(chosen));
+            if (culture.Length > 0) open.Add("local:" + culture);   // and their own people
+
+            _foldedVoiceGroups.Clear();
+            foreach (var group in shown.Select(GroupKeyFor).Distinct(StringComparer.Ordinal))
+                if (!open.Contains(group)) _foldedVoiceGroups.Add(group);
+        }
+
+        private static string TryCultureOf(Hero? hero)
+        {
+            try { return hero?.Culture?.StringId ?? string.Empty; }
+            catch { return string.Empty; }
+        }
+
         private string BuildVoiceStatus(bool localReady, bool cloudReady)
         {
             var config = _config;
@@ -1102,13 +1244,29 @@ namespace ImmersiveAI.UI.TalkScreen
             if (config == null || !config.EnableVoice)
                 lines.Add("Voices are OFF. Nothing is spoken aloud, and nothing here costs anything until you turn them on.");
             else if (!localReady && !cloudReady)
-                lines.Add("Voices are on, but there is no way to make them yet — either install the speech engine, or put a key for a hosted service in config.json.");
+            {
+                // The one moment the panel has to teach rather than report: nothing works, and the
+                // player is standing right here wondering why. Both roads, named concretely.
+                lines.Add("Voices are on, but nothing can make them yet.");
+                var advice = Voice.VoiceService.SetupAdvice;
+                if (advice.Length > 0) lines.Add(advice);
+                lines.Add("Or skip all of it — put a key in the settings under Voices → Hosted voices, and thirteen voices appear here. About 1½ cents a minute, no download, no graphics card.");
+            }
             else if (localReady && cloudReady)
                 lines.Add("Voices are on, made on this machine (free) or by the hosted service (billed by the minute).");
             else if (localReady)
                 lines.Add("Voices are on, made on this machine. Free, and nothing leaves your computer.");
             else
+            {
                 lines.Add("Voices are on, made by the hosted service — billed by the minute, and shown in the cost line like everything else.");
+                // Half-installed and paying by the minute for it: worth the one line that finishes
+                // the job. Silent for anyone who never started, who has chosen the hosted road.
+                if (Voice.VoiceService.EngineWaitsOnAModel)
+                {
+                    var advice = Voice.VoiceService.SetupAdvice;
+                    if (advice.Length > 0) lines.Add(advice);
+                }
+            }
 
             var chosen = _selected?.Hero;
             if (chosen != null)
@@ -1118,9 +1276,9 @@ namespace ImmersiveAI.UI.TalkScreen
                     .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
                 lines.Add(voice == null
                     ? $"{chosen.Name} has no voice yet."
-                    : Voice.VoiceService.IsCastByHand(chosen)
+                    : Voice.VoiceService.OriginFor(chosen) == Voice.VoiceService.VoiceOrigin.Cast
                         ? $"{chosen.Name} speaks with {voice.Name} — chosen for them."
-                        : $"{chosen.Name} speaks with {voice.Name} — whatever their kind is given.");
+                        : $"{chosen.Name} speaks with {voice.Name} — given for their own people.");
             }
 
             return string.Join("\n", lines);
@@ -1172,14 +1330,11 @@ namespace ImmersiveAI.UI.TalkScreen
                     ? "Voices are on. Choose a voice below and press ▶ to hear it."
                     : "Voices are off.", PromptFrameColor));
             RefreshVoices();
+            RefreshVoiceBadge();
         }
 
         public void ExecuteVoiceGiveToThem() => GiveVoice(id => Voice.VoiceService.Cast(_selected?.Hero, id),
                                                           _selected?.Hero?.Name?.ToString() ?? "them");
-        public void ExecuteVoiceAllWomen() => GiveVoice(Voice.VoiceService.SetDefaultFemale, "every woman");
-        public void ExecuteVoiceAllMen() => GiveVoice(Voice.VoiceService.SetDefaultMale, "every man");
-        public void ExecuteVoiceMine() => GiveVoice(Voice.VoiceService.SetPlayerVoice, "you");
-
         private void GiveVoice(Action<string?> give, string whom)
         {
             var row = _voicePick;
@@ -1193,6 +1348,7 @@ namespace ImmersiveAI.UI.TalkScreen
             InformationManager.DisplayMessage(new InformationMessage(
                 $"{row.Name} is now the voice of {whom}.", PromptFrameColor));
             RefreshVoices();
+            RefreshVoiceBadge();
         }
 
         /// <summary>Silence for this soul — which means "back to whatever your kind is given", not
@@ -1205,10 +1361,22 @@ namespace ImmersiveAI.UI.TalkScreen
             InformationManager.DisplayMessage(new InformationMessage(
                 $"{npc.Name} goes back to the usual voice for their kind.", PromptFrameColor));
             RefreshVoices();
+            RefreshVoiceBadge();
         }
 
         /// <summary>Brings over everything made in Qwen-TTS Studio that is not here already. With
         /// cloning in game deferred, this IS the road from "I made a voice" to "she speaks with it".</summary>
+        /// <summary>Lifts the sex filter, for giving a voice to all women while talking to a man —
+        /// or to yourself. Re-seeds the folds, since the shelf it is folding just changed size.</summary>
+        public void ExecuteVoiceShowAll()
+        {
+            _showEveryVoice = !_showEveryVoice;
+            _voiceFoldSeed = string.Empty;
+            OnPropertyChanged("VoiceShowAllText");
+            RefreshVoices();
+            RefreshVoiceBadge();
+        }
+
         public void ExecuteVoiceImport()
         {
             var brought = Voice.VoiceService.ImportFromStudio(out var trouble);
@@ -1219,6 +1387,7 @@ namespace ImmersiveAI.UI.TalkScreen
                                          : "Nothing new to bring over; every voice there is already here.",
                 PromptFrameColor));
             RefreshVoices();
+            RefreshVoiceBadge();
         }
 
         public void ExecuteVoiceOpenFolder() => Voice.VoiceService.OpenVoicesFolder();
@@ -1414,6 +1583,28 @@ namespace ImmersiveAI.UI.TalkScreen
         }
 
         [DataSourceProperty]
+        private string _voiceBadgeText = string.Empty;
+
+        /// <summary>"(Gwen, of their people)" — set by <see cref="RefreshVoiceBadge"/>.</summary>
+        [DataSourceProperty]
+        public string VoiceBadgeText
+        {
+            get => _voiceBadgeText;
+            set
+            {
+                if (value == _voiceBadgeText) return;
+                _voiceBadgeText = value;
+                OnPropertyChangedWithValue(value, "VoiceBadgeText");
+                OnPropertyChanged("HasVoiceBadge");
+            }
+        }
+
+        [DataSourceProperty]
+        public bool HasVoiceBadge => !string.IsNullOrEmpty(_voiceBadgeText);
+
+        [DataSourceProperty]
+        public Color VoiceBadgeColor => new Color(0.62f, 0.66f, 0.72f, 1f);
+
         public string SelectedName
         {
             get => _selectedName;
@@ -1819,13 +2010,10 @@ namespace ImmersiveAI.UI.TalkScreen
         public string VoiceImportText => "Bring over from Studio";
 
         [DataSourceProperty]
-        public string VoiceFolderText => "Open the voices folder";
+        public string VoiceShowAllText => _showEveryVoice ? "Only theirs" : "Every voice";
 
         [DataSourceProperty]
-        public string VoiceAllWomenText => "all women";
-
-        [DataSourceProperty]
-        public string VoiceAllMenText => "all men";
+        public string VoiceFolderText => "Voices folder";
 
         [DataSourceProperty]
         public string VoiceMineText => "me";

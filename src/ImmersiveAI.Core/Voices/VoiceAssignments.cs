@@ -25,11 +25,32 @@ namespace ImmersiveAI.Core.Voices
         /// <summary>Hero string id → voice id. Only souls deliberately cast appear here.</summary>
         public Dictionary<string, string> ByNpc { get; set; } = new Dictionary<string, string>();
 
-        /// <summary>The voice every woman speaks with unless cast otherwise.</summary>
+        /// <summary>
+        /// DEAD as of 2026.08.15 — kept only so an old casting sheet still loads and saves without
+        /// losing anything else in it. Nothing reads these to choose a voice any more.
+        /// <para>
+        /// They held "the voice every woman/man speaks with", and they sat ABOVE the per-people
+        /// casting: one press, or the automatic fill that used to happen on a fresh shelf, and every
+        /// man in the world shared a voice while ninety-three culture-matched ones sat unused, with
+        /// nothing in the panel able to undo it. <see cref="ClearDeadDefaults"/> empties them once.
+        /// Do not bring them back — see the note on <see cref="VoiceCasting"/>.
+        /// </para>
+        /// </summary>
         public string DefaultFemale { get; set; } = string.Empty;
 
-        /// <summary>The voice every man speaks with unless cast otherwise.</summary>
+        /// <inheritdoc cref="DefaultFemale"/>
         public string DefaultMale { get; set; } = string.Empty;
+
+        /// <summary>Empties the retired gender slots. Returns true when there was something to
+        /// clear, so the caller knows to save. Per-soul castings are never touched.</summary>
+        public bool ClearDeadDefaults()
+        {
+            if (string.IsNullOrWhiteSpace(DefaultFemale) && string.IsNullOrWhiteSpace(DefaultMale))
+                return false;
+            DefaultFemale = string.Empty;
+            DefaultMale = string.Empty;
+            return true;
+        }
 
         /// <summary>The player's own voice, for their own lines. Empty = the player is not voiced,
         /// which is the honest default: most people do not want to hear themselves.</summary>

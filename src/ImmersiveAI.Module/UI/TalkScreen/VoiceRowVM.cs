@@ -27,7 +27,7 @@ namespace ImmersiveAI.UI.TalkScreen
                           Action<VoiceRowVM>? select, Action<VoiceRowVM>? hear)
         {
             Voice = voice;
-            Name = voice?.Name ?? string.Empty;
+            Name = NameFor(voice);
             Detail = DetailFor(voice);
             Marks = marks ?? string.Empty;
             Wants = wants ?? string.Empty;
@@ -36,9 +36,58 @@ namespace ImmersiveAI.UI.TalkScreen
             _hear = hear;
         }
 
+        /// <summary>
+        /// A FOLDER rather than a voice — one line the player can fold shut.
+        /// <para>
+        /// Headers ride the same list as the voices rather than living in a nested control because
+        /// Gauntlet gives one ItemTemplate per list: two kinds of row in one flat list, each drawn
+        /// by the half of the template that its own flag makes visible. It is also what keeps
+        /// scrolling, selection and the scrollbar working exactly as they already did.
+        /// </para>
+        /// </summary>
+        public VoiceRowVM(string groupKey, string headerText, bool collapsed, Action<VoiceRowVM>? toggle)
+        {
+            Voice = null!;
+            IsHeader = true;
+            GroupKey = groupKey ?? string.Empty;
+            IsCollapsed = collapsed;
+            // ASCII, and it has to stay that way. The first cut used ▸ / ▾ and both drew as "?" —
+            // they are Geometric Shapes (U+25B8, U+25BE), the one block the shipped fonts do not
+            // cover. It is the SAME trap already written up on HearText below, and I walked into it
+            // anyway; a plus and a minus cannot be got wrong by any font.
+            HeaderText = (collapsed ? "+  " : "-  ") + (headerText ?? string.Empty);
+            Name = string.Empty;
+            Detail = string.Empty;
+            Marks = string.Empty;
+            Wants = string.Empty;
+            IsReady = true;
+            _select = toggle;
+        }
+
         public VoicePreset Voice { get; }
 
+        /// <summary>True for a folder line, false for a voice. The template draws one or the other.</summary>
+        [DataSourceProperty]
+        public bool IsHeader { get; }
+
+        [DataSourceProperty]
+        public bool IsVoiceRow => !IsHeader;
+
+        /// <summary>Which folder this row is, or belongs to. Empty for a loose voice.</summary>
+        public string GroupKey { get; } = string.Empty;
+
+        public bool IsCollapsed { get; }
+
+        /// <summary>The folder's own line, arrow and all.</summary>
+        [DataSourceProperty]
+        public string HeaderText { get; } = string.Empty;
+
         public string Id => Voice?.Id ?? string.Empty;
+
+        /// <summary>The folder colour — dimmer than a voice's name, so the eye reads structure
+        /// before it reads contents.</summary>
+        [DataSourceProperty]
+        public Color HeaderColor => new Color(0.78f, 0.71f, 0.55f, 1f);
 
         [DataSourceProperty]
         public string Name { get; }
@@ -98,22 +147,55 @@ namespace ImmersiveAI.UI.TalkScreen
         public void ExecuteSelect() => _select?.Invoke(this);
         public void ExecuteHear() => _hear?.Invoke(this);
 
+        /// <summary>
+        /// The name with WHO MAKES IT after it — "Sibylla (Qwen TTS Studio)", "Alloy (OpenAI)".
+        /// <para>
+        /// Said on every row rather than only on the hosted ones (Anton, 2026.08.15: the hosted
+        /// voices wore a mark and the local ones wore nothing, which reads as though only one kind
+        /// came from anywhere). The tag lives HERE and not in the preset's own Name so it stays a
+        /// piece of rendering: nothing on disk, nothing in the casting sheet, and a voice shared
+        /// with a friend carries only its real name.
+        /// </para>
+        /// </summary>
+        private static string NameFor(VoicePreset? voice)
+        {
+            if (voice == null) return string.Empty;
+            var name = (voice.Name ?? string.Empty).Trim();
+            var tag = TagFor(voice);
+            return tag.Length == 0 ? name : (name.Length == 0 ? tag : name + " " + tag);
+        }
+
+        private static string TagFor(VoicePreset voice)
+        {
+            if (voice.Backend == VoiceBackend.Remote) return "(OpenAI)";
+            // The model's own speakers are Qwen too, but they were never cloned in Studio — saying
+            // so would be a small lie, and which shelf a voice came off is the useful half anyway.
+            if (!string.IsNullOrWhiteSpace(voice.SpeakerName)) return "(Qwen TTS, built-in)";
+            return "(Qwen TTS Studio)";
+        }
+
+        /// <summary>
+        /// Where the voice sits, said the way the folders read: <c>female/battania/Gwen</c>.
+        /// <para>
+        /// It replaces the old "woman's · made on this machine" opening because with a shelf of a
+        /// hundred voices the useful question stopped being what KIND of voice it is and became
+        /// which people it is for — that is what a player scanning the list is hunting. The maker
+        /// still rides on the name itself, so nothing was actually lost.
+        /// </para>
+        /// </summary>
         private static string DetailFor(VoicePreset? voice)
         {
             if (voice == null) return string.Empty;
 
-            var kind = voice.Backend == VoiceBackend.Remote ? "hosted" : "made on this machine";
-            var sex = voice.Gender == VoiceGender.Female ? "woman's"
-                    : voice.Gender == VoiceGender.Male ? "man's"
-                    : string.Empty;
+            var parts = new System.Collections.Generic.List<string>(3);
+
+            var where = VoiceCasting.Label(voice);
+            if (where.Length > 0) parts.Add(where);
 
             var said = (voice.ReferenceText ?? string.Empty).Trim();
             if (said.Length > 80) said = said.Substring(0, 80).TrimEnd() + "…";
-
-            var parts = new System.Collections.Generic.List<string>(3);
-            if (sex.Length > 0) parts.Add(sex);
-            parts.Add(kind);
             if (said.Length > 0) parts.Add(said);
+
             return string.Join(" · ", parts);
         }
     }

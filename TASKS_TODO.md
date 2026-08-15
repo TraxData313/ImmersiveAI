@@ -202,6 +202,13 @@ POST V1 or NOT FULLY DECIDED:
 
       KNOWN NOT DONE, deliberately: no cloning from inside the game (the Studio road is documented
       instead), no microphone, and reach-outs do not speak by themselves unless you switch it on.
+
+      ALSO WORTH A LOOK NOW (2026.08.15): everyone you have not cast is given a voice of their own
+      culture and sex, so talk to a few Battanians and a few Aserai and see whether the shelf is
+      spread the way you expect. The Voices page says where each voice sits (female/battania/Gwen)
+      and lists them grouped that way. It only bites once module\Voices\<gender>\<culture>\ has
+      voices in it — until then everyone still falls back to Sibylla/Maximus. NOTE the two of them
+      moved to female\other\ and male\other\, which is what "belongs to no people" looks like.
 - [ ] Dramalord compatibility (asked on Nexus by coca1colax, 2026.07.25)
     Fold Dramalord's relationship state (lovers, affairs, friendships, its emotion values) into what
     each NPC knows of themselves and the player — so a Dramalord lover speaks AS a lover without the
