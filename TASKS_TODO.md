@@ -10,12 +10,29 @@
 BUGS:
 - [ ] THE VOICE BUZZES ON A NIGHT ACCOUNT (Anton, 2026.08.15, reproduced twice). Pressing ♪ on the
       ☾ night-account card ("The Jug by the Fire") plays a "buuuuu" noise where the first part
-      should be. Suspects in order: the card's body carries furniture the words never should — the
-      "[the road, 1084.04.19 02.29 (Winter 19, Year 1084)] ☾ Of that night between us: …" stamp and
-      the ☾ glyph — so SpeakableText may not be stripping THIS card's shape; or the account's
-      length trips VoiceBudget's ceiling and the runaway guard cuts mid-stream. Start at
-      ChatMessageVM.WithVoice and what body the ☾ card hands it; docs/voiceover-engine-notes.md has
-      the derail numbers.
+      should be.
+      NARROWED BUT NOT FIXED (2026.08.16). **Suspect one is dead** — do not spend time there again.
+      The ☾ account card hands `WithVoice` the CLEAN account and nothing else: `TalkScreenVM` draws
+      the stamp line as its own separate narration row, which carries no ▶ at all, and passes
+      `nightStory` to the card, which is `NightRecord.Story` straight from the ledger. No stamp, no
+      ☾ glyph, no furniture ever reaches the engine.
+      **Suspect two is the live one, and it is bigger than a ceiling.** On the Streaming and FullRead
+      roads `VoiceService.RunJobAsync` sends `plan.Text` — the WHOLE account — as ONE generation;
+      `plan.Bites` is used only on the retired ByLine road. So an ordinary reply (capped at MaxTokens
+      400) and a night account (`AccountCharBudget` runs to ~2000-2600 characters, and the roll's own
+      `DefaultFullAccountBudget` is 2600) are handed to the model as the same shape of request at
+      wildly different sizes. Two consequences, either of which fits a buzz at the START:
+        · past roughly 2350 characters `VoiceBudget.MaxTokensFor` CLAMPS to `EngineMaxTokens` (4096),
+          which is the engine's own rail — and this project's own rule is that a generation running
+          to its whole ceiling is judged a runaway on that fact alone.
+        · docs/voiceover-engine-notes.md says outright, from the measuring session: "Sentence
+          chunking is a reliability feature, not only a latency one. A derail costs one sentence, not
+          a whole reply." Streaming traded that away for gaplessness, and the longest text in the mod
+          is where the bill came due.
+      LIKELY FIX, UNPROVEN: group `plan.Bites` into generations bounded by characters (~600-900) and
+      chain them — one generation for an ordinary reply, so today's behaviour and the "one generation
+      or she changes person" lesson are untouched, and a handful for an account, where a slight seam
+      beats a buzz. Drive the real engine before believing any of it: measure, do not reason.
 - [ ] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN → moved into **THE STAGE** below. It is the same
       file as two other open items and must not be fixed alone.
 
