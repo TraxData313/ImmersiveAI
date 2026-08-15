@@ -1,4 +1,4 @@
-# The nights of a marriage — design record
+﻿# The nights of a marriage — design record
 
 **Built 2026.08.09, Anton's design.** The wedding chronicle's own morning after: the day after the
 wedding, the game went straight back to flipping a coin behind the player's back and handing him a
@@ -73,17 +73,44 @@ gives every woman (26–30 days, hers for life, deterministic in her id):
 | the days of the custom (1–5) | 0.00 — the door is closed |
 | everything else | 0.03 |
 
-`NightOdds.NightlyChance` = `V × L × f / Σf(window) × gift × dial`, where `V` is the game's own daily
-chance and `Σf(window)` is `MoodTides.FertileWindowSum` (4.65 — one constant for every woman, and a
-test guards that the window never overlaps the closed days, which is *why* it is one constant).
+**THE SPREAD IS OF HAZARD, NOT OF PROBABILITY** (corrected 2026.08.16 — Anton: "85% is very high for
+a babe", and he was right):
 
-**The rule this serves:** taking every night of the window gives about the same monthly odds the
-world would have given on its own. A test asserts it against `1 − (1−V)^L`.
+```
+H  = -ln(1 - V) × L                     the whole cycle's hazard, from the game's own daily chance
+h  = H × f / MoodTides.CurveSum(L) × gift × dial
+p  = 1 - e^(-h)
+```
 
-For a young wife with no children (V ≈ 0.11): ~66% on the crest, ~29% four nights before, ~1% in the
-quiet days, nothing while her door is closed. Older or with children, the same curve sits far lower —
-the game's arithmetic doing the work, not ours. Capped at `MaxNightlyChance` 0.85: no night is ever
-a certainty, whatever the purse.
+**The rule this serves:** taking every night of a cycle gives EXACTLY the monthly odds the world
+would have given on its own — Σh = H by construction, so Π(1−p) = e^(−H) = (1−V)^L identically, for
+every age, every gift and every cycle length. A test pins it to six places across four women, five
+ages and both gift extremes.
+
+*What was wrong before, and it is worth keeping because the shape of the mistake is a common one.*
+The first cut shared the month's chance out additively: `V × L × f / FertileWindowSum`, so the nightly
+chances summed to `V × L`. That is the EXPECTED COUNT of conceptions, not the chance of at least one,
+and the two agree only while `V × L` is small. It is 3–4 here — three or four expected children packed
+into eight nights — so the crest was forced to 66% and the jewel's doubling produced **173%**, a
+number that is not a probability at all. `MaxNightlyChance` (0.85), whose comment calls it flavour,
+was in fact the load-bearing clamp holding the model inside probability space; that is why the hearth
+window read *"85% plainly, up to 85% with the grandest gift"* — both readings were over the rail.
+Two smaller things fell out with it: the normaliser was `FertileWindowSum` (4.65) where the curve
+truly sums to `CurveSum(28)` = 5.10, since the quiet days carry weight too — a further 9.7% too hot;
+and the guard test's upper bound was `1.0`, so it could only ever fail if the mod were too BARREN
+and could not see an overshoot at all. Both are fixed, and the test is now two-sided and exact.
+
+For a childless wife of twenty-five (V ≈ 0.11): ~47% on the crest, ~23% four nights before, a fraction
+of a percent in the quiet days, nothing while her door is closed; ~72% at the crest with the jewel.
+Older or with children, the same curve sits far lower — the game's arithmetic doing the work, not
+ours. `MaxNightlyChance` 0.85 remains, and now binds in only one corner (a wife of eighteen, the
+Virile perk, and the grandest gift), which is what a flavour rail should look like.
+
+**Worth saying plainly, because the number still surprises:** a young childless wife who is taken
+through her whole season comes out around 96% over a month. That is VANILLA'S OWN figure for a wife
+travelling with her husband — matching it is the promise. The dial for a calmer house is
+`ConceptionChanceMultiplier`, which under the hazard form simply scales the exponent: halve it and
+the month falls to ~81%, quarter it to ~56%.
 
 ---
 

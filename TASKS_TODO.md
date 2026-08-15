@@ -94,6 +94,30 @@ BUGS:
       station carries one sentence of what its trade knows, which is the other reason his sheet had
       nothing to say about the streets he runs. UNPLAYTESTED.
 
+- [x] THE HEARTH SHOWED 85% PLAINLY AND 85% WITH THE BEST GIFT — FIXED 2026.08.16, and it was not the
+      display. Anton: "85% is very high for a babe, can you check the maths." He was right.
+      THE SPREAD WAS ADDITIVE. `NightOdds` shared the month's chance out as `V x L x f /
+      FertileWindowSum`, so the nightly chances SUMMED to `V x L` — which is the expected COUNT of
+      conceptions, not the chance of at least one. The two agree only while `V x L` is small; it is
+      3–4 here, so the crest was forced to 66% and the jewel's doubling produced **173%**, a number
+      that is not a probability. `MaxNightlyChance` (0.85), whose comment calls it flavour, was in
+      fact the load-bearing clamp holding the model inside probability space — hence both readings
+      sitting on the rail and reading identical.
+      NOW THE HAZARD IS SPREAD, not the probability: `H = -ln(1-V) x L`, `h = H x f / CurveSum(L) x
+      gift x dial`, `p = 1 - e^-h`. Sum of h is H by construction, so the whole-cycle match with
+      vanilla is EXACT rather than approximate, for every age, gift and cycle length — a test pins
+      it to six places across four women and five ages.
+      TWO MORE FELL OUT WITH IT. The normaliser was `FertileWindowSum` (4.65) where the curve truly
+      sums to `MoodTides.CurveSum(28)` = 5.10, because the quiet days carry weight too — a further
+      9.7% too hot; that is what `CurveSum` is for. And the guard test's upper bound was `1.0`, so
+      it could only ever fail if the mod were too BARREN and was structurally blind to an overshoot.
+      Now two-sided and exact.
+      A childless wife of 25 reads ~47% at the crest and ~72% with the jewel, so the gift is felt
+      again. WORTH KNOWING: her whole season still comes out ~96% over a month — that is VANILLA'S
+      OWN number for a wife who travels with her husband, and matching it is the promise. The dial
+      for a calmer house is `ConceptionChanceMultiplier`, which now cleanly scales the exponent
+      (0.5 -> ~81% a cycle, 0.25 -> ~56%). Design record updated with the whole derivation.
+
 NEXT UPDATE:
 - [ ] THE STAGE — one job, three entries that used to be scattered (consolidated 2026.08.16).
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means

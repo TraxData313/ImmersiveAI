@@ -83,16 +83,70 @@ public class NightsTests
 
         double vanillaMonthly = 1.0 - Math.Pow(1.0 - vanillaDaily, length);
 
+        // EVERY night of the cycle, not only the window's. The quiet days carry weight too, and
+        // leaving them out is precisely how the old normaliser came to be a tenth short.
         double missedEveryNight = 1.0;
         for (int day = 0; day < length; day++)
-        {
-            double f = MoodTides.Fertility(Her, day);
-            if (f <= MoodTides.QuietFertility) continue; // only the window nights are "the right moments"
             missedEveryNight *= 1.0 - NightOdds.NightlyChanceFor(Her, day, vanillaDaily);
-        }
         double oursMonthly = 1.0 - missedEveryNight;
 
-        Assert.InRange(oursMonthly, vanillaMonthly - 0.08, 1.0);
+        // TWO-SIDED, AND THAT IS THE POINT (2026.08.16). The old bound was
+        // InRange(ours, vanilla - 0.08, 1.0) — an upper limit of ONE, so the test could only ever
+        // fail if the mod were too BARREN. It could not see an overshoot, and there was a large
+        // one: the spread was additive, so the nightly chances summed to the expected COUNT of
+        // conceptions rather than the chance of at least one, and a young wife's crest was being
+        // clamped down from 66% (173% with a gift) by a rail meant only for flavour.
+        // Spreading the hazard makes the match exact rather than approximate, so this is now
+        // pinned tight from both sides.
+        Assert.Equal(vanillaMonthly, oursMonthly, 6);
+    }
+
+    [Fact]
+    public void TheMatchHoldsForEveryAgeEveryGiftAndEveryCycleLength()
+    {
+        // The invariant is provable, not fitted: sum of the hazards is the cycle's own hazard by
+        // construction, so this holds identically wherever it is sampled.
+        foreach (var who in new[] { Her, "lord_2_1_1", "companion_11", "lord_9_4_2" })
+        {
+            int length = MoodTides.CycleLength(who);
+            foreach (var vanillaDaily in new[] { 0.0139, 0.0624, 0.1104, 0.1440, 0.1872 })
+            {
+                double vanillaMonthly = 1.0 - Math.Pow(1.0 - vanillaDaily, length);
+                double missed = 1.0;
+                for (int day = 0; day < length; day++)
+                    missed *= 1.0 - NightOdds.NightlyChanceFor(who, day, vanillaDaily);
+                Assert.Equal(vanillaMonthly, 1.0 - missed, 6);
+            }
+        }
+    }
+
+    [Fact]
+    public void ACrestNightIsNoLongerPinnedAgainstTheRail()
+    {
+        // The symptom Anton reported: 85% plainly AND 85% with the grandest gift, because both
+        // readings had left probability space and were being clipped by the same ceiling.
+        const double vanillaDaily = 0.1104;                  // a childless wife of twenty-five
+        int crest = CrestDayOf(Her);
+
+        double plain = NightOdds.NightlyChanceFor(Her, crest, vanillaDaily);
+        double jewel = NightOdds.NightlyChanceFor(Her, crest, vanillaDaily, giftMultiplier: 2.0);
+
+        Assert.InRange(plain, 0.40, 0.55);
+        Assert.True(jewel > plain + 0.15, $"a gift must still be felt: {plain:P1} vs {jewel:P1}");
+        Assert.True(jewel < NightOdds.MaxNightlyChance, "and neither may sit on the rail");
+    }
+
+    private static int CrestDayOf(string who)
+    {
+        int length = MoodTides.CycleLength(who);
+        int best = 0;
+        double most = -1;
+        for (int day = 0; day < length; day++)
+        {
+            double f = MoodTides.Fertility(who, day);
+            if (f > most) { most = f; best = day; }
+        }
+        return best;
     }
 
     [Fact]

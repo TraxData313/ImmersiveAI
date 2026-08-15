@@ -19,10 +19,16 @@ namespace ImmersiveAI.Core.Nights
     /// what the world would have given you.
     ///
     /// What that feels like, for a young wife with no children (the game's own daily chance ≈ 0.11,
-    /// a 28-day cycle): about 66% on the crest night, 29% four nights before it, a hundredth of
-    /// that in the quiet days, and nothing at all while the custom of women is upon her. Older, or
-    /// with children already borne, the same curve stands but the whole of it is far lower — the
-    /// game's own arithmetic doing the work, not ours.
+    /// a 28-day cycle): about 47% on the crest night, 23% four nights before it, a fraction of that
+    /// in the quiet days, and nothing at all while the custom of women is upon her. Older, or with
+    /// children already borne, the same curve stands but the whole of it is far lower — the game's
+    /// own arithmetic doing the work, not ours.
+    ///
+    /// Worth knowing before anyone calls the crest high: taking a young childless wife's whole
+    /// season comes out at about 96% over a month, and that is VANILLA'S OWN NUMBER for a wife who
+    /// travels with her husband. Matching it is the promise. The dial for a calmer house is
+    /// <c>ConceptionChanceMultiplier</c>, which under the hazard form below simply scales the
+    /// exponent — halve it and the month falls to ~81%, quarter it to ~56%.
     /// </summary>
     public static class NightOdds
     {
@@ -48,13 +54,31 @@ namespace ImmersiveAI.Core.Nights
         {
             if (vanillaDailyChance <= 0.0 || fertility <= 0.0) return 0.0;
             if (cycleLength <= 0) return 0.0;
+            if (vanillaDailyChance >= 1.0) return MaxNightlyChance;
 
-            // A whole cycle's worth of the world's own hazard, spread across the fertile window.
-            double perWindowPoint = vanillaDailyChance * cycleLength / MoodTides.FertileWindowSum;
-            double chance = fertility * perWindowPoint
-                          * Math.Max(0.0, giftMultiplier)
-                          * Math.Max(0.0, playerMultiplier);
+            // THE SPREAD IS OF HAZARD, NOT OF PROBABILITY (2026.08.16 — Anton: "85% is very high for
+            // a babe", and he was right; the whole thing was checked against the game's own model).
+            //
+            // The first cut simply shared the month's chance out across the window: sum of the
+            // nightly chances = V x L. That is the EXPECTED COUNT of conceptions, not the chance of
+            // at least one, and the two agree only while V x L is small. Here it is 3 to 4 — the
+            // model was packing three or four expected children into eight nights — so the crest was
+            // forced to 66%, and with the jewel's doubling to a hundred and seventy-three per cent.
+            // A probability cannot be 173%: MaxNightlyChance below was quietly holding the whole
+            // thing inside probability space, which is not what a flavour rail is for. It is also
+            // why the crest read 85% plain AND 85% with the grandest gift — both were over the rail.
+            //
+            // Spread the HAZARD instead and the promise stops being approximate and becomes
+            // provable: with sum of h_d = H by construction, the chance of getting through a whole
+            // cycle untouched is exactly e^-H = (1-V)^L — identically, for every age, every gift and
+            // every cycle length. Taking her whole season is then exactly as likely to give a child
+            // as the world's own reckoning, which is the promise this file was written to keep.
+            double totalHazard = -Math.Log(1.0 - vanillaDailyChance) * cycleLength;
+            double nightHazard = totalHazard * fertility / MoodTides.CurveSum(cycleLength)
+                               * Math.Max(0.0, giftMultiplier)
+                               * Math.Max(0.0, playerMultiplier);
 
+            double chance = 1.0 - Math.Exp(-nightHazard);
             return Math.Min(MaxNightlyChance, Math.Max(0.0, chance));
         }
 

@@ -108,6 +108,27 @@ namespace ImmersiveAI.Core.Prompts
         /// child in a month as the world's own reckoning would have made him.</summary>
         public static readonly double FertileWindowSum = FertileWindow.Sum(w => w.Weight);
 
+        /// <summary>Days of the custom, when the curve is honestly zero.</summary>
+        public const int MensesDays = 5;
+
+        /// <summary>
+        /// What <see cref="Fertility"/> sums to over a WHOLE cycle of this length — the window plus
+        /// the quiet tail, which <see cref="FertileWindowSum"/> leaves out.
+        /// <para>
+        /// The difference is not decorative: normalising against the window alone means the quiet
+        /// days' weight is handed out on top of a full cycle's worth of chance instead of being part
+        /// of it, so the whole curve runs about a tenth too hot (4.65 against a true 5.10 on a
+        /// 28-day cycle). The guard test never saw it because it sums only the days above the quiet
+        /// weight, which is exactly the tail this accounts for.
+        /// </para>
+        /// </summary>
+        public static double CurveSum(int cycleLength)
+        {
+            int quietDays = cycleLength - MensesDays - FertileWindow.Length;
+            if (quietDays < 0) quietDays = 0;
+            return FertileWindowSum + QuietFertility * quietDays;
+        }
+
         /// <summary>The quiet weight of a day outside the window — never nothing, as bodies are
         /// never nothing, but a hundredth of the crest.</summary>
         public const double QuietFertility = 0.03;
