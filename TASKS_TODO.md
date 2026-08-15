@@ -37,6 +37,28 @@ NEXT UPDATE:
       DO THEM TOGETHER, and in that order: the two smaller ones teach the scene selection that the
       stage then has to arbitrate between two screens.
 
+- [ ] TRIAGE RESULTS ARE ON DISK AND UNAPPLIED (2026.08.16). A triage run over the twenty untriaged
+      leads finished its READING phase and then died on a session limit part-way through verifying.
+      **Ten of its readers returned in full and their verdicts are saved in the repo**:
+        docs/workflow-results-2026-08-16.json       — the structured verdicts (verdict + evidence +
+                                                      a named fix per finding, file:line each)
+        docs/workflow-results-2026-08-16.full.txt   — the same run's raw output, for anything the
+                                                      JSON truncated
+      SIX AREAS were read whole: births/recognition, doors + duty nights, heart-bands + the lover
+      road, the two windows' "Between us", leaks + the wound spike, and the dusk flow. FOUR planners
+      returned too (the voice buzz, the acted parts, speak-when-closed, and — dead, the night clock,
+      which was built by hand instead).
+      **THE VERDICTS ARE ONE READER'S WORD AND NOTHING MORE.** The refuters — whose whole job is
+      killing false positives — are the half that died, exactly as in the run before it. Read the
+      code at each cited line before believing any of it. What the run flags as REAL and NEW, worth
+      opening first: `HouseOfThePlayerLine` still reads `BornInMarriage` raw (an existing campaign's
+      legitimate children described in the vocabulary reserved for children acknowledged outside a
+      marriage, on every wife's sheet, every reply); `DeclineTheFeast` → `WithholdTheName` keeps the
+      old insufficient guard while the popup beside it was given a live-world one, so "No feast"
+      can answer a question the player was deliberately never asked; and a bought feast records a
+      QUIET owning, which leaves `BirthText.MotherNameBeat`'s with-feast branch dead in production.
+      NONE OF THESE IS FIXED. Nothing from that file has been applied.
+
 - [ ] REVIEW FINDINGS STILL OPEN (adversarial pass over the after-the-wedding batch, 2026.08.15).
       ALL 35 RAW FINDINGS ARE IN docs/review-findings-2026-08-15.md — recovered from the run's
       journal, with file:line and a scenario each, grouped high/medium/low. They are UNVERIFIED:
