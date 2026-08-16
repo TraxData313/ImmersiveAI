@@ -8,6 +8,7 @@ If one of these searches brought you here - yes, this is that mod:
 [*]NPCs with [b]real long-term memory[/b] - they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story - [b]courted and married in conversation[/b], companions included
+[*][b]voiced NPCs[/b] - hear them speak, in voices of their own people: clone your own or use hosted ones
 [*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
 [*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
 [/list]
@@ -18,7 +19,7 @@ If one of these searches brought you here - yes, this is that mod:
 [*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words - the names, promises and debts between you - beside their own sense of self and opinion of you.
 [*]Every soul begins as somebody: at your first meeting a private starting truth is written for them - an old wound, an odd habit, a vanity - grown from their real story.
 [*]They see the moment - time, place, who stands near, what lately happened in the world - and they carry moods and weather of their own.
-[*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won - the last in detail, older ones by name ("what happened at the storming of Varcheg?").
+[*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won - the last in detail, older ones by name.
 [*]Your companions witness the everyday road too - the towns, the trade, the men you hired, the tasks and how each ended - and they know their own wounds, and see yours.
 [*]They are free: told who they are and what their world is, never forced. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first - you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
@@ -26,26 +27,26 @@ If one of these searches brought you here - yes, this is that mod:
 
 [b][size=4]Court them. Wed them. Hire them.[/size][/b]
 [list]
-[*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road - liking, love, readiness, betrothal, wedding - moved by their own judgment of your talks, not by a menu.
-[*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words. Talk them over; only they decide when one is answered, and their readiness waits until nothing they wrote still stands.
+[*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road, moved by their own judgment of your talks, not by a menu.
+[*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words; their readiness waits until nothing they wrote still stands.
 [*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing - and her family's blessing costs a bride-price, haggled in talk or letter.
-[*][b]Companion brides and grooms[/b] - vanilla forbids them; here they are the point. Wed the wanderer riding at your side and she keeps her place and duties.
-[*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself. They open at their worth and never volunteer their lowest price.
+[*][b]Companion brides and grooms[/b] - vanilla forbids them; here you may wed the wanderer at your side, and she keeps her place and duties.
+[*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself - they open high and never volunteer their floor.
 [*]Nothing is sealed by words alone - every bargain, betrothal and wedding takes your confirming click, and the wedding is the real game marriage.
-[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her own month decides what may come of it - a child is begun on a night you chose, not by a hidden daily roll.
-[*]Bring wine or a jewel and the night is written down and named. The grander it was, the likelier your other wives are to hear of it - and of its name.
+[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her month decides what may come of it - a child begun on a night you chose, not by a hidden roll. Bring wine or a jewel and the night is written down and named - and your other wives may hear of it.
+[*][b]And after[/b] - every child written down and owned before the world (or not), lovers won past what marriage asks, doors shut against you with her reasons in her own words, wives keeping count of your nights.
 [/list]
 
 [b]And useful - stop googling stuff:[/b]
 
-Ask your scout how to make the party faster, your quartermaster about the stocks, anyone anything about the game - they quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools instead of one info-dump prompt: the muster roll, the scales of battle, the market ledger, your chronicle.
+Ask anyone anything about the game - they quietly search the web mid-reply and answer in their own voice, never citing a wiki. They reach for tools, not one info-dump prompt: the muster roll, the scales of battle, the market ledger, your chronicle.
 
 [b]Your ways to reach them:[/b]
 [list]
-[*]Face to face - they see you coming and greet you as you approach.
-[*]A chat window (hotkey [b]O[/b]) - quick words with anyone near you, no ceremony.
-[*]A letter window (hotkey [b]Y[/b]) - the whole correspondence, couriers riding real in-game days.
-[*]Both windows edit a character's prompt, or the world's, [b]without leaving the game[/b] - it speaks from the next reply.
+[*]Face to face - they greet you as you approach.
+[*][b]One talk screen[/b] (hotkey [b]O[/b]) - everyone you know in one list - near, far or gone - the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
+[*][b]Hear them[/b] - a play mark beside every line, and a Voices page to cast anyone. Off by default.
+[*]Edit a character's prompt, or the world's, [b]without leaving the game[/b] - it speaks from the next reply.
 [*][b]Think[/b] (Shift+Enter) - stuck for words? Your own hero drafts your next line from all you two have said, to keep, change or bin. Presets steer it: starter, romantic, ender, or your own.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)
 [/list]

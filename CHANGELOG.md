@@ -15,16 +15,23 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-**DRAFT Nexus changelog — re-check the 255-character cap before shipping:**
+## v3.0.0 — 2026.08.16
+
+The big one: one screen for everyone you know, voices you can hear, every child written down,
+and life after the wedding. Much of this is freshly built — this is a hobby project, one pair of
+hands — so if something misbehaves, please say so in the comments and it will be mended.
+
+**The Nexus changelog (255 max — copy this verbatim):**
 
 ```
-* New: hear them speak - clone a voice, or use a hosted one
-* A play mark on every line: replies, letters, their own thoughts
-* New: every child you father is written down, in her own voice
-* Choose the feast: bread and salt, or a whole town rejoicing
+* One screen for everyone you know, drawn there alive
+* Hear them speak - local or hosted voices
+* Every child written down: the hour, the feast, the name
+* Lovers, shut doors, and nights that count
+* Big update, much is fresh - report what breaks!
 ```
-<!-- 251 characters, measured 2026.08.15 (Nexus counts characters, not bytes: this block is pure
-     ASCII so the two agree). Four characters of room. Re-measure after ANY edit here. -->
+<!-- 248 characters, measured 2026.08.16 (Nexus counts characters, not bytes: this block is pure
+     ASCII so the two agree). Seven characters of room. Re-measure after ANY edit here. -->
 
 
 ### Hearing them speak

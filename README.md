@@ -19,6 +19,7 @@ If one of these searches brought you here — yes, this is that mod:
 - NPCs that **approach you** and **write you letters** on their own
 - an **AI wife or companion** that roleplays and never forgets your story — **courted and married
   in conversation**, companions included
+- **voiced NPCs** — hear them speak, in voices of their own people: clone your own or use hosted ones
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
 - **never knowing what to say?** one key and your own hero drafts your next line for you
 - **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — or, for tinkerers only, a
@@ -91,9 +92,13 @@ If one of these searches brought you here — yes, this is that mod:
 ## Reaching them
 
 - **Face to face** — they see you coming and greet you as you approach.
-- **Chat window** (hotkey `O`) — quick words with anyone near you, no ceremony.
-- **Letter window** (hotkey `Y`) — the whole correspondence as readable letters, couriers riding real in-game days, and a desk to write from.
-- Both windows edit a character's own prompt, or the whole world's, **without leaving the game** — it speaks from the very next reply.
+- **One talk screen** (hotkey `O` or `Y`) — everyone you know in one list — near, far or gone — and
+  the one you choose drawn there alive, the way the game draws a talk on the map. Words if they can
+  hear you, a letter riding real in-game days if they cannot, one thread for both. (The two older
+  windows survive behind a setting.)
+- **Hear them** — a play mark beside every line, and a Voices page to cast anyone: voices ship with
+  the mod, clone your own locally, or use hosted ones by the minute. Off by default.
+- The screen edits a character's own prompt, or the whole world's, **without leaving the game** — it speaks from the very next reply.
 - **Think** (Shift+Enter) — stuck for words? Your own hero drafts your next line from everything the two of you have said; it lands in your writing box to keep, change or bin. Standing presets steer it: *starter*, *romantic*, *ender*, or your own.
 - Any language in, the same language out.
 
