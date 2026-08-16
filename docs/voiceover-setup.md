@@ -78,6 +78,9 @@ everybody else. Which road a voice takes is decided by the voice, never by a set
    toolkit installed, in which case the smaller `windows-cuda-system` will do. Immersive AI uses its
    speech engine and its models — you never have to keep the app open, it just has to have been
    installed once so both exist on your disk.
+   *(**No administrator rights on this machine?** The installer needs them; the `.zip` of the same
+   build, on the same page, does not. See [voices without admin rights](voices-without-admin.md) —
+   it also does step 2 for you.)*
 2. **Download a model in it.** `qwen-talker-1.7b-base` is the one to get; it will also fetch the
    tokenizer that goes with it. Studio pulls these from
    [Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF) on Hugging Face.
