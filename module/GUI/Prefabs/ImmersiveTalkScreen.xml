@@ -384,72 +384,6 @@
 
                   </Children>
                 </Widget>
-                <!-- The bar rides LAST so it draws - and hit-tests - ON TOP. It shared a parent
-                     with the pane below it, which is stretched to fill and therefore lay over the
-                     buttons like a pane of glass: they were perfectly visible and completely dead
-                     (Anton's screenshot, 2026.08.14). Later siblings win the mouse in Gauntlet. -->
-                <!-- the bar: the two prompt doors, the dev panel, "?" and the way out -->
-                <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Top" StackLayout.LayoutMethod="HorizontalLeftToRight">
-                  <Children>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleDev" IsVisible="@IsDevMode">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Dev" />
-                      </Children>
-                    </ButtonWidget>
-                    <!-- Stop: shown only while something is speaking, so it is never a dead button
-                         and its appearing is itself the hint. The panic KEY (config VoicePanicKey,
-                         Backspace by default) is the one for when opening a window is too slow. -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="90" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceStop" IsVisible="@IsVoicePlaying">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceStopText" />
-                      </Children>
-                    </ButtonWidget>
-                    <!-- The hearth: the same screen turned to the women of it. Shown only when
-                         there IS one - a button leading to an empty list is a promise the game
-                         does not keep. -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleHearth" IsVisible="@HasHearth">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@ModeButtonText" />
-                      </Children>
-                    </ButtonWidget>
-                    <!-- The set: only inside a town, and only when there is more than one room to
-                         stand in. It cycles rather than opening a menu - three rooms at most, and a
-                         menu for three is heavier than the choice it carries. -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteChangeSet" IsVisible="@CanChangeSet">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@SetButtonText" />
-                      </Children>
-                    </ButtonWidget>
-                    <!-- Voices: shown to EVERYBODY, always. Voices are off by default, so this button
-                         is the whole discovery story - the page behind it explains what it is and
-                         turns it on. -->
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="110" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleVoice">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceButtonText" />
-                      </Children>
-                    </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@CanEdit">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Their prompt" />
-                      </Children>
-                    </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditGlobalPrompt">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="World prompt" />
-                      </Children>
-                    </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="38" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleInfo">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@InfoButtonText" />
-                      </Children>
-                    </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="38" SuggestedHeight="34" Brush="Popup.Cancel.Button" Command.Click="ExecuteClose">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="X" />
-                      </Children>
-                    </ButtonWidget>
-                  </Children>
-                </ListPanel>
 
               </Children>
             </Widget>
@@ -952,6 +886,86 @@
                 </ButtonWidget>
               </Children>
             </Widget>
+          </Children>
+        </Widget>
+
+        <!-- ==================== the bar, and the strip that hosts it ====================
+             It used to live inside the right-hand pane, right-aligned and grown by its children —
+             so as buttons were added it ran off that pane's left edge and the last of them sat
+             loose on the scene (Anton's screenshot, 2026.08.16). At the root it gets a strip of its
+             own running the whole width beside the list of souls, which is what it looked like it
+             wanted all along. Still LAST of the root's children: later siblings win the mouse in
+             Gauntlet, and the panes are stretched to fill, so anything before them is a pane of
+             glass over dead buttons. -->
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="44" VerticalAlignment="Top" MarginLeft="340">
+          <Children>
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#14100BFF" AlphaFactor="0.90" />
+            <!-- The bar rides LAST so it draws - and hit-tests - ON TOP. It shared a parent
+                 with the pane below it, which is stretched to fill and therefore lay over the
+                 buttons like a pane of glass: they were perfectly visible and completely dead
+                 (Anton's screenshot, 2026.08.14). Later siblings win the mouse in Gauntlet. -->
+            <!-- the bar: the two prompt doors, the dev panel, "?" and the way out -->
+            <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="34" HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="12" StackLayout.LayoutMethod="HorizontalLeftToRight">
+              <Children>
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleDev" IsVisible="@IsDevMode">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Dev" />
+                  </Children>
+                </ButtonWidget>
+                <!-- Stop: shown only while something is speaking, so it is never a dead button
+                     and its appearing is itself the hint. The panic KEY (config VoicePanicKey,
+                     Backspace by default) is the one for when opening a window is too slow. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="90" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceStop" IsVisible="@IsVoicePlaying">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceStopText" />
+                  </Children>
+                </ButtonWidget>
+                <!-- The hearth: the same screen turned to the women of it. Shown only when
+                     there IS one - a button leading to an empty list is a promise the game
+                     does not keep. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleHearth" IsVisible="@HasHearth">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@ModeButtonText" />
+                  </Children>
+                </ButtonWidget>
+                <!-- The set: only inside a town, and only when there is more than one room to
+                     stand in. It cycles rather than opening a menu - three rooms at most, and a
+                     menu for three is heavier than the choice it carries. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteChangeSet" IsVisible="@CanChangeSet">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@SetButtonText" />
+                  </Children>
+                </ButtonWidget>
+                <!-- Voices: shown to EVERYBODY, always. Voices are off by default, so this button
+                     is the whole discovery story - the page behind it explains what it is and
+                     turns it on. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="110" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleVoice">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceButtonText" />
+                  </Children>
+                </ButtonWidget>
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditNpcPrompt" IsVisible="@CanEdit">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Their prompt" />
+                  </Children>
+                </ButtonWidget>
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditGlobalPrompt">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="World prompt" />
+                  </Children>
+                </ButtonWidget>
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="38" SuggestedHeight="34" MarginRight="6" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleInfo">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@InfoButtonText" />
+                  </Children>
+                </ButtonWidget>
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="38" SuggestedHeight="34" Brush="Popup.Cancel.Button" Command.Click="ExecuteClose">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="X" />
+                  </Children>
+                </ButtonWidget>
+              </Children>
+            </ListPanel>
           </Children>
         </Widget>
 

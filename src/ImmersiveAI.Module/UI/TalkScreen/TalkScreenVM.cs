@@ -1785,8 +1785,12 @@ namespace ImmersiveAI.UI.TalkScreen
         /// <summary>Where the thread ends vertically: just above the writing line, or above the draft
         /// mirror while one is being written — taller for a letter, which runs long.</summary>
         [DataSourceProperty]
+        /// <summary>How far the thread stops short of the writing box. It grows once there is a
+        /// draft, because the box grows a mirror of the whole message under it — and it grows by
+        /// three lines more than it used to (Anton, 2026.08.16): the mirror was reaching the last
+        /// spoken line and sitting on its final rows.</summary>
         public float MessagesBottomMargin => !CanEdit ? 24f
-            : HasDraft ? (IsAway ? 280f : 210f) : 122f;
+            : HasDraft ? (IsAway ? 350f : 280f) : 122f;
 
         /// <summary>Whether there is any point in a writing box at all — a soul gone from the world
         /// can be read, never written to.</summary>

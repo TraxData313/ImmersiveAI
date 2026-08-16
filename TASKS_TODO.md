@@ -256,6 +256,18 @@ NEXT UPDATE:
           that the room she is truly in — so the label is honest from the first frame and the first
           press always takes her somewhere new. A room we do not offer (a prison, a barred keep)
           names none rather than lying about which one it is.
+          SIXTH, both polish (Anton, 2026.08.16):
+          • THE BAR RAN OFF ITS OWN PANE. It lived inside the right-hand pane, right-aligned and
+            grown by its children, so each button added pushed the row further past that pane's left
+            edge until the last of them sat loose on the scene. Lifted to the ROOT with a strip of
+            its own running the whole width beside the list of souls — which is what it had looked
+            like it wanted for some time. It is still the LAST root child: later siblings win the
+            mouse in Gauntlet, and the panes are stretched to fill, so anything before them is a
+            pane of glass over dead buttons (the 2026.08.14 lesson, unchanged and still true one
+            level up).
+          • THE DRAFT MIRROR SAT ON THE LAST SPOKEN LINE. `MessagesBottomMargin` grew by three lines
+            once there is a draft (210 -> 280, and 280 -> 350 for a soul away), since the mirror of
+            the whole message is taller than the box that raises it.
           STILL UNPLAYTESTED IN THIS SHAPE.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),
