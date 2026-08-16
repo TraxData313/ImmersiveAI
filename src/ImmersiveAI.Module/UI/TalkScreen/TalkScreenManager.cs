@@ -573,16 +573,25 @@ namespace ImmersiveAI.UI.TalkScreen
         /// couple of frames — sizes are not known the moment the list is rebuilt).</summary>
         internal static void RequestScrollToBottom() => _scrollCountdown = IsOpen || _scrollCountdown > 0 ? 3 : _scrollCountdown;
 
+        private static void ScrollToEnd(Widget root, string id)
+        {
+            var panels = root.GetAllChildrenOfTypeRecursive<ScrollablePanel>(p => p.Id == id);
+            if (panels.Count == 0) return;
+            var bar = panels[0].VerticalScrollbar;
+            if (bar != null) bar.ValueFloat = bar.MaxValue;
+        }
+
         private static void ScrollMessagesToBottom()
         {
             try
             {
                 var root = _movie?.Movie?.RootWidget;
                 if (root == null) return;
-                var panels = root.GetAllChildrenOfTypeRecursive<ScrollablePanel>(p => p.Id == "MessagesScroller");
-                if (panels.Count == 0) return;
-                var bar = panels[0].VerticalScrollbar;
-                if (bar != null) bar.ValueFloat = bar.MaxValue;
+                // BOTH ROLLS, and for the same reason (Anton, 2026.08.16): the newest is what you
+                // came to read. The thread opens on the last thing said; the hearth opens on the
+                // last night, and earlier ones are scrolled UP to, the way a memory is walked back.
+                ScrollToEnd(root, "MessagesScroller");
+                ScrollToEnd(root, "HearthScroller");
             }
             catch { /* a missed scroll is a shrug, not a failure */ }
         }

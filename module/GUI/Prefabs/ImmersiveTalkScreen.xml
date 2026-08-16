@@ -73,7 +73,37 @@
                   </Children>
                 </Widget>
 
-                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="92">
+                <!-- THE SWITCHES OF THE HOUSE (Anton, 2026.08.16). They govern the household, not
+                     the woman on stage, so they belong on this side rather than on her page. Two
+                     widgets, not one: the outer owns the visibility in this screen's scope, the
+                     inner owns her page's data - a widget that declares a DataSource captures every
+                     binding on itself, its own IsVisible included. -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="92" IsVisible="@IsHearth">
+                  <Children>
+                    <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren">
+                      <Children>
+                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" StackLayout.LayoutMethod="VerticalTopToBottom">
+                          <Children>
+                            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="36" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleVisitMode">
+                              <Children>
+                                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VisitModeButtonText" />
+                              </Children>
+                            </ButtonWidget>
+                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="4" MarginBottom="10" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@VisitModeText" />
+                            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="36" Brush="Popup.Cancel.Button" Command.Click="ExecuteTogglePrevent">
+                              <Children>
+                                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PreventButtonText" />
+                              </Children>
+                            </ButtonWidget>
+                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="4" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#9AA3B2FF" Brush.TextHorizontalAlignment="Left" Text="@PreventText" />
+                          </Children>
+                        </ListPanel>
+                      </Children>
+                    </Widget>
+                  </Children>
+                </Widget>
+
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="@ContactsTopMargin">
                   <Children>
 
                     <ScrollablePanel Id="ContactsScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="ContactsClip" InnerPanel="ContactsClip\ContactsList" VerticalScrollbar="..\ContactsScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
@@ -141,9 +171,32 @@
                     <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="34" VerticalAlignment="Top" MarginTop="44" MarginRight="200" StackLayout.LayoutMethod="HorizontalLeftToRight">
                       <Children>
                         <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Title.Text" Brush.FontSize="22" Brush.TextHorizontalAlignment="Left" Text="@SelectedName" />
-                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="12" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@VoiceBadgeColor" Brush.TextHorizontalAlignment="Left" Text="@VoiceBadgeText" IsVisible="@HasVoiceBadge" />
+                        <!-- What she IS to you takes the badge's place on the hearth side: there the
+                             bond is the subject, and the name of her voice beside her own name read
+                             as a stutter - "Sibylla (Sibylla)" (Anton, 2026.08.16). -->
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="12" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#C9BFA8FF" Brush.TextHorizontalAlignment="Left" Text="@BondBadgeText" IsVisible="@HasBondBadge" />
+                        <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" MarginLeft="12" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@VoiceBadgeColor" Brush.TextHorizontalAlignment="Left" Text="@VoiceBadgeText" IsVisible="@ShowVoiceBadge" />
                       </Children>
                     </ListPanel>
+
+                    <!-- Her state, under her name and out of the scrolling roll: what her body is
+                         about, whether the night is hers to spend, and the odds if they are shown.
+                         Stacked and measured, never at fixed offsets - each of them can wrap. -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="82" MarginRight="30" IsVisible="@IsHearth">
+                      <Children>
+                        <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren">
+                          <Children>
+                            <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" StackLayout.LayoutMethod="VerticalTopToBottom">
+                              <Children>
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="@SeasonColor" Brush.TextHorizontalAlignment="Left" Text="@SeasonText" />
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="4" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@StatusText" />
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@OddsText" IsVisible="@HasOdds" />
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </Widget>
+                      </Children>
+                    </Widget>
 
                     <!-- the road page: her misgivings, her kin's blessing, the days counting down,
                          then the wedding day itself, kept forever -->
@@ -192,7 +245,7 @@
                         <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
                           <Children>
 
-                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="130" MarginBottom="130">
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="196" MarginBottom="130">
                           <Children>
                             <ScrollablePanel Id="HearthScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="HearthClip" InnerPanel="HearthClip\HearthColumn" VerticalScrollbar="..\HearthScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
                               <Children>
@@ -200,29 +253,6 @@
                                   <Children>
                                     <ListPanel Id="HearthColumn" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="30" StackLayout.LayoutMethod="VerticalTopToBottom">
                                       <Children>
-
-                                        <!-- where her body stands, where she stands, and the odds -->
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.FontColor="@SeasonColor" Brush.TextHorizontalAlignment="Left" Text="@SeasonText" />
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="4" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@StatusText" />
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@OddsText" IsVisible="@HasOdds" />
-
-                                        <!-- the two switches of the house, and what each is set to -->
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="14" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@VisitModeText" />
-                                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@PreventText" />
-                                        <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="40" HorizontalAlignment="Left" MarginTop="8" StackLayout.LayoutMethod="HorizontalLeftToRight">
-                                          <Children>
-                                            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="34" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleVisitMode">
-                                              <Children>
-                                                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VisitModeButtonText" />
-                                              </Children>
-                                            </ButtonWidget>
-                                            <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="34" Brush="Popup.Cancel.Button" Command.Click="ExecuteTogglePrevent">
-                                              <Children>
-                                                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PreventButtonText" />
-                                              </Children>
-                                            </ButtonWidget>
-                                          </Children>
-                                        </ListPanel>
 
                                         <!-- the fortnight of nights, with the children's cards among them -->
                                         <ListPanel DataSource="{Entries}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="18" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">

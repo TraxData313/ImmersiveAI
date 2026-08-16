@@ -223,6 +223,22 @@ NEXT UPDATE:
           lazy construction (fixed anyway, and correctly) and the layout margins (rebuilt anyway, and
           better for it). No exception was ever logged, which was the clue that pointed here: nothing
           was failing, something simply was not being asked for.
+          THIRD PLAYTEST: it draws, and Anton asked for four changes, three of them done:
+          • THE SWITCHES ARE THE HOUSE'S, NOT HERS — visiting and prevent-a-child govern the whole
+            household, so they moved to the LEFT column above the list of souls, where the settings
+            of the house belong. The list's top offset is MEASURED from the wrapped sentences
+            (`ContactsTopMargin` over the old window's own `ControlsHeight`), because how far each
+            wraps depends on which way its own switch stands.
+          • THE ROLL OPENS ON THE NEWEST NIGHT, scrolling up for earlier ones — the same manner the
+            thread already had, now shared (`ScrollToEnd` takes the scroller's id).
+          • HER STATE MOVED UP under her name and out of the roll, and the parenthetical beside her
+            name is now the BOND — "(wife)" / "(lover)" — where the voice badge had been reading as
+            a stutter, "Sibylla (Sibylla)". The badge still stands on the talk side, where it means
+            something.
+          NOT CHANGED, and stated rather than guessed: "Go to her tonight" still closes the screen
+          before the gift question. It has to — the screen HOLDS THE WORLD STILL, and a night that
+          cannot let an hour pass is a night that never settles. Whether it should REOPEN on her
+          afterwards is Anton's call and was left for him.
           STILL UNPLAYTESTED IN THIS SHAPE.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),

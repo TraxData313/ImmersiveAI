@@ -728,6 +728,10 @@ namespace ImmersiveAI.UI.TalkScreen
             OnPropertyChanged("CanChangeSet");
             OnPropertyChanged("SetButtonText");
             SyncHearth();
+            OnPropertyChanged("ContactsTopMargin");
+            OnPropertyChanged("BondBadgeText");
+            OnPropertyChanged("HasBondBadge");
+            OnPropertyChanged("ShowVoiceBadge");
             OnPropertyChanged("MessagesBottomMargin");
             OnPropertyChanged("HasDraft");
 
@@ -1845,6 +1849,8 @@ namespace ImmersiveAI.UI.TalkScreen
                 // every reading below stays blank.
                 _hearth!.RefreshContacts();
                 _hearth.TrySelect(hero);
+                // Open on the newest night, as the thread opens on the last thing said.
+                TalkScreenManager.RequestScrollToBottom();
             }
             catch (Exception ex) { ModLog.Error("turning the hearth page", ex); }
         }
@@ -1864,6 +1870,10 @@ namespace ImmersiveAI.UI.TalkScreen
                 OnPropertyChanged("ShowThink");
                 OnPropertyChanged("CanEdit");
                 OnPropertyChanged("CanSend");
+                OnPropertyChanged("ContactsTopMargin");
+                OnPropertyChanged("BondBadgeText");
+                OnPropertyChanged("HasBondBadge");
+                OnPropertyChanged("ShowVoiceBadge");
                 RefreshContacts();
                 SyncHearth();
             }
@@ -1888,6 +1898,48 @@ namespace ImmersiveAI.UI.TalkScreen
                 catch { return false; }
             }
         }
+
+        /// <summary>Where the list of souls starts. In hearth mode the two switches of the HOUSE
+        /// stand above it — they are settings of the household and not of the woman on stage, so
+        /// they belong on this side, away from her page (Anton, 2026.08.16). The offset is MEASURED
+        /// from the wrapped sentences rather than nailed to a number: how far each wraps depends on
+        /// which way its own switch stands, and a fixed margin is exactly what clipped them in the
+        /// old window.</summary>
+        [DataSourceProperty]
+        public int ContactsTopMargin
+        {
+            get
+            {
+                if (!_hearthMode || _hearth == null) return 92;
+                return 92 + Math.Max(0, _hearth.ControlsHeight - 44) + 14;
+            }
+        }
+
+        /// <summary>What she is to the player, in one word, where the voice badge stands the rest of
+        /// the time. Only on the hearth side: there the bond IS the subject, and the name of her
+        /// voice beside her own name read as a stutter ("Sibylla (Sibylla)").</summary>
+        [DataSourceProperty]
+        public string BondBadgeText
+        {
+            get
+            {
+                var hero = _selected?.Hero;
+                if (!_hearthMode || hero == null) return string.Empty;
+                try
+                {
+                    if (Personas.FamilyBuilder.AreWed(Hero.MainHero, hero)) return "(wife)";
+                    return ImmersiveChatBehavior.IsLoverOfPlayer(hero) ? "(lover)" : string.Empty;
+                }
+                catch { return string.Empty; }
+            }
+        }
+
+        [DataSourceProperty]
+        public bool HasBondBadge => BondBadgeText.Length > 0;
+
+        /// <summary>The voice badge stands down on the hearth side, where the bond takes its place.</summary>
+        [DataSourceProperty]
+        public bool ShowVoiceBadge => HasVoiceBadge && !_hearthMode;
 
         public void ExecuteToggleHearth() => IsHearth = !_hearthMode;
 
