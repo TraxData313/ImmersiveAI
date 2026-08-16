@@ -7,7 +7,10 @@ the AI you configure — each with their own voice, memory, moods and sense of s
 meeting, seek you out, write letters from across the map, and know their world: their family,
 their company, their trade, the war, the road.
 
-![Face to face](Screenshots/1_face_to_face_conversation.jpg)
+![The talk screen](Screenshots/12_talk_screen.jpg)
+*Everyone you know down the left — here, away, or gone. The one you turn to stands in the middle,
+in the room she is really in, shifting her stance as you talk. Her whole story runs down the right,
+a ▶ beside every line.*
 
 
 ## Looking for…?
@@ -28,7 +31,7 @@ If one of these searches brought you here — yes, this is that mod:
 
 ## Alive
 
-- Distinct voices, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
+- Distinct manners of speech, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
 - They grow: recent talks stay word-for-word, old ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — alongside their own sense of self and their opinion of you.
 - Every soul begins as somebody: at your first meeting, a private starting truth is written for them — an old wound, an odd habit, a vanity — grown from their real story, traits and your world prompt. It lands in their own editable prompt file, yours to read, rewrite or erase.
 - They see the moment — time, place, who stands near, what lately happened in the world.
@@ -42,6 +45,7 @@ If one of these searches brought you here — yes, this is that mod:
 
 ![An NPC comes to you](Screenshots/5_incoming_talk.jpg)
 ![The talk taken](Screenshots/6_incoming_talk_taken.jpg)
+*Someone crosses the room on their own account. Answer the knock and the screen opens on them.*
 
 
 ## Court them. Wed them. Hire them.
@@ -79,12 +83,25 @@ If one of these searches brought you here — yes, this is that mod:
   of its name. Every wife keeps her own fortnight of nights — the ones you came, the ones her
   door was closed, and whatever she learned of the rest.
 
+![Your wedding day](Screenshots/15_wedding_day.jpg)
+*The day itself, replayed — and drawn at the age you both were on it, however many years later
+you open it.*
+
+![Your own hearth](Screenshots/14_the_hearth.jpg)
+*The hearth (H): the women of your house on the left, the one you turn to standing there, and her
+own page on the right — her season, the nights she keeps, your children, and tonight's one decision.*
+
 
 ## Useful — stop googling stuff
 
 - Ask your scout how to make the party faster; ask your quartermaster about the stocks.
 - Ask anything about the game — they can quietly search the web mid-reply and answer in their own voice, never citing a wiki.
 - They reach for tools instead of one mega info-dump prompt: the encyclopedia, a look around, the muster roll, the scales of battle, the market ledger, the chronicle of your battles — deciding for themselves what the moment calls for.
+
+![Asking them things](Screenshots/16_asking_them_things.jpg)
+*Your second-in-command on what an engineer is actually worth — answered as a soldier would put it,
+never as a wiki would. Above it, in grey, everything that has happened since the two of you last
+had a proper talk.*
 
 ![Scout searching the web](Screenshots/2_scout_web_search.jpg)
 
@@ -102,8 +119,11 @@ If one of these searches brought you here — yes, this is that mod:
 - **Think** (Shift+Enter) — stuck for words? Your own hero drafts your next line from everything the two of you have said; it lands in your writing box to keep, change or bin. Standing presets steer it: *starter*, *romantic*, *ender*, or your own.
 - Any language in, the same language out.
 
+![Letters in the thread](Screenshots/13_letters_in_the_thread.jpg)
+*A friend a kingdom away. The same screen, the same thread — his letters and yours among the spoken
+words, the box now saying "Seal and send", and a courier already on the road between you.*
+
 ![A letter arrives](Screenshots/3_incoming_letter.jpg)
-![The letter window](Screenshots/4_letter_window.jpg)
 
 
 ## What it runs on — and what it costs
@@ -125,7 +145,7 @@ optional hard daily cap makes runaway costs impossible.
 **Two catches worth knowing about free:** Google states that free-tier traffic is used to improve
 their products, so your roleplay isn't private there (paying moves the same key to their paid
 tier). And Gemini's thinking **cannot be switched off**, so its replies are slow — live in the
-chat window (hotkey `O`); the face-to-face panel handles the wait poorly.
+talk screen (hotkey `O`); the face-to-face panel handles the wait poorly.
 
 📖 **[Which AI should I use?](docs/choosing-a-model.md)** — prices side by side, the catch with
 each provider, what makes a model good enough (native tool calling, thinking off), and the whole
@@ -157,8 +177,8 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
   personality lands.
 - Each character's folder holds their memories, self-image, and letters as readable text
   — the whole inner life, yours to browse. Changes apply on the next conversation.
-- Both prompt files are editable from inside the game too, in the chat and letter windows.
-- `conversation_presets.txt` — your standing presets for **Think** (Shift+Enter in either window),
+- Both prompt files are editable from inside the game too, from the talk screen's own bar.
+- `conversation_presets.txt` — your standing presets for **Think** (Shift+Enter on the talk screen),
   the button that has your own character work out what to say or write next. Starts with three —
   *starter*, *romantic*, *ender* — and is yours to rewrite, from the file or from the menu's own
   Edit page.
@@ -169,6 +189,9 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `NPCs\campaign_*\_births\` — every child born to you: the hour of it in the mother's own words,
   which stays between the two of you, and the feast you kept for the child, which everyone who
   stood there remembers.
+- `Voices\` — the voices on your shelf, and who has been cast in which. It sits *outside* the
+  campaign folders on purpose: loading an older save rewinds what everyone remembers, and it must
+  never quietly recast anybody along with it.
 
 That config folder is *yours* and survives everything: uninstall, resubscribe, update — every
 character still remembers you. (It doesn't sync between PCs; copy it yourself, and mind the API
