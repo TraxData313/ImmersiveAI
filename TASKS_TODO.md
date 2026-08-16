@@ -1,6 +1,21 @@
-﻿WHERE THINGS STAND (2026.08.16, after the night pass)
+﻿WHERE THINGS STAND (2026.08.16 — **v3.0.0 IS SHIPPED**)
+
+  ** LEFT FOR ANTON, and the release is not finished without them:
+      1. Steam item 3764210301 → Owner Controls → paste docs\steam-page-final.bbcode.txt as the
+         description. THE DESCRIPTION CHANGED this release (it now describes the one talk screen,
+         the voices and the after-the-wedding batch) — this is not a patch, so it must be pasted.
+      2. Nexus → upload dist\ImmersiveAI_v3.0.0.zip, paste docs\nexus-page.bbcode.txt as the
+         description, and the CHANGELOG's fenced 248-character block into the per-version field.
+
+  v3.0.0 went up to the Workshop on 2026.08.16 ("Uploading done!", 10,747,516 bytes): 54 commits
+  since v2.2.1 six days before — the one talk screen, the voices whole, the birth chronicle, the
+  entire after-the-wedding batch, the reworked coming-to-you, and a long tail of real fixes. It
+  ships with an honest note at the top of every change-note tier saying much of it is freshly built,
+  that this is one pair of hands, and asking for reports — Anton's call, and the right one.
+
   804 Core tests green, everything below built, committed and DEPLOYED — and almost none of it
-  played. The post-marriage batch, the voices, and this night's whole pass are all unplaytested.
+  played. The post-marriage batch, the voices, and this night's whole pass are all unplaytested;
+  what comes back from players is now the fastest road to knowing which parts are real.
 
   THIS NIGHT LANDED, in order: the voices reading the *acted* parts; her answer spoken with the
   screen shut; the night's clock kept by the sun instead of a drifting hour count; the voice BUZZ

@@ -793,3 +793,51 @@ release ritual warns about.
   doing, but the Gauntlet call for it is unverified and this screen is the fragile one.
 
   Built and deployed; CHANGELOG pill. NOT re-playtested. (2026.08.16 13.40.00)
+
+- [x] **v3.0.0 SHIPPED TO THE STEAM WORKSHOP** (2026.08.16) — the biggest release the mod has had:
+  54 commits since v2.2.1 six days earlier, plus that morning's fixes. Anton's call on the shape of
+  it: *"I wont be able to raise new children, find lovers etc, we have to leave a quick note that
+  this is new and ask for bug reports if they see problems, I know, but im hobby dev, so let them
+  take it or leave it."* So the release SAYS SO — every tier opens by naming that much of it is
+  freshly built, that this is one pair of hands, and asking for reports. That honesty is the
+  feature, not an apology: it is what makes shipping a mostly-unplaytested batch an honest act
+  rather than a careless one.
+
+  WHAT WENT OUT: the one talk screen (chat + letters merged, the chosen one drawn alive, stances,
+  moving the talk between a town's rooms), THE VOICES whole (93 shipped, cloning, hosted, per-people
+  casting, Backspace), the birth chronicle, the entire after-the-wedding batch (lovers, doors with
+  written reasons, duty nights, recognition, "Between us"), the reworked coming-to-you (the ponder
+  retired, the hearths, the one-way cold), and a long tail of real fixes — the conception maths, the
+  night clock, the item flood, the scouts' eyes, the gang leader, the three births findings.
+
+  VERSION THREE, not 2.3: the screen, the voices and the lover road each change what the mod IS.
+
+  THE STEAM PAGE WAS ALREADY OVER ITS CAP BEFORE THIS RELEASE TOUCHED IT — 8061 bytes against the
+  8000 limit, which would have failed to save with the bare "There was a problem trying to save the
+  title and description" the runbook warns about. It has now been paid down to 7847 WITH the voices
+  and after-the-wedding lines added: facts kept, words cut, the two dead windows replaced by the one
+  screen everywhere. Nexus +89 chars for two whole feature families; README in step. Nexus block
+  248/255. The runbook's "measure in BYTES" rule earned itself again — nobody had re-measured since
+  the page was last edited, so the cap was breached silently and would have surfaced as a confusing
+  failure in Anton's hands, not mine.
+
+  THE FALSE ALARM WORTH RECORDING, because it cost real time and a good scare: `package.ps1` REFUSED
+  to package on `$neverShip` (sibylla, achilles, max). I read that as a leak — those names had been
+  celebrity clones — found them git-tracked and PUSHED to the public repo, pulled them out of the
+  tree, committed the removal and offered to rewrite public history. Anton, emphatically: *"Sibylla
+  and Max are fully reworked, all the voices are fully reworked and ok to ship, we have been over
+  this a few times."* TRUE, and `module\Voices\README.txt` says so plainly in its own provenance
+  section — the whole 93-voice shelf was rebuilt from CC0 audio (kyutai/tts-voices) on 2026.08.15,
+  same names, different throats. The guard list had simply never been told. Both voices restored,
+  `$neverShip` EMPTIED (not trimmed — a stale entry that blocks a legitimately reworked voice is its
+  own failure), the machinery kept whole for anything genuinely unshippable, and the memory note
+  rewritten so no future session raises it again. THE LESSON: a guard that encodes a JUDGMENT must
+  be updated the day the judgment changes, or it does not protect the project, it just lies to it
+  slowly — and the day it fires, whoever reads it will believe it over the evidence in front of them.
+
+  UPLOAD: "Uploading done!", 10,747,516 bytes to item 3764210301, the exit-82 press-any-key crash
+  being the documented harmless ending. 804 Core tests green. LEFT FOR ANTON, and the release is not
+  finished without them: paste `docs\steam-page-final.bbcode.txt` into the item's Owner Controls
+  (the description CHANGED this release — this is not a patch), and upload
+  `dist\ImmersiveAI_v3.0.0.zip` to Nexus with the CHANGELOG's 248-character block.
+  (2026.08.16 21.30.00)
