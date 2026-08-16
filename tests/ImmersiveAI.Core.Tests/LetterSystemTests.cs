@@ -145,10 +145,10 @@ public class LetterSystemTests
     [Fact]
     public void LetterLines_CarryTheNamesAndTheWords()
     {
-        Assert.Contains("Aeron", PromptBuilder.WriteLetterDesireLine("Aeron"));
-        Assert.Contains("yes or no", PromptBuilder.WriteLetterDesireLine("Aeron"));
-
+        // The spontaneous letter opens straight at the page now (2026.08.16 — no "do I wish to write?"
+        // call in front of it), so the road and the waiting courier are part of the writing itself.
         Assert.Contains("Aeron", PromptBuilder.ComposeLetterLine("Aeron"));
+        Assert.Contains("a courier stands ready", PromptBuilder.ComposeLetterLine("Aeron"));
 
         var read = PromptBuilder.AnswerLetterDesireLine("Aeron", "Meet me at Sargot.");
         Assert.Contains("Aeron", read);

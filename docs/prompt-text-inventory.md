@@ -41,16 +41,15 @@ Swept 2026-08-14, read-only, from `src\ImmersiveAI.Core\` and `src\ImmersiveAI.M
 | whisper: CanBlessTroth | "- The one of my house who is promised to them awaits my word…" | sheet | | T |
 | AngelFrame | "{voice} speaks softly into your mind: \"{line}\"" | LEGACY frame | voice, line | T R! LOCK — replay of pre-2026.08.07 turns only |
 | InnerFrame | "(Within my own mind: {line})" | beat frame | line | T R! (live + replay must render identically; window renders "(Name, within: …)") |
-| ReachOutPonderLine ×2 (stranger/known) | "I notice {player} nearby… NO — or YES: what I want to discuss." | util | player | R! (answer shape parsed by InitiationParser.WantsToGo keywords NO/YES/GO/STAY) |
-| ReachOutPonderNote ×2 | "I marked {player} nearby… I resolved:" | beat | player | T R! (prefix is PonderNoteMark) |
-| PonderNoteMark | "I marked " | MARK | | R! LOCK (IsPonderBeat prefix match, window folding) |
-| ApproachLine ×2 (welcomed/refused) | "I rise and go to {player}…" | beat | player, reason | T |
-| ApproachNote ×2 | "Of my own accord I went to {player}…" | beat | player, reason | |
-| FirstWordLine ×2 (stranger/known) | "I cross to {player} now — we have never spoken…" | beat | player, reason | T ("at once or only later") |
-| FirstWordNote | "Of my own accord I crossed to {player} and spoke first…" | beat | player, reason | |
-| ReasonSentence / ReasonClause | " What brings me: {reason}." / " — what brought me: {reason}" | beat glue | reason | |
-| WriteLetterDesireLine | "The road lies long between me and {player}… yes or no." | util | player | T; answer parsed by WantsToReachOut |
-| ComposeLetterLine | "I sit, and set my heart to paper…" (+ inService report clause) | beat | player | T R! LOCK — opening IS ComposeLetterMarkOwn; in-service clause appended AFTER the marker on purpose |
+| ~~ReachOutPonderLine~~ | RETIRED 2026.08.16 — nothing asks a soul whether it has anything to say; the roll gives it the mike | — | | gone with InitiationParser.WantsToGo and the whole `reason` plumbing |
+| ReachOutPonderNote ×2 | "I marked {player} nearby… I resolved:" | LEGACY beat | player | T R! (prefix is PonderNoteMark) — no new ones written since 2026.08.16 |
+| PonderNoteMark | "I marked " | MARK | | R! LOCK (IsPonderBeat prefix match, window folding) — old memories forever |
+| ApproachLine ×2 (welcomed/refused) | "I rise and go to {player}, for there is something I want to tell them, or to ask them…" | beat | player | T (the premise the retired question used to set) |
+| ApproachNote ×2 | "Of my own accord I went to {player}…" | beat | player | |
+| FirstWordLine ×2 (stranger/known) | "I cross to {player} now — we have never spoken. Something moves me to it: a thing I want to tell them, or to ask them…" | beat | player | T ("at once or only later", "tell them"/"ask them") |
+| FirstWordNote | "Of my own accord I crossed to {player} and spoke first…" | beat | player | the spoken words on the same turn ARE the repetition brake |
+| ~~WriteLetterDesireLine~~ | RETIRED 2026.08.16 — the post asks nobody either; its premise moved into ComposeLetterLine | — | | |
+| ComposeLetterLine | "I sit, and set my heart to paper. The road lies long… a courier stands ready…" (+ inService report clause) | beat | player | T R! LOCK — opening IS ComposeLetterMarkOwn; road premise AND in-service clause both appended AFTER the marker on purpose |
 | AnswerLetterDesireLine | "A courier has found me… I break the seal and read: {body} … Do I wish to write back…" | beat | player, letterBody | T R! LOCK — contains ReadLetterOpenMarkOwn + ReadLetterCloseMarkOwn; the body is extracted BETWEEN the marks |
 | ComposeReplyLine | "I answer them now. What I set down is only the letter…" | beat | player | T R! LOCK — opening IS ComposeReplyMarkOwn |
 | ComposeLetterMark / ComposeReplyMark / ReadLetterOpenMark / ReadLetterCloseMark | "Then sit, and set your heart to paper" … | LEGACY MARK ×4 | | T R! LOCK — recorded pre-2026.08.07 memories carry these forever; NEVER editable |

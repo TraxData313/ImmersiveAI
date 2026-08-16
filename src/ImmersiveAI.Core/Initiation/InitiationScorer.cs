@@ -14,7 +14,7 @@ namespace ImmersiveAI.Core.Initiation
     ///
     /// where each factor in [0,1] pulls it down toward silence:
     ///   - frequency: how much has ever been shared, saturating at <see cref="FrequencyFullAt"/> exchanges.
-    ///   - closeness: how far the standing is from indifference, |relation| / 100 (love OR enmity both pull).
+    ///   - closeness: how WARM the standing is, relation / 100 — affection alone; see <see cref="Coldness"/>.
     ///   - recency: gently decays if they have not spoken lately, so a long-quiet bond grows quiet.
     ///
     /// The config's <c>DailyInitiationRate</c> is the expected number of reach-outs per day IN TOTAL,
@@ -52,6 +52,13 @@ namespace ImmersiveAI.Core.Initiation
         /// regardless), so this only lifts the reaching-out off exactly zero for the bonds that are actually
         /// close in time spent. Keeps the feature observable rather than near-impossible to ever see.</summary>
         public const double ClosenessFloor = 0.15;
+
+        /// <summary>How much of their pull is left at the very bottom of ill feeling (relation −100):
+        /// a twentieth. Deliberately NOT zero — Anton, 2026.08.16: "let's move from total silence, cap it
+        /// to something small". A soul who despises the player may still, once in a long while, come and
+        /// say so; what they may not do is behave like a devoted friend, which is what the old symmetric
+        /// |relation| had them doing.</summary>
+        public const double ColdestFactor = 0.05;
 
         /// <summary>Recency floor for someone in the player's own service (their clan: companions
         /// leading parties and caravans, kin, governors). Bonds of AFFECTION fade with silence; a
@@ -115,7 +122,7 @@ namespace ImmersiveAI.Core.Initiation
             if (storyRichness <= 0) return 0;
 
             double frequency = Math.Min(1.0, storyRichness / (double)FrequencyFullAt);
-            double standing = Math.Min(1.0, Math.Abs(relation) / 100.0);
+            double standing = Math.Min(1.0, Math.Max(0, relation) / 100.0);
             double closeness = ClosenessFloor + (1.0 - ClosenessFloor) * standing;
             double recency = RecencyFactor(daysSinceLastTalk);
 
@@ -125,10 +132,39 @@ namespace ImmersiveAI.Core.Initiation
                 recency = Math.Max(recency, DutyRecencyFloor);
             }
 
-            double pull = frequency * closeness * recency;
+            // The cold rides LAST, over the duty floors as well: a governor who has come to dislike the
+            // player still files his report, but he files it the way a cold man does — rarely.
+            double pull = frequency * closeness * recency * Coldness(relation);
             if (pull < 0) pull = 0;
             if (pull > 1) pull = 1;
             return pull;
+        }
+
+        /// <summary>
+        /// THE COLD (2026.08.16, Anton's design). How much a soul's ill feeling quiets them, a
+        /// multiplier in [<see cref="ColdestFactor"/>, 1] on their whole pull: 1 at indifference and
+        /// above, falling straight down to a twentieth at relation −100.
+        ///
+        /// It replaces the old symmetric |relation| closeness, which held that "love OR enmity both
+        /// pull" and therefore made a wife who has come to hate the player seek him out exactly as
+        /// eagerly as one who adores him. That was backwards for the case the whole marriage batch is
+        /// built around: he wrongs her, she closes her door at night, she goes cold — and the mod
+        /// answered by having her cross the room MORE. The cold now runs one way through everything:
+        /// fewer visits, fewer letters, and the door she has already shut.
+        ///
+        /// NOT zero at the bottom (see <see cref="ColdestFactor"/>) — a hatred that can never once
+        /// speak is a soul deleted rather than a soul cold.
+        ///
+        /// WHAT IT MUST NEVER TOUCH is the fresh wound (<see cref="WoundSpike"/>), which is a FLOOR
+        /// applied over the finished pull. Learning of the wrong is exactly what drove the relation
+        /// down, so chilling the spike with it would silence the one moment the wound exists for.
+        /// The order is deliberate: she comes once while it is news, and THEN the cold takes over.
+        /// </summary>
+        public static double Coldness(int relation)
+        {
+            if (relation >= 0) return 1.0;
+            double depth = Math.Min(1.0, -relation / 100.0);          // 0 at indifference, 1 at −100
+            return 1.0 - (1.0 - ColdestFactor) * depth;
         }
 
         /// <summary>

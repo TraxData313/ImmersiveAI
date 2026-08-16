@@ -71,7 +71,7 @@ public class CorrespondenceLogTests
         Assert.True(PromptBuilder.IsComposeLetterBeat(PromptBuilder.ComposeLetterLine("Aurelia")));
         Assert.True(PromptBuilder.IsComposeLetterBeat(PromptBuilder.ComposeReplyLine("Aurelia")));
 
-        Assert.False(PromptBuilder.IsComposeLetterBeat(PromptBuilder.WriteLetterDesireLine("Aurelia")));
+        Assert.False(PromptBuilder.IsComposeLetterBeat(PromptBuilder.AnswerLetterDesireLine("Aurelia", "Come north.")));
         Assert.False(PromptBuilder.IsComposeLetterBeat(PromptBuilder.ArrivalLine("Aurelia", firstMeeting: false)));
         Assert.False(PromptBuilder.IsComposeLetterBeat(null));
     }

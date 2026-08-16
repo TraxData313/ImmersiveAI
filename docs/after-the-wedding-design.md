@@ -464,7 +464,12 @@ without playing forty hours.
    scripted grievance: his beat carries the fact ("the debt is settled; nothing else between us
    is"), his own mind decides whether to write at all, and a head of a house who chooses to say
    nothing is saying a great deal. He needs no unlocking — the beat gives him history, and the
-   relation drop RAISES his pull, since enmity pulls as hard as love.
+   invitation fires the reach-out (or the letter) DIRECTLY, outside the hourly roll, so it does not
+   depend on his pull at all. NOTE that the second half of this sentence used to read "and the
+   relation drop RAISES his pull, since enmity pulls as hard as love" — true until 2026.08.16, when
+   the cold was made to run one way (`InitiationScorer.Coldness`). His anger now QUIETS him
+   afterwards instead of keeping him loud, which is the better shape anyway: one letter said while
+   it is hot, then a house that has stopped writing to you.
    STILL OWED on this item: nothing blocking. `LoverRoad.HeartHasLeft` is written and deliberately
    uncalled — an automatic silent departure would take the choice out of her hands, which is the
    one thing this mod does not do; it is there for the leaks (item 4) to lean on, where a thinned

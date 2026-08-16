@@ -104,9 +104,12 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: the one you are wed to comes to you far more readily than anyone else — three times as often as a companion who shares the same amount of story with you, and she will cross a room to begin even if the two of you have never spoken.
 - New: your own household — companions, kin, the lords of your clan — are somewhat likelier to come to you than the nobles and townsfolk around them. A nudge, not a landslide.
 - New: your spouse now heads the talk screen's list wherever in Calradia she is, and is who the screen opens on.
-- Fixed: people almost never came to you any more. When they noticed you nearby they were asking themselves whether they had a *matter to discuss* — and hardly anyone has one on a given hour, so the answer was always no. They now ask whether there is anything they want to tell you or ask you, which still needs something real to say but lets a remark or a question through.
+- Fixed: people almost never came to you any more, and it cost you to be told so. Whenever someone noticed you nearby they first weighed, in private, whether they had anything worth saying — a whole turn of thought, usually answered "no". Nobody is asked now: when the moment falls to someone they simply cross the room and speak, about whatever the day has actually put in front of them. Half the price, twice the company.
+- Changed: **the cold now runs one way.** Someone who has come to dislike you used to seek you out exactly as eagerly as someone who loves you — so wronging your wife made her cross the room *more*. Ill feeling now quiets a person instead: fewer visits, fewer letters, down to a rare word at the very bottom. Never total silence, and never at the cost of the morning after — a fresh hurt still brings her to you while it is fresh, and the cold begins after that.
+- Note: because nobody is talked out of it any more, people really will come as often as your **socialness** setting promises. If your camp feels busy, turn it down a notch — that dial finally means what it says.
 
 ### The post
+- Changed: someone far away no longer sits and wonders whether to write to you. When the post falls to them they write, and the letter you get is the same letter — one fewer thought paid for on the way to it.
 - Fixed: a courier now always outrides you. You could beat your own letter to its reader, and then stand in front of them with it still on the road between you — which also barred you from writing again.
 - Fixed: a letter still travelling to someone you have since ridden up to is handed over on the spot, whenever the two of you meet.
 

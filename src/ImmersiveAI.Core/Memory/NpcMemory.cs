@@ -197,14 +197,15 @@ namespace ImmersiveAI.Core.Memory
             NoteWoundSpoken();
         }
 
-        /// <summary>They weighed reaching out and let the moment pass (or answered a letter they were
-        /// invited to answer): the outreach day still rests them for a while, but their pride is
-        /// untouched — nothing of theirs waits unanswered.</summary>
+        /// <summary>They spent the moment without reaching out of their own will — today that means
+        /// answering a letter they were invited to answer (the reach-out and spontaneous-letter
+        /// weighings that also landed here were retired 2026.08.16). The outreach day still rests them
+        /// for a while, but their pride is untouched — nothing of theirs waits unanswered.</summary>
         public void NoteOutreachConsidered(double gameDay)
         {
             LastOutreachGameDay = gameDay;
-            // She weighed it and let it pass. That IS her answer to the wound, and she does not get
-            // asked again about the same one.
+            // The moment was hers and she spent it. That IS her answer to the wound, and she does not
+            // get moved across a room about the same one again.
             NoteWoundSpoken();
         }
 

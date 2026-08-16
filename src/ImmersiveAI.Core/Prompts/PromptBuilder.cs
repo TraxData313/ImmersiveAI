@@ -231,42 +231,30 @@ namespace ImmersiveAI.Core.Prompts
             return parts.Count == 0 ? string.Empty : "[" + string.Join(", ", parts) + "] ";
         }
 
-        /// <summary>The NPC's own reckoning on whether to approach the player — one simple nudge, first
-        /// person: is there anything I want to TELL them or to ASK them, the rest left wholly to their
-        /// own nature and what the sheet has stirred (news, mood, trade, memory).
-        /// Deliberately free of instruction about what a worthy topic is — a list there made every soul
-        /// answer the same (Anton, 2026.07.27: "the AI stops being AI and becomes a program again").
-        /// Answered NO or "YES: the something" (see <see cref="Initiation.InitiationParser.WantsToGo"/>).
-        ///
-        /// THE VERB IS THE WHOLE DIAL, and it has now been set at both extremes (Anton, 2026.08.15).
-        /// It read "is there something I want to DISCUSS", raised on 2026.07.26 to stop courtesy visits —
-        /// the steward asking how you feel, the quartermaster's "troops are good, how are you today". It
-        /// worked far too well: "discuss" asks for a MATTER, an item of business, and almost nobody has
-        /// one on a given hour, so every ponder came back NO and the feature became a tax paid in tokens
-        /// for nothing that ever happened. Tell / ask are plain speech acts instead: they still demand
-        /// real content — nobody can tell another person nothing — while a remark, a question, a thing
-        /// noticed on the road all clear the bar. And the anti-spam load has not belonged here since
-        /// OutreachDamping (2026.07.26) fixed the actual cause, which was a feedback loop and not an
-        /// eager prompt; the raised bar was doing that job a second time. If courtesy visits ever come
-        /// back in volume, damp them there — do not re-raise this.</summary>
-        public static string ReachOutPonderLine(string playerName, bool stranger = false) => stranger
-            ? $"I notice {playerName} nearby — someone I know only by sight, for we have never spoken. " +
-              "Is there anything I want to tell them, or to ask them? " +
-              "I decide in one line: NO — or YES: what I want to say."
-            : $"I notice {playerName} nearby, about their own affairs. " +
-              "Is there anything I want to tell them, or to ask them? " +
-              "I decide in one line: NO — or YES: what I want to say.";
+        // ---------------- the reach-out, and the question that used to stand before it ----------------
+        // THE PONDER IS RETIRED (2026.08.16, Anton's call). Until now a soul the hourly roll had picked
+        // was first ASKED — in a full-sheet call of its own — whether it had anything to say at all
+        // ("NO, or YES: the something"), and only a YES ever reached the player. The verb in that
+        // question was tuned at both extremes over three weeks (discuss → tell/ask) and the lesson of
+        // the tuning is what killed it: the answer is decided by the sheet, not by the wording, and the
+        // sheet now carries battles, the road journal, births, weddings, the nights, the line since we
+        // were last alone, tidings and rumours. There is always something to bring. Paying a whole
+        // prompt to be told "no" was buying silence at the price of speech.
+        //
+        // So the dice pick, and the picked soul simply gets the microphone. What tempers the frequency
+        // is the roll itself (DailyInitiationRate × the pull) and OutreachDamping — never a question;
+        // damping is where the anti-spam load has belonged since 2026.07.26, when a feedback loop, not
+        // an eager prompt, turned out to be the real cause. Do not re-introduce an asking step here.
+        //
+        // TWO THINGS SURVIVE THE CUT. Recorded ponder beats keep their words forever (IsPonderBeat
+        // still folds them into one line of narration in the windows) — and silence is still possible,
+        // it is simply no longer solicited: nobody is forced to speak, and words that never come never
+        // arrive.
 
-        /// <summary>The condensed note recorded for a ponder beat (the live prompt uses the full
-        /// <see cref="ReachOutPonderLine"/>; memory keeps this short truthful note plus their answer).
-        /// Both variants share the <see cref="IsPonderBeat"/> prefix — keep it word-for-word.
-        ///
-        /// IT MUST AGREE WITH THE LINE ABOVE, and for a reason easy to miss: this note is RECORDED, so
-        /// every future ponder reads a stack of the soul's own past reckonings before answering. While
-        /// the line asked for a matter to discuss, the note said they had weighed "true cause" — and
-        /// that phrasing was then handed back to them, in their own voice, once per remembered hour. A
-        /// bar softened only in the live line would have gone on being re-argued by the memory of it.
-        /// Old notes keep their old words forever, as all recorded beats do; these only shape new ones.</summary>
+        /// <summary>LEGACY (pre-2026.08.16): the condensed note recorded for a ponder beat, back when
+        /// the reach-out opened with a question. Nothing writes new ones — it stays because it defines
+        /// the <see cref="IsPonderBeat"/> prefix by which old memories are still recognized, and old
+        /// notes keep their old words forever, as all recorded beats do.</summary>
         public static string ReachOutPonderNote(string playerName, bool stranger = false) => stranger
             ? $"I marked {playerName} nearby — a stranger to me still — and weighed whether I had anything to say to them. I resolved:"
             : $"I marked {playerName} nearby and weighed whether I had anything to say to them. I resolved:";
@@ -282,62 +270,65 @@ namespace ImmersiveAI.Core.Prompts
 
         /// <summary>The NPC's own narration of crossing to the player after choosing an offered approach:
         /// when <paramref name="welcomed"/> the player receives them and they speak first; otherwise the
-        /// player is too busy and the moment is theirs to spend.</summary>
-        public static string ApproachLine(string playerName, bool welcomed, string? reason = null) => welcomed
-            ? $"I rise and go to {playerName}. Seeing me come, they turn to me and give me their attention.{ReasonSentence(reason)} " +
-              "I speak first now, in my own voice."
-            : $"I rise and go to {playerName}, but as I near, they raise an apologetic hand — too caught up just now to speak with me. " +
+        /// player is too busy and the moment is theirs to spend. Since the ponder was retired this line
+        /// carries as a PREMISE the very bar the question used to set — something to tell, or to ask —
+        /// and leaves what that is wholly to their own nature and to what the sheet has stirred.</summary>
+        public static string ApproachLine(string playerName, bool welcomed) => welcomed
+            ? $"I rise and go to {playerName}, for there is something I want to tell them, or to ask them. " +
+              "Seeing me come, they turn to me and give me their attention. I speak first now, in my own voice."
+            : $"I rise and go to {playerName} — there is something I want to tell them, or to ask them — but as I near, " +
+              "they raise an apologetic hand: too caught up just now to speak with me. " +
               "The moment is still mine: I say or do with it what I will, here and now.";
 
         /// <summary>The condensed note recorded for an approach beat.</summary>
-        public static string ApproachNote(string playerName, bool welcomed, string? reason = null) => welcomed
-            ? $"Of my own accord I went to {playerName}{ReasonClause(reason)}; they received me, and I spoke first. My words:"
-            : $"Of my own accord I went to {playerName}{ReasonClause(reason)}, but they were too caught up to speak with me just then. In that moment:";
+        public static string ApproachNote(string playerName, bool welcomed) => welcomed
+            ? $"Of my own accord I went to {playerName}; they received me, and I spoke first. My words:"
+            : $"Of my own accord I went to {playerName}, but they were too caught up to speak with me just then. In that moment:";
 
         /// <summary>The NPC's own narration for a reaching-out that arrives as spoken words: they cross
-        /// to the player and speak first — carrying what they resolved to discuss — knowing the answer
-        /// may come at once or only later. The stranger variant states only the fact: they have never
-        /// spoken (no imagined history; how to open is their own affair).</summary>
-        public static string FirstWordLine(string playerName, bool stranger = false, string? reason = null) => stranger
-            ? $"I cross to {playerName} now — we have never spoken.{ReasonSentence(reason)} " +
+        /// to the player and speak first, knowing the answer may come at once or only later. Same premise
+        /// as <see cref="ApproachLine"/> — a thing to tell or to ask, never a list of what would count.
+        /// The stranger variant states only the fact: they have never spoken (no imagined history; how
+        /// to open is their own affair).</summary>
+        public static string FirstWordLine(string playerName, bool stranger = false) => stranger
+            ? $"I cross to {playerName} now — we have never spoken. Something moves me to it: a thing I want to tell them, or to ask them. " +
               "They are caught up in their own affairs; my words will reach them, but the answer may come at once or only later. " +
               "I speak my first words now, in my own voice."
-            : $"I go to {playerName} now.{ReasonSentence(reason)} " +
+            : $"I go to {playerName} now, of my own accord: there is something I want to tell them, or to ask them. " +
               "They are caught up in their own affairs; my words will reach them, but the answer may come at once or only later. " +
               "I speak now, in my own voice.";
 
-        /// <summary>The condensed note recorded for a first-word beat — the cause rides in it, so the
-        /// next ponder sees plainly what was already brought and needs no second telling.</summary>
-        public static string FirstWordNote(string playerName, string? reason = null) =>
-            $"Of my own accord I crossed to {playerName} and spoke first{ReasonClause(reason)}. My words:";
-
-        private static string ReasonSentence(string? reason) =>
-            string.IsNullOrWhiteSpace(reason) ? string.Empty : $" What brings me: {reason!.Trim()}.";
-
-        private static string ReasonClause(string? reason) =>
-            string.IsNullOrWhiteSpace(reason) ? string.Empty : $" — what brought me: {reason!.Trim()}";
+        /// <summary>The condensed note recorded for a first-word beat. The words they actually spoke ride
+        /// the same turn, and THAT is the repetition brake now the ponder's stated cause is gone: the next
+        /// reach-out reads what was really said last time, not a summary of what was meant by it.</summary>
+        public static string FirstWordNote(string playerName) =>
+            $"Of my own accord I crossed to {playerName} and spoke first. My words:";
 
         // ------------------------- letters (correspondence across the map) -------------------------
         // Each beat below is the NPC's OWN mind at the writing desk (first person, recorded with
         // ConversationTurn.InnerSpeaker since 2026.08.07 — the Angel narrator is retired), so the
         // NPC's memory holds the whole correspondence truthfully — the wishing, the words, the reading.
 
-        /// <summary>The NPC's own weighing of whether they wish, of their own will, to write to the
-        /// far-away player (answered yes/no — see <see cref="Initiation.InitiationParser.WantsToReachOut"/>).</summary>
-        public static string WriteLetterDesireLine(string playerName) =>
-            $"The road lies long between me and {playerName} — they are far from here, beyond an easy ride. " +
-            $"Yet a letter could reach them: a courier stands ready to carry my words across the distance. " +
-            $"Do I wish, of my own will, to write to {playerName} now? " +
-            "I answer in a single word — yes or no. The choice is wholly mine, and no one presses me.";
+        // The spontaneous letter's own asking step went the same way as the reach-out ponder on
+        // 2026.08.16 (WriteLetterDesireLine, "do I wish, of my own will, to write now?" — one full-sheet
+        // call answered yes or no). Same reasoning, same roll: the post has its own dice
+        // (LetterCourier.WriteRateFactor × the pull × the depth of the story × the damping), and when
+        // they come up a writer's way they sit to the page. The premise the question used to establish —
+        // the long road, the courier standing ready — moved into the compose line below, AFTER its
+        // opening marker fragment, so recorded beats stay recognized. The letter a player WROTE is a
+        // different matter: answering one is a reply, not an outreach, and letting it lie unanswered
+        // stays a real choice (see AnswerLetterDesireLine).
 
         /// <summary>The NPC sitting down to set the letter itself onto the page, in their own first
         /// person. For one in the player's own service (<paramref name="inService"/> — their clan: a
         /// party or caravan on the road, a governor at their post) a field-report invitation is added,
-        /// so the letter home may carry word of their charge. The added sentence follows the marker
-        /// fragment (<see cref="IsComposeLetterBeat"/> matches by prefix), so recorded beats stay
-        /// recognized.</summary>
+        /// so the letter home may carry word of their charge. Everything after the first sentence
+        /// follows the marker fragment (<see cref="IsComposeLetterBeat"/> matches by prefix), so
+        /// recorded beats stay recognized.</summary>
         public static string ComposeLetterLine(string playerName, bool inService = false) =>
-            $"I sit, and set my heart to paper. What I set down now is only the letter itself — the words " +
+            $"I sit, and set my heart to paper. The road lies long between me and {playerName} — they are far " +
+            $"from here, beyond an easy ride — but a courier stands ready to carry my words across it. " +
+            $"What I set down now is only the letter itself — the words " +
             $"that will stand on the page before {playerName}'s eyes, in my own hand and my own voice. " +
             "I do not tell about the letter; I write it." +
             (inService

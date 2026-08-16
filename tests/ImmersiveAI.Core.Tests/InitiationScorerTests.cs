@@ -17,19 +17,60 @@ public class InitiationScorerTests
     }
 
     [Fact]
-    public void DailyChance_RisesWithClosenessOfStanding()
+    public void DailyChance_RisesWithWarmthOfStanding()
     {
-        // Love and enmity both pull; a warmer bond reaches out more than a lukewarm one, which in turn
-        // beats a neutral one sitting on the floor.
+        // A warmer bond reaches out more than a lukewarm one, which in turn beats a neutral one
+        // sitting on the floor.
         double neutral = InitiationScorer.DailyChance(1.0, 40, relation: 0, daysSinceLastTalk: 0);
         double lukewarm = InitiationScorer.DailyChance(1.0, 40, relation: 20, daysSinceLastTalk: 0);
         double devoted = InitiationScorer.DailyChance(1.0, 40, relation: 90, daysSinceLastTalk: 0);
         Assert.True(devoted > lukewarm);
         Assert.True(lukewarm > neutral);
+    }
 
-        // Enmity is symmetric with love: a bitter rival is as moved to reach out as a dear friend.
-        double hated = InitiationScorer.DailyChance(1.0, 40, relation: -90, daysSinceLastTalk: 0);
-        Assert.Equal(devoted, hated, 5);
+    [Fact]
+    public void TheColdRunsOneWay_IllFeelingQuietsThemInsteadOfMovingThem()
+    {
+        // Until 2026.08.16 closeness used |relation|, so "love OR enmity both pull" and a wife who
+        // had come to hate the player sought him out exactly as eagerly as one who adored him —
+        // backwards for the whole point of the marriage batch. Ill feeling now runs one way only.
+        double devoted = InitiationScorer.DailyChance(1.0, 40, relation: 90, daysSinceLastTalk: 0);
+        double neutral = InitiationScorer.DailyChance(1.0, 40, relation: 0, daysSinceLastTalk: 0);
+        double bitter = InitiationScorer.DailyChance(1.0, 40, relation: -90, daysSinceLastTalk: 0);
+
+        Assert.True(bitter < neutral);
+        Assert.True(bitter < devoted / 10.0);   // not "a little quieter" — an order of magnitude
+        Assert.True(bitter > 0);                // but never total silence: Anton's cap, not a mute
+    }
+
+    [Fact]
+    public void Coldness_IsOneUntilIllFeelingBegins_ThenFallsStraightToTheCap()
+    {
+        Assert.Equal(1.0, InitiationScorer.Coldness(100), 5);
+        Assert.Equal(1.0, InitiationScorer.Coldness(0), 5);
+        Assert.Equal(InitiationScorer.ColdestFactor, InitiationScorer.Coldness(-100), 5);
+        Assert.Equal(InitiationScorer.ColdestFactor, InitiationScorer.Coldness(-250), 5);  // clamped
+
+        // Halfway down is halfway between — a linear fall, so a first wrong costs a little and a
+        // ruined marriage costs nearly everything.
+        Assert.Equal((1.0 + InitiationScorer.ColdestFactor) / 2.0, InitiationScorer.Coldness(-50), 5);
+
+        // Monotone all the way down, with no step at the hinge.
+        for (int r = -100; r < 100; r++)
+            Assert.True(InitiationScorer.Coldness(r) <= InitiationScorer.Coldness(r + 1) + 1e-12);
+    }
+
+    [Fact]
+    public void TheCold_DoesNotReachTheFreshWound()
+    {
+        // The wound is a FLOOR over the finished pull, and learning of the wrong is exactly what
+        // drove the standing down — chilling it would silence the one moment it exists for. She
+        // comes once while it is news; the cold takes over afterwards.
+        double bitterPull = InitiationScorer.Pull(storyRichness: 40, relation: -90, daysSinceLastTalk: 0);
+        double spike = InitiationScorer.WoundSpike(hoursSinceWound: 0);
+
+        Assert.True(spike > bitterPull);
+        Assert.Equal(InitiationScorer.WoundSpikeAtOnce, spike, 5);
     }
 
     [Fact]

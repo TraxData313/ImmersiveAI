@@ -607,3 +607,104 @@ player has ever seen, and a "Fixed:" note about a version that never shipped is 
 release ritual warns about.
 
     2026.08.16 00.00.00
+
+- [x] **THE ROLL IS THE MIKE — THE PONDER AND THE LETTER-DESIRE RETIRED** (Anton, 2026.08.16: "let's
+  move out of the questions 'do you want to speak with X — he let the moment pass'; we now have
+  enough events that the NPCs might discuss and comment on, so let us stop wasting prompts on asking
+  them and just move to giving them the mike, when they get the roll").
+
+  Both self-initiated acts opened with a full-sheet call answered yes or no, and only a yes ever
+  reached the player: `ReachOutPonderLine` ("Is there anything I want to tell them, or to ask them?
+  NO — or YES: the something") and `WriteLetterDesireLine` ("Do I wish, of my own will, to write
+  now?"). Both are gone, with `InitiationParser.WantsToGo`, the whole `reason` plumbing
+  (`ReasonSentence`/`ReasonClause`, `PendingNotice.Reason`, `_currentApproachReason`, four parameter
+  lists) and `PassOnInitiation`'s "…considered reaching out to you, but let the moment pass" notice.
+  **Halves the cost of every reach-out and every spontaneous letter.**
+
+  WHY IT WAS RIGHT, and it is the tuning history that says so: the verb in that question was set at
+  both extremes over three weeks (2026.07.26 "discuss" to stop courtesy visits → 2026.08.15
+  "tell/ask" because *discuss* wants a MATTER and nobody has one on a given hour). What both moves
+  proved is that the answer is decided by the SHEET and not by our wording — and the sheet now
+  carries battles, the road journal, births, weddings, the nights, the line since we were last
+  alone, tidings and rumours. Paying a whole prompt to be told "no" was buying silence at the price
+  of speech.
+
+  WHAT CARRIES THE BAR NOW: the premise moved into the delivery lines — `FirstWordLine` /
+  `ApproachLine` open "there is something I want to tell them, or to ask them", still with NO list
+  of what would count (the 2026.07.27 rule: a list makes every soul answer the same). The letter's
+  premise (the long road, the courier standing ready) moved INTO `ComposeLetterLine`, deliberately
+  after its opening marker fragment so recorded beats stay recognized.
+
+  WHAT TEMPERS FREQUENCY: the roll and `OutreachDamping`, never a question — damping is where the
+  anti-spam load has belonged since 2026.07.26, when a feedback loop turned out to be the real
+  cause. NOTE FOR THE PLAYTEST: the NO-rate was silently multiplying the socialness dial down, so
+  `DailyInitiationRate` finally means what it says and camps will feel busier at the same setting.
+
+  RAILS KEPT: recorded ponder beats keep their words forever (`ReachOutPonderNote` + `IsPonderBeat`
+  still fold reckoning and resolution into one narration line in both windows); the repetition brake
+  is now the delivery beat itself, which holds what was really SAID rather than a summary of what
+  was meant; and silence survives as a fact rather than a question — a blank first word now records
+  nothing, toasts nothing and knocks on nothing, so a stumbling backend can never walk up to the
+  player and say "...". The letter a PLAYER wrote is untouched on purpose: answering one is a reply,
+  not an outreach, and letting it lie unanswered stays a real choice (`AnswerLetterDesireLine` +
+  `WantsToReachOut`, now that parser's only caller).
+
+  Tests 798 green (the WantsToGo suite deleted, the ponder-line test replaced by one pinning the
+  mike's premise, `ApproachLine`/`ComposeLetterLine` pinned to carry it, ponder-beat recognition
+  kept as a legacy test). CHANGELOG: the 2026.08.15 "they now ask whether…" pill REPLACED rather
+  than contradicted (an unshipped section must not announce a feature retired inside the same
+  cycle), plus a note about the socialness dial and one post pill. CLAUDE.md, prompt-text-inventory
+  and the NpcMemory doc updated. NOT playtested. (2026.08.16 04.30.00)
+
+- [x] **THE COLD RUNS ONE WAY** (Anton, 2026.08.16: "right now abs(relation) gets as an increasing
+  factor, I want to make it proportional… if a player gets in bad relation with his wife, say if he
+  cheats, she starts not wanting him to come to her at night, which makes her cold, I want that
+  coldness to translate to her not reaching him to speak too" — then, on the shape: "let's move from
+  total silence, cap it to something small").
+
+  `InitiationScorer.Pull`'s closeness term was `|relation| / 100` — "love OR enmity both pull",
+  written 2026.07.09 with rival lords in mind. It meant the marriage batch's central case ran
+  backwards: he wrongs her → her door shuts → she goes cold → and the mod answered by making her
+  cross the room MORE, at up to 6.7× a neutral bond's weight.
+
+  NOW: closeness takes the WARM half only (`max(0, relation)/100`), and a new
+  `InitiationScorer.Coldness(relation)` multiplies the whole pull — flat ×1 at indifference and
+  above, falling straight to `ColdestFactor` (**0.05**) at −100. Effective standing weight:
+
+  | relation | −100 | −90 | −50 | −20 | 0 | +20 | +50 | +100 |
+  |---|---|---|---|---|---|---|---|---|
+  | was | 1.00 | 0.915 | 0.575 | 0.32 | 0.15 | 0.32 | 0.575 | 1.00 |
+  | now | 0.0075 | 0.0218 | 0.0788 | 0.1215 | 0.15 | 0.32 | 0.575 | 1.00 |
+
+  So a first wrong costs her a fifth of her pull, a ruined marriage costs ~95%, and at rock bottom
+  she is a twentieth of an indifferent bond — a wife with a rich story and the hearth's ×4.5 goes
+  from about a visit a day to about one a month. Positive standings are untouched, bit for bit.
+
+  THREE PLACES IT HAD TO REACH, and two of them are the whole difference between working and
+  looking like it works:
+  - **The presence floor in `CoLocatedPull`** (`InitiationPullFloor`, 0.1) is chilled with the same
+    factor. Left alone it holds a hating wife at the STRANGER's floor — and the hearth's ×4.5 then
+    makes the coldest bond in the campaign louder than most warm ones. The floor exists so mere
+    presence moves a stranger across a room; a wife who has come to hate you is not a stranger.
+  - **The letters** ride the same `Pull`, so the post chills with the visits — which is the half
+    Anton's sentence actually asks for ("not reaching him to speak" covers both roads).
+  - **The duty floors** (`DutyClosenessFloor`/`DutyRecencyFloor`) are chilled too, because the cold
+    is applied last: a governor who dislikes you still files his report, the way a cold man does.
+
+  WHAT IT MUST NEVER TOUCH is `WoundSpike` — a FLOOR over the finished pull. Learning of the wrong
+  is exactly what drove the standing down, so chilling the spike would silence the one moment it
+  exists for. The order is the design: she comes once while it is news, THEN the cold. Guarded by
+  its own test.
+
+  ACCEPTED CONSEQUENCE, flagged to Anton and not asked twice: it silences angry rivals too — a lord
+  at −80 no longer crosses rooms to gloat or threaten. If that is missed, the honest fix is to make
+  the symmetry conditional on an intimate bond (spouse/lover/kin) rather than to restore it for the
+  whole world. `docs/after-the-wedding-design.md` corrected where it leaned on the old rule (the
+  ransomed daughter's father: his invitation fires the outreach DIRECTLY, outside the roll, so it
+  still lands — his anger now quiets him afterwards instead of keeping him loud, which is the better
+  shape anyway).
+
+  Tests 801 green (the old "enmity is symmetric with love" assertion replaced by one pinning the
+  one-way cold at an order of magnitude below neutral and still above zero, plus the hinge/monotony
+  of `Coldness` and the wound's immunity). CHANGELOG pill, CLAUDE.md. NOT playtested.
+  (2026.08.16 12.10.00)

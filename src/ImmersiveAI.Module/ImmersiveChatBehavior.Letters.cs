@@ -262,9 +262,13 @@ namespace ImmersiveAI
 
         // ------------------------------ the NPC writes ------------------------------
 
-        // The two beats of writing, both recorded as real inner turns: their own mind weighs whether
-        // they wish to write at all (they may decline in peace), and on a yes they sit to the letter
-        // itself — composed with the full self (persona, memory, situation-apart, even the gift of recall).
+        // ONE beat now, recorded as a real inner turn: the post's own dice have picked this writer, and
+        // they sit to the letter itself — composed with the full self (persona, memory, situation-apart,
+        // even the gift of recall). The asking step that used to stand in front of it ("do I wish, of my
+        // own will, to write now?" — a whole sheet spent on a yes or a no) went out with the reach-out
+        // ponder on 2026.08.16; the premise it set moved into the compose line. A letter still comes only
+        // when the roll says so, and a writer whose letters met silence still holds their pen — that is
+        // OutreachDamping's work, not a question's.
         private async Task BeginNpcLetterAsync(Hero npc)
         {
             // Quiet: the letter is sealed until it arrives — a cost notice now would break the seal.
@@ -275,26 +279,14 @@ namespace ImmersiveAI
                 await EnsurePersonaSparkAsync(npc, canAsk: false).ConfigureAwait(false);
 
                 var situation = SafeBuildApartSituation(npc);
-                var ctx = BuildContext(npc, situation);
 
-                var desireLine = PromptBuilder.WriteLetterDesireLine(ctx.PlayerName);
-                var desireMsgs = _promptBuilder.BuildInnerPrompt(
-                    ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, desireLine, _config.SystemVoiceName);
-                var desireRaw = await _client.CompleteAsync(desireMsgs).ConfigureAwait(false);
-                var desireAnswer = string.IsNullOrWhiteSpace(desireRaw) ? "No." : desireRaw.Trim();
-
-                // Weighing whether to write rests them either way (see the reach-out desire beat).
-                AppendRecordedTurn(npc, desireLine, desireAnswer, OutreachMark.Considered);
-
-                if (!InitiationParser.WantsToReachOut(desireAnswer)) { _letterWorkInFlight = false; return; }
-
-                // They wish to. The letter is written with everything they are — and the writing is
-                // itself a remembered moment (the compose line and the letter, as an inner turn).
+                // The letter is written with everything they are — and the writing is itself a remembered
+                // moment (the compose line and the letter, as an inner turn).
                 // One in the player's own service is invited to make it a field report of their charge.
                 var composeCtx = BuildContext(npc, situation);
-                var composeLine = PromptBuilder.ComposeLetterLine(ctx.PlayerName, InPlayersService(npc));
+                var composeLine = PromptBuilder.ComposeLetterLine(composeCtx.PlayerName, InPlayersService(npc));
                 var composeMsgs = _promptBuilder.BuildInnerPrompt(
-                    composeCtx.Persona, composeCtx.Memory, composeCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
+                    composeCtx.Persona, composeCtx.Memory, composeCtx.Scene, composeCtx.PlayerName, composeLine, _config.SystemVoiceName);
                 var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
                 if (body.Length == 0) { _letterWorkInFlight = false; return; }

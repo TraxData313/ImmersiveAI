@@ -1022,14 +1022,29 @@ bribe price, vanilla's own paid-bribe rule) for anyone the `LocationComplex` pla
 known one still shows "(away)" in the window pointing to a letter, which DOES find them; fail-open so a
 model hiccup never silences a keep; distant NPCs write letters instead) joins ONE bond-scaled group roll to
 reach out — including people never spoken with: everyone carries at least `InitiationPullFloor` (default
-0.1) of a full bond's pull, so a stranger may cross the room and begin their story (their own ponder
-tells them honestly it would be a first acquaintance — `ReachOutPonderLine(stranger: true)` —
+0.1) of a full bond's pull, so a stranger may cross the room and begin their story (their own opening
+line tells them honestly it would be a first acquaintance — `FirstWordLine(stranger: true)` —
 and their first beat creates their memory). A real history raises the pull from there: each NPC's *pull*
 in [0,1] is `InitiationScorer.Pull` = `frequency × closeness × recency`: `frequency`
 saturates at `FrequencyFullAt` lifetime turns (`NpcMemory.StoryRichness` = lifetime `TotalTurns`, floored
 at surviving turns for old saves), `closeness` = a small floor
-(`InitiationScorer.ClosenessFloor`) plus |relation|/100 (love *or* enmity pulls hardest; a neutral bond
-you actually spend time with stays quiet, not silent — the floor keeps the feature observable),
+(`InitiationScorer.ClosenessFloor`) plus the WARM half of relation/100 (a neutral bond you actually
+spend time with stays quiet, not silent — the floor keeps the feature observable), **times the cold**
+(`InitiationScorer.Coldness`, 2026.08.16, Anton: closeness used to be |relation|, so "love OR enmity
+both pull" and a wife who had come to hate the player sought him out exactly as eagerly as one who
+adored him — backwards for the whole marriage batch, where he wrongs her, her door shuts, she goes
+cold, and the mod answered by having her cross the room MORE). Ill feeling now runs one way through
+visits AND letters: a straight fall from ×1 at indifference to `ColdestFactor` (×0.05) at −100 —
+small, deliberately NOT zero ("let's move from total silence, cap it to something small"), because a
+hatred that can never once speak is a soul deleted rather than a soul cold. TWO PLACES IT HAD TO
+REACH, both easy to miss: the presence FLOOR in `CoLocatedPull` is chilled with it (left alone it
+holds a hating wife at the stranger's 0.1, and the hearth's ×4.5 then makes the coldest bond in the
+campaign louder than most warm ones), and the duty floors are chilled too (a governor who dislikes
+you still files his report, the way a cold man does — rarely). The ONE thing it must never touch is
+`WoundSpike`, a floor applied over the finished pull: learning of the wrong is what drove the
+standing down, so chilling the spike would silence the very moment it exists for. Order matters —
+she comes once while it is news, and THEN the cold takes over. It also quiets angry rivals, which is
+accepted: a lord who hates you no longer crosses rooms to gloat.
 `recency` decays with days since the last talk. The pulls combine as `InitiationScorer.UnionPull`
 (= 1 − Π(1 − pull), the chance at least one soul is moved) and the hour rolls once at
 `InitiationScorer.GroupHourlyChance` = `DailyInitiationRate × unionPull ÷ 24`, so the **day's expected
@@ -1049,15 +1064,16 @@ themselves via `AppendRecordedTurn`'s `OutreachMark` (Reached / Considered / Pla
 weighings and invited replies rest without the pride wound). The damping multiplies AFTER the presence
 floor (else the floor re-arms the spam); `MemoryIndex` carries both fields so the hourly rolls stay
 cheap, and BondStatsLabel/the odds view show the damped truth ("awaits your answer (2 unanswered)").
-**THE PONDER'S VERB IS THE OTHER DIAL, and it belongs at the low end** (2026.08.15): the line asked "is
-there something I want to DISCUSS", raised in this same 2026.07.26 wave to stop courtesy visits, and it
-overshot — *discuss* wants a MATTER, almost nobody has one on a given hour, so every ponder answered NO
-and the feature only spent tokens. It now asks whether there is anything to **tell** or to **ask**:
-plain speech acts, still needing real content, but a remark or a question clears them. The recorded
-`ReachOutPonderNote` moved with it ("true cause" → "anything to say") because it is READ BACK at every
-later ponder, so a bar softened only in the live line goes on being re-argued by the memory of it.
-Spam belongs to `OutreachDamping`, which fixed the real cause (a feedback loop); never re-raise the
-verb to do that job twice.
+**THE PONDER'S VERB WAS THE OTHER DIAL — AND TUNING IT KILLED IT** (2026.08.15, superseded 2026.08.16
+by the retirement below, kept because the lesson outlived the feature): the question asked "is there
+something I want to DISCUSS", raised in the 2026.07.26 wave to stop courtesy visits, and it overshot —
+*discuss* wants a MATTER, almost nobody has one on a given hour, so every ponder answered NO and the
+feature only spent tokens. Softening it to **tell**/**ask** helped and proved the deeper point: what a
+soul answers is decided by its SHEET, not by our wording, so the question was never doing the work we
+paid for. It is gone. (One rail from that day still binds anything similar: a recorded note is READ
+BACK later, so a bar softened only in a live line goes on being re-argued by the memory of it — change
+both or neither.) Spam belongs to `OutreachDamping`, which fixed the real cause (a feedback loop);
+never make a prompt do that job a second time.
 **THE TWO HEARTHS** (2026.08.15, Anton: "she is the hearth of this mod"): `ImmersiveChatBehavior.HearthRank`
 — 2 for the one the player is WED TO (`FamilyBuilder.AreWed`, never a bare `Spouse` check: a polygamy
 mod parks living wives in ExSpouses and the second wife is exactly who this is for), 1 for the player's
@@ -1091,20 +1107,32 @@ in the window as "(Name, within: …)" narration and in reflection as "My own th
 2026.08.07 EVERY beat lives this way — arrivals, letters, reflection, all of it, no narrator
 anywhere). The situation for these beats is the **NEARBY shape**
 (`SituationBuilder.BuildNearby` — "X is nearby, about their own affairs"), because the meeting shape's
-closing "And now X comes to me" contradicted the question of whether to go. The beats:
-(1) `PromptBuilder.BuildInnerPrompt` with `PromptBuilder.ReachOutPonderLine` — the full sheet (news, mood,
-duty, memory) plus ONE simple nudge: **"Is there anything I want to tell them, or to ask them?"** — answered
-**NO or "YES: the something"** (`InitiationParser.WantsToGo`, word-boundary-safe, old STAY/GO still read;
-unreadable answers fall back to plain yes/no, then NO). Deliberately NO instruction about what a worthy
-topic is — the first cut listed causes and banned courtesy, and that made every soul answer the same
-("the AI stops being AI and becomes a program again", Anton 2026.07.27); YES/NO rather than STAY/GO so
-the words never smell of physically leaving. Memory keeps a condensed note (`ReachOutPonderNote`,
-prefix-matched by `IsPonderBeat` so the window folds reckoning+resolution into one narration line), and the
-resolved **reason rides into the delivery** — `FirstWordLine`/`ApproachLine` carry "What brings me: …", and
-the recorded `FirstWordNote`/`ApproachNote` keep it, so the next ponder sees what was already brought (the
-content-repetition brake; inner beats also never reset `UnansweredOutreachCount`). For the offer shape the
-reason travels in `PendingNotice.Reason` → `ShowInitiationInquiry` → `_currentApproachReason`.
-(2) On GO, the player gets a
+closing "And now X comes to me" contradicted a soul who is the one doing the crossing. The beats:
+(1) **THE PONDER IS RETIRED — THE ROLL IS THE MIKE** (2026.08.16, Anton: "we now have enough events
+that the NPCs might discuss and comment on, so let us stop wasting prompts on asking them"). Until
+now a picked soul was first ASKED, in a full-sheet call of its own, whether it had anything to say
+("NO — or YES: the something", read by `InitiationParser.WantsToGo`), and only a YES ever reached the
+player. The verb in that question was tuned at both extremes over three weeks (discuss → tell/ask,
+see the 2026.08.15 entry) and the tuning is what killed it: the answer is decided by the SHEET, not
+by the wording, and the sheet now carries battles, the road journal, births, weddings, the nights,
+the line since we were last alone, tidings and rumours. Paying a whole prompt to be told "no" was
+buying silence at the price of speech. So the dice pick and the picked soul simply speaks — the bar
+the question used to set rides on as a PREMISE in `FirstWordLine`/`ApproachLine` ("there is something
+I want to tell them, or to ask them"), never as a list of worthy topics. What tempers frequency is
+the roll (`DailyInitiationRate` × the pull) and `OutreachDamping`, never a question — damping is
+where the anti-spam load has belonged since 2026.07.26, when a feedback loop turned out to be the
+real cause. **Do not reintroduce an asking step**, here or in the post. Consequences worth knowing:
+the socialness dial finally means what it says (the NO-rate was silently multiplying it down, so
+expect more company at the same setting); the offer shape now costs NOTHING until the player accepts;
+`WantsToGo` and the whole `reason` plumbing (`PendingNotice.Reason`, `_currentApproachReason`) are
+gone; `PassOnInitiation`'s "…let the moment pass" notice is gone with the refusal it reported; and
+silence survives as a fact rather than a question — a blank first word records nothing, toasts
+nothing and knocks on nothing (`DeliverFirstWordAsync`), so a stumbling backend never walks up to
+the player and says "...". Recorded ponder beats from before the cut keep their words forever
+(`ReachOutPonderNote` + `IsPonderBeat` still fold them into one narration line, and inner beats still
+never reset `UnansweredOutreachCount`); the repetition brake is now the delivery beat itself, which
+holds what was really said rather than a summary of what was meant.
+(2) The player gets a
 faced portrait toast and — with `UseMapNoticeForInitiations` on (default) — a **persistent, non-pausing
 right-side map notice wearing her live portrait** (see the Harmony section below); clicking it opens the
 accept/decline inquiry (which pauses per `PauseOnInitiationOffer`). The notice waits up to 2 in-game days,
@@ -1114,7 +1142,8 @@ once. Without the notice UI the inquiry shows directly, as before. (3) The appro
 greeting (a recorded inner turn — no weaving needed, so she never repeats it), the conversation opens
 (`CampaignMapConversation.OpenConversation`) and falls into the talk loop; **Not now** → the closed door
 passes through her own mind and she answers it in her own voice (recorded, shown back with her face) —
-a lived moment, not a cold "you were refused". Two LLM calls per fired offer; she can always choose silence.
+a lived moment, not a cold "you were refused". ONE LLM call per reach-out now (the ponder is gone), and
+in the offer shape that call is made only after the player accepts — a knock waved off costs nothing.
 `MemoryCompressor` attributes legacy Angel turns by the voice's name (not "They") so summaries stay truthful.
 Toggle with `EnableNpcInitiatedChats`. Nothing about the schedule is persisted (stateless hourly rolls), so
 save/load is a non-issue. Three `[Immersive AI • test]` free-chat options
@@ -1375,9 +1404,16 @@ each hour, distant NPCs with history roll `LetterCourier.WriteRateFactor` (0.5) 
 chance × `LetterCourier.StoryDepthFactor` (richness/12 capped at 1 — one shallow conversation funds
 half-weight letters at best, 2026.07.26) × the same `OutreachDamping` as the visits (a writer whose
 letters met silence holds their pen — duty writers too: one field report, then patience until answered);
-one moved soul weighs privately, within their own mind — yes/no, recorded — whether they wish to write,
-and on a yes composes the letter with their full self (persona, memory, the situation built *apart*
-via `SituationBuilder.Build(..., apart: true)`, and the gift of recall). **The player's own clan writes
+and the picked soul simply sits to the letter, composed with their full self (persona, memory, the
+situation built *apart* via `SituationBuilder.Build(..., apart: true)`, and the gift of recall).
+**The post lost its asking step with the reach-out's** (2026.08.16, same call, same reasoning):
+`WriteLetterDesireLine` — a whole sheet spent on "do I wish, of my own will, to write now?" — is gone,
+and the premise it set (the long road, the courier standing ready) moved INTO `ComposeLetterLine`,
+after its opening marker fragment so recorded beats stay recognized. A letter still comes only when
+the dice say so, and a writer whose letters met silence still holds their pen; that is
+`OutreachDamping`'s work, never a question's. The letter a PLAYER wrote is deliberately untouched —
+answering one is a reply, not an outreach, and letting it lie unanswered stays a real choice
+(`AnswerLetterDesireLine` + `WantsToReachOut`, which is now that parser's only caller). **The player's own clan writes
 out of duty** (2026.07.12): `InitiationScorer.Pull(..., inPlayersService)` floors recency (0.6) and
 closeness (0.5) for one's own companions/kin/governors — a caravan forty days on the road still writes
 home — and their compose line invites a field report of their charge (`ComposeLetterLine(inService)`,

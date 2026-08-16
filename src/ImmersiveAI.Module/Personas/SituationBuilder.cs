@@ -130,7 +130,7 @@ namespace ImmersiveAI.Personas
         public static string Build(Hero speaker, Hero partner, ModConfig? config = null)
             => Build(speaker, partner, config, Moment.Meeting);
 
-        /// <summary>The situation for a reach-out ponder: the partner is NEARBY, about their own
+        /// <summary>The situation for a reach-out: the partner is NEARBY, about their own
         /// affairs — not coming to the speaker, not being written to from afar. Before this shape the
         /// reach-out flow borrowed the meeting one, whose closing "And now X comes to me" contradicted
         /// the very question of whether to go to them (found 2026.07.26).</summary>
