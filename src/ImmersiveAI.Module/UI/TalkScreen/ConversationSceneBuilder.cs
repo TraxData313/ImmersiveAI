@@ -329,6 +329,14 @@ namespace ImmersiveAI.UI.TalkScreen
         /// to be in and the answer is null, exactly as before.
         /// </para>
         /// </summary>
+        /// <summary>The room a soul is really standing in, named as the tableau names it — what the
+        /// stage shows when nobody has moved the talk anywhere. Null out of doors.</summary>
+        internal static string? RoomOf(Hero hero)
+        {
+            try { return LocationFor(hero, SceneSettlementFor(hero)); }
+            catch { return null; }
+        }
+
         private static string? LocationFor(Hero hero, Settlement? place)
         {
             if (place == null || hero == null) return null;

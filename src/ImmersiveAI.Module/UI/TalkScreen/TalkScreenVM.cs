@@ -1961,12 +1961,17 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             get
             {
-                var sets = ConversationTableauController.SetsFor(_selected?.Hero);
+                var hero = _selected?.Hero;
+                var sets = ConversationTableauController.SetsFor(hero);
                 if (sets.Count == 0) return "The set";
-                var chosen = ConversationTableauController.ChosenSet;
+
+                // Where the stage IS, not where the list happens to start: with nothing moved that
+                // is her own room, and saying "the town" over a woman standing in the tavern made
+                // the first press look broken.
+                var shown = ConversationTableauController.RoomShownFor(hero);
                 foreach (var set in sets)
-                    if (set.Id == chosen) return "In " + set.Label;
-                return "In " + sets[0].Label;      // no move made: they stand where they stand
+                    if (set.Id == shown) return "In " + set.Label;
+                return "The set";                 // a room we do not offer: name none rather than lie
             }
         }
 
@@ -1978,10 +1983,11 @@ namespace ImmersiveAI.UI.TalkScreen
                 var sets = ConversationTableauController.SetsFor(hero);
                 if (hero == null || sets.Count < 2) return;
 
-                var chosen = ConversationTableauController.ChosenSet;
-                int at = 0;
+                // Step on from where she IS, so the first press always moves her somewhere new.
+                var shown = ConversationTableauController.RoomShownFor(hero);
+                int at = -1;
                 for (int i = 0; i < sets.Count; i++)
-                    if (sets[i].Id == chosen) { at = i; break; }
+                    if (sets[i].Id == shown) { at = i; break; }
 
                 var next = sets[(at + 1) % sets.Count];
                 // Only say it moved if it did: a stage that refused to rebuild keeps its old label

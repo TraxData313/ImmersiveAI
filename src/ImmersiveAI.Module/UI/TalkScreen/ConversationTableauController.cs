@@ -77,6 +77,21 @@ namespace ImmersiveAI.UI.TalkScreen
 
         internal static string? ChosenSet => _chosenSet;
 
+        /// <summary>The room the stage is ACTUALLY showing: whatever the player moved the talk to,
+        /// or — when they have moved nothing — the one the soul truly stands in.
+        /// <para>
+        /// Both the label and the cycle read this rather than assuming the first set (playtest,
+        /// 2026.08.16 — meeting a wanderer in a tavern, the button said "In the town" while she
+        /// stood in the tavern, and the first press appeared to do nothing because it "moved" her
+        /// to where she already was).
+        /// </para>
+        /// </summary>
+        internal static string? RoomShownFor(Hero? hero)
+        {
+            if (_chosenSet != null) return _chosenSet;
+            return hero == null ? null : ConversationSceneBuilder.RoomOf(hero);
+        }
+
         /// <summary>The rooms this talk may be moved to. Empty outside walls, and empty when there
         /// is only one — a control offering a single choice is furniture, not a choice.</summary>
         internal static IReadOnlyList<(string Id, string Label)> SetsFor(Hero? hero)

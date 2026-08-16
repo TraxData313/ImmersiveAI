@@ -249,6 +249,13 @@ NEXT UPDATE:
             what her memory costs — and on her page they said nothing anyone came for while sitting
             straight under her own state. Hidden whole in hearth mode (Anton: "I dont need that info
             string here... it will leave the child info ok").
+          FIFTH: the set button started on the WRONG room. Both the label and the cycle assumed
+          the list's first entry, so meeting a wanderer in a tavern the button said "In the town"
+          over a woman standing in the tavern, and the first press "moved" her to where she already
+          was and looked broken. Both now read `RoomShownFor` — whatever was moved to, or failing
+          that the room she is truly in — so the label is honest from the first frame and the first
+          press always takes her somewhere new. A room we do not offer (a prison, a barred keep)
+          names none rather than lying about which one it is.
           STILL UNPLAYTESTED IN THIS SHAPE.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),
