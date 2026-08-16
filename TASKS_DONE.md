@@ -708,3 +708,88 @@ release ritual warns about.
   one-way cold at an order of magnitude below neutral and still above zero, plus the hinge/monotony
   of `Coldness` and the wound's immunity). CHANGELOG pill, CLAUDE.md. NOT playtested.
   (2026.08.16 12.10.00)
+
+- [x] THE THREE BIRTHS FINDINGS — one shared judgment instead of three answers to one question.
+  Triaged by hand from docs/workflow-results-2026-08-16.json (the run whose refuting half died, so
+  every verdict was read against the code first). All three were REAL. Work order and the reasoning
+  Anton signed off: docs/birth-recognition-fix-plan.md.
+
+  THE ROOT WAS ONE QUESTION ANSWERED THREE WAYS — *is this child of a marriage, in the world's
+  eyes?* The feast popup asked the record AND the live world (its own self-review had already found
+  the principle: "the question is asked of the LIVE world, not only of the record"); the house line
+  and the withholding guard asked only the record. `BornInMarriage` arrived 2026.08.15 and is a
+  plain bool, so every birth written before it loads FALSE — and the record's own doc comment says
+  exactly why `IsOwnedBeforeTheWorld` must therefore lean on `Acknowledgement.NeverArose` instead.
+  Two sites walked around that protection.
+
+  THE LAW, agreed with Anton: **marrying the mother heals silence, never speech.**
+  `OfTheMarriageInTheWorldsEyes(record)` — true if born in wedlock; false if an explicit
+  `Withheld` stands (a said thing, and no wedding unsays it — only the giving of the name does,
+  which is what keeps that act the heavy one); otherwise true when the two are wed TODAY. That is
+  the era's own rule (legitimatio per subsequens matrimonium) and it heals old records for free
+  wherever the mother is alive and wed, so NO migration was written — Anton's call ("only care for
+  the new ones"). It resolves the same PAIR the capture at birth weighs (mother + father from the
+  record), which also settles the female-player case the old inline test could only ever answer no.
+
+  THE THREE, and only the first was old-records-only:
+  • THE HOUSE LINE called trueborn children bastards. `HouseOfThePlayerLine` read the flag raw, so
+    an existing campaign's legitimate children flipped `anyOutside` and rode every wife's and every
+    lover's sheet in the vocabulary kept for children owned outside a marriage — every reply.
+  • "NO FEAST" COULD DISOWN A CHILD, on a FRESH campaign with correct data. The popup shows the
+    three-way question only when `mustOwnIt`; otherwise its negative button reads "No feast". But
+    `DeclineTheFeast` → `WithholdTheName` guarded on the record alone, so for a child born to a
+    lover the player then MARRIED — the lover road's own happy ending — clicking "No feast" wrote
+    an explicit withholding, beat it into his wife's memory, and put the child on the awaits-the-
+    name list a lover can press on. The third answer of a three-way question, written from a
+    two-way one. `DeclineTheFeast` now takes `askedTheOwning` and withholds only then;
+    `WithholdTheName` carries the shared helper as its own guard so no future caller can repeat it.
+  • A BOUGHT FEAST WAS REMEMBERED AS NO FEAST. `OwnTheChild(..., bool withFeast = false)` and
+    nothing in the mod ever passed it: the buy site owned the child and then held the feast, so the
+    mother's beat always took the quiet-owning wording and `BirthText.MotherNameBeat`'s with-feast
+    branch was dead in production — reachable only by tests that all passed false. One word, plus
+    a Core test (`AFeastedOwningIsNotRememberedAsAQuietOne`) so the branch cannot rot again.
+
+  WHY IT MATTERED BEYOND THE WRONG WORDS: the two aches of the post-marriage design only work if
+  they are EARNED. A false `Withheld` manufactures the lover's craving and the wife's wound out of
+  something that never happened — the mod scripting a feeling from a fact it invented, which is the
+  one thing that whole batch was designed never to do.
+
+  ACCEPTED AND STATED, not hidden: an old record whose mother has DIED cannot be healed by a live
+  test, so those keep today's imperfect reading — the old-record artifact, narrowed to widowers.
+  DELIBERATELY NOT TOUCHED: the lapse question (an offer lapsing past its 30-day window leaves
+  `Owned = NeverArose`, reading as owned), which stays an open decision in TASKS_TODO.md.
+  802 Core tests green, built, deployed, CHANGELOG pills. UNPLAYTESTED.
+  (2026.08.16 20.15.00)
+
+- [x] **THE HEARTH KEY WAS STILL LISTENING WHILE THE PLAYER WROTE** (Anton's playtest, 2026.08.16:
+  "when I load into a save and bring up the Y and start typing the first time it bugs and hides the
+  chat… when I close the window and open it it starts working"). The screenshot showed the screen
+  sitting in HEARTH mode — the nights page and its switches — with the thread gone.
+
+  `NightWindowManager.TickClosed` polls the raw H key and, since the hearth became a MODE of the
+  talk screen, answered it with `TalkScreenManager.Open(hearth: true)` — placed ABOVE `CanOpenNow()`
+  because that method refuses while the talk screen is open ("one place at a time"). Correct-looking,
+  and it jumped every OTHER guard with it: the typing check (`MapOverlays.IsTypingSomewhere`), the
+  encyclopedia check, the inquiry check, the mission/state checks. That left H the ONLY key in the
+  mod that acts while the player is writing — so an "h" inside a word turned the screen over. Both
+  other hotkeys (O and Y) run `CanOpenNow()` and were never able to do this.
+
+  FIX, in two parts. The moment-guards were split out of `CanOpenNow` into `KeyMayAct()` — the part
+  that is about the MOMENT rather than about which of our own windows is up — and the talk-screen
+  road now runs it before raising anything. And while the screen is already open the key does
+  NOTHING: turning it over is what the "Between us" / "Talk" buttons in its own bar are for, they
+  are always in reach, and a shortcut sharing a key with a letter, inside a screen built for
+  writing, can only ever fire mid-word. Same reasoning applied to the voice panic key in
+  `SubModule` (default Backspace, which is how a typo is deleted): it now stands down while a text
+  field holds the keyboard, so it stops a reading and never a word.
+
+  WHY "ONLY THE FIRST TIME" is not fully explained and does not need to be: with the path unguarded
+  the flip depended on whether a given message happened to press the physical H key (Anton types in
+  Bulgarian, and the raw poll reads the SCAN CODE, not the letter produced), and on whether the
+  writing box held focus at that moment — nothing about the screen's first opening after a load made
+  it safe afterwards. The fix removes the road rather than the weather on it. If typing still
+  misbehaves the next suspect is FOCUS: nothing in the mod ever gives the writing box keyboard focus
+  on open, so the first keystrokes after pressing Y go nowhere until the box is clicked — worth
+  doing, but the Gauntlet call for it is unverified and this screen is the fragile one.
+
+  Built and deployed; CHANGELOG pill. NOT re-playtested. (2026.08.16 13.40.00)

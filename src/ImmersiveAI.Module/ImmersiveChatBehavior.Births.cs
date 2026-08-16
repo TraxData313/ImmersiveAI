@@ -534,12 +534,11 @@ namespace ImmersiveAI
                 // own fix). So it is simply never shown, and the question comes on its own the
                 // moment the purse can carry the cheapest feast.
                 // THE CHOICE IS THREE-WAY FOR A CHILD BORN OUTSIDE A MARRIAGE (2026.08.15) — and
-                // the question is asked of the LIVE world, not only of the record: every birth
-                // written before this field existed carries BornInMarriage = false, and asking a
-                // long-married player whether his wife's child is his would be absurd
-                // (self-review). If she is his wife today, no such question arises.
-                bool mustOwnIt = !record.BornInMarriage
-                    && !Safe(() => FamilyBuilder.AreWed(Hero.MainHero, mother), false);
+                // the question is asked of the LIVE world, not only of the record: asking a
+                // long-married player whether his wife's child is his would be absurd. That
+                // judgment now lives in ONE place for everyone who needs it (2026.08.16) —
+                // see OfTheMarriageInTheWorldsEyes, and the disowning the old split let through.
+                bool mustOwnIt = !OfTheMarriageInTheWorldsEyes(record);
 
                 // An empty purse is not a question — EXCEPT when one of the answers is free. Owning
                 // a child quietly costs nothing and is the whole point of the choice; gating it
@@ -603,7 +602,7 @@ namespace ImmersiveAI
                             MarkFeastOffered(record);
                             var pick = chosen?.FirstOrDefault()?.Identifier;
                             // Every feast is an owning; the free choice is an owning with no hall.
-                            if (pick is BirthScale scale) { OwnTheChild(record, late: false); HoldTheFeast(record, scale); }
+                            if (pick is BirthScale scale) { OwnTheChild(record, late: false, withFeast: true); HoldTheFeast(record, scale); }
                             else if (pick as string == QuietOwning) { OwnTheChild(record, late: false); TrySealIfWhole(record); }
                         }
                         catch (Exception ex) { ModLog.Error("choosing the child's feast", ex); }
@@ -614,7 +613,7 @@ namespace ImmersiveAI
                     // decline that was never a choice must not quietly make a liar of that.
                     // A decline ALWAYS settles it. Anything else re-asks a world-pausing question
                     // on the next hourly tick, and the next, and the next.
-                    _ => DeclineTheFeast(record));
+                    _ => DeclineTheFeast(record, askedTheOwning: mustOwnIt));
 
                 MBInformationManager.ShowMultiSelectionInquiry(data, true);
                 return true;
@@ -682,7 +681,10 @@ namespace ImmersiveAI
         {
             try
             {
-                if (record == null || record.BornInMarriage) return;
+                // Belt and braces beside the caller's own gate: no path may ever disown a child the
+                // world counts as of a marriage (2026.08.16).
+                if (record == null || OfTheMarriageInTheWorldsEyes(record)) return;
+                // And only SILENCE can become a withholding — an owning already said is not unsaid.
                 if (record.Owned != Acknowledgement.NeverArose) return;
                 record.Owned = Acknowledgement.Withheld;
                 _birthLedger?.Save(record);
@@ -727,6 +729,39 @@ namespace ImmersiveAI
         }
 
         /// <summary>
+        /// WHETHER THE WORLD COUNTS THIS CHILD AS OF A MARRIAGE (2026.08.16) — the ONE answer to a
+        /// question three sites used to answer three different ways. The feast popup asked the
+        /// record AND the live world; the house line and the withholding guard asked only the
+        /// record. That split is what let "No feast" disown a child, and what described a wife's
+        /// own children in the vocabulary kept for children owned outside a marriage.
+        ///
+        /// MARRYING THE MOTHER HEALS SILENCE, NEVER SPEECH (Anton, 2026.08.16). A child born in
+        /// wedlock is of the marriage by the fact of the day. A child born outside one becomes of
+        /// it when the two are wed TODAY and nothing was ever explicitly said — the era's own rule
+        /// (a later marriage legitimates the child born before it), and the same stroke quietly
+        /// heals every record written before <see cref="BirthRecord.BornInMarriage"/> existed,
+        /// since they all load false. But an explicit withholding was HEARD, and no wedding unsays
+        /// it — only the giving of the name does, which is precisely what keeps that act heavy.
+        ///
+        /// A parent who cannot be resolved (dead, gone) falls back to the captured flag: the
+        /// accepted old-record artifact, narrowed to widowers.
+        /// </summary>
+        internal static bool OfTheMarriageInTheWorldsEyes(BirthRecord record)
+        {
+            if (record == null) return false;
+            if (record.BornInMarriage) return true;
+            if (record.Owned == Acknowledgement.Withheld) return false;   // speech survives the wedding
+            return Safe(() =>
+            {
+                // The same PAIR the capture at the birth weighs, which also settles the female-player
+                // case: measuring the player against herself could only ever answer no.
+                var mother = record.MotherIsPlayer ? Hero.MainHero : FindAliveHero(record.MotherId);
+                var father = record.FatherIsPlayer ? Hero.MainHero : FindAliveHero(record.FatherId);
+                return mother != null && father != null && FamilyBuilder.AreWed(mother, father);
+            }, false);   // = the captured flag, which is false by the time we are here
+        }
+
+        /// <summary>
         /// HOW THE PLAYER'S HOUSE IS SPOKEN OF (2026.08.15) — one line for the sheet, built from the
         /// ledger's own record of what has been SAID rather than from the game's record of blood.
         /// A child of the marriage is simply his; one he has owned is his and the world says how; one
@@ -748,7 +783,8 @@ namespace ImmersiveAI
                 {
                     if (record == null || !record.AnyLived) continue;
                     if (!record.FatherIsPlayer && !record.MotherIsPlayer) continue;
-                    if (!record.BornInMarriage) anyOutside = true;
+                    bool ofMarriage = OfTheMarriageInTheWorldsEyes(record);
+                    if (!ofMarriage) anyOutside = true;
                     foreach (var kid in record.Children ?? new List<BirthChild>())
                     {
                         if (kid == null || string.IsNullOrWhiteSpace(kid.Name)) continue;
@@ -756,7 +792,7 @@ namespace ImmersiveAI
                         {
                             Name = kid.Name,
                             MotherName = record.MotherName,
-                            InMarriage = record.BornInMarriage,
+                            InMarriage = ofMarriage,
                             Owned = record.IsOwnedBeforeTheWorld,
                         });
                     }
@@ -830,14 +866,19 @@ namespace ImmersiveAI
 
         // No feast, then. The day is complete as soon as the hour is written — so if it already is,
         // it is laid before the player now; if the chronicler is still at it, FinishBirthHour will.
-        private void DeclineTheFeast(BirthRecord record)
+        //
+        // THE NEGATIVE BUTTON MEANS WHAT IT SAYS (2026.08.16). It reads "Say nothing" only when the
+        // owning was truly put to the player; otherwise it reads "No feast" and may settle nothing
+        // but the feast. Writing the third answer of a three-way question from a two-way one is how
+        // a man declining a party found he had disowned the child of the woman he had since married.
+        private void DeclineTheFeast(BirthRecord record, bool askedTheOwning)
         {
             try
             {
                 MarkFeastOffered(record);
                 // For a child born outside a marriage, declining is not "no feast" — it is saying
                 // nothing, which in this world is its own loud act. Recorded as the decision it is.
-                WithholdTheName(record);
+                if (askedTheOwning) WithholdTheName(record);
                 TrySealIfWhole(record);
             }
             catch (Exception ex) { ModLog.Error("declining the child's feast", ex); }

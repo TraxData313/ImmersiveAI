@@ -56,6 +56,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ### Between us
 - Fixed: on the older chat window the "Between us" page told you a child of yours had never been owned before the world and gave you no button to do it. The act now has its door on both windows.
+- Fixed: the "Between us" button did nothing on the hearth side of the talk screen. Her page was lying over it and taking the press, so the button was there to be seen and could not be pressed.
 
 ### The hearth
 - New: the hearth (H) is now a stage. The women of your house are listed on the left, the one you turn to stands there ALIVE in her own place — the same picture the game uses for talking on the map — and her page is on the right: her season, the fortnight of nights, your children's cards, the two switches, and the one decision. It is the same screen the talking happens on, turned over; a button in the bar moves between the two.
@@ -84,6 +85,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Changed: the room a character gets for writing their memories now starts at 2,000 words' worth instead of 4,000 — cheaper per exchange, and enough for the deep memory to finish its thought. Your own setting, if you changed it, is untouched.
 
 ### One place for everyone you know
+- Fixed: typing a message could throw you out of the conversation and onto the hearth page mid-word. The key that opens the hearth was still listening while you wrote, so an "h" in a sentence turned the whole screen over. It now stays out of the way while the screen is up — the buttons in the bar do the turning, as they always did.
+- Fixed: the key that stops a voice mid-reading no longer fires while you are writing, so deleting a typo just deletes a typo.
 - The world now holds still while the talk screen is open, the way it does in an ordinary conversation, and starts again when you step away.
 - New setting: a frame limit for the talk screen, 60 by default. Nothing moves there but one person breathing, so your machine can rest; set it to 0 to leave your own limit alone (MCM, under Windows & Hotkeys).
 - New: they change how they stand as you talk — a hand on the hip, arms folded, weight shifted — the way they do in a face-to-face conversation. Which poses you see depends on how they feel about you: an old friend stands easy with you, someone who cannot stand you keeps their guard up.
@@ -140,6 +143,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - New: **you can still give the name, at any age** — from the "Between us" page of the child's mother.
 - New: every child now keeps its **own memory from the day it is born** — where it was born, who its parents are, and whether anything was said of it. So when it grows up and first speaks to you, it already knows who it is. Nobody briefs it. And the silence is recorded too.
 - A child is never given its mother's own account of the hour. It gets the facts of its day; her voice stays hers.
+- Fixed: **marrying a woman makes her child yours before the world too.** A child born before the wedding is no longer spoken of as one born outside it — by her, by your other women, or by anyone reading your house. If you once said nothing of that child on purpose, that still stands, and giving the name still means something.
+- Fixed: **"No feast" now means no feast.** Declining a party for a child of your own wife could quietly record that you had refused to acknowledge it — and tell her so. The refusal is only ever written down when you were actually asked the question.
+- Fixed: a mother whose child you welcomed with a hall full of people remembers the hall. She was being told you had said it quietly in a corridor, whatever you had spent.
 
 ### One door, many rooms
 - Changed: the little button under someone's name no longer changes its name. It says **"Between us"**, always, and the page behind it holds everything that is between you: what stands unanswered, where you stand, the road, your wedding day, your children, and what is still owed to one of them.

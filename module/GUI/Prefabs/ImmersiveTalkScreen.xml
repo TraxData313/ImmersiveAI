@@ -240,9 +240,21 @@
                          widget, the game looked for IsHearth on her page's view model, found
                          nothing, and never showed the panel. So: the outer widget owns the
                          visibility, in the screen's own scope; the inner one owns the data. -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsHearth">
+                    <!-- AND NEITHER OF THEM MAY TAKE A CLICK (Anton's playtest, 2026.08.16: "Between
+                         us" did nothing on the hearth side and worked fine on the talk side). Both of
+                         these stretch over the WHOLE right column, the button included, and they are
+                         declared after it - and the engine hands a click to the LAST declared widget
+                         under the cursor that accepts events (EventManager.CollectEnableWidgetsAt
+                         walks children in reverse), with a bare Widget accepting by default. So in
+                         hearth mode these two transparent sheets were catching the press and the
+                         button underneath never heard it; in talk mode they are invisible, which is
+                         exactly why only one side was broken. DoNotAcceptEvents drops only the widget
+                         itself from that walk - children are still reached, guarded by
+                         DoNotPassEventsToChildren, which stays false - so the scroller, the scrollbar
+                         and the Go button below are untouched. -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" DoNotAcceptEvents="true" IsVisible="@IsHearth">
                       <Children>
-                        <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
+                        <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" DoNotAcceptEvents="true">
                           <Children>
 
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="196" MarginBottom="130">

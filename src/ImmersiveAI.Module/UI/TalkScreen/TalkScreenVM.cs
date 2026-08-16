@@ -1868,6 +1868,12 @@ namespace ImmersiveAI.UI.TalkScreen
             {
                 if (value == _hearthMode) return;
                 _hearthMode = value;
+                // One line in log.txt whenever the screen turns over. It is here because a turn the
+                // player did not ask for LOOKS like the chat vanishing (Anton, 2026.08.16: typing
+                // "hid the chat" — the hearth key was still listening while he wrote), and the two
+                // faults are otherwise indistinguishable from a screenshot: a mode that flipped, or
+                // a thread that failed to draw. If it is ever reported again, this line answers it.
+                ModLog.Info("talk screen: turned to " + (value ? "the hearth" : "the talk"));
                 OnPropertyChangedWithValue(value, "IsHearth");
                 OnPropertyChanged("IsTalking");
                 OnPropertyChanged("ModeButtonText");

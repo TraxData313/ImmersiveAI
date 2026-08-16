@@ -315,14 +315,13 @@ NEXT UPDATE:
       which was built by hand instead).
       **THE VERDICTS ARE ONE READER'S WORD AND NOTHING MORE.** The refuters — whose whole job is
       killing false positives — are the half that died, exactly as in the run before it. Read the
-      code at each cited line before believing any of it. What the run flags as REAL and NEW, worth
-      opening first: `HouseOfThePlayerLine` still reads `BornInMarriage` raw (an existing campaign's
-      legitimate children described in the vocabulary reserved for children acknowledged outside a
-      marriage, on every wife's sheet, every reply); `DeclineTheFeast` → `WithholdTheName` keeps the
-      old insufficient guard while the popup beside it was given a live-world one, so "No feast"
-      can answer a question the player was deliberately never asked; and a bought feast records a
-      QUIET owning, which leaves `BirthText.MotherNameBeat`'s with-feast branch dead in production.
-      NONE OF THESE IS FIXED. Nothing from that file has been applied.
+      code at each cited line before believing any of it.
+      **THE THREE BIRTHS FINDINGS ARE DONE** — triaged by hand, all three real, FIXED and
+      deployed 2026.08.16. Work order + reasoning: docs/birth-recognition-fix-plan.md; the account
+      of what was built is at the end of TASKS_DONE.md.
+      The REST of the twenty verdicts remain untriaged and unapplied. What is left in this file
+      is one reader's word on the other areas — read the code at each cited line before believing
+      any of it.
 
 - [ ] REVIEW FINDINGS STILL OPEN (adversarial pass over the after-the-wedding batch, 2026.08.15).
       ALL 35 RAW FINDINGS ARE IN docs/review-findings-2026-08-15.md — recovered from the run's

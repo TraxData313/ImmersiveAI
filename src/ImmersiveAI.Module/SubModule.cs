@@ -180,6 +180,11 @@ namespace ImmersiveAI
                 }
                 if (!_panicKeyParsed) return;
 
+                // While a text field holds the keyboard, this key is part of a word being written —
+                // the default is Backspace, which is exactly how a typo is deleted. Reading is when
+                // the player wants the cord; writing is when they want their character back.
+                if (UI.MapOverlays.IsTypingSomewhere) return;
+
                 if (!Input.IsKeyPressed(_panicKey)) return;
 
                 Voice.VoiceService.Stop();

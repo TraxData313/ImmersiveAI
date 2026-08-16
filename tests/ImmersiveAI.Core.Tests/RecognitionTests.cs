@@ -107,6 +107,24 @@ public class RecognitionTests
         Assert.Contains("It is said now", late);
     }
 
+    /// <summary>
+    /// A FEAST IS REMEMBERED AS A FEAST (2026.08.16). Honor in this feature is nothing but what has
+    /// been SAID, and a feast is saying it at the top of one's voice — so the grandest hall in the
+    /// game must never reach her memory as a quiet word in a corridor. This branch was DEAD in
+    /// production until today: the buy site called the owning without ever passing the flag, and
+    /// every test passed false, so nothing anywhere asked for these words.
+    /// </summary>
+    [Fact]
+    public void AFeastedOwningIsNotRememberedAsAQuietOne()
+    {
+        var feasted = BirthText.MotherNameBeat("Mizam", "Nadea", given: true, withFeast: true, late: false);
+        var quiet = BirthText.MotherNameBeat("Mizam", "Nadea", given: true, withFeast: false, late: false);
+
+        Assert.Contains("before a hall full of people", feasted);
+        Assert.DoesNotContain("no hall", feasted);
+        Assert.NotEqual(quiet, feasted);
+    }
+
     // ------------------------------ the child who knows its own story ------------------------------
 
     [Fact]
