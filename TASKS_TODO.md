@@ -196,9 +196,22 @@ NEXT UPDATE:
           women; and `ExecuteGo` now closes the talk screen too, because that screen HOLDS THE WORLD
           STILL and a night that cannot let an hour pass is a night that never settles.
           The old window is whole behind `UseClassicChatWindow` and the session fallback.
-          UNPLAYTESTED, AND UNVERIFIABLE WITHOUT PLAY. It compiles and the Core suite is green, but
-          nothing here is Core: layout margins, whether the nested data source binds, and whether the
-          stage behaves when the mode turns are all things only the game can answer.
+          FIRST PLAYTEST, 2026.08.16 (Anton): she was DRAWN correctly and the Talk/Hearth button
+          worked, but her whole page was blank — no season, no switches, no fortnight, no Go.
+          TWO CAUSES, both now fixed, and the first is the one worth remembering:
+          • A NESTED DataSource IS BOUND WHEN THE WIDGET IS CREATED. `Hearth` was built lazily on
+            the first turn to the hearth, so at movie-load it was null, the panel bound to nothing,
+            and no later notification ever brought it back. It is now built in the VM's constructor,
+            before the movie loads — the same rule the face already follows two lines above it
+            ("choosing here happens BEFORE the movie loads").
+          • Her page's own contact list is unbound but is still what `TrySelect` matches against, so
+            it must be refreshed before selecting or the page selects nobody and every reading is
+            blank.
+          The layout was rebuilt as ONE SCROLLING COLUMN while I was there: her season, state and
+          odds can each wrap to two lines, and anything pinned under them at a fixed offset gets sat
+          on — the letter window's old bug in a new coat. Only the Go button is pinned, because a
+          decision should not have to be scrolled to. The prefab is now XML-validated before deploy.
+          STILL UNPLAYTESTED IN THIS SHAPE.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),
           where it had been passing null. NOTE the tableau wants the room's own StringId as a

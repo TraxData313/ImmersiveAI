@@ -108,6 +108,15 @@ namespace ImmersiveAI.UI.TalkScreen
         public TalkScreenVM(ModConfig config)
         {
             _config = config;
+
+            // HER PAGE IS BUILT HERE, BEFORE THE MOVIE LOADS, and that is a rail rather than
+            // eagerness (playtest, 2026.08.16 — the hearth showed her and nothing else). A nested
+            // DataSource is bound when the widget is created; built lazily on the first turn to the
+            // hearth, the property was still null at load, the panel bound to nothing, and no later
+            // notification brought it back. Costs one empty view model for a player who never opens
+            // it, which is nothing at all.
+            _hearth = new NightWindow.NightWindowVM(config);
+
             RefreshContacts();
 
             // Somebody is always on stage from the first frame. Partly grace — an empty middle is a
@@ -1831,7 +1840,11 @@ namespace ImmersiveAI.UI.TalkScreen
                 var hero = _selected?.Hero;
                 if (hero == null) return;
                 if (_hearth == null) Hearth = new NightWindow.NightWindowVM(_config);
-                _hearth!.TrySelect(hero);
+                // Her own list is unbound, but it is what TrySelect matches against — so it has to
+                // be current, or turning to a woman the page has never heard of selects nobody and
+                // every reading below stays blank.
+                _hearth!.RefreshContacts();
+                _hearth.TrySelect(hero);
             }
             catch (Exception ex) { ModLog.Error("turning the hearth page", ex); }
         }
