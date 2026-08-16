@@ -182,7 +182,7 @@
                     <!-- Her state, under her name and out of the scrolling roll: what her body is
                          about, whether the night is hers to spend, and the odds if they are shown.
                          Stacked and measured, never at fixed offsets - each of them can wrap. -->
-                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="82" MarginRight="30" IsVisible="@IsHearth">
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="84" MarginRight="30" IsVisible="@IsHearth">
                       <Children>
                         <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren">
                           <Children>
@@ -210,7 +210,7 @@
                          they cannot), the bond's own mechanics, and the memory's weight. They STACK
                          in a list panel so a wrapped line can never land on the next one; the thread
                          below rides @MessagesTopMargin, which counts that wrapping. -->
-                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="84" StackLayout.LayoutMethod="VerticalTopToBottom">
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="84" StackLayout.LayoutMethod="VerticalTopToBottom" IsVisible="@IsTalking">
                       <Children>
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Text="@ReachText" IsVisible="@HasReach" />
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />

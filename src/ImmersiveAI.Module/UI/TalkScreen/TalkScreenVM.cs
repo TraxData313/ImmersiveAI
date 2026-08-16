@@ -1986,8 +1986,15 @@ namespace ImmersiveAI.UI.TalkScreen
                 var next = sets[(at + 1) % sets.Count];
                 // Only say it moved if it did: a stage that refused to rebuild keeps its old label
                 // rather than claiming a room the player is not looking at.
-                if (ConversationTableauController.MoveTo(hero, next.Id))
-                    OnPropertyChanged("SetButtonText");
+                if (!ConversationTableauController.MoveTo(hero, next.Id)) return;
+
+                // THE STAGE IS REBUILT, AND THE SCREEN MUST BE TOLD (playtest, 2026.08.16 — the
+                // label moved between the town and the tavern and she never left the street). The
+                // controller holds the new tableau, but the widget draws whatever it was handed
+                // last: without this the picture is the old room's, with a new name over it.
+                OnPropertyChanged("SetButtonText");
+                OnPropertyChanged("TableauData");
+                OnPropertyChanged("HasFace");
             }
             catch (Exception ex) { ModLog.Error("moving the talk to another set", ex); }
         }

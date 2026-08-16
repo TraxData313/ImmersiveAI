@@ -239,6 +239,16 @@ NEXT UPDATE:
           before the gift question. It has to — the screen HOLDS THE WORLD STILL, and a night that
           cannot let an hour pass is a night that never settles. Whether it should REOPEN on her
           afterwards is Anton's call and was left for him.
+          FOURTH PLAYTEST: the page reads right. Two more, both fixed:
+          • THE SET TOGGLED ITS LABEL AND SHE NEVER LEFT THE STREET. `MoveTo` rebuilt the tableau
+            and the controller held the new one, but the widget draws whatever it was last HANDED —
+            so the screen had to be told (`OnPropertyChanged("TableauData")` / `"HasFace"`, the same
+            pair `RefreshContacts` already raises). Only the label was being refreshed.
+          • THE TALK-SIDE INFO LINES OVERLAPPED HER STATE. The reach line, the bond line and the
+            memory weight are the messages side's business — how to reach her, how the bond runs,
+            what her memory costs — and on her page they said nothing anyone came for while sitting
+            straight under her own state. Hidden whole in hearth mode (Anton: "I dont need that info
+            string here... it will leave the child info ok").
           STILL UNPLAYTESTED IN THIS SHAPE.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),
