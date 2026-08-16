@@ -211,6 +211,18 @@ NEXT UPDATE:
           odds can each wrap to two lines, and anything pinned under them at a fixed offset gets sat
           on — the letter window's old bug in a new coat. Only the Go button is pinned, because a
           decision should not have to be scrolled to. The prefab is now XML-validated before deploy.
+          SECOND PLAYTEST, same day: STILL blank, and the real cause was neither of those.
+          **A WIDGET THAT DECLARES A DataSource RESOLVES EVERY BINDING ON ITSELF AGAINST THAT NEW
+          SOURCE — ITS OWN `IsVisible` INCLUDED.** The panel carried `DataSource="{Hearth}"` and
+          `IsVisible="@IsHearth"` on the SAME widget, so the game looked for `IsHearth` on the night
+          window's view model, found nothing, and never showed it. The thread hid correctly the whole
+          time precisely because it has no DataSource of its own. Split in two now: the OUTER widget
+          owns the visibility in the screen's own scope, the INNER one owns the data. Write it down —
+          the same trap is waiting for every future nested panel in this prefab.
+          Worth noting what was NOT the cause, since both were plausible and both cost a round: the
+          lazy construction (fixed anyway, and correctly) and the layout margins (rebuilt anyway, and
+          better for it). No exception was ever logged, which was the clue that pointed here: nothing
+          was failing, something simply was not being asked for.
           STILL UNPLAYTESTED IN THIS SHAPE.
     - [x] A WANDERER IN A TAVERN IS DRAWN IN THE TOWN — FIXED 2026.08.16. `ConversationSceneBuilder`
           now passes the room the soul is really in (`LocationComplex.GetLocationOfCharacter(hero)`),

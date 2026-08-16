@@ -180,8 +180,17 @@
                          offset gets sat on. Stacked inside the scroller, nothing can collide with
                          anything. Only the Go button is pinned, because a decision should not have
                          to be scrolled to. -->
-                    <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsHearth">
+                    <!-- TWO WIDGETS, NOT ONE, and this is a Gauntlet rule rather than taste
+                         (playtest, 2026.08.16 — the page was blank twice). A widget that
+                         declares a DataSource resolves EVERY binding on itself against that new
+                         source, its own IsVisible included. With the flag and the source on one
+                         widget, the game looked for IsHearth on her page's view model, found
+                         nothing, and never showed the panel. So: the outer widget owns the
+                         visibility, in the screen's own scope; the inner one owns the data. -->
+                    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsHearth">
                       <Children>
+                        <Widget DataSource="{Hearth}" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
+                          <Children>
 
                         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="130" MarginBottom="130">
                           <Children>
@@ -251,6 +260,8 @@
                           </Children>
                         </ButtonWidget>
 
+                          </Children>
+                        </Widget>
                       </Children>
                     </Widget>
 
