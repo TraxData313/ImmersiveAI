@@ -73,12 +73,15 @@ if (Test-Path $guiSource) {
 # their blessing. module\Voices\README.txt says the same where it will actually be read.
 $voicesSource = Join-Path $repoRoot "module\Voices"
 
-# Voices that must NEVER leave this machine, by folder name. These are cloned from real people who
-# did not consent (public figures), so they are fine to develop against and unshippable by anyone.
-# Each voice folder carries the embedding itself, so packaging one IS distributing that person's
-# voice - which is why this stops the release dead rather than warning. deploy.ps1 deliberately does
-# NOT check: the local install is exactly where they belong.
-$neverShip = @("sibylla", "achilles", "max")
+# Voices that must NEVER leave this machine, by folder name. EMPTY today, deliberately: the three
+# names that lived here (sibylla, achilles, max) were early clones of real people, since RECREATED
+# whole from CC0 source audio (kyutai/tts-voices) - Anton confirmed the rework and gave the
+# all-clear on 2026.08.16, and module\Voices\README.txt states the practice. The list STAYS as the
+# mechanism: any future voice cloned from someone who did not consent goes here (or wears the
+# Source mark below), and it stops the release dead rather than warning - the embedding IS the
+# voice, so packaging one distributes it. deploy.ps1 deliberately does NOT check: the local
+# install is exactly where an unshippable development clone belongs.
+$neverShip = @()
 
 # A durable mark inside voice.json, for the voices a NAME list cannot keep up with. The 91 cloned
 # from Bannerlord's own dialogue VO wear it: no game audio is redistributed (the folders hold only

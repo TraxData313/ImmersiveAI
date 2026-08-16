@@ -11,9 +11,3 @@ dist/
 # Droppings of TaleWorlds' Workshop uploader when run from the repo root
 steam_appid.txt
 steam_workshop_uploader.txt
-
-# Never-ship voice clones (see $neverShip in tools/package.ps1): fine to copy in
-# for a LOCAL deploy, but git must stay blind to them - they are real people's
-# cloned voices and this repo is public. Kept at ..\voices-private\ when not in use.
-module/Voices/female/other/sibylla/
-module/Voices/male/other/max/
