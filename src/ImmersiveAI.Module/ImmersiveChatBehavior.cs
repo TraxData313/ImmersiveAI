@@ -299,11 +299,8 @@ namespace ImmersiveAI
             if (call.Name == Tools.LoverTool.NameHerPrice)
                 return Task.FromResult(ResolveRansomLay(call, npc, bless));
 
-            if (call.Name == Tools.QuestTool.AcceptQuest)
-                return Task.FromResult(ResolveAcceptQuest(call, npc, quest));
-
-            if (call.Name == Tools.QuestTool.ReportQuest)
-                return Task.FromResult(ResolveReportQuest(call, npc, quest));
+            if (call.Name == Tools.QuestTool.AcceptQuest || call.Name == Tools.QuestTool.ReportQuest)
+                return Task.FromResult(Tools.QuestDialogTreeBridge.ResolveToolCall(call, npc, quest));
 
             NotifyActivity(npc, call);
             if (call.Name == Tools.WebWisdom.SeekWisdom)
@@ -1939,7 +1936,22 @@ namespace ImmersiveAI
             // may take offence and move her heart in the same breath, and so may a person.
             var door = CanWeighTheDoor(npc) ? new Tools.DoorTool.Tally() : null;
 
-            var ctx = BuildContext(npc, situationOverride, bargainRides: bargain != null,
+            string? effectiveScene = situationOverride;
+            if (quest != null)
+            {
+                var branches = Personas.TroubleBuilder.BuildQuestBranches(npc, Hero.MainHero);
+                if (!string.IsNullOrWhiteSpace(branches))
+                {
+                    var baseScene = !string.IsNullOrWhiteSpace(situationOverride)
+                        ? situationOverride
+                        : string.IsNullOrWhiteSpace(_currentSituation)
+                            ? SituationBuilder.Build(npc, Hero.MainHero, _config)
+                            : _currentSituation;
+                    effectiveScene = string.IsNullOrWhiteSpace(baseScene) ? branches : baseScene + "\n\n" + branches;
+                }
+            }
+
+            var ctx = BuildContext(npc, effectiveScene, bargainRides: bargain != null,
                 trothRides: trothRides, blessBride: bless?.Bride,
                 loverRides: loverRides, ransom: bless?.IsRansom ?? false, doorRides: door != null);
             var memory = ctx.Memory;

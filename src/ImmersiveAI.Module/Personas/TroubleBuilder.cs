@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ImmersiveAI.Core.Prompts;
+using ImmersiveAI.Tools;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Issues;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -53,14 +54,10 @@ namespace ImmersiveAI.Personas
             if (issue != null)
                 DescribeOwnIssue(issue, sentences, speaker, partner);
             else
-                // A notable with no issue says so to himself, so "do you need any work?" is met with
-                // honest small labor or a plain no — never an invented quest-shaped promise.
                 Try(() =>
                 {
                     if (speaker.IsNotable)
-                        sentences.Add("No true trouble weighs on me in these days — nothing worth hiring " +
-                            "a fighting company for; if I set a willing visitor to anything, it would be " +
-                            "small everyday labor, paid in kind and a fair word.");
+                        sentences.Add("CRITICAL FACT: I currently have NO troubles, tasks, deliveries, or business opportunities to offer anyone. If the traveler asks for work, errands, or trade opportunities, I MUST clearly and plainly tell them that I have no tasks, shipments, or work for them at this time, and recommend they check with other notables or the tavern. I MUST NEVER invent, promise, or fabricate fake errands, cargo shipments, or tasks.");
                 });
 
             // Quests they gave that ride on without an issue behind them (a lord's charge, a story
@@ -105,37 +102,50 @@ namespace ImmersiveAI.Personas
             Try(() => brief = TidingsFormatter.StripMarkup(issue.IssueBriefByIssueGiver?.ToString()));
             Try(() => questAsk = TidingsFormatter.StripMarkup(issue.IssueQuestSolutionExplanationByIssueGiver?.ToString()));
             Try(() => altAsk = TidingsFormatter.StripMarkup(issue.IssueAlternativeSolutionExplanationByIssueGiver?.ToString()));
-            if (string.IsNullOrWhiteSpace(questAsk) && string.IsNullOrWhiteSpace(altAsk))
-                Try(() => questAsk = TidingsFormatter.StripMarkup(issue.IssueAcceptByPlayer?.ToString()));
 
-            // Read-only extraction of exact item/goods if present on issue
+            // Extract target trade good / supply scope if present
             Try(() =>
             {
-                var type = issue.GetType();
                 var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
-                var itemObj = (type.GetField("_rawMaterialsToBeDelivered", flags) ?? type.GetField("_requestedTradeGood", flags) ?? type.GetField("_requestedItem", flags))?.GetValue(issue) as ItemObject;
-                if (itemObj != null)
+                var issueType = issue.GetType();
+                var itemField = issueType.GetField("_issueItem", flags) ?? issueType.GetField("_requestedItem", flags);
+                if (itemField != null)
                 {
-                    goodName = itemObj.Name?.ToString();
-                    var countProp = type.GetProperty("RawMaterialCountToBeDelivered", flags) ?? type.GetProperty("RequestedTradeGoodAmount", flags) ?? type.GetProperty("RequestedItemAmount", flags);
-                    if (countProp != null) goodCount = Convert.ToInt32(countProp.GetValue(issue, null));
+                    var item = itemField.GetValue(issue) as ItemObject;
+                    if (item != null) goodName = item.Name?.ToString();
                 }
 
-                var targetSettlement = (type.GetField("_targetSettlement", flags) ?? type.GetField("_destinationSettlement", flags))?.GetValue(issue) as Settlement;
-                if (targetSettlement != null)
+                var countField = issueType.GetField("_issueItemCount", flags) ?? issueType.GetField("_requestedItemCount", flags);
+                if (countField != null)
                 {
-                    targetSettlementName = targetSettlement.Name?.ToString();
-                    var speakerPos = speaker?.CurrentSettlement?.Position ?? Hero.MainHero?.CurrentSettlement?.Position;
-                    if (speakerPos.HasValue && (speakerPos.Value.X != 0f || speakerPos.Value.Y != 0f))
+                    goodCount = Convert.ToInt32(countField.GetValue(issue));
+                }
+            });
+
+            // Extract target destination settlement and spatial direction
+            Try(() =>
+            {
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+                var issueType = issue.GetType();
+                var targetField = issueType.GetField("_targetSettlement", flags) ?? issueType.GetField("_destinationSettlement", flags);
+                if (targetField != null)
+                {
+                    var settlement = targetField.GetValue(issue) as Settlement;
+                    if (settlement != null)
                     {
-                        targetDir = TravelOrientationTracker.GetCardinalDirection(speakerPos.Value, targetSettlement.Position);
+                        targetSettlementName = settlement.Name?.ToString();
+                        var speakerSettlement = speaker?.CurrentSettlement ?? speaker?.PartyBelongedTo?.CurrentSettlement;
+                        if (speakerSettlement != null)
+                        {
+                            var diff = settlement.Position.ToVec2() - speakerSettlement.Position.ToVec2();
+                            targetDir = GetCompassDirection(diff.X, diff.Y);
+                        }
                     }
                 }
             });
 
-            sentences.Add(string.IsNullOrWhiteSpace(title)
-                ? "A trouble weighs on me in these days."
-                : $"A trouble weighs on me in these days — the matter of “{title.TrimEnd('.')}”.");
+            if (!string.IsNullOrWhiteSpace(title))
+                sentences.Add($"A trouble weighs on me in these days — the matter of “{title}”.");
 
             if (!string.IsNullOrWhiteSpace(desc))
                 sentences.Add($"The core objective of the matter: {desc}");
@@ -188,11 +198,8 @@ namespace ImmersiveAI.Personas
 
                 if ((flagsInt & 256) != 0) // PreconditionFlagNotEnoughTroops
                 {
-                    sentences.Add("Note on who stands before me: they ride with very few men or travel alone for a dangerous task. When they merely inquire about general local troubles or ask after the village, I should mention the trouble with realistic hesitation and doubt ('We have a problem with bandits, but it is far too perilous for a lone traveler...'), withholding the full proposal until they press further or show confidence.");
+                    sentences.Add("Note on who stands before me: they ride with very few men or travel alone for a dangerous task. If they merely inquire about general local troubles or ask after the settlement, express realistic hesitation about their company size before formally proposing the charge.");
                 }
-
-                sentences.Add("Important: Address the traveler strictly according to who stands before you, their true station, and your relationship. Opening Etiquette: When meeting the traveler or opening a conversation, greet them naturally according to your station; do not abruptly blurt out business or pending tasks on Turn 1 before the traveler introduces themselves or states their business. When the traveler inquires about work, troubles, rumors, or how to help, paraphrase the core trouble, destination, and goods naturally in your own authentic voice according to your personality, allowing them to handle it directly or delegate as they see fit, without verbatim reciting canned script formulas.");
-                sentences.Add("Once the traveler clearly commits, agrees, or confirms in their words that they will undertake the task (in whatever phrasing or language they express acceptance or willingness to take it on), I accept their aid and I MUST call accept_quest in that very reply to seal the agreement and deliver the task. (Do NOT call accept_quest when they are merely inquiring, discussing ability, or asking for details).");
             }
         }
 
@@ -224,22 +231,6 @@ namespace ImmersiveAI.Personas
                     ? "The time for it is nearly spent."
                     : $"Some {(int)Math.Round(days)} days remain before the chance is lost.");
             });
-
-            if (target > 0 && current < target)
-            {
-                string taskLabel = !string.IsNullOrWhiteSpace(progressText) ? progressText : $"{current} of {target}";
-                sentences.Add($"FACTUAL REALITY: The task is UNFINISHED ({taskLabel} completed). The required items or deeds have NOT yet been fulfilled or delivered. If the traveler claims they have finished it or asks for rewards, you MUST refuse their claim and never pay or celebrate, speaking strictly according to who you are and your standing.");
-            }
-            else if (target > 0 && current >= target)
-            {
-                sentences.Add($"FACTUAL REALITY: The required map deeds or item deliveries have been verified fulfilled ({current} of {target} achieved).");
-            }
-            else
-            {
-                sentences.Add("FACTUAL REALITY: The task is still actively underway on the map. Speak and react naturally to the ongoing progress in accordance with who you are.");
-            }
-
-            sentences.Add("Notice on completing tasks: Field/combat deeds (such as destroying bandits or clearing hideouts) are concluded by the realm when fought and won on the map; do NOT call completion tools or hand out rewards for combat deeds in conversation.");
         }
 
         // Quests this hero gave that are not the issue's own — each named with its latest word.
@@ -248,95 +239,159 @@ namespace ImmersiveAI.Personas
             var quests = Campaign.Current.QuestManager?.Quests;
             if (quests == null) return;
 
-            var player = Hero.MainHero?.Name?.ToString() ?? "someone";
-            int told = 0;
-            foreach (var quest in quests)
+            QuestBase ownQuest = ownIssue?.IssueQuest;
+            foreach (var q in quests)
             {
-                if (quest == null || !quest.IsOngoing || quest.QuestGiver != speaker) continue;
-                if (ownIssue?.IssueQuest == quest) continue;
-                if (told >= 2) break; // more than a couple and the trouble drowns the person
-                told++;
-
-                string title = null;
-                Try(() => title = TidingsFormatter.StripMarkup(quest.Title?.ToString()));
-                if (string.IsNullOrWhiteSpace(title)) continue;
-
-                sentences.Add($"And there is the matter of “{title.TrimEnd('.')}”, which {player} took up at my asking.");
-                int cur = 0, tgt = 0;
-                var latest = LatestJournalLine(quest, out cur, out tgt);
-                if (latest.Length > 0)
-                    sentences.Add($"The last word of it: {latest}");
+                if (q == null || q == ownQuest || q.QuestGiver != speaker || !q.IsOngoing) continue;
+                Try(() =>
+                {
+                    string title = TidingsFormatter.StripMarkup(q.Title?.ToString());
+                    int current = 0, target = 0;
+                    string progress = LatestJournalLine(q, out current, out target);
+                    if (string.IsNullOrWhiteSpace(progress))
+                        sentences.Add($"I have laid the charge of “{title}” on {Hero.MainHero?.Name?.ToString() ?? "someone"} to resolve.");
+                    else
+                        sentences.Add($"I have charged {Hero.MainHero?.Name?.ToString() ?? "someone"} with “{title}”, and where it stands is: {progress}");
+                });
             }
         }
 
-        // Deliveries or errands where this hero is the designated recipient/contact on behalf of another party.
+        // Quests given by other lords where this speaker is the designated contact or recipient.
         private static void DescribeIncomingDeliveries(Hero speaker, List<string> sentences)
         {
             var quests = Campaign.Current.QuestManager?.Quests;
-            if (quests == null || speaker == null) return;
+            if (quests == null) return;
 
             var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
-            foreach (var quest in quests)
+
+            foreach (var q in quests)
             {
-                if (quest == null || !quest.IsOngoing || quest.QuestGiver == speaker) continue;
-                if (!Tools.QuestTool.IsQuestTargetHero(quest, speaker)) continue;
+                if (q == null || !q.IsOngoing) continue;
+                Try(() =>
+                {
+                    var qType = q.GetType();
+                    var targetHeroField = qType.GetField("_targetHero", flags) ??
+                                          qType.GetField("_buyerHero", flags) ??
+                                          qType.GetField("_recipientHero", flags);
 
-                string questTitle = quest.Title?.ToString() ?? "a delivery";
-                string giverName = quest.QuestGiver?.Name?.ToString() ?? "someone";
-                string giverHome = quest.QuestGiver?.CurrentSettlement?.Name?.ToString() ?? quest.QuestGiver?.HomeSettlement?.Name?.ToString() ?? "their settlement";
-                var player = Hero.MainHero?.Name?.ToString() ?? "the traveler";
-
-                var qType = quest.GetType();
-                var herdType = (qType.GetField("_herdTypeToDeliver", flags) ?? qType.GetField("_requestedItem", flags))?.GetValue(quest) as ItemObject;
-                int count = 0;
-                var countField = qType.GetField("_animalCountToDeliver", flags) ?? qType.GetField("_itemCountToDeliver", flags);
-                if (countField != null) count = Convert.ToInt32(countField.GetValue(quest));
-
-                string cargoDesc = herdType != null ? (count > 0 ? $"{count} {herdType.Name}" : $"{herdType.Name}") : "the promised delivery";
-
-                sentences.Add($"Expected delivery: I am awaiting a delivery of {cargoDesc} sent by {giverName} of {giverHome}, which {player} agreed to bring to me.");
-                sentences.Add("Opening Etiquette: When meeting the traveler or opening a conversation, greet them naturally according to your station; do not abruptly blurt out business, deliveries, or pending tasks on Turn 1 before the traveler introduces themselves or states their business.");
-                sentences.Add($"Important: When {player} presents the delivery or explicitly states they have brought the {cargoDesc} on behalf of {giverName}, I inspect and receive the goods and I MUST call report_quest to formally accept the delivery and conclude the task. (If they speak of other matters, converse normally).");
+                    if (targetHeroField != null)
+                    {
+                        var targetHero = targetHeroField.GetValue(q) as Hero;
+                        if (targetHero == speaker)
+                        {
+                            var giverName = q.QuestGiver?.Name?.ToString() ?? "someone";
+                            var questTitle = TidingsFormatter.StripMarkup(q.Title?.ToString() ?? "a delivery task");
+                            sentences.Add($"I am awaiting a delivery under the charge of “{questTitle}” arranged by {giverName}. If the traveler brings the cargo or livestock, I should acknowledge the delivery.");
+                        }
+                    }
+                });
             }
         }
 
-        // The most recent journal entry that carries words, with its task's count when one is kept
-        // ("Delivered hardwood: 4 of 10") — the same journal the player's quest log shows.
+        /// <summary>
+        /// Assembles dynamic resolution branches and tool guidance strictly for active reply turns (not greetings).
+        /// </summary>
+        public static string BuildQuestBranches(Hero speaker, Hero partner)
+        {
+            if (speaker == null || Campaign.Current == null) return string.Empty;
+            var sentences = new List<string>();
+
+            IssueBase issue = null;
+            var availableIssue = QuestTool.GetAvailableIssue(speaker);
+            if (availableIssue != null)
+            {
+                QuestBase previewQ = null;
+                var genMethod = availableIssue.GetType().GetMethod("GenerateIssueQuest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (genMethod != null)
+                {
+                    try { previewQ = genMethod.Invoke(availableIssue, new object[] { (availableIssue.StringId ?? "issue") + "_preview" }) as QuestBase; }
+                    catch { }
+                }
+                var offerFlowField = typeof(QuestBase).GetField("OfferDialogFlow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                var offerFlow = offerFlowField?.GetValue(previewQ) as DialogFlow;
+                var options = QuestDialogTreeBridge.ExtractOptions(offerFlow, evaluateConditions: true, quest: previewQ);
+                if (options.Count > 0)
+                {
+                    string prompt = QuestDialogTreeBridge.FormatOptionsPrompt(options, "Available dialogue acceptance branches:");
+                    if (!string.IsNullOrWhiteSpace(prompt))
+                    {
+                        sentences.Add(prompt);
+                        sentences.Add(QuestDialogTreeBridge.GetUniversalConversationGuidance(isReporting: false));
+                    }
+                }
+            }
+            else
+            {
+                var quests = Campaign.Current.QuestManager?.Quests;
+                if (quests != null)
+                {
+                    foreach (var q in quests)
+                    {
+                        if (q != null && !q.IsFinalized && (q.QuestGiver == speaker || QuestTool.IsQuestTargetHero(q, speaker)))
+                        {
+                            var flowField = typeof(QuestBase).GetField("DiscussDialogFlow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                            var discussFlow = flowField?.GetValue(q) as DialogFlow;
+                            var options = QuestDialogTreeBridge.ExtractOptions(discussFlow, evaluateConditions: true, quest: q);
+                            if (options.Count > 0)
+                            {
+                                string prompt = QuestDialogTreeBridge.FormatOptionsPrompt(options, "Available dialogue resolution branches:");
+                                if (!string.IsNullOrWhiteSpace(prompt))
+                                {
+                                    sentences.Add(prompt);
+                                    sentences.Add(QuestDialogTreeBridge.GetUniversalConversationGuidance(isReporting: true));
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return sentences.Count == 0 ? string.Empty : string.Join("\n", sentences);
+        }
+
+        private static string GetCompassDirection(float dx, float dy)
+        {
+            double angle = Math.Atan2(dy, dx) * (180.0 / Math.PI);
+            if (angle < 0) angle += 360.0;
+
+            if (angle >= 337.5 || angle < 22.5) return "east";
+            if (angle >= 22.5 && angle < 67.5) return "north-east";
+            if (angle >= 67.5 && angle < 112.5) return "north";
+            if (angle >= 112.5 && angle < 157.5) return "north-west";
+            if (angle >= 157.5 && angle < 202.5) return "west";
+            if (angle >= 202.5 && angle < 247.5) return "south-west";
+            if (angle >= 247.5 && angle < 292.5) return "south";
+            return "south-east";
+        }
+
         private static string LatestJournalLine(QuestBase quest, out int current, out int target)
         {
             current = 0;
             target = 0;
-            var entries = quest?.JournalEntries;
-            if (entries == null) return string.Empty;
+            if (quest == null) return string.Empty;
 
-            for (int i = entries.Count - 1; i >= 0; i--)
+            try
             {
-                var log = entries[i];
-                if (log == null) continue;
-                var text = TidingsFormatter.StripMarkup(log.LogText?.ToString());
-                if (text.Length == 0) continue;
-
-                int cur = log.CurrentProgress;
-                int rng = log.Range;
-                if (rng > 0)
+                var entries = quest.JournalEntries;
+                if (entries != null && entries.Count > 0)
                 {
-                    current = cur;
-                    target = rng;
+                    var last = entries[entries.Count - 1];
+                    current = last.CurrentProgress;
+                    target = last.Range;
+                    var text = last.LogText?.ToString();
+                    if (!string.IsNullOrWhiteSpace(text)) return TidingsFormatter.StripMarkup(text);
                 }
-
-                string task = null;
-                Try(() => task = TidingsFormatter.StripMarkup(log.TaskName?.ToString()));
-                if (!string.IsNullOrWhiteSpace(task) && rng > 0)
-                {
-                    return $"{task}: {cur} of {rng}";
-                }
-
-                return text;
             }
+            catch { }
+
             return string.Empty;
         }
 
-        // A missing fact should never sink the whole trouble, so each is attempted independently.
-        private static void Try(Action a) { try { a(); } catch { /* skip this fact */ } }
+        private static void Try(Action action)
+        {
+            try { action(); }
+            catch { }
+        }
     }
 }

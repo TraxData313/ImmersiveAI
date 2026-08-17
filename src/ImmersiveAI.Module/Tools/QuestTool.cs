@@ -22,24 +22,30 @@ namespace ImmersiveAI.Tools
             public Hero? Npc;
             public IssueBase? AcceptedIssue;
             public QuestBase? ReportedQuest;
-            public System.Reflection.MethodInfo? CompletionMethod;
+            public Func<bool>? CompletionDelegate;
+            public bool IsReneged;
+            public int OptionIndex;
+            public bool HasExplicitOptionIndex;
             public int RequiredGold;
         }
 
         public static readonly ToolDefinition AcceptTool = new ToolDefinition(AcceptQuest,
-            "I am burdened with trouble, and the task is mine to give: this formally hands my spoken errand over to the traveler once they have plainly agreed, in their own words, to take it upon themselves. " +
-            "I call it ONLY when they have committed to aid me — never when they merely ask, discuss possibilities, or weigh their skill. Nothing is settled in the world until the hand is given.",
+            "Formally hand over my spoken issue or task to the traveler only after they have clearly and explicitly committed in words to take it upon themselves. " +
+            "If multiple agreement branches exist in my awareness (e.g. Standard Task Agreement vs Direct Cash Buyout/Alternative), pass the exact option_index matching the traveler's choice. " +
+            "Do NOT call this when they are merely inquiring, discussing possibilities, or stating their skills.",
             new[]
             {
-                new ToolParameter("confirmation", "A brief phrase confirming the task agreed upon.", required: false)
+                new ToolParameter("confirmation", "A brief phrase confirming the task agreed upon.", required: false),
+                new ToolParameter("option_index", "The integer index of the chosen agreement option (matching the option list in your awareness).", required: false)
             });
 
         public static readonly ToolDefinition ReportTool = new ToolDefinition(ReportQuest,
-            "Acknowledge the fulfillment of an errand brought to me: this receives delivered goods, herds, or messages and seals the quest's completion when the traveler returns having done what was asked. " +
-            "Combat deeds upon the field conclude on their own; I call this when hands meet to deliver what was promised.",
+            "Acknowledge the handover, progress report, or breach resolution of an ongoing task when speaking with the traveler. " +
+            "Pass the corresponding option_index matching the chosen dialogue resolution branch.",
             new[]
             {
-                new ToolParameter("result", "Confirmation of the quest result.", required: false)
+                new ToolParameter("result", "Confirmation of the quest result or resolution phrase.", required: false),
+                new ToolParameter("option_index", "The integer index of the chosen dialogue resolution option.", required: false)
             });
 
         public static IssueBase? GetAvailableIssue(Hero npc)
