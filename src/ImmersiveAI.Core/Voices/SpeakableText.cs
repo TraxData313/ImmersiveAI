@@ -29,6 +29,99 @@ namespace ImmersiveAI.Core.Voices
         /// sentence cannot hold the whole reply silent while it generates.</summary>
         public const int DefaultMaxChars = 260;
 
+        /// <summary>
+        /// Symbols that are worth SAYING rather than dropping, and what they become.
+        /// <para>
+        /// The dashes turn into commas and the ellipsis into a full stop on purpose: they are pauses
+        /// in the writing, so a pause is what they should be in the reading. Borrowed whole from the
+        /// sister project's <c>voice_lib._SPOKEN</c>, where it has ridden a thousand generations.
+        /// </para>
+        /// </summary>
+        private static readonly Dictionary<char, string> Spoken = new Dictionary<char, string>
+        {
+            // The trailing space matters: "soon—and" must become "soon, and" and never "soon,and",
+            // which is one strange blob to a tokenizer where the whole point was to remove one.
+            // A space that lands in FRONT of the comma is swept up again by Tidy.
+            ['—'] = ", ", ['–'] = ", ", ['―'] = ", ",
+            ['‘'] = "'", ['’'] = "'", ['“'] = "\"", ['”'] = "\"", ['„'] = "\"", ['«'] = "\"", ['»'] = "\"",
+            ['…'] = ".", [' '] = " ", ['​'] = "",
+            ['×'] = " times ", ['°'] = " degrees ", ['±'] = " plus or minus ",
+            ['→'] = " to ", ['←'] = " from ", ['⇒'] = " gives ",
+            ['≤'] = " at most ", ['≥'] = " at least ", ['≠'] = " not equal to ",
+            ['•'] = " ", ['·'] = " ", ['✓'] = " ", ['✗'] = " ", ['❦'] = " ", ['☾'] = " ", ['✒'] = " ",
+        };
+
+        /// <summary>
+        /// Every character that reaches the speech engine, and nothing else.
+        /// <para>
+        /// THE REASON THIS EXISTS (2026.08.17, Anton's own catch — "maybe in bannerlord they say some
+        /// strange symbols?"). The sister project speaks through the same DLL on the same card and
+        /// derailed ONCE in about a thousand generations; this mod derailed TWELVE times in 196. The
+        /// engine is therefore not the problem, and one of the two things it is handed differently
+        /// is the text: that project passes every character through this whitelist and we passed
+        /// none. An em dash, a curly quote, a zero-width space or a bullet is a rare token to a
+        /// speech tokenizer, and a rare token is exactly the sort of thing an autoregressive model
+        /// wanders off after — it never emits its end-of-speech and generates until it hits the rail.
+        /// </para>
+        /// <para>
+        /// The rule is a whitelist rather than a blacklist because the failure is silent and the
+        /// space of strange characters is unbounded: a model writing in-world prose reaches for
+        /// typographic dashes and quotes constantly, and nothing downstream would ever complain.
+        /// LETTERS AND DIGITS OF EVERY SCRIPT PASS — Anton plays in Bulgarian, and asking for
+        /// <c>[A-Za-z0-9]</c> would silently throw away every Cyrillic word in the mod.
+        /// </para>
+        /// </summary>
+        public static string Normalize(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+
+            var sb = new StringBuilder(text!.Length);
+            foreach (var c in text!)
+            {
+                string mapped;
+                if (Spoken.TryGetValue(c, out mapped)) { sb.Append(mapped); continue; }
+
+                // Plain ASCII is always safe, except the control codes, which are not speech.
+                if (c < 128)
+                {
+                    sb.Append(c < 32 && c != '\n' && c != '\t' ? ' ' : c);
+                    continue;
+                }
+
+                // A letter or a digit in ANY script — Cyrillic, Greek, anything.
+                if (char.IsLetterOrDigit(c)) { sb.Append(c); continue; }
+
+                sb.Append(' ');
+            }
+            return Tidy(sb.ToString());
+        }
+
+        /// <summary>
+        /// Clears up after the sweep: a space in front of punctuation (left by a dropped symbol, or
+        /// by a dash that became a comma), and a run of the same mark where two of them met.
+        /// Without it "a — b" reads out as "a , b" and a swept bullet leaves "· ." behind.
+        /// </summary>
+        private static string Tidy(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (var c in s)
+            {
+                if (IsTightPunct(c))
+                {
+                    // Drop the whitespace we just wrote in front of it...
+                    while (sb.Length > 0 && (sb[sb.Length - 1] == ' ' || sb[sb.Length - 1] == '\t'))
+                        sb.Length--;
+                    // ...and never write the same mark twice running.
+                    if (sb.Length > 0 && sb[sb.Length - 1] == c) continue;
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        private static bool IsTightPunct(char c)
+            => c == ',' || c == '.' || c == ';' || c == ':' || c == '!' || c == '?';
+
         /// <summary>The words of a message, with the gestures taken out. Returns empty when there
         /// is nothing to say (a reply that was ALL gesture, or nothing at all).</summary>
         public static string SpokenOnly(string? body)
@@ -37,7 +130,7 @@ namespace ImmersiveAI.Core.Voices
             if (segments.Count == 0) return string.Empty;
 
             var spoken = segments.Where(s => !s.IsGesture).Select(s => s.Text);
-            return Collapse(string.Join(" ", spoken));
+            return Collapse(Normalize(string.Join(" ", spoken)));
         }
 
         /// <summary>
@@ -56,7 +149,7 @@ namespace ImmersiveAI.Core.Voices
         {
             var segments = EmoteText.Split(body);
             if (segments.Count == 0) return string.Empty;
-            return Collapse(string.Join(" ", segments.Select(s => Closed(s.Text))));
+            return Collapse(Normalize(string.Join(" ", segments.Select(s => Closed(s.Text)))));
         }
 
         /// <summary>Gives a segment an ending when it has none, so the next one does not run into it.

@@ -193,6 +193,7 @@ public static class Program
             LanguageId = Wire.Int(root, "languageId", -1),
             Whole = Wire.Bool(root, "whole", false),
             MaxTokens = Wire.Int(root, "maxTokens", 0),
+            ExpectedSamples = Wire.Long(root, "expectedSamples", 0),
         };
 
         if (root.TryGetProperty("voice", out var voice) && voice.ValueKind == JsonValueKind.Object)

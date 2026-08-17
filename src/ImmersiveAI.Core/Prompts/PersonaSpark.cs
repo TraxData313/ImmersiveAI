@@ -183,6 +183,19 @@ namespace ImmersiveAI.Core.Prompts
             sb.AppendLine();
             sb.AppendLine($"Write 1 to 3 sentences in {their} own first-person voice, present tense — private truths {they} {holdsWord} about {(they == "they" ? "themselves" : they == "she" ? "herself" : "himself")}. Make them CONCRETE: name the person, the place, the habit, the sound, the smell. They must grow out of {their} story and traits, never contradict them, and never repeat what the facts above already say. No preamble, no quotes, no talk of cards or directors — output only the sentences themselves.");
 
+            // THE TONGUE, riding last (2026.08.17, Steam/Moetel). Every instruction above is English,
+            // so most models answered in English however the keeper wrote their world — and this text
+            // is written ONCE, at a first meeting, and kept forever. That is the "it depends which
+            // model I first met them with" effect exactly. The keeper's own world text is the only
+            // sample of their tongue that exists this early: the soul has not yet spoken a word, and a
+            // hand-written custom_instructions.txt cannot be evidence here because its presence blocks
+            // the spark outright. So a keeper who wants their souls sparked in their own language must
+            // WRITE global_prompt.txt in it — evidence beats instruction on the weaker models, which is
+            // the whole reason this rule shows rather than tells.
+            TongueRule.AppendQuoted(sb, facts.WorldText,
+                "These are the words of the keeper who made this world:",
+                "the sentences");
+
             return sb.ToString().TrimEnd();
         }
 

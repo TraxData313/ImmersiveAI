@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ImmersiveAI.Core.Llm;
+using ImmersiveAI.Core.Prompts;
 
 namespace ImmersiveAI.Core.Memory
 {
@@ -76,10 +77,26 @@ namespace ImmersiveAI.Core.Memory
 
             // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
             // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
-            if (self != null && !string.IsNullOrWhiteSpace(parsed.Self) && !IsUnchangedMarker(parsed.Self))
+            if (self != null && !string.IsNullOrWhiteSpace(parsed.Self) && !IsUnchangedMarker(parsed.Self)
+                && LooksLikeSelf(parsed.Self))
                 self.Text = parsed.Self!.Trim();
 
             return true;
+        }
+
+        // The second line of defence behind IsUnchangedMarker, and the one that does not need to know
+        // every language (2026.08.17). The prompt asks for "unchanged" in those letters, but the tongue
+        // rule now steers the whole answer into the player's own language, and a model that translates
+        // the marker anyway would have its one foreign word written in as a whole self. A self is asked
+        // for as a short paragraph: a single bare word is never one, in any tongue, so what already
+        // stands is kept instead. Deliberately NOT folded into IsUnchangedMarker, whose meaning is
+        // exactly "the word unchanged" and which another caller relies on.
+        private static bool LooksLikeSelf(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            return text!.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(w => w.Trim(MarkerDressing))
+                .Count(w => w.Length > 0) > 1;
         }
 
         // Everything a model may dress the marker in: quotes, brackets, markdown bold/italic/rules/
@@ -148,8 +165,23 @@ namespace ImmersiveAI.Core.Memory
             }
 
             AppendReplyFormat(sb);
+            AppendTongue(sb, turns.Count + freshTurns.Count > 0 || !string.IsNullOrWhiteSpace(memory.Summary));
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
+        }
+
+        // THE TONGUE, riding last in both memory prompts (2026.08.17). These two calls see neither the
+        // NPC's sheet nor the world prompt, so their language was inherited from the transcript alone —
+        // a strong model stayed in the player's tongue and a weak one drifted to English mid-summary,
+        // in the two most load-bearing generated texts the mod holds. The evidence is already standing
+        // above (the folded turns ARE the player's own words), so it is POINTED AT rather than quoted
+        // again: re-quoting up to forty turns would double the largest prompt this mod builds.
+        private static void AppendTongue(StringBuilder sb, bool hasWords)
+        {
+            if (hasWords)
+                TongueRule.AppendFromAbove(sb, "the words set down above", "all I set down here");
+            else
+                TongueRule.AppendFallback(sb, "all I set down here", ownMind: true);
         }
 
         // The first line of every memory-work prompt: the NPC's own mind opening, named when the
@@ -250,8 +282,17 @@ namespace ImmersiveAI.Core.Memory
                 // invite them to actually put themselves into words. Once they have a self, allow it to stand.
                 sb.AppendLine(string.IsNullOrWhiteSpace(selfText)
                     ? "<a short paragraph, in my own first-person voice, of who I feel myself to be — my spirit, my longings, what I hold dear.>"
-                    : "<a short paragraph, in my own first-person voice, of who I feel myself to be now — my spirit, my longings, what I hold dear. If nothing has changed, I write: unchanged.>");
+                    // "unchanged" is a MARKER, not prose, and it is the one word here I must produce
+                    // rather than copy. The tongue rule below pushes everything else into the player's
+                    // own language, and a translated marker would sail past IsUnchangedMarker and
+                    // overwrite a whole self with a single foreign word — so it is pinned, out loud,
+                    // beside the SUMMARY:/SELF: labels it already keeps company with.
+                    : "<a short paragraph, in my own first-person voice, of who I feel myself to be now — my spirit, my longings, what I hold dear. If nothing has changed, I write this one word exactly as it stands, in these letters, whatever tongue the rest is in: unchanged.>");
             }
+
+            // After the SELF: block, not merely after the reply contract — the rule must be the last
+            // thing read, and self.txt is exactly as prone to drifting into English as the summary.
+            AppendTongue(sb, turnsToFold.Count + freshTurns.Count > 0 || !string.IsNullOrWhiteSpace(memory.Summary));
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
         }

@@ -98,6 +98,13 @@ namespace ImmersiveAI.Core.Voices
         /// no single sentence in it. Absent or 0 means "whatever the host was started with".</summary>
         public const string FieldMaxTokens = "maxTokens";
 
+        /// <summary>Where an honest reading of this line should have ended — see
+        /// <see cref="VoiceBudget.ExpectedSamplesFor"/>. Past that mark the host judges the audio it
+        /// is still making and stops a reading that has stopped being speech, which is the only one
+        /// of the three derail guards that acts while the player is listening. Absent or 0 means
+        /// "do not listen".</summary>
+        public const string FieldExpectedSamples = "expectedSamples";
+
         /// <summary>Set on a result the host does not trust: far more audio came back than the words
         /// could justify, so the generation was cut short. The words already spoken are good — every
         /// derail measured begins correctly and runs away later — but the clip must never be CACHED,
@@ -163,6 +170,7 @@ namespace ImmersiveAI.Core.Voices
                         LanguageId = (int)Num(o, FieldLanguageId, NoLanguage),
                         Whole = Bool(o, FieldWhole, false),
                         MaxTokens = (int)Num(o, FieldMaxTokens, 0),
+                        ExpectedSamples = (long)Num(o, FieldExpectedSamples, 0),
                     };
 
                 case OpCancel:
@@ -560,6 +568,13 @@ namespace ImmersiveAI.Core.Voices
         /// how many seconds a runaway is allowed before the engine stops it.</summary>
         public int MaxTokens { get; set; }
 
+        /// <summary>Where an honest reading of this line should have ended, in samples —
+        /// <see cref="VoiceBudget.ExpectedSamplesFor"/>. Past it the host listens to what it is
+        /// making and cuts a reading that has become a held note. 0 leaves it deaf, which is what
+        /// the two length rails were on their own: they stop a runaway, but only after the player
+        /// has heard it.</summary>
+        public long ExpectedSamples { get; set; }
+
         /// <summary>
         /// Whether this request can actually be served, and if not, in what words to say so.
         /// <para>
@@ -596,6 +611,7 @@ namespace ImmersiveAI.Core.Voices
             o[VoiceHostProtocol.FieldLanguageId] = LanguageId;
             o[VoiceHostProtocol.FieldWhole] = Whole;
             if (MaxTokens > 0) o[VoiceHostProtocol.FieldMaxTokens] = MaxTokens;
+            if (ExpectedSamples > 0) o[VoiceHostProtocol.FieldExpectedSamples] = ExpectedSamples;
             return o;
         }
     }

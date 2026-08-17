@@ -40,6 +40,8 @@ public sealed class TtsEngine : IDisposable
 
     private IntPtr _ctx;
     private int _maxAudioTokens = 4096;
+    private float _temperature = 0.55f;
+    private float _topP = 0.85f;
     private string[] _speakers = Array.Empty<string>();
 
     public string BackendName { get; private set; } = "unknown";
@@ -51,6 +53,8 @@ public sealed class TtsEngine : IDisposable
     public void Bring(EngineLocation loc, HostOptions o)
     {
         _maxAudioTokens = o.MaxAudioTokens;
+        _temperature = o.Temperature;
+        _topP = o.TopP;
 
         Loader.Preload(loc.EngineDir);
 
@@ -125,8 +129,8 @@ public sealed class TtsEngine : IDisposable
         // and nobody compares two of them back to back. Cooling the sampling holds the timbre steady
         // across the seams; it costs a little expressive variety, which is the right trade when the
         // alternative is the listener noticing the machinery.
-        p.Temperature = 0.55f;
-        p.TopP = 0.85f;
+        p.Temperature = _temperature;
+        p.TopP = _topP;
         var textUtf8 = Native.Utf8(text);
         GCHandle speakerPin = default;
         var result = default(QwenResult);
@@ -352,8 +356,12 @@ public sealed class TtsEngine : IDisposable
         if (tokens > MaxRequestTokens) tokens = MaxRequestTokens;
 
         var p = QwenParams.StudioDefaults(req.LanguageId, tokens);
-        p.Temperature = 0.55f;      // see Synthesize: cooler sampling holds the timbre steady
-        p.TopP = 0.85f;
+        // See Synthesize: cooler sampling holds the timbre steady across a reply's seams. NOTE the
+        // justification is weaker HERE than it was there — the cooling was introduced when a reply
+        // was several separate generations, and this road is one — which is what makes it the
+        // leading suspect for the runaways (HostOptions.Temperature).
+        p.Temperature = _temperature;
+        p.TopP = _topP;
         p.ChunkSeconds = ChunkSeconds;
         p.LeftContextSeconds = LeftContextSeconds;
         p.CollectAudio = 0;         // the chunks ARE the output; no need to keep a second copy
@@ -366,6 +374,21 @@ public sealed class TtsEngine : IDisposable
         // different token rate, when the field would silently mean something else.
         long sampleBudget = (long)(tokens * (double)SamplesPerToken * 1.1) + Rate;
         bool derailed = false;
+
+        // THE THIRD LINE OF DEFENCE, and the only one that acts while the player is LISTENING.
+        //
+        // The two above are length rails: they stop a runaway, but not before it has run. That was
+        // no great matter while a whole reply was written in silence and could be thrown away — and
+        // it became the whole matter once streaming put every second into the air as it was made.
+        // A length rail cannot be tightened out of this, either: the honest duration of a long reply
+        // is only known to about a fifth either way, which on a thirty-second reply is six seconds of
+        // babble whatever we set.
+        //
+        // So past the point where the words should have run out, we listen to what is still being
+        // made. Arming it there is what makes it safe to be aggressive: an honest reading is over by
+        // then, so there is nothing left to cut wrongly, and a derail is by definition still going.
+        long expectedSamples = req.ExpectedSamples > 0 ? req.ExpectedSamples : long.MaxValue;
+        int droneChunks = 0;
 
         int index = 0, totalSamples = 0, rate = Rate;
         float gain = 0f;            // decided by the first chunk, then held for the whole reply
@@ -392,6 +415,31 @@ public sealed class TtsEngine : IDisposable
                 Wav.ApplyGain(buf, gain);
 
                 totalSamples += buf.Length;
+
+                // Past the words' own end: is this still speech? Judged BEFORE the piece is handed
+                // over, so a caught derail is never played at all — the second that trips the guard
+                // is the second the player does not hear.
+                if (totalSamples > expectedSamples)
+                {
+                    double swing = Wav.SpeechLikeness(buf, rate, out double quiet);
+                    bool drone = swing < DroneSwing && quiet < DroneQuietFraction;
+                    droneChunks = drone ? droneChunks + 1 : 0;
+
+                    // Logged every time, tripped or not: these are the first real numbers anybody
+                    // will have for what a derail measures against what speech measures, and the
+                    // thresholds above were reasoned out rather than measured. One line a second,
+                    // and only past the end of the words, so it costs nothing.
+                    HostLog.Info($"listening to {req.Id}: swing={swing:F2} quiet={quiet:F2}" +
+                                 $"{(drone ? $" DRONE ({droneChunks})" : "")}");
+
+                    if (droneChunks >= DroneChunksToCut)
+                    {
+                        derailed = true;
+                        HostLog.Warn($"derail guard: {req.Id} has been holding one note for " +
+                                     $"{droneChunks} pieces past the end of its words - stopping it here");
+                        return 0;
+                    }
+                }
 
                 if (whole != null)
                 {
@@ -545,4 +593,22 @@ public sealed class TtsEngine : IDisposable
     /// <summary>The engine's own ceiling. 4096 tokens is 327.68 s — the length a real runaway
     /// reached on the evening this was measured.</summary>
     public const int MaxRequestTokens = 4096;
+
+    /// <summary>How little the loudness may move across a second before we call it a held note
+    /// rather than speech. REASONED, NOT MEASURED — a syllable rate of four to eight a second puts
+    /// real speech far above this, but nobody has yet held a derail still long enough to read its
+    /// number off. The host logs the figure for every judged piece precisely so the next one to
+    /// happen settles it.</summary>
+    public static double DroneSwing = 0.35;
+
+    /// <summary>And how nearly free of gaps it must be. A second of real speech practically always
+    /// contains a stop or a word boundary that drops the loudness to almost nothing; a held vowel
+    /// contains none. Both this and <see cref="DroneSwing"/> must agree before anything is cut —
+    /// two independent ways of saying "nothing is happening in this second".</summary>
+    public static double DroneQuietFraction = 0.05;
+
+    /// <summary>Consecutive judged pieces before the cord is pulled. Two, so about two seconds:
+    /// short enough that the player hears a stumble rather than a haunting, long enough that a
+    /// single odd second — a held note at the end of a sentence, a sigh — is never enough.</summary>
+    public static int DroneChunksToCut = 2;
 }

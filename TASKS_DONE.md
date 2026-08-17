@@ -934,3 +934,152 @@ release ritual warns about.
   hides for him, and "the folk - theyll test it if it doesnt and will tell me". The fetch machinery
   underneath it WAS driven by hand end to end (download, kill, resume, unpack, model stream), so
   what is untested is the button, its popup and the live line, not the errand. (2026.08.17 08.45.00)
+
+- [x] THE GENERATED-ONCE TEXTS NOW KEEP THE PLAYER'S TONGUE (Steam, Moetel, 2026.08.17 — "it depends
+  on which model was used when first meeting an NPC... will the world prompt execute correctly if we
+  define that all texts should be written in a certain language?"). He was right, and it was not
+  merely the model. Two calls were writing durable text with no idea what language the player plays
+  in: the PERSONA SPARK (saw the world prompt, but only as quoted material inside an otherwise
+  all-English instruction — written once at a first meeting and kept forever, which is exactly the
+  "depends which model I first met them with" effect) and MEMORY COMPRESSION / REFLECTION, which saw
+  neither the sheet nor the world prompt and inherited its language from the transcript alone. The
+  deep memory and self.txt are the two most load-bearing generated texts in the mod and were the
+  least protected.
+  THE SHAPE IS THE CHRONICLES', LIFTED WHOLE: real words as EVIDENCE plus "write in the SAME TONGUE
+  as those words", riding LAST because the model reads the end most closely. It SHOWS rather than
+  TELLS, which is why it holds where naming a language does not. Now a shared Core `Prompts\TongueRule`
+  (AppendQuoted / AppendFromAbove / AppendFallback) — the canonical form for every NEW call site.
+  The three tuned copies in WeddingText/BirthText/NightText were deliberately LEFT ALONE: their
+  wording carries clauses those accounts need (a TITLE, the spelling of names) and is test-guarded.
+  THE MEMORY PROMPTS POINT AT THEIR EVIDENCE RATHER THAN QUOTING IT — the folded turns ARE the
+  player's own words and already stand in the prompt; re-quoting up to forty of them would double the
+  largest prompt this mod builds, and non-ASCII play already costs ~1.6x per token on top.
+  THE ONE TRAP, found by asking what the change could break: the SELF: slot asks her to produce the
+  word "unchanged", and steering the whole answer into Bulgarian would have had her produce
+  "непроменено" — which sails straight past IsUnchangedMarker and overwrites A WHOLE SELF with one
+  foreign word. Fixed at both ends: the prompt now pins that one word ("exactly as it stands, in
+  these letters, whatever tongue the rest is in"), and `LooksLikeSelf` refuses any single bare word
+  as a self, in any language, keeping what already stands. Deliberately NOT folded into
+  IsUnchangedMarker, whose meaning is exactly "the word unchanged" and which another caller relies on.
+  A hand-written custom_instructions.txt is NOT usable as spark evidence, contrary to the task note:
+  its presence blocks generation outright. The world prompt is the only sample that exists that early,
+  so a keeper who wants their souls sparked in their own tongue must WRITE global_prompt.txt in it —
+  now said in the changelog. Not affected: the backstory seed, which is the game's own strings.
+  13 new tests (TongueRuleTests + placement/marker tests in both suites); 821 green. Shipped in
+  v3.1.1. The separate "Reply language option" task still stands and is now worth more, since the
+  two calls that used to ignore any such setting no longer do. (2026.08.17 11.13.00)
+
+- [x] THE NEXUS QUARANTINE: AN ARCHIVE WITH AN EXECUTABLE IN IT IS BLOCKED (Anton, 2026.08.17 — "our
+  last two update files on nexus are: This file has been automatically quarantined"). Diagnosed by
+  elimination, at the cost of two releases, and the elimination IS the finding — every step ruled out
+  something it would otherwise be natural to try again:
+    * NOT an antivirus detection. The flagged exe is 0/70 on VirusTotal
+      (b52951197dc7a9114deba59caa9fdf8f017b5c186447c0413f95b02b7867f732) — not one vendor of seventy
+      objects. The first draft of the appeal email argued "unsigned .NET trips Wacatac heuristics" and
+      would have been disproved by the recipient in one click. Check before claiming.
+    * NOT a malformed archive. Nexus's own "Preview file contents" renders our whole nested tree
+      perfectly. (PowerShell's Compress-Archive really does write off-spec BACKSLASH separators, and
+      that was fixed anyway — entry-by-entry zipping with forward slashes — but it was never the cause:
+      every pre-v3 release used the same packer and passed.)
+    * NOT the single-file publish. Their rules do name "any kind of self-extracting file", and a
+      PublishSingleFile bundle genuinely is one, so it was republished as an ordinary apphost with its
+      DLLs beside it, in a VoiceHost folder outside bin (which the game must never see net8 assemblies
+      in). v3.1.1 was quarantined ANYWAY.
+    * What is left: v1.x/v2.x carried no exe and every one passed; both releases carrying one were
+      blocked. The archive containing an executable is the whole trigger.
+  THE FIX (v3.1.2): the main zip carries no executable and always installs; the voice host is a
+  separate OPTIONAL Nexus file whose zip is ImmersiveAI/VoiceHost/..., unpacking over the same Modules
+  folder. No game-side change was needed — VoiceEngineDiscovery already probed <module>\VoiceHost —
+  but its candidate ORDER was flipped so the module root wins: an upgrading player keeps the old
+  bundle lying in bin, and probing bin first would spawn last version's host forever. package.ps1 now
+  THROWS if any .exe/.com/.scr/.bat/.cmd is found in the main module folder.
+  STEAM IS THE OPPOSITE CASE, same script: the Workshop does not scan and has no optional-file slot,
+  so splitting there would simply delete voices for Steam players. package.ps1 copies the host back
+  into dist\ImmersiveAI AFTER the zips are sealed, so the uploader's folder ships whole.
+  Also fixed along the way: the "voice program is missing — reinstall Immersive AI" advice, which is
+  now the NORMAL state for most players and had to stop reading as damage. And a Nexus UI trap worth
+  knowing — "Update existing file" silently inherits the OLD file's display name and description and
+  unticks "update mod version", so a new release can go up wearing the previous one's release notes.
+  Shipped v3.1.1 (packaging) and v3.1.2 (the split); appeal sent to Nexus support. (2026.08.17 13.35.00)
+
+* THE VOICE THAT WOULD NOT STOP — a derail caught while the player is LISTENING.
+  Anton, mid-playtest: Sibylla "glitched again while speaking this part right here, she started going
+  ooooououoouuu... and I stopped it, it sounds really scary even, breaks the immersion".
+  THE GAP: both existing derail guards are LENGTH rails, and both judge after the fact. That cost
+  nothing while Full read was the default — nothing is heard until the generation ends, so a runaway
+  is thrown away and retried in silence — and became the whole problem when streaming (2026.08.15)
+  began putting every second into the air as it was made. The retry only ever fires for `whole`
+  requests, which is exactly why his line had none.
+  THE ARITHMETIC WAS THE OTHER HALF: the ceiling was `expected x 1.8`, a RELATIVE margin, so the
+  absolute licence to babble grew with the text — three seconds of rope for a four-second line and
+  half a minute for a thirty-second reply. His line: 388 characters, an honest ~26 s reading,
+  56.48 s of audio. HIS OWN LOG SETTLED THE FREQUENCY: 12 runaways in 196 streamed generations —
+  SIX PER CENT, not the "dice roll" the notes claimed — and every single one the same shape, the
+  model never emitting end-of-speech and running to the rail.
+  THREE EDITS. (1) Core VoiceBudget caps the slack (`MaxExcessSeconds` 6), since a derail is a
+  fixed-size accident and not a proportional one; short lines keep their full proportional margin,
+  which is tested both ways. (2) A THIRD GUARD, and the only one that acts while the player is
+  listening: past `ExpectedSamples` — where the WORDS should have ended — the host judges each piece
+  before handing it over (`Wav.SpeechLikeness`: 20 ms frames, the spread of their loudness over its
+  mean, plus the fraction that fall near silence). Real speech is syllabic at 4-8 beats a second and
+  full of stops; a held vowel moves not at all, whatever note it holds. Two such pieces in a row and
+  the cord is pulled, so a derail is ~2 s of stumble instead of ~30 s of haunting. ARMING IT AT THE
+  END OF THE WORDS is what makes it safe to be aggressive: before that mark it never judges at all,
+  so no honest syllable can be cut; after it, the words are already spoken. (3) The player is told
+  once, plainly, that the voice stumbled — `VoiceEngineGate.NoteStumble`, rate-limited to one in
+  three minutes. Anton's report was that it sounded SCARY, and a known hiccup is not scary.
+  THE THRESHOLDS ARE REASONED, NOT MEASURED, and say so; the host logs its figure for every judged
+  piece so the next runaway settles them.
+  THE ROOT CAUSE IS STILL OPEN, and the suspect is our own sampling: we ship temperature 0.55 /
+  topP 0.85, cooled from Studio's 0.9 / 1.0 on 2026.08.14 to stop the voice changing person between
+  sentences. Cooled sampling degenerating into a repeated token is the textbook failure and a
+  repeated audio token is precisely what a held vowel sounds like — while the 200-synthesis run that
+  found ZERO runaways used Studio's own settings. And the reason for the cooling EXPIRED: it was
+  introduced when a reply was several separate generations, and streaming made it one, so there is
+  no seam left for it to hold together. Both numbers moved onto the host's command line
+  (`--temperature`, `--top-p`, env vars too) so it can be A/B'd without a rebuild. Needs ~50
+  generations an arm to tell 6% from 0%; not run, and it is the first thing to do here.
+  Also swept: a stranded VoiceHost was found alive with the game long closed, holding its VRAM —
+  the watchdog is supposed to make that impossible. Noted, not chased.
+  828 Core tests green, deployed. (2026.08.17 14.42.00)
+
+* WHY THE VOICES DERAIL — the control group Anton had already run.
+  Straight after the guards above he pushed back, and he was right to: "there must be a deeper reason
+  for this glitch, I have this other app that we build that you speak through and it never glitches
+  and it read so much already... Maybe in bannerlord they say some strange symbols?" That app
+  (claude-voice, C:\Users\Trax\Documents\claude-voice) drives THE SAME qwen3_tts.dll on THE SAME card
+  through THE SAME streaming C ABI — so it is a controlled comparison that was sitting there finished.
+  Its own docs/engine-notes.md counts the same failure with the same detector: ~1000 generations,
+  ONE runaway. Ours: 196 streamed generations, TWELVE. 0.1% against 6% — sixty times worse on
+  identical machinery, which rules out the engine, CUDA and the model and leaves only what we hand it.
+  TWO DIFFERENCES, both real, both now fixed, and his instinct named the first.
+  (1) THE TEXT WENT IN RAW. voice_lib._normalize passes every character through a whitelist — a
+  _SPOKEN table turning typographic marks into what they MEAN (em dash -> comma, ellipsis -> full
+  stop, curly quotes -> straight), then ASCII and any script's letters/digits kept, everything else
+  swept to a space. We had NOTHING of the kind: SpeakableText stripped gestures and chunked, the
+  host's Sanitize only dropped NULs and control codes. So em dashes (which this mod's own prose
+  style reaches for constantly), curly quotes, zero-width and non-breaking spaces, and the thread's
+  own card marks all went straight into the tokenizer. A rare token is exactly what an
+  autoregressive decoder wanders off after. Ported whole into Core SpeakableText.Normalize, applied
+  in SpokenOnly + SpokenWithGestures so every road (bites, whole text, cache key) gets it. TWO
+  corrections to the port, both caught by the tests: the dashes map to ", " with the trailing space
+  (else "soon-and" becomes "soon,and", one strange blob traded for another), which then needs Tidy
+  to sweep the space that lands IN FRONT of punctuation. LETTERS OF EVERY SCRIPT PASS — [A-Za-z0-9]
+  would have silently muted every Bulgarian word in the mod, which is the exact trap that project's
+  own comment warns about.
+  (2) WE COOLED THE SAMPLING; IT USES STUDIO'S OWN. We shipped temperature 0.55 / topP 0.85 against
+  Studio's 0.9 / 1.0. Cooled sampling collapsing onto a repeated token is the textbook failure of an
+  autoregressive decoder, and a repeated audio token is precisely what a held vowel IS. And THE
+  REASON FOR THE COOLING HAD EXPIRED: it was introduced 2026.08.14 to stop the voice changing person
+  BETWEEN sentences, and streaming made a whole reply ONE generation the very next day — no seam
+  left to hold together. Restored to 0.9 / 1.0, reachable from config.json (VoiceTemperature /
+  VoiceTopP, 0 = the engine's own) and from the host's own --temperature / --top-p / env vars, so a
+  disagreeing ear needs no rebuild. Delivery.ByLine is the one road that still truly has seams, and
+  it is legacy and not the default.
+  WHICH OF THE TWO CARRIED THE FAULT IS NOT KNOWN — they shipped together because each is right on
+  its own merits. The log tells: `derail guard` lines should now be rare, and if they are not, the
+  sampling is the half to try first because it is one config edit. THE LESSON, which is the general
+  one: a sister project on the same machinery is a control group, and asking "what does the one that
+  works do differently?" beat every hypothesis reasoned from our own code alone — mine included, and
+  mine was only half right.
+  829 Core tests green, deployed. (2026.08.17 15.10.00)

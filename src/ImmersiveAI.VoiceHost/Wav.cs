@@ -135,6 +135,63 @@ public static class Wav
         }
     }
 
+    /// <summary>
+    /// How much this second of audio BEHAVES like speech, from 0 (a held drone) upward.
+    /// <para>
+    /// The derail's own sound is the detector. A runaway is a sustained vowel — the
+    /// "ooooououoouuu" a playtest ran into on 2026.08.17 — and what makes it that is not its pitch
+    /// but its FLATNESS: the loudness simply stops moving. Real speech is syllabic, four to eight
+    /// beats a second, and every stop consonant and word gap drops the envelope to near nothing.
+    /// So we cut the piece into 20 ms frames, take each frame's loudness, and ask how much that
+    /// loudness varies across the second (its spread over its mean). Speech runs high; a held note
+    /// runs near zero, whatever note it is holding.
+    /// </para>
+    /// <para>
+    /// Cheap on purpose — one pass, no transform — because this runs inside the engine's own
+    /// callback, where the whole contract is to write the file, judge it, and get out.
+    /// </para>
+    /// </summary>
+    public static double SpeechLikeness(float[] s, int rate, out double quietFraction)
+    {
+        quietFraction = 1.0;
+        if (s == null || s.Length == 0) return 0;
+        if (rate <= 0) rate = 24000;
+
+        int frame = Math.Max(1, rate / 50);              // 20 ms
+        int frames = s.Length / frame;
+        if (frames < 8) return double.MaxValue;          // too little to judge; never accuse it
+
+        var loud = new double[frames];
+        double mean = 0;
+        for (int f = 0; f < frames; f++)
+        {
+            double sum = 0;
+            int start = f * frame;
+            for (int i = start; i < start + frame; i++)
+            {
+                float v = s[i];
+                if (float.IsNaN(v) || float.IsInfinity(v)) continue;
+                sum += (double)v * v;
+            }
+            loud[f] = Math.Sqrt(sum / frame);
+            mean += loud[f];
+        }
+        mean /= frames;
+
+        if (mean < 1e-4) { quietFraction = 1.0; return double.MaxValue; }   // silence is not a derail
+
+        double var2 = 0;
+        int quiet = 0;
+        foreach (var l in loud)
+        {
+            double d = l - mean;
+            var2 += d * d;
+            if (l < mean * 0.15) quiet++;                // a stop, a gap between words
+        }
+        quietFraction = (double)quiet / frames;
+        return Math.Sqrt(var2 / frames) / mean;
+    }
+
     /// <summary>Cheap sanity metrics for the log: is this speech, silence, or noise?</summary>
     public static string Describe(float[] s, int rate)
     {

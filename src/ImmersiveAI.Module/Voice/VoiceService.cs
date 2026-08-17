@@ -73,7 +73,7 @@ namespace ImmersiveAI.Voice
             try { VoicePlayback.SweepJoined(); } catch { /* housekeeping */ }
         }
 
-        private static ModConfig? Config => _config ?? SubModule.Config;
+        internal static ModConfig? Config => _config ?? SubModule.Config;
 
         /// <summary>Where the player's voices and the casting sheet live.</summary>
         public static string VoicesRoot => VoiceCache.VoicesRoot;
@@ -138,8 +138,13 @@ namespace ImmersiveAI.Voice
 
                     // Our own file, not theirs — a different problem with a different remedy, and
                     // telling someone to fetch an engine over it would send them the wrong way.
+                    // Since 2026.08.17 this is the NORMAL state for most players rather than a fault:
+                    // the voice program is a separate download, because an archive carrying any
+                    // executable is auto-quarantined on Nexus and that blocked the whole mod. So the
+                    // wording must read as "one more optional thing to fetch", never as damage.
                     if (setup.HostExePath.Length == 0)
-                        return "The mod's own voice program is missing from its folder — reinstalling Immersive AI puts it back.";
+                        return "Voices need one extra download — the \"Voice host\" file on the mod page, which unzips into "
+                             + "your Modules folder just like the mod itself. Everything else here works without it.";
 
                     // Said at the door rather than twenty minutes into a download: the speech engine
                     // is CUDA-only, so on any other card the whole 2.8 GB would be spent to fail at
@@ -1042,6 +1047,7 @@ namespace ImmersiveAI.Voice
                             languageId: AutoLanguage,
                             setup: setup,
                             maxTokens: VoiceBudget.MaxTokensFor(bite),
+                            expectedSamples: VoiceBudget.ExpectedSamplesFor(bite, VoiceBudget.EngineRate),
                             onChunk: (_, path, __) =>
                             {
                                 if (job.Abandoned) return;
@@ -1096,6 +1102,7 @@ namespace ImmersiveAI.Voice
                         setup: setup,
                         whole: joined,
                         maxTokens: VoiceBudget.MaxTokensFor(plan.Text),
+                        expectedSamples: VoiceBudget.ExpectedSamplesFor(plan.Text, VoiceBudget.EngineRate),
                         onChunk: (index, path, samples) =>
                         {
                             // Streaming: a piece per second. Joined: this fires ONCE, at the end,
@@ -1130,6 +1137,7 @@ namespace ImmersiveAI.Voice
                 if (derailed)
                 {
                     ModLog.Warn("voice: a reading ran away and was cut short — it will not be kept.");
+                    VoiceEngineGate.NoteStumble();
                     return;
                 }
 

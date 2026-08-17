@@ -209,4 +209,64 @@ public class SpeakableTextTests
     {
         Assert.Empty(SpeakableText.BitesFor("*shrugs*"));
     }
+
+    // ---------------- the whitelist: what reaches the speech engine ----------------
+    //
+    // Ported from the sister project (claude-voice), which drives the same engine on the same card
+    // and derailed ONCE in ~1000 generations where this mod derailed 12 times in 196. It passes every
+    // character through a whitelist; we passed none. A rare token is what an autoregressive model
+    // wanders off after, and the mod's own prose style reaches for typographic dashes constantly.
+
+    [Fact]
+    public void Normalize_TurnsTypographyIntoThePausesItMeans()
+    {
+        // An em dash IS a pause, so it becomes one rather than being dropped into a run-on.
+        Assert.Equal("I shall be ready soon, and I shall come back to you whole.",
+            SpeakableText.SpokenOnly("I shall be ready soon—and I shall come back to you whole."));
+
+        Assert.Equal("I had not thought to see you again. not after everything",
+            SpeakableText.SpokenOnly("I had not thought to see you again… not after everything"));
+
+        Assert.Equal("She said 'no' and meant \"never\".",
+            SpeakableText.SpokenOnly("She said ‘no’ and meant “never”."));
+    }
+
+    [Fact]
+    public void Normalize_KeepsEveryScriptsLettersAndDigits()
+    {
+        // Anton plays in Bulgarian. Asking for [A-Za-z0-9] would silently mute half the mod.
+        const string bg = "Мислих дълго за това, което ми каза при брода.";
+        Assert.Equal(bg, SpeakableText.SpokenOnly(bg));
+
+        Assert.Equal("13 men and 4 horses.", SpeakableText.SpokenOnly("13 men and 4 horses."));
+    }
+
+    [Fact]
+    public void Normalize_SweepsAwayTheInvisibleAndTheDecorative()
+    {
+        // A zero-width space is the worst of them: it cannot be seen in any log or any editor. It
+        // closes up rather than becoming a space, so a word it was hiding inside stays one word.
+        Assert.Equal("no gaphere", SpeakableText.SpokenOnly("no gap​here"));
+
+        // A non-breaking space is a space; the card marks the thread draws are not speech at all.
+        Assert.Equal("a b", SpeakableText.SpokenOnly("a b"));
+        Assert.DoesNotContain("❮", SpeakableText.SpokenOnly("❦ our wedding day"));
+    }
+
+    [Fact]
+    public void Normalize_SaysTheSymbolsWorthSaying()
+    {
+        Assert.Contains("times", SpeakableText.SpokenOnly("Wool ×24 was the whole of it."));
+        Assert.Contains("degrees", SpeakableText.SpokenOnly("It stood at 30° that day."));
+    }
+
+    [Fact]
+    public void Normalize_NeverThrowsAndKeepsPlainTextExactly()
+    {
+        Assert.Equal(string.Empty, SpeakableText.Normalize(null));
+        Assert.Equal(string.Empty, SpeakableText.Normalize(""));
+
+        const string plain = "Then we are agreed. I will tell the men at first light!";
+        Assert.Equal(plain, SpeakableText.SpokenOnly(plain));
+    }
 }

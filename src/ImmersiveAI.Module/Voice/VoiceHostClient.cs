@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -57,6 +58,8 @@ namespace ImmersiveAI.Voice
         private const string ArgModels = "--model-dir";
         private const string ArgModel = "--model";
         private const string ArgParent = "--parent";
+        private const string ArgTemperature = "--temperature";
+        private const string ArgTopP = "--top-p";
         private const string EnvEngine = "IMMERSIVEAI_TTS_ENGINE_DIR";
         private const string EnvModels = "IMMERSIVEAI_TTS_MODEL_DIR";
         private const string EnvModel = "IMMERSIVEAI_TTS_MODEL";
@@ -273,6 +276,23 @@ namespace ImmersiveAI.Voice
             parts.Add(ArgParent);
             parts.Add(OwnPid().ToString());
 
+            // Only when the player has moved them off the host's own defaults, so an untouched
+            // config never pins a number the host may later want to change on its own.
+            var config = VoiceService.Config;
+            if (config != null)
+            {
+                if (config.VoiceTemperature > 0f)
+                {
+                    parts.Add(ArgTemperature);
+                    parts.Add(config.VoiceTemperature.ToString("0.###", CultureInfo.InvariantCulture));
+                }
+                if (config.VoiceTopP > 0f)
+                {
+                    parts.Add(ArgTopP);
+                    parts.Add(config.VoiceTopP.ToString("0.###", CultureInfo.InvariantCulture));
+                }
+            }
+
             return string.Join(" ", parts);
         }
 
@@ -327,7 +347,8 @@ namespace ImmersiveAI.Voice
             CancellationToken cancel = default,
             Action<int, string, long>? onChunk = null,
             bool whole = false,
-            int maxTokens = 0)
+            int maxTokens = 0,
+            long expectedSamples = 0)
         {
             if (string.IsNullOrWhiteSpace(id)) return VoiceHostReply.Failed("no id");
             if (string.IsNullOrWhiteSpace(text)) return VoiceHostReply.Failed("nothing to say");
@@ -356,6 +377,7 @@ namespace ImmersiveAI.Voice
                     LanguageId = languageId,
                     Whole = whole,
                     MaxTokens = maxTokens,
+                    ExpectedSamples = expectedSamples,
                 };
 
                 // Caught here rather than at the far end of a pipe: the host would answer the same

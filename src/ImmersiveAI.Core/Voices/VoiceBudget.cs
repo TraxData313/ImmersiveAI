@@ -38,6 +38,11 @@ namespace ImmersiveAI.Core.Voices
         /// <summary>Seconds one audio token is worth (80 ms).</summary>
         public const double SecondsPerToken = 0.08;
 
+        /// <summary>The rate everything on this road speaks at: the local engine answers 24 kHz mono,
+        /// and the hosted one was asked for the same shape precisely so the cache, the joiner and the
+        /// playback chain never have to care which made a file.</summary>
+        public const int EngineRate = 24000;
+
         /// <summary>The engine's own ceiling, and so ours: 4096 tokens is 327.68 seconds.</summary>
         public const int EngineMaxTokens = 4096;
 
@@ -60,6 +65,21 @@ namespace ImmersiveAI.Core.Voices
         /// estimate, so 1.8× leaves a wide margin over anything that is genuinely speech.</summary>
         public const double DerailFactor = 1.8;
 
+        /// <summary>
+        /// The most slack any line gets, however long it is — and the correction to the mistake this
+        /// arithmetic made for its first two days (playtest, 2026.08.17: a reply of Sibylla's ran
+        /// away mid-sentence and babbled long enough that Anton stopped it by hand).
+        /// <para>
+        /// <see cref="DerailFactor"/> alone is a RELATIVE margin, so the absolute slack grows with
+        /// the text: 1.8× is three seconds of rope for a four-second line and half a minute for a
+        /// thirty-second reply. That was survivable while Full read was the default — nothing is
+        /// heard until the generation ends, so a runaway is thrown away and retried in silence — and
+        /// became audible the moment streaming made every second reach the player as it was made.
+        /// A derail is a fixed-size accident, not a proportional one, so its allowance is capped.
+        /// </para>
+        /// </summary>
+        public const double MaxExcessSeconds = 6.0;
+
         /// <summary>How long an honest reading of this text should take.</summary>
         public static double ExpectedSeconds(string? text)
         {
@@ -68,14 +88,39 @@ namespace ImmersiveAI.Core.Voices
             return GraceSeconds + chars / CharsPerSecond;
         }
 
-        /// <summary>The longest this text may honestly become before we stop believing it is speech.</summary>
+        /// <summary>The longest this text may honestly become before we stop believing it is speech.
+        /// The slack over an honest reading is proportional for short lines and CAPPED for long ones
+        /// — see <see cref="MaxExcessSeconds"/> for why that distinction is the whole point.</summary>
         public static double CeilingSeconds(string? text)
         {
             var expected = ExpectedSeconds(text);
             if (expected <= 0) return 0;
-            var ceiling = expected * DerailFactor;
+
+            var excess = expected * (DerailFactor - 1.0);
+            if (excess > MaxExcessSeconds) excess = MaxExcessSeconds;
+
+            var ceiling = expected + excess;
             var engineMax = EngineMaxTokens * SecondsPerToken;
             return ceiling > engineMax ? engineMax : ceiling;
+        }
+
+        /// <summary>
+        /// How many samples an honest reading of this text should take — the point past which a
+        /// generation is doing something it was not asked to.
+        /// <para>
+        /// This is where the host ARMS its acoustic guard, and the arming is what makes that guard
+        /// safe: before this mark it never judges the audio at all, so no honest sentence can be cut
+        /// by a misreading of it, and after this mark the words are already spoken, so what remains
+        /// has nothing to lose. <see cref="ExpectedSeconds"/> takes the SLOW end of the measured
+        /// speaking range, which puts this comfortably past where real speech ends.
+        /// </para>
+        /// </summary>
+        public static long ExpectedSamplesFor(string? text, int sampleRate)
+        {
+            if (sampleRate <= 0) sampleRate = 24000;
+            var seconds = ExpectedSeconds(text);
+            if (seconds <= 0) return 0;
+            return (long)(seconds * sampleRate);
         }
 
         /// <summary>

@@ -49,10 +49,16 @@ Copy-Item (Join-Path $repoRoot "lib\0Harmony.LICENSE.txt") $binDir -Force -Error
 # costs a session's voices; in-process it would cost the campaign. It has to travel WITH the
 # module, since the game spawns it by path.
 #
-# Published as a SINGLE FILE, always. This bin folder is on the game's assembly search path, and
-# a scatter of net8.0 runtime DLLs (System.Private.CoreLib and friends) lying beside a net472
-# ImmersiveAI.dll is a loader accident waiting to happen. One .exe is inert there; the game only
-# ever loads DLLs from this folder.
+# It lives in a VoiceHost FOLDER AT THE MODULE ROOT, and is published as ORDINARY FILES (changed
+# 2026.08.17). It used to be a single-file bundle dropped straight into bin\Win64_Shipping_Client,
+# for a good reason that has not gone away: that bin folder is on the game's assembly search path,
+# and a scatter of net8.0 files lying beside a net472 ImmersiveAI.dll is a loader accident waiting
+# to happen. What changed is the price of the fix. Nexus quarantined BOTH releases that carried the
+# bundle (v3.0.0 and v3.1.0, the only two that ever had an exe in them); their own rules name "any
+# kind of self-extracting file", and a single-file publish is exactly that - the managed DLLs are
+# appended to the apphost and unpacked at run time, which every scanner reads as a packer.
+# A folder outside bin answers both at once: the game never looks there, so the loader is safe, and
+# a plain apphost with two DLLs beside it looks like the ordinary program it is.
 #
 # FRAMEWORK-DEPENDENT on purpose - it needs the .NET 8 runtime present on the player's machine.
 # Measured, not guessed: 0.15 MB this way against 33 MB self-contained-and-compressed (64 MB
@@ -71,19 +77,34 @@ if (Test-Path $voiceHostProj) {
     Get-Process -Name "ImmersiveAI.VoiceHost" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
     $voiceOut = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\bin\publish\$Configuration"
-    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained false -p:PublishSingleFile=true -o $voiceOut
+    if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force -ErrorAction SilentlyContinue }
+    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained false -o $voiceOut
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "The voice host did not build - deploying without it. The mod runs fine; the NPCs simply keep their voices to themselves."
     } else {
         # The game spawns it BY NAME, so a renamed exe is a silent no-voices bug - say so loudly.
         $hostExe = Join-Path $voiceOut "ImmersiveAI.VoiceHost.exe"
         if (Test-Path $hostExe) {
-            Copy-Item $hostExe $binDir -Force
-            # Dev builds keep the pdb: it is what turns a host stack trace into line numbers.
-            Copy-Item (Join-Path $voiceOut "ImmersiveAI.VoiceHost.pdb") $binDir -Force -ErrorAction SilentlyContinue
+            # Clean slate: the host's own DLL names change with its dependencies, and a file left
+            # from an older publish is loaded just as readily as one this build produced.
+            $hostDir = Join-Path $moduleDir "VoiceHost"
+            if (Test-Path $hostDir) { Remove-Item $hostDir -Recurse -Force -ErrorAction SilentlyContinue }
+            New-Item -ItemType Directory -Force $hostDir | Out-Null
+            # Contents-into-ensured-destination, the same trap deploy.ps1 avoids everywhere else.
+            Copy-Item (Join-Path $voiceOut "*") $hostDir -Recurse -Force
             # Anything the host bundles that obliges a notice travels with it, same habit as Harmony.
-            Copy-Item (Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\THIRD-PARTY-NOTICES.txt") $binDir -Force -ErrorAction SilentlyContinue
-            Write-Host "Voice host installed (framework-dependent - needs the .NET 8 runtime at play time)."
+            # (Dev builds keep the pdb the publish already produced - it is what turns a host stack
+            # trace into line numbers.)
+            Copy-Item (Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\THIRD-PARTY-NOTICES.txt") $hostDir -Force -ErrorAction SilentlyContinue
+
+            # A single-file bundle from a pre-2026.08.17 deploy still sits in bin and is still a
+            # perfectly loadable host. Discovery now prefers the module root precisely so an
+            # upgrade cannot go on spawning it, but leaving it there would also leave the thing
+            # Nexus objects to lying in the folder we tell players is clean.
+            Remove-Item (Join-Path $binDir "ImmersiveAI.VoiceHost.exe") -Force -ErrorAction SilentlyContinue
+            Remove-Item (Join-Path $binDir "ImmersiveAI.VoiceHost.pdb") -Force -ErrorAction SilentlyContinue
+
+            Write-Host "Voice host installed to VoiceHost\ (framework-dependent - needs the .NET 8 runtime at play time)."
         } else {
             $made = (Get-ChildItem $voiceOut -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }) -join ", "
             if (-not $made) { $made = "(no exe at all)" }

@@ -421,4 +421,89 @@ public class MemoryCompressorTests
     {
         Assert.Equal(expected, MemoryCompressor.TrimToLastCompleteSentence(summary));
     }
+
+    // ---------------- THE TONGUE (2026.08.17) ----------------
+    // These two calls see neither the sheet nor the world prompt, so their language came from the
+    // transcript alone and a weak model drifted to English mid-summary — in the two most load-bearing
+    // generated texts the mod holds.
+
+    [Fact]
+    public async Task CompressionPrompt_EndsOnTheTongueRule()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(8);
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 3);
+        var prompt = client.LastRequest![0].Content.TrimEnd();
+
+        Assert.Contains("THE TONGUE", prompt);
+        // It must be the LAST thing read, after the SUMMARY: contract — that is the whole placement.
+        Assert.True(prompt.LastIndexOf("THE TONGUE", StringComparison.Ordinal)
+                    > prompt.LastIndexOf("SUMMARY:", StringComparison.Ordinal));
+        // And it must cost nothing: the turns are pointed at, never quoted a second time.
+        Assert.DoesNotContain("\"\"\"", prompt);
+    }
+
+    [Fact]
+    public async Task ReflectionPrompt_PutsTheTongueRuleAfterTheSelfBlock()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(6);
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 3,
+            systemVoiceName: null, self: new NpcSelf { Text = "I am cautious." });
+        var prompt = client.LastRequest![0].Content;
+
+        // self.txt drifts into English exactly as readily as the summary does, so the rule rides
+        // past the SELF: slot rather than merely past the SUMMARY: contract.
+        Assert.True(prompt.LastIndexOf("THE TONGUE", StringComparison.Ordinal)
+                    > prompt.LastIndexOf("SELF:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ReflectionPrompt_PinsTheUnchangedMarkerAgainstTranslation()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(6);
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 3,
+            systemVoiceName: null, self: new NpcSelf { Text = "I am cautious." });
+        var prompt = client.LastRequest![0].Content;
+
+        // The one word here that is PRODUCED rather than copied, and the one the tongue rule would
+        // otherwise translate straight past IsUnchangedMarker.
+        Assert.Contains("whatever tongue the rest is in: unchanged", prompt);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_KeepsTheSelf_WhenTheMarkerCameBackTranslated()
+    {
+        // непроменено = "unchanged". IsUnchangedMarker cannot know every language; what it can know
+        // is that a self was asked for as a paragraph and one bare word is never one.
+        foreach (var translated in new[] { "непроменено", "unverändert", "**inalterado**" })
+        {
+            var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + translated };
+            var memory = MemoryWithTurns(3);
+            var self = new NpcSelf { Text = "I am who I was." };
+
+            await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+                systemVoiceName: null, self: self);
+
+            Assert.Equal("I am who I was.", self.Text);
+        }
+    }
+
+    [Fact]
+    public async Task ReflectAsync_StillTakesAShortRealSelf()
+    {
+        // The guard is "one bare word", not "short" — a terse two-word self is still a self.
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nСтанах смела." };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am timid." };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal("Станах смела.", self.Text);
+    }
 }

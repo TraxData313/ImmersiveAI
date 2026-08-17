@@ -1,5 +1,26 @@
 ﻿WHERE THINGS STAND (2026.08.17 — **v3.1.0 IS SHIPPED, both stores**)
 
+  ** NEXT PLAYTEST — DID THE VOICES STOP DERAILING? (2026.08.17)
+      Anton heard Sibylla hold one wordless note for ~30 s mid-reply. Three things shipped for it:
+      a guard that cuts such a note within ~2 s, a character whitelist before the engine, and the
+      speech engine's own sampling restored (we had cooled it for a problem streaming had already
+      solved). Root cause was narrowed by comparing against claude-voice — same DLL, same card,
+      0.1% derails against our 6% — but WHICH of the two differences carried it is not known.
+      WHAT TO CHECK, all in Configs\ImmersiveAI\voicehost.log:
+        - `derail guard` lines. Twelve in 196 readings before; they should now be rare or gone.
+          If they are NOT, set VoiceTemperature 0.55 / VoiceTopP 0.85 in config.json to put half
+          the change back and compare — one edit, no rebuild.
+        - `listening to ...: swing= quiet=` lines, which the new guard writes for every piece it
+          judges. These are the first real numbers for what a derail measures against speech; the
+          two thresholds (DroneSwing 0.35, DroneQuietFraction 0.05) were REASONED, not measured.
+        - Whether the guard ever cut an honest reading. It only judges past the end of the words,
+          so it should be impossible — but "should be" is why this is on the list.
+      BY EAR: the restored sampling is the one change that could cost something. Listen to a long
+      multi-sentence reply and check the voice still sounds like the one that was cloned. If it
+      wanders, VoiceTemperature is the dial and lower is tighter.
+      ALSO SEEN, not chased: a VoiceHost found alive with the game long closed, holding its VRAM.
+      The watchdog (parent PID + stdin EOF) is supposed to make that impossible.
+
   ** LEFT FOR ANTON:
       1. WATCH THE NEXUS VIRUS SCAN. v3.0.0 was AUTOMATICALLY QUARANTINED there ("may be unsafe",
          undownloadable) and it sat that way for a day unnoticed — almost certainly the voice host

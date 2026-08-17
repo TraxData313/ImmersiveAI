@@ -55,10 +55,22 @@ public sealed class SynthRequest
     /// </summary>
     public int MaxTokens;
 
+    /// <summary>
+    /// How many samples an honest reading of this text should take (Core's
+    /// <c>VoiceBudget.ExpectedSamplesFor</c>). 0 = do not listen at all.
+    /// <para>
+    /// Not another rail but the ARMING POINT of one: past this mark the host begins judging the
+    /// audio it is making, and a second that has stopped being speech ends the generation. It is
+    /// deliberately the point where the WORDS end rather than where the patience does, because
+    /// everything after it is already surplus and so can be cut without risking a syllable.
+    /// </para>
+    /// </summary>
+    public long ExpectedSamples;
+
     public override string ToString() =>
         $"id={Id} kind={Kind} voice={(VoicePath is null ? Speaker ?? "-" : Path.GetFileName(VoicePath))} " +
         $"lang={LanguageId} whole={Whole} maxTokens={(MaxTokens > 0 ? MaxTokens.ToString() : "host")} " +
-        $"chars={Text.Length} out={OutPath}";
+        $"expect={ExpectedSamples} chars={Text.Length} out={OutPath}";
 }
 
 /// <summary>
@@ -239,6 +251,15 @@ public static class Wire
         if (!o.TryGetProperty(name, out var v)) return fallback;
         if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out int n)) return n;
         if (v.ValueKind == JsonValueKind.String && int.TryParse(v.GetString(), out int m)) return m;
+        return fallback;
+    }
+
+    public static long Long(JsonElement o, string name, long fallback)
+    {
+        if (o.ValueKind != JsonValueKind.Object) return fallback;
+        if (!o.TryGetProperty(name, out var v)) return fallback;
+        if (v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out long n)) return n;
+        if (v.ValueKind == JsonValueKind.String && long.TryParse(v.GetString(), out long m)) return m;
         return fallback;
     }
 

@@ -1784,7 +1784,24 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
   GAME THREAD AND NOWHERE ELSE** — `Begin`/`StopAll` set a flag and let the next `Tick` do it.
   With that, Streaming is strictly better than Full read and is the default (ConfigVersion **V5**
   migrates only a config still holding the exact old default).
-- **THE DERAIL, AND THE THREE RAILS AGAINST IT.** An autoregressive model that misses its
+- **WHY THE DERAIL HAPPENED AT ALL, settled 2026.08.17 — and the method is the lesson.** The rails
+  below stop a runaway; they never explained one. Anton's own `claude-voice` drives the SAME DLL on
+  the SAME card through the SAME streaming ABI and derailed once in ~1000 generations against our 12
+  in 196 — 0.1% vs 6% — which rules out the engine and asks instead what WE hand it. Two answers,
+  both now fixed: (1) **the text went in raw.** Core `SpeakableText.Normalize` (ported from that
+  project's `voice_lib._normalize`, and applied inside `SpokenOnly`/`SpokenWithGestures` so every
+  road gets it) now passes every character through a whitelist — typographic marks become what they
+  MEAN (em dash → ", ", ellipsis → ".", curly quotes → straight), ASCII and **any script's** letters
+  and digits pass, everything else becomes a space, and `Tidy` sweeps the space that then lands in
+  front of punctuation. NEVER narrow this to `[A-Za-z0-9]`: it would silently mute every Bulgarian
+  word in the mod. (2) **we had cooled the sampling** to 0.55/0.85 against Studio's 0.9/1.0, and the
+  reason for it had EXPIRED — it was added 2026.08.14 to stop the voice changing person between
+  sentences, and streaming made a reply ONE generation the next day. Restored, and now reachable via
+  `ModConfig.VoiceTemperature`/`VoiceTopP` (0 = the engine's own) and the host's `--temperature` /
+  `--top-p`. Which of the two carried the fault is UNKNOWN — they shipped together; the log's
+  `derail guard` lines are how to tell, and the sampling is the half to try putting back first.
+  Read `claude-voice/docs/engine-notes.md` before theorising about anything voice-shaped.
+- **THE DERAIL, AND THE FOUR RAILS AGAINST IT.** An autoregressive model that misses its
   end-of-speech token generates until it hits its own ceiling. This is not theoretical — it happened
   while the numbers were being measured: **202 characters of Bulgarian became 327.68 seconds of
   audio**, which is exactly 4096 tokens. Core `VoiceBudget` works a token ceiling out of the line's
@@ -1793,6 +1810,19 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
   ceiling is judged a runaway on that fact alone, because a sentence that ends by itself practically
   never lands on the rail to the token. A whole reply discards and retries ONCE; **a derailed clip is
   never sealed into the cache**, or one bad synthesis is replayed for the rest of the campaign.
+  The FOURTH rail (2026.08.17) is the only one that acts while the player is LISTENING, which is what
+  the other three do not: the length rails judge after the fact, harmless while Full read kept a reply
+  silent until it finished and useless once streaming put every second into the air as it was made.
+  So past `VoiceBudget.ExpectedSamplesFor` — where the WORDS should have ended — the host judges each
+  piece BEFORE handing it over (`Wav.SpeechLikeness`: 20 ms frames, the spread of their loudness over
+  its mean, plus how many fall near silence; speech is syllabic and full of stops, a held vowel moves
+  not at all), and two drone pieces running end it. **Arming it at the end of the words is what makes
+  it safe** — before that mark it never judges, so no honest syllable can be cut. Its two thresholds
+  are REASONED, NOT MEASURED, and it logs its figure for every judged piece so the next runaway
+  settles them. `VoiceBudget`'s slack is also CAPPED now (`MaxExcessSeconds`): ×1.8 is three seconds
+  of rope for a four-second line and half a minute for a thirty-second reply, and a derail is a
+  fixed-size accident, not a proportional one. A cut derail tells the player once
+  (`VoiceEngineGate.NoteStumble`) — Anton's report was that it sounded SCARY, and a named hiccup is not.
   Above all that sits the player's own **panic key (`VoicePanicKey`, Backspace)**, read from the raw
   keyboard in `SubModule.OnApplicationTick` so it works on the map, in a battle, with every window
   shut — and only while something is speaking, so it steals nobody's Backspace.

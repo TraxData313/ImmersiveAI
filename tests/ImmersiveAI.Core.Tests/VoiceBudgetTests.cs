@@ -122,6 +122,60 @@ public class VoiceBudgetTests
         Assert.True(VoiceBudget.MaxSamplesFor(null, 0) > 0);
     }
 
+    /// <summary>
+    /// The 2026.08.17 playtest, in arithmetic. A relative margin gives a long reply a proportionally
+    /// long licence to babble — which was invisible while Full read was the default (nothing is heard
+    /// until the generation ends) and audible the moment streaming put every second into the air.
+    /// </summary>
+    [Fact]
+    public void SlackOverAnHonestReadingIsCappedHoweverLongTheText()
+    {
+        // A whole reply of several paragraphs — the shape that was actually heard running away.
+        var reply = string.Join(" ", Enumerable.Repeat(MeasuredEnglish, 4));   // ~900 chars
+
+        var honest = VoiceBudget.ExpectedSeconds(reply);
+        var slack = VoiceBudget.CeilingSeconds(reply) - honest;
+
+        Assert.True(slack <= VoiceBudget.MaxExcessSeconds + 0.001,
+            $"a {honest:F0}s reply was given {slack:F0}s of rope");
+
+        // And the old arithmetic really would have given it half a minute.
+        Assert.True(honest * VoiceBudget.DerailFactor - honest > 20);
+    }
+
+    [Fact]
+    public void ShortLinesKeepTheirProportionalSlack()
+    {
+        // The cap must bind only where the proportional margin has grown silly. A four-second line
+        // still gets its full 0.8x, or a brisk-but-honest short reading starts being guillotined.
+        const string shortLine = "Then we are agreed. I will tell the men at first light.";
+        var honest = VoiceBudget.ExpectedSeconds(shortLine);
+        var slack = VoiceBudget.CeilingSeconds(shortLine) - honest;
+
+        Assert.Equal(honest * (VoiceBudget.DerailFactor - 1.0), slack, 3);
+        Assert.True(slack < VoiceBudget.MaxExcessSeconds);
+    }
+
+    [Fact]
+    public void ExpectedSamplesArmsTheGuardAfterTheWordsAndBeforeThePatience()
+    {
+        // The host begins listening at ExpectedSamples and gives up at CeilingSeconds. The first must
+        // land past every honest reading measured, and inside the second, or the guard is either deaf
+        // or trigger-happy.
+        foreach (var text in new[] { MeasuredEnglish, MeasuredBulgarian })
+        {
+            var arm = VoiceBudget.ExpectedSamplesFor(text, Rate) / (double)Rate;
+            Assert.True(arm < VoiceBudget.CeilingSeconds(text));
+        }
+
+        Assert.True(VoiceBudget.ExpectedSamplesFor(MeasuredEnglish, Rate) / (double)Rate > 13.4);
+        Assert.True(VoiceBudget.ExpectedSamplesFor(MeasuredBulgarian, Rate) / (double)Rate > 15.3);
+
+        // Nothing to say arms nothing at all: 0 means "do not listen".
+        Assert.Equal(0, VoiceBudget.ExpectedSamplesFor("", Rate));
+        Assert.Equal(0, VoiceBudget.ExpectedSamplesFor(null, 0));
+    }
+
     [Fact]
     public void MaxSamplesIsLooserThanTheTokenCeiling()
     {

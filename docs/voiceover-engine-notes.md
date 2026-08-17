@@ -75,7 +75,73 @@ it is otherwise a thing we only had second-hand:
 hit its own ceiling. The same text with a sane ceiling read cleanly in 15.3 s a minute later, so it
 is a dice roll, not a property of the text.
 
-**Both guards are now in and both are proven live** (`guard-hit`, `guard-whole`, 2026.08.15):
+## The derail is NOT rare — counted from a live log, 2026.08.17
+
+The paragraph above calls it "a dice roll". It is a much loaded die than that, and the number came
+from the player's own `voicehost.log` after he reported hearing one:
+
+| | |
+|---|---|
+| Streamed generations in the log | **196** |
+| Runaways among them | **12 — six per cent** |
+| Shape of every single one | *ran to its whole ceiling* — the model never emitted end-of-speech |
+| The one he heard | 388 characters, an honest ~26 s reading, **56.48 s of audio** |
+
+Two things follow, and the second is the open question.
+
+**The guards were built for the wrong delivery mode.** Both length rails stop a runaway only after
+it has run, which cost nothing while Full read was the default — nothing is heard until the
+generation ends, so it is thrown away and retried in silence — and became the whole problem when
+streaming (2026.08.15) started putting every second into the air as it was made. Note in the table
+that the retry only ever fires for `joined into one` requests. So a **third guard** was added
+2026.08.17: past the point where the words should have ended, the host judges each piece it makes
+and stops a reading that has become a held note (`Wav.SpeechLikeness` + `SynthRequest.
+ExpectedSamples`). Its thresholds are REASONED, NOT MEASURED — it logs its figure for every judged
+piece so the next runaway settles them.
+
+### The control group already existed — and it is not the engine
+
+Anton's answer to the guard was the right one: *"there must be a deeper reason, I have this other app
+that we build that you speak through and it never glitches and it read so much already"*. That app
+(`claude-voice`, same machine) drives **this same DLL, on this same card, through this same streaming
+C ABI**, and its own notes count the same failure with the same detector:
+
+| | generations | runaways | rate |
+|---|---|---|---|
+| claude-voice | ~1000 | 1 | **0.1 %** |
+| Immersive AI | 196 | 12 | **6 %** |
+
+Sixty times worse on identical machinery. So the derail is not a property of the engine, of CUDA, or
+of the model — it is something *we* hand it. There were exactly two candidates, and both are now
+fixed:
+
+**1. We sent the text raw; it sends a whitelist.** `voice_lib._normalize` passes every character
+through `_SPOKEN` (typographic symbols → what they MEAN: an em dash becomes a comma, an ellipsis a
+full stop) then keeps ASCII and any script's letters and digits, and turns everything else into a
+space. We had nothing of the kind — `SpeakableText` stripped gestures and chunked, and the host's
+`Sanitize` only removed NULs. So em dashes, curly quotes, `…`, non-breaking and zero-width spaces,
+and the thread's own `❦ ☾ ✒` card marks went straight into the tokenizer. A rare token is precisely
+what an autoregressive decoder wanders off after, and the mod's prose style reaches for typographic
+dashes constantly. Ported whole into `SpeakableText.Normalize` (2026.08.17), with `Tidy` after it so
+a dash-turned-comma does not leave `a , b`. **Letters of every script pass** — asking for
+`[A-Za-z0-9]` would silently mute every Bulgarian word in the mod.
+
+**2. We cooled the sampling; it uses Studio's own.** We shipped `temperature 0.55 / topP 0.85`
+against Studio's `0.9 / 1.0`. Cooled sampling collapsing onto a repeated token is the textbook
+failure of an autoregressive decoder, and a repeated audio token is exactly what a held vowel *is*.
+Worse, **the reason for the cooling had expired**: it was introduced 2026.08.14 to stop the voice
+changing person BETWEEN sentences, and streaming made a reply ONE generation the very next day, so
+there was no seam left for it to hold. Restored to `0.9 / 1.0`, with `ModConfig.VoiceTemperature` /
+`VoiceTopP` (0 = the engine's own) and `--temperature` / `--top-p` on the host, so a player whose ear
+disagrees can put it back without a rebuild. The one road that still genuinely has seams is
+`Delivery.ByLine`, which is legacy and not the default.
+
+**What is NOT yet known** is which of the two carried the fault, or whether both did — they shipped
+together, because both are right on their own merits. The way to tell is the log: `derail guard`
+lines should now be rare. If they are not, the sampling is the half to try first, since it is one
+config edit.
+
+**Both length guards are in and both are proven live** (`guard-hit`, `guard-whole`, 2026.08.15):
 a per-line token ceiling that the engine honours to the sample, and the host's own sample counter
 that stops the generation itself if that ceiling ever stops meaning what it means. A generation that
 runs to its whole ceiling is treated as a runaway on that fact alone — a sentence that ends by

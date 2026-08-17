@@ -15,6 +15,73 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+### Fixed
+
+- A voice that loses its way mid-sentence — a long, wordless held note in place of the words — is
+  now cut within about two seconds instead of running on for half a minute.
+- When that happens you are told plainly that the voice stumbled, so it reads as a hiccup rather
+  than as something gone wrong with the game. The line is spoken afresh next time it is asked for.
+- And it should now happen far more rarely: typographic marks that a voice cannot read — long
+  dashes, curly quotes, invisible spaces, the little symbols the conversation draws its cards with —
+  are turned into what they mean before a word is spoken, instead of being handed over as-is.
+- The voices also read with the speech engine's own settings again. We had quietened them to fix an
+  older problem that no longer exists, and the quietening was making the voices lose their way.
+
+## v3.1.2 — 2026.08.17
+
+The mod's own download would not stay unblocked. Nexus quarantines any archive that carries a
+program file, and the voices needed one — so the voices have moved out into a small separate
+download of their own, and the mod itself installs cleanly again. If you do not use voices there is
+nothing to do; if you do, there is one extra file to grab, once.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* The mod's download installs cleanly again
+* Voices are now a separate optional download
+* Grab "Voice host" too if you want NPCs to speak
+* Everything else works without it
+```
+
+### Changed
+
+- The voice program is no longer part of the main download. It is a separate optional file on the
+  mod page — unzip it into your Modules folder exactly like the mod, and voices work as before.
+- The mod finds it by itself whichever way you installed it, including older installs.
+- The Voices page now tells you plainly when that extra file is missing, instead of implying
+  something is broken.
+
+## v3.1.1 — 2026.08.17
+
+A repair release with two halves. Nexus's scanner had quarantined the last two downloads — the
+voice program shipped as a single packed file, which their rules read as a self-extracting archive.
+It now installs as ordinary files in a folder of its own, and nothing about it changes for you.
+The other half is about language: if you play in your own tongue, the things an NPC writes down
+once and keeps forever were still coming out in English.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* The download is no longer flagged by Nexus's scanner
+* Voices now install as plain files in their own folder
+* NPCs remember you in the language you play in
+* A soul's first personality is written in it too
+```
+
+### Fixed
+
+- The download is no longer flagged and quarantined by Nexus's virus scanner.
+- The voice program now installs as ordinary files in its own folder, beside the mod rather than
+  inside it. Nothing to do differently — it is found automatically, old copies included.
+- What an NPC writes into their deep memory now stays in the language you actually play in, instead
+  of drifting into English part-way through. The same for who they have become.
+- The private personality a soul is given at your first meeting is written in your language too,
+  taken from your own world prompt. Write that file in your tongue and every soul you meet from now
+  on is sparked in it. (Souls you have already met keep what they were given — delete their
+  `custom_instructions.txt` to invite a fresh one.)
+- A soul's sense of self can no longer be wiped out by a single stray word when they had nothing new
+  to say about themselves.
+
 ## v3.1.0 — 2026.08.17
 
 Voices used to ask you to install a program, find a model list and download the right thing out of

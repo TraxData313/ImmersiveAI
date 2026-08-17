@@ -106,4 +106,39 @@ public class PersonaSparkTests
             "Before any road fight, I press my ear to it! If I hear nothing, I draw first.";
         Assert.Equal(spark, PersonaSpark.ClampToSentences(spark));
     }
+
+    // ---------------- THE TONGUE (2026.08.17) ----------------
+    // The spark is written ONCE, at a first meeting, and kept forever — so an English one is an
+    // English one for the life of that campaign. Every instruction around it is English, which is
+    // why the keeper's own words have to arrive as evidence.
+
+    [Fact]
+    public void BuildPrompt_EndsOnTheTongueRule_CarryingTheKeepersOwnWords()
+    {
+        var facts = IlyaFacts();
+        facts.WorldText = "Това е суров средновековен свят. Пиши на български.";
+
+        var prompt = PersonaSpark.BuildPrompt(facts, PersonaSpark.Deck[0], PersonaSpark.Deck[1],
+            PersonaSpark.Intensities[1]);
+
+        Assert.Contains("THE TONGUE", prompt);
+        Assert.Contains("Пиши на български", prompt);
+        Assert.Contains("SAME TONGUE", prompt);
+        // Last thing read, after the "Write 1 to 3 sentences" order it is meant to qualify.
+        Assert.True(prompt.LastIndexOf("THE TONGUE", StringComparison.Ordinal)
+                    > prompt.LastIndexOf("Write 1 to 3 sentences", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildPrompt_WithNoWorldText_StillStatesTheTongueRule()
+    {
+        var facts = IlyaFacts();
+        facts.WorldText = string.Empty;
+
+        var prompt = PersonaSpark.BuildPrompt(facts, PersonaSpark.Deck[0], PersonaSpark.Deck[1],
+            PersonaSpark.Intensities[0]);
+
+        Assert.Contains("THE TONGUE", prompt);
+        Assert.Contains("write in English", prompt);
+    }
 }

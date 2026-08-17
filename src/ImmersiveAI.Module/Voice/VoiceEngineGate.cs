@@ -129,6 +129,34 @@ namespace ImmersiveAI.Voice
             ModLog.Info("voice: the gate was opened by hand.");
         }
 
+        /// <summary>
+        /// A reading ran away and was cut. Says so once, plainly, and then holds its tongue for a
+        /// while.
+        /// <para>
+        /// Worth a word to the player where most of this file's troubles are not, because of what it
+        /// SOUNDS like: a derail is a held, wordless note in a voice they know, and the playtest that
+        /// prompted this guard (2026.08.17) described it as scary. Told that the mod noticed and
+        /// stopped it, it is a stumble; untold, it is the game doing something inexplicable. It says
+        /// nothing about why, since there is no why the player can act on — the line is simply spoken
+        /// afresh the next time it is asked for, the clip never having been kept.
+        /// </para>
+        /// </summary>
+        public static void NoteStumble()
+        {
+            lock (Gate)
+            {
+                if (DateTime.UtcNow < _stumbleQuietUntil) return;
+                _stumbleQuietUntil = DateTime.UtcNow + StumbleQuietFor;
+            }
+            Say("The voice stumbled over that line and was cut short.");
+        }
+
+        /// <summary>One derail is a dice roll and worth mentioning; six in a row is a broken engine
+        /// shouting, and the gate's own quieting is the answer to that.</summary>
+        private static readonly TimeSpan StumbleQuietFor = TimeSpan.FromMinutes(3);
+
+        private static DateTime _stumbleQuietUntil = DateTime.MinValue;
+
         private static void Say(string message)
         {
             MainThreadDispatcher.Enqueue(() =>
