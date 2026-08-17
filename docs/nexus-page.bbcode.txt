@@ -45,7 +45,7 @@ Ask anyone anything about the game - they quietly search the web mid-reply and a
 [list]
 [*]Face to face - they greet you as you approach.
 [*][b]One talk screen[/b] (hotkey [b]O[/b]) - everyone you know in one list - near, far or gone - the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
-[*][b]Hear them[/b] - a play mark beside every line, and a Voices page to cast anyone. Off by default.
+[*][b]Hear them[/b] - a play mark beside every line, and a Voices page to cast anyone. Off by default; one button installs it (NVIDIA card, or a key for hosted voices).
 [*]Edit a character's prompt, or the world's, [b]without leaving the game[/b] - it speaks from the next reply.
 [*][b]Think[/b] (Shift+Enter) - stuck for words? Your own hero drafts your next line from all you two have said, to keep, change or bin. Presets steer it: starter, romantic, ender, or your own.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)

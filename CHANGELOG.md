@@ -15,6 +15,32 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v3.1.0 — 2026.08.17
+
+Voices used to ask you to install a program, find a model list and download the right thing out of
+it. Now they ask you to press one button — and they tell you honestly, before anything is
+downloaded, whether your machine can run them at all.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Voices now install themselves - one button, no setup
+* Says up front that local voices need an NVIDIA card
+* Hosted voices still need nothing but a key
+* A broken download carries on where it stopped
+* Fixed two symbols the fonts could not draw
+```
+<!-- 246 characters, measured 2026.08.17 (pure ASCII, so characters and bytes agree). Nine
+     characters of room. Re-measure after ANY edit here. -->
+
+### Hearing them speak
+- New: **one button sets voices up.** Talk screen → Voices → "Download the voices", and the mod fetches the speech engine and its models itself — about 2.8 GB, in the background, while you carry on playing. No program to install, no model list to find, no administrator rights.
+- New: an interrupted download carries on from where it stopped rather than starting over, and stopping it costs nothing.
+- Changed: local voices need an **NVIDIA** graphics card, and the mod now says so before anything is downloaded rather than failing later. On any other machine it points you at the hosted voices instead, which ask nothing of your hardware.
+- Fixed: the disk figure on the setup page was a guess and was wrong — voices want about 2.9 GB, not 7.
+- Fixed: the Voices page described the play mark with a symbol the game's fonts cannot draw, so the two lines telling you what to press showed empty boxes instead. It now shows the same ♪ the buttons use.
+- Fixed: the unread mark beside a name used a symbol from that same unsupported family.
+
 ## v3.0.0 — 2026.08.16
 
 The big one: one screen for everyone you know, voices you can hear, every child written down,

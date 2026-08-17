@@ -137,19 +137,20 @@ namespace ImmersiveAI.Voice
                     if (setup.IsComplete) return string.Empty;
 
                     // Our own file, not theirs — a different problem with a different remedy, and
-                    // telling someone to install Studio over it would send them the wrong way.
+                    // telling someone to fetch an engine over it would send them the wrong way.
                     if (setup.HostExePath.Length == 0)
                         return "The mod's own voice program is missing from its folder — reinstalling Immersive AI puts it back.";
 
-                    if (setup.EnginePath.Length == 0)
-                        return "To make voices on your own machine: install Qwen-TTS Studio (free) from "
-                             + "github.com/Danmoreng/qwen-tts-studio — take the windows-cuda-bundled build — then "
-                             + "download the model qwen-talker-1.7b-base in it. It wants a graphics card and about 7 GB.";
+                    // Said at the door rather than twenty minutes into a download: the speech engine
+                    // is CUDA-only, so on any other card the whole 2.8 GB would be spent to fail at
+                    // model load. The hosted road asks nothing of the machine at all.
+                    if (!VoiceFetcher.HasNvidiaCard)
+                        return "Voices made on this machine need an NVIDIA graphics card — the speech engine has no other build. "
+                             + "The hosted road works on any machine: put a key in the settings under Voices → Hosted voices.";
 
-                    // Engine found, no model: they are mid-install and one download from done.
-                    return "Almost there — open Qwen-TTS Studio and download a model. "
-                         + "qwen-talker-1.7b-base is the one that clones voices; qwen-talker-1.7b-customvoice "
-                         + "carries nine ready-made ones instead.";
+                    return "Press \"Download the voices\" below and it fetches everything itself — about "
+                         + VoiceFetcher.DownloadSize + ", nothing to install, no administrator rights. "
+                         + "You can carry on playing while it runs.";
                 }
                 catch { return string.Empty; }
             }

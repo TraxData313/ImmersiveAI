@@ -2,15 +2,21 @@
      checked live on that date. Keep it short and copy-pasteable: this page exists to be read on a
      locked-down laptop with commands pasted straight out of it. -->
 
-# Voices without admin rights
+# Voices the manual way
+
+> **You probably do not need this page.** Since 2026.08.17 the mod fetches all of it itself: open
+> the talk screen (**O**) → **Voices** → **Download the voices**. It does exactly what is written
+> below, resumes if the connection drops, and wants no administrator rights either. This page is
+> for when you would rather do it by hand, when the button cannot run (a machine that blocks the
+> mod's own programs from reaching the internet), or when you want to see precisely what is being
+> put on your disk.
 
 Immersive AI's local voices need two things from Qwen-TTS Studio: its **engine files** and its
 **models**. It never needs the app *installed*, and it never launches it.
 
 That matters, because Studio's installer asks for administrator rights — and on a work or school
-machine you may not have them. **You don't need them.** This page is steps 1 and 2 of
-[voiceover-setup.md](voiceover-setup.md) done with no elevation, no installer, and nothing written
-outside your own user folder.
+machine you may not have them. **You don't need them.** Nothing here elevates, and nothing is
+written outside your own user folder.
 
 > **Status: first draft, not yet walked through on a locked-down machine.** It was written from a
 > machine where the zip road was already in use and the engine already worked; every URL and size in
@@ -52,8 +58,14 @@ curl.exe -L -o "$env:USERPROFILE\Downloads\qwen-tts-studio.zip" https://github.c
 Expand-Archive -Path "$env:USERPROFILE\Downloads\qwen-tts-studio.zip" -DestinationPath "$env:USERPROFILE\Downloads" -Force
 ```
 
-632 MB down, about 1.4 GB unpacked, into `Downloads\qwen-tts-studio\`. That location is deliberate —
-see step 4.
+632 MB down, 833 MB unpacked (measured 2026.08.17), into `Downloads\qwen-tts-studio\`. That location
+is deliberate — see step 4.
+
+Only eight of those files are the engine — the flat `.dll`s beside the exe, 662 MB of the 833 —
+and the `app\` and `runtime\` folders are the Java application they arrive inside, which the mod
+never touches. Deleting those two afterwards is safe, and is exactly what the in-game download
+button does instead of writing them at all. Keep them only if you mean to *clone* voices, which
+wants Studio's own window.
 
 > If v0.2.9 is no longer the latest, the version appears twice in that URL. The
 > [releases page](https://github.com/Danmoreng/qwen-tts-studio/releases) always offers both the msi

@@ -140,6 +140,13 @@ namespace ImmersiveAI.UI.TalkScreen
         /// <b>So stay in the blocks this mod already proves work</b> — ☾ is U+263E, ♪ is U+266A,
         /// two doors down.
         /// </para>
+        /// <para>
+        /// 2026.08.17: it shipped a SECOND time in two places that were never buttons — the two
+        /// sentences of the Voices panel's own hint, which name the mark the player is hunting for
+        /// and drew it as a box (Anton, screenshot). A glyph fix is not one string: everything that
+        /// SAYS the symbol has to move with everything that DRAWS it. Swept the same day, and the
+        /// unread dot ● (U+25CF, same doomed block) went to ✦ (U+2726, Dingbats) with it.
+        /// </para>
         /// </summary>
         [DataSourceProperty]
         public string HearText => "♪";

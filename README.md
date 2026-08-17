@@ -114,10 +114,11 @@ had a proper talk.*
   hear you, a letter riding real in-game days if they cannot, one thread for both. (The two older
   windows survive behind a setting.)
 - **Hear them** — a play mark beside every line, and a Voices page to cast anyone: voices ship with
-  the mod, clone your own locally, or use hosted ones by the minute. Off by default.
-  📖 [Hearing them speak](docs/voiceover-setup.md) — what it costs and how to set it up.
-  On a machine where you are **not an administrator**, take
-  [this road instead](docs/voices-without-admin.md).
+  the mod, clone your own locally, or use hosted ones by the minute. Off by default. One button on
+  that page fetches everything the local road needs (~2.8 GB) — nothing to install, no administrator
+  rights, and it wants an **NVIDIA** card; hosted voices want none at all.
+  📖 [Hearing them speak](docs/voiceover-setup.md) — what it costs and how to set it up
+  (or [do it by hand](docs/voices-without-admin.md)).
 - The screen edits a character's own prompt, or the whole world's, **without leaving the game** — it speaks from the very next reply.
 - **Think** (Shift+Enter) — stuck for words? Your own hero drafts your next line from everything the two of you have said; it lands in your writing box to keep, change or bin. Standing presets steer it: *starter*, *romantic*, *ender*, or your own.
 - Any language in, the same language out.

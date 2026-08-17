@@ -18,6 +18,11 @@ public sealed class HostOptions
     public int MaxAudioTokens = 4096;  // --max-audio-tokens
     public bool KeepStderr;            // --keep-stderr    (default: stderr -> NUL, see StdoutGuard)
 
+    /// <summary>Run the errand instead of the engine: fetch the speech engine and its models into
+    /// --engine-dir and --model-dir, report progress, and exit. No native library is loaded in this
+    /// mode, so it cannot fail the way bringing the engine up can.</summary>
+    public bool Fetch;                 // --fetch
+
     public int BackendCode => Backend?.Trim().ToLowerInvariant() switch
     {
         "cpu" => Native.BACKEND_CPU,
@@ -53,6 +58,7 @@ public sealed class HostOptions
                 case "log" or "log-path": o.LogPath = Take(ref i, next); break;
                 case "max-audio-tokens": o.MaxAudioTokens = Int(Take(ref i, next), 4096); break;
                 case "keep-stderr": o.KeepStderr = true; break;
+                case "fetch": o.Fetch = true; break;
                 default: break;   // unknown switches are ignored, never fatal
             }
         }
@@ -80,5 +86,6 @@ public sealed class HostOptions
 
     public override string ToString() =>
         $"engineDir={EngineDir ?? "(discover)"} modelDir={ModelDir ?? "(discover)"} model={ModelName ?? "(discover)"} " +
-        $"backend={Backend} threads={Threads} parentPid={ParentPid} maxAudioTokens={MaxAudioTokens} keepStderr={KeepStderr}";
+        $"backend={Backend} threads={Threads} parentPid={ParentPid} maxAudioTokens={MaxAudioTokens} " +
+        $"keepStderr={KeepStderr} fetch={Fetch}";
 }

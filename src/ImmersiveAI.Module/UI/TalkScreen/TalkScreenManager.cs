@@ -543,6 +543,14 @@ namespace ImmersiveAI.UI.TalkScreen
             }
             catch { /* the button is a courtesy */ }
 
+            // And the download's own line, while the voices page is open. Only then: it is a
+            // twenty-minute errand and nobody watches it, but the one who does needs to see it move.
+            try
+            {
+                if (_vm != null && _vm.IsVoiceShown) _vm.RefreshVoiceFetchLine();
+            }
+            catch { /* likewise */ }
+
             // The map keeps running under this screen, so a road that counts DAYS ("Preparations 1/3")
             // would sit stale until the player clicked away and back — and a button that does not move
             // is indistinguishable from a broken one. One cheap check per tick, one refresh per day.

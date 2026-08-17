@@ -841,3 +841,96 @@ release ritual warns about.
   (the description CHANGED this release — this is not a patch), and upload
   `dist\ImmersiveAI_v3.0.0.zip` to Nexus with the CHANGELOG's 248-character block.
   (2026.08.16 21.30.00)
+
+- **The voices install themselves now — one button instead of a setup page, and the NVIDIA truth
+  told at the door.** Anton pointed at his other repo (`claude-voice`), where the same engine's
+  install had already been reduced to one command, and asked the same here: "dont bother the users
+  with manual work, just inform them that we will be downloading and go" — plus "there we found out
+  that Nvidia card is a req, if it is here too, maybe we should state it?"
+
+  BOTH ANSWERS WERE YES, and the second was a straight defect in our own writing. Every player-facing
+  text said local voices want "a graphics card". They want an NVIDIA one: both builds of the engine
+  package are CUDA builds, there is no CPU build to fall back to, and the engine's own CPU path has
+  never been measured. Only `voices-without-admin.md` (the newest page) had ever said it plainly. So
+  an AMD or Intel player read "yes, I have one", spent 2.8 GB, and found out at model load. Now the
+  requirement is stated in the setup page's first paragraph and its table, in the MCM hint, and in
+  the panel — and `VoiceFetcher.HasNvidiaCard` (System32\nvcuda.dll, the display driver's own
+  library, no WMI) means the download is never OFFERED on a machine it could only disappoint; that
+  player is pointed at the hosted road, which asks nothing of their hardware.
+
+  WHAT THE FOUR MANUAL STEPS ACTUALLY WERE: install a Java application, open it, find its model
+  list, download the right model. None of it was ever load-bearing — the mod has never needed
+  Qwen-TTS Studio INSTALLED and never launches it. It needs eight native DLLs out of that package
+  and two .gguf files from Hugging Face. So `--fetch` in the voice host (`Fetcher.cs`) takes exactly
+  those: the release zip streamed with a Range header to a `.part` file, then ONLY the DLLs unpacked
+  out of it. Which entries those are is worked out FROM `qwen3_tts.dll` rather than from a list of
+  names — whatever folder inside the zip holds the main library is the engine folder, the same rule
+  the game's own discovery uses — so a package that one day nests one level deeper still unpacks.
+
+  MEASURED, NOT ASSUMED (his own rule, and it paid twice): the eight DLLs are 662 MB of an 833 MB
+  unpacked folder, so `app\` + `runtime\` (the Java app and its JRE, 171 MB) are never written out.
+  And the setup page's "~7 GB" was simply invented — the true figure is 2.9 GB. `voices-without-admin.md`
+  said "about 1.4 GB unpacked" where it is 833 MB. Both corrected from the disk in front of me.
+
+  IT RUNS IN THE HOST, not in the game, for the engine's own reason: 2.8 GB of streaming download
+  and a 632 MB unzip do not belong in the process holding a campaign. It carries `--parent` like the
+  engine does, so it dies with the game rather than becoming a hidden orphan pulling gigabytes over
+  somebody's connection — and the next press resumes it, which the button promises anyway. Progress
+  rides the existing stdout protocol as one new Core event (`VoiceFetchEvent`, six tests), drawn by
+  the talk screen's own tick. Everything resumes; only a whole file is ever given its real name,
+  which is what makes `File.Exists` a sufficient "is it complete?" on the next run.
+
+  TWO SILENT KILLERS FOUND WHILE WIRING IT, both pre-existing. (1) The module's discovery never read
+  `IMMERSIVEAI_TTS_ENGINE_DIR` / `IMMERSIVEAI_TTS_MODEL_DIR` — only the host did — so the env-var
+  instructions in `voices-without-admin.md` did nothing: the game refuses to start a host it believes
+  has nothing to load, so a variable honoured on one side only is a setting that silently fails.
+  (2) There was no `~\.qwen-tts-studio\models` fallback: models were found through Studio's
+  `settings.properties`, which does not exist on a machine where Studio never ran — which, the
+  moment this feature shipped, is the ORDINARY case. Without that one line the button would have
+  downloaded two gigabytes of models and then reported that there are no models.
+
+  DRIVEN BY HAND BEFORE BEING BELIEVED (the standing rule for anything undocumented): nothing-to-do
+  returns instantly; a 20-second run then a kill leaves a 408 MB `.part`; the next run RESUMES it,
+  finishes, and unpacks exactly the eight libraries at exactly the sizes of Anton's own install; the
+  model URL streams. 808 Core tests green. NOT yet playtested in game — the button, its confirming
+  popup and the live line have been read, not clicked. (2026.08.17 02.15.00)
+
+- **v3.1.0 SHIPPED — both stores, in one sitting.** Anton: "get this to the fold hungry for this
+  feature", and for the first time "can you skip me for the nexus this time, just open the chrome,
+  im logged in, and upload it there too" — so the Nexus half of the dance, which `release-dance.md`
+  has always listed under HIS column, was done from the browser instead.
+
+  THE DANCE, straight through: store checked first (v3.0.0, no backlog — the "a version prepared is
+  not a version shipped" trap has teeth), version bumped and the file LOOKED at afterwards, all
+  three change-note tiers written together (Nexus block measured at 246/255, ASCII so bytes agree;
+  Steam ChangeNotes with `&quot;` for every quote and validated by parsing the XML), both store
+  pages given one clause about the NVIDIA requirement and re-measured in BYTES (Steam 7709/8000,
+  291 spare), packaged, and uploaded. "Uploading done!" with the documented exit-82 crash after it.
+
+  ONE NEW TRAP FOR THE RUNBOOK, and it had been costing us for a day: **v3.0.0 was AUTOMATICALLY
+  QUARANTINED on Nexus** — red cross, "This file has been automatically quarantined and may be
+  unsafe", no download for anybody. Nobody had looked at the page after uploading. It is almost
+  certainly `ImmersiveAI.VoiceHost.exe`, which first shipped in v3.0.0: every green file in the
+  history is 1.2 MB and predates it. **A Nexus upload is not finished when the file is saved — it
+  is finished when the scan is green**, and that is now step 8 of the dance. The appeal behind
+  "How can I fix this?" can only be filed by the account owner, so it is left for Anton.
+
+  A SECOND THING NOBODY HAD NOTICED: the mod's own **Version field still read V1.3.2** while its
+  main file was V3.0.0 — a separate field from the file's, and the one VORTEX compares against, so
+  Vortex users were never told an update existed. Set to V3.1.0 with this release. Worth checking
+  every time; the file version and the mod version are not the same knob.
+
+  Also learned, cheaply: selecting "Update existing file" REPLACES the display name with the old
+  file's, silently. And the fenced 255-char block lives in the file's **Description** field (which
+  is itself capped at 255), while the "Add changelog" box feeds the version history — two different
+  places, both wanted.
+
+  A FALSE ALARM, resolved by checking rather than assuming: the zip came out 4.8 MB against the
+  "10,747,516 bytes" recorded for v3.0.0, which read like half the mod had gone missing. That
+  figure was the Steam uploader's payload, not the zip; v3.0.0's own zip is also 4.8 MB.
+
+  SHIPPED KNOWINGLY UNPLAYTESTED, which the runbook warns against: the download button has been
+  read, never clicked. Anton's call and stated plainly — he already has the engine, so the button
+  hides for him, and "the folk - theyll test it if it doesnt and will tell me". The fetch machinery
+  underneath it WAS driven by hand end to end (download, kill, resume, unpack, model stream), so
+  what is untested is the button, its popup and the live line, not the errand. (2026.08.17 08.45.00)

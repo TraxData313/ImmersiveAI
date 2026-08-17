@@ -56,6 +56,33 @@ namespace ImmersiveAI.Core.Voices
         public const string EventFailed = "failed";
         public const string EventPong = "pong";
 
+        /// <summary>The host running as an ERRAND rather than as an engine: fetching the speech
+        /// engine and its models so the player never has to. Same executable, same channel, its own
+        /// event — and it is only ever sent by a host started with <c>--fetch</c>, which loads no
+        /// native library at all.</summary>
+        public const string EventFetch = "fetch";
+
+        /// <summary>What the errand is doing right now — one of the <c>Stage*</c> names below.</summary>
+        public const string FieldStage = "stage";
+
+        /// <summary>Bytes done and bytes expected, for the one file in hand. Not for the whole
+        /// errand: a total that jumps when the next file starts is honest and cheap, where one
+        /// pretending to know the size of everything up front is neither.</summary>
+        public const string FieldDone = "done";
+        public const string FieldTotal = "total";
+
+        /// <summary>The stage in the player's own words ("the speech engine"), written by the host
+        /// because the host is what knows which file it is on.</summary>
+        public const string FieldNote = "note";
+
+        public const string StageChecking = "checking";
+        public const string StageEngine = "engine";
+        public const string StageUnpacking = "unpacking";
+        public const string StageModel = "model";
+
+        /// <summary>The last fetch line, and the only one carrying a verdict.</summary>
+        public const string StageDone = "done";
+
         /// <summary>Marks a line as ONE PIECE of a streamed reply rather than the reply's verdict.
         /// It carries an id like a result does, so it must be recognised BEFORE the result shape or
         /// a piece would be read as the whole thing finishing — and the reply would be cut off after
@@ -191,6 +218,19 @@ namespace ImmersiveAI.Core.Voices
                         return new VoiceFailedEvent { Error = Str(o, FieldError) };
                     case EventPong:
                         return new VoicePongEvent();
+                    case EventFetch:
+                        return new VoiceFetchEvent
+                        {
+                            Stage = Str(o, FieldStage),
+                            Note = Str(o, FieldNote),
+                            Done = (long)Num(o, FieldDone, 0),
+                            Total = (long)Num(o, FieldTotal, 0),
+                            // Only the closing line carries a verdict, and an absent one is not a
+                            // failure — a progress line that parsed as "ok:false" would end the
+                            // errand at its first megabyte.
+                            Ok = Bool(o, FieldOk, true),
+                            Error = Str(o, FieldError),
+                        };
                     default:
                         return null;   // an event from a newer host: not ours to guess at
                 }
@@ -679,6 +719,83 @@ namespace ImmersiveAI.Core.Voices
     {
         internal override JObject ToJson()
             => new JObject { [VoiceHostProtocol.FieldEvent] = VoiceHostProtocol.EventPong };
+    }
+
+    /// <summary>
+    /// How the errand is going: the host fetching the speech engine and its models on the player's
+    /// behalf, so that setting voices up is a button rather than a page of instructions.
+    /// <para>
+    /// Many of these arrive, then exactly one carrying a verdict (<see cref="IsFinished"/>). The
+    /// byte counts are for the FILE IN HAND, not the whole errand — see
+    /// <see cref="VoiceHostProtocol.FieldTotal"/> for why.
+    /// </para>
+    /// </summary>
+    public sealed class VoiceFetchEvent : VoiceHostMessage
+    {
+        /// <summary>One of <see cref="VoiceHostProtocol.StageEngine"/> and its siblings. Never
+        /// matched on to build a sentence — <see cref="Note"/> is what the player reads — only to
+        /// tell the closing line from the rest.</summary>
+        public string Stage { get; set; } = string.Empty;
+
+        /// <summary>What is happening, in the player's own words.</summary>
+        public string Note { get; set; } = string.Empty;
+
+        public long Done { get; set; }
+        public long Total { get; set; }
+
+        /// <summary>True only on the closing line, which is the one that carries the verdict.</summary>
+        public bool IsFinished => string.Equals(Stage, VoiceHostProtocol.StageDone, StringComparison.OrdinalIgnoreCase);
+
+        public bool Ok { get; set; } = true;
+        public string Error { get; set; } = string.Empty;
+
+        /// <summary>How far through the file in hand, 0..1. Zero when the size is not yet known —
+        /// a server that sends no length gives an honest bar of nothing rather than a made-up one.</summary>
+        public double Fraction
+        {
+            get
+            {
+                if (Total <= 0 || Done <= 0) return 0;
+                if (Done >= Total) return 1;
+                return (double)Done / Total;
+            }
+        }
+
+        /// <summary>The one line a player sees while this runs. Lives here rather than in the game
+        /// so the shape of it is unit-tested: it is on screen for twenty minutes and is the only
+        /// thing saying the download has not stalled.</summary>
+        public string Describe()
+        {
+            if (IsFinished) return Ok ? "Done." : (Error.Length > 0 ? Error : "It did not finish.");
+
+            var what = Note.Length > 0 ? Note : Stage;
+            if (Total <= 0) return what;
+
+            var percent = (int)Math.Round(Fraction * 100);
+            return what + " — " + Megabytes(Done) + " of " + Megabytes(Total) + " (" + percent + "%)";
+        }
+
+        private static string Megabytes(long bytes)
+        {
+            if (bytes >= 1024L * 1024 * 1024)
+                return (bytes / (1024.0 * 1024 * 1024)).ToString("0.0", CultureInfo.InvariantCulture) + " GB";
+            return Math.Round(bytes / (1024.0 * 1024)).ToString("0", CultureInfo.InvariantCulture) + " MB";
+        }
+
+        internal override JObject ToJson()
+        {
+            var o = new JObject { [VoiceHostProtocol.FieldEvent] = VoiceHostProtocol.EventFetch };
+            VoiceHostProtocol.Put(o, VoiceHostProtocol.FieldStage, Stage);
+            VoiceHostProtocol.Put(o, VoiceHostProtocol.FieldNote, Note);
+            if (Done > 0) o[VoiceHostProtocol.FieldDone] = Done;
+            if (Total > 0) o[VoiceHostProtocol.FieldTotal] = Total;
+            if (IsFinished)
+            {
+                o[VoiceHostProtocol.FieldOk] = Ok;
+                VoiceHostProtocol.Put(o, VoiceHostProtocol.FieldError, Error);
+            }
+            return o;
+        }
     }
 
     /// <summary>The answer to one synthesize request, well or badly.</summary>

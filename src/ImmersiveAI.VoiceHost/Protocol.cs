@@ -6,6 +6,23 @@ namespace ImmersiveAI.VoiceHost;
 
 public enum VoiceKind { Default, Icl, Embedding, Speaker }
 
+/// <summary>
+/// The wire's own vocabulary for the fetch errand. Mirrored, word for word, from Core's
+/// <c>VoiceHostProtocol</c> — this project deliberately references nothing, so the two spellings
+/// are kept together by discipline and by the fact that a mismatch shows up instantly as a progress
+/// bar that never moves. Core is the reference; change it there first.
+/// </summary>
+public static class Protocol
+{
+    public const string EventFetch = "fetch";
+
+    public const string StageChecking = "checking";
+    public const string StageEngine = "engine";
+    public const string StageUnpacking = "unpacking";
+    public const string StageModel = "model";
+    public const string StageDone = "done";
+}
+
 /// <summary>One "synthesize" line, already parsed and sanity-checked.</summary>
 public sealed class SynthRequest
 {
@@ -76,6 +93,28 @@ public static class Wire
         });
 
     public static void Pong() => Send(w => w.WriteString("event", "pong"));
+
+    /// <summary>How the fetch errand is going. Many of these, then exactly one
+    /// <see cref="FetchDone"/>. The byte counts are for the file in hand, not the whole errand.</summary>
+    public static void Fetch(string stage, string note, long done, long total) =>
+        Send(w =>
+        {
+            w.WriteString("event", Protocol.EventFetch);
+            w.WriteString("stage", stage);
+            if (!string.IsNullOrEmpty(note)) w.WriteString("note", note);
+            if (done > 0) w.WriteNumber("done", done);
+            if (total > 0) w.WriteNumber("total", total);
+        });
+
+    /// <summary>The errand's verdict, and the last thing it says.</summary>
+    public static void FetchDone(bool ok, string? error) =>
+        Send(w =>
+        {
+            w.WriteString("event", Protocol.EventFetch);
+            w.WriteString("stage", Protocol.StageDone);
+            w.WriteBoolean("ok", ok);
+            if (!string.IsNullOrEmpty(error)) w.WriteString("error", Short(error!));
+        });
 
     /// <summary>One piece of a streamed reply is on disk and can be played NOW. Several of these
     /// arrive per request, in order, each followed eventually by the usual Ok that closes it out.

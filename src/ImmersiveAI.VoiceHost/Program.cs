@@ -40,6 +40,11 @@ public static class Program
         // thing that can be argued with.
         Watchdog.WatchParent(opts.ParentPid);
 
+        // The errand, not the engine: fetch what the voices need and leave. Checked before
+        // anything is discovered or loaded, because the whole point is that there is nothing to
+        // discover yet.
+        if (opts.Fetch) return Fetcher.Run(opts);
+
         var engine = new TtsEngine();
         try
         {

@@ -84,6 +84,26 @@ You usually only need to open:
   the name/id inside voice.json, so a rename cannot slip past) and REFUSES to package — while
   `deploy.ps1` deliberately does not check, because the local install is exactly where a
   development clone belongs. See the memory note `voice-shipping-constraint`.
+  **THE INSTALL IS ONE BUTTON** (2026.08.17, Anton's ask — his `claude-voice` repo had already
+  reduced the same engine's setup to one command): Voices → "Download the voices" runs the host with
+  `--fetch` (`VoiceHost\Fetcher.cs` + Module `Voice\VoiceFetcher.cs` + Core `VoiceFetchEvent` on the
+  same stdout protocol). It streams the Studio release zip with a Range header to a `.part` file and
+  unpacks ONLY the native DLLs — worked out FROM `qwen3_tts.dll`'s own folder inside the zip, never
+  a list of names — into `%LOCALAPPDATA%\Programs\qwen-tts-studio`, and the two .gguf models into
+  `%USERPROFILE%\.qwen-tts-studio\models`. Both are places discovery already knows, and both are
+  shared with anyone who installed Studio the old way, so an existing install is simply skipped.
+  MEASURED: the 8 DLLs are 662 MB of an 833 MB folder, so the Java app + JRE (171 MB) are never
+  written; 2.8 GB down, 2.9 GB on disk — the old docs' "~7 GB" was invented. Everything RESUMES and
+  only a whole file is ever given its real name, which is what makes `File.Exists` a sufficient
+  "is it complete?". It carries `--parent` so it dies with the game rather than orphaning a
+  multi-gigabyte download. Two pre-existing silent killers were fixed to make it work at all: the
+  module's discovery never read `IMMERSIVEAI_TTS_{ENGINE,MODEL}_DIR` (the host did — so the
+  env-var instructions in `voices-without-admin.md` did nothing), and there was no
+  `~\.qwen-tts-studio\models` fallback, without which the button would fetch 2 GB of models and then
+  report that there are none. **AN NVIDIA CARD IS A HARD REQUIREMENT AND MUST BE SAID SO** (same
+  day): both engine builds are CUDA, there is no CPU build, and every text used to say only "a
+  graphics card" — `VoiceFetcher.HasNvidiaCard` (System32\nvcuda.dll, not WMI) means the download is
+  never offered where it could only disappoint, and that player is pointed at the hosted road.
   **OFF by default and it must stay that way** (`EnableVoice`), found through the "Voices" button
   that shows for everybody. **WHO SPEAKS FOR A SOUL nobody cast** (2026.08.15, Anton's ask) is Core
   `Voices\VoiceCasting`: cast by hand → **a voice of their own people and sex** → one of no people →

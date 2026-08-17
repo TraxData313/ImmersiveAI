@@ -1154,6 +1154,8 @@ namespace ImmersiveAI.UI.TalkScreen
                 OnPropertyChanged("HasVoicePick");
                 OnPropertyChanged("VoiceGiveText");
                 OnPropertyChanged("VoiceEnabledText");
+                OnPropertyChanged("ShowVoiceFetch");
+                OnPropertyChanged("VoiceFetchText");
             }
             catch (Exception ex)
             {
@@ -1280,6 +1282,15 @@ namespace ImmersiveAI.UI.TalkScreen
             var config = _config;
             var lines = new List<string>(4);
 
+            // The errand outranks everything else this panel could say: it is a twenty-minute
+            // download and its line is the only proof it has not stalled.
+            if (Voice.VoiceFetcher.IsRunning)
+            {
+                lines.Add("Fetching the voices — " + Voice.VoiceFetcher.Line);
+                lines.Add("You can close this and carry on playing; it keeps going. Stopping it loses nothing — it picks up where it left off.");
+                return string.Join("\n", lines);
+            }
+
             if (config == null || !config.EnableVoice)
                 lines.Add("Voices are OFF. Nothing is spoken aloud, and nothing here costs anything until you turn them on.");
             else if (!localReady && !cloudReady)
@@ -1289,7 +1300,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 lines.Add("Voices are on, but nothing can make them yet.");
                 var advice = Voice.VoiceService.SetupAdvice;
                 if (advice.Length > 0) lines.Add(advice);
-                lines.Add("Or skip all of it — put a key in the settings under Voices → Hosted voices, and thirteen voices appear here. About 1½ cents a minute, no download, no graphics card.");
+                lines.Add("Or skip all of it — put a key in the settings under Voices → Hosted voices, and thirteen voices appear here. About 1½ cents a minute, no download, no graphics card at all.");
             }
             else if (localReady && cloudReady)
                 lines.Add("Voices are on, made on this machine (free) or by the hosted service (billed by the minute).");
@@ -1366,7 +1377,7 @@ namespace ImmersiveAI.UI.TalkScreen
 
             InformationManager.DisplayMessage(new InformationMessage(
                 _config.EnableVoice
-                    ? "Voices are on. Choose a voice below and press ▶ to hear it."
+                    ? "Voices are on. Choose a voice below and press ♪ to hear it."
                     : "Voices are off.", PromptFrameColor));
             RefreshVoices();
             RefreshVoiceBadge();
@@ -1430,6 +1441,81 @@ namespace ImmersiveAI.UI.TalkScreen
         }
 
         public void ExecuteVoiceOpenFolder() => Voice.VoiceService.OpenVoicesFolder();
+
+        /// <summary>
+        /// The one button that replaces the setup page: fetch the speech engine and its models.
+        /// <para>
+        /// It asks first, and the asking is the point — this is a 2.8 GB download onto somebody's
+        /// disk, so it names the size, the places it writes, and where the files come from, and it
+        /// does not start until they say yes. After that it is silent: they carry on playing, and the
+        /// panel's own line is the only thing that ever mentions it again.
+        /// </para>
+        /// </summary>
+        public void ExecuteVoiceFetch()
+        {
+            if (Voice.VoiceFetcher.IsRunning)
+            {
+                Voice.VoiceFetcher.Cancel();
+                RefreshVoices();
+                return;
+            }
+
+            InformationManager.ShowInquiry(new InquiryData(
+                "Download the voices",
+                "This fetches everything the voices need — about " + Voice.VoiceFetcher.DownloadSize +
+                ", leaving roughly " + Voice.VoiceFetcher.DiskSize + " on your disk.\n\n" +
+                "The speech engine comes from Qwen-TTS Studio's own release page and the two models from " +
+                "Hugging Face. Nothing is installed, no administrator rights are needed, and everything is " +
+                "written inside your own user folder:\n\n" +
+                Voice.VoiceFetcher.EngineTarget + "\n" +
+                Voice.VoiceFetcher.ModelTarget + "\n\n" +
+                "It runs in the background while you play, and a download that is interrupted carries on " +
+                "from where it stopped.",
+                true, true, "Download", "Not now",
+                () =>
+                {
+                    if (!Voice.VoiceFetcher.Start(_config))
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "The download could not be started — " + Voice.VoiceFetcher.LastError, PromptFrameColor));
+                    RefreshVoices();
+                },
+                null));
+        }
+
+        /// <summary>
+        /// Keeps the download's line moving while the panel is open. Called from the screen's own
+        /// tick, because a progress line that only changed when the player clicked something would
+        /// be indistinguishable from a stalled one.
+        /// </summary>
+        public void RefreshVoiceFetchLine()
+        {
+            try
+            {
+                var running = Voice.VoiceFetcher.IsRunning;
+                var line = running ? Voice.VoiceFetcher.Line : string.Empty;
+                if (running == _fetchWasRunning && string.Equals(line, _fetchLastLine, StringComparison.Ordinal))
+                    return;
+
+                var finished = _fetchWasRunning && !running;
+                _fetchWasRunning = running;
+                _fetchLastLine = line;
+
+                // The shelf itself is rebuilt only when the errand ENDS: what it holds cannot change
+                // while a download runs, and rebuilding a hundred rows twice a second would be a
+                // strange way to spend a frame.
+                if (finished) RefreshVoices();
+                else
+                {
+                    VoiceStatusText = BuildVoiceStatus(Voice.VoiceService.LocalReady, Voice.VoiceService.CloudReady);
+                    OnPropertyChanged("VoiceFetchText");
+                    OnPropertyChanged("ShowVoiceFetch");
+                }
+            }
+            catch { /* a progress line is a courtesy; never let it break the screen */ }
+        }
+
+        private bool _fetchWasRunning;
+        private string _fetchLastLine = string.Empty;
 
         /// <summary>The stop control for the ordinary case — the panic KEY is for the case where
         /// opening a window is already too slow.</summary>
@@ -2310,10 +2396,14 @@ namespace ImmersiveAI.UI.TalkScreen
 
         [DataSourceProperty]
         public string VoiceHintText =>
-            "Every soul can be given a voice. Press ▶ beside a voice to hear it, then give it to whoever you like — "
-            + "and the same ▶ beside any words in the conversation reads them aloud, letters and their own quiet "
+            // ♪ NOT ▶ — see VoiceRowVM.HearText: the shipped fonts' fallback covers Miscellaneous
+            // Symbols and Dingbats but NOT Geometric Shapes, so U+25B6 draws as a question mark. The
+            // button was fixed on the day that was found; these two sentences, which NAME the mark
+            // the player is looking for, were missed and shipped two boxes (Anton, 2026.08.17).
+            "Every soul can be given a voice. Press ♪ beside a voice to hear it, then give it to whoever you like — "
+            + "and the same ♪ beside any words in the conversation reads them aloud, letters and their own quiet "
             + "thoughts included.\n"
-            + "Voices made on this machine are free and private but want the speech engine and a real graphics card; "
+            + "Voices made on this machine are free and private but want an NVIDIA card and one download; "
             + "hosted voices want only a key, cannot be cloned to sound like anyone in particular, and are billed by the minute.";
 
         [DataSourceProperty]
@@ -2333,6 +2423,18 @@ namespace ImmersiveAI.UI.TalkScreen
 
         [DataSourceProperty]
         public string VoiceImportText => "Bring over from Studio";
+
+        /// <summary>The download button, shown only when it is the right answer: the local road is
+        /// not open yet, our own host is there to run the errand, and the machine has a card that
+        /// can carry the engine. A player already set up never sees it, and neither does one it
+        /// could only disappoint.</summary>
+        [DataSourceProperty]
+        public bool ShowVoiceFetch => Voice.VoiceFetcher.IsRunning || Voice.VoiceFetcher.CanOffer(_config);
+
+        [DataSourceProperty]
+        public string VoiceFetchText => Voice.VoiceFetcher.IsRunning
+            ? "Stop the download"
+            : "Download the voices (" + Voice.VoiceFetcher.DownloadSize + ")";
 
         [DataSourceProperty]
         public string VoiceShowAllText => _showEveryVoice ? "Only theirs" : "Every voice";

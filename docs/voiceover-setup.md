@@ -3,7 +3,13 @@
      speakers are all shipped, and this page now describes them as they are rather than as planned.
      NOT yet playtested in a live campaign: if a label here disagrees with the game, the game is
      right and this page is stale. Keep this URL path stable — README and all three store pages
-     point at it. -->
+     point at it.
+
+     2026.08.17: the four manual setup steps became ONE BUTTON — the mod fetches the engine and the
+     models itself. The old road is kept in voices-without-admin.md rather than here. The same day
+     the NVIDIA requirement was stated plainly everywhere (it was always true and this page said
+     only "a graphics card"), and the disk figure was corrected from a guessed ~7 GB to a MEASURED
+     2.9 GB: 662 MB of libraries and 2.2 GB of models. Measure before you write a number down. -->
 
 # Hearing them speak
 
@@ -11,8 +17,9 @@ Immersive AI can read every NPC's words aloud, in a voice you choose — includi
 clone yourself** from a few seconds of audio. This page tells you how. It gets more detailed as
 you scroll: **read only as far as you need.**
 
-Voices are **off by default**, and turning them on is a real decision — it wants a few gigabytes
-and a graphics card. Everything below is about whether that trade is worth it to you.
+Voices are **off by default**, and turning them on is a real decision — it wants about three
+gigabytes and an **NVIDIA** graphics card. Everything below is about whether that trade is worth it
+to you.
 
 ---
 
@@ -20,7 +27,7 @@ and a graphics card. Everything below is about whether that trade is worth it to
 
 | If you want… | You need | Cost |
 |---|---|---|
-| **Any voice at all** | A graphics card and ~7 GB free | free, runs on your PC |
+| **Any voice at all** | An **NVIDIA** card and ~3 GB free | free, runs on your PC |
 | **Your own cloned voices** | The same, plus a clip of the voice | free |
 | **No download, no GPU** | A key for a hosted speech service | ~1½ cents a minute of speech |
 | **No voices** | Nothing — leave it off | — |
@@ -28,6 +35,11 @@ and a graphics card. Everything below is about whether that trade is worth it to
 The local road is the good one: it is free forever, it never sends a word off your machine, and it
 is the only one that can clone a voice. The hosted road exists so people without a gaming PC still
 get spoken NPCs.
+
+> **It has to be NVIDIA.** The speech engine ships only as a CUDA build — there is no AMD or Intel
+> build, and no CPU one to fall back to. On any other card the download would be spent only to fail
+> when the model loads, so the mod checks before it offers, and points you at the hosted road
+> instead. This is the one requirement with no way around it.
 
 ---
 
@@ -37,7 +49,7 @@ Not money — the local engine is free and unlimited. It costs **hardware**:
 
 | | |
 |---|---|
-| **Disk** | ~7 GB for the speech models |
+| **Disk** | ~2.9 GB — 662 MB of speech engine, 2.2 GB of models |
 | **Video memory** | ~3–4 GB *on top of what Bannerlord is already using* |
 | **Speed** | About 4× faster than real time on a modern card — a four-second line takes about a second to make |
 | **First line after loading** | ~1.5 seconds extra, once, while the model wakes up |
@@ -73,29 +85,42 @@ everybody else. Which road a voice takes is decided by the voice, never by a set
 
 ## Setting it up
 
-1. **Install Qwen-TTS Studio** *(free)* — [github.com/Danmoreng/qwen-tts-studio](https://github.com/Danmoreng/qwen-tts-studio/releases).
-   On the releases page take **`windows-cuda-bundled`** unless you already have the NVIDIA CUDA
-   toolkit installed, in which case the smaller `windows-cuda-system` will do. Immersive AI uses its
-   speech engine and its models — you never have to keep the app open, it just has to have been
-   installed once so both exist on your disk.
-   *(**No administrator rights on this machine?** The installer needs them; the `.zip` of the same
-   build, on the same page, does not. See [voices without admin rights](voices-without-admin.md) —
-   it also does step 2 for you.)*
-2. **Download a model in it.** `qwen-talker-1.7b-base` is the one to get; it will also fetch the
-   tokenizer that goes with it. Studio pulls these from
-   [Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF) on Hugging Face.
-   *(If you want to hear something before cloning anything of your own, fetch
-   `qwen-talker-1.7b-customvoice` as well — see "Voices without cloning" below.)*
-3. **Turn voices on.** Open the talk screen (**O**), press **Voices**, and press **Turn voices on**.
-   Immersive AI finds the engine and models by itself; if it cannot, that same page says plainly
-   what is missing.
-4. **Pick who speaks.** In the same panel: press **Bring over from Studio** to pull in the voices you
-   made there, press **♪** beside one to hear it, then give it to the person you are talking to — or
-   to nobody, and let everyone be given a voice of their own people (see below). That is enough to
-   start.
+1. **Open the talk screen (O) and press Voices.**
+2. **Press "Download the voices".** It says what it is about to fetch and where it will put it;
+   say yes and it does the rest — about 2.8 GB, in the background, while you carry on playing.
+   Nothing is installed, nothing asks for administrator rights, and everything is written inside
+   your own user folder. If the connection drops, press it again: it carries on from where it
+   stopped rather than starting over.
+3. **Press "Turn voices on".** That is it — you will be told when it is ready.
+4. **Pick who speaks.** Press **♪** beside a voice to hear it, then give it to the person you are
+   talking to — or to nobody at all, and let everyone be given a voice of their own people (see
+   below). The mod brings a shelf of voices with it, so there is something to choose from at once.
 
 If anything is missing, voices simply stay quiet and one grey line tells you why. **A voice problem
 never blocks, delays or loses a reply** — the words always arrive, whatever the sound is doing.
+
+<details>
+<summary><b>What that button actually fetches, and doing it by hand</b></summary>
+
+Two things, and they are the same two Qwen-TTS Studio would have fetched for you:
+
+- **The speech engine** — eight native libraries, taken out of the `windows-cuda-bundled` package
+  on [Qwen-TTS Studio's own releases page](https://github.com/Danmoreng/qwen-tts-studio/releases),
+  into `%LOCALAPPDATA%\Programs\qwen-tts-studio`. The Java application those libraries arrive
+  inside is thrown away rather than written out — the mod has never needed Studio *installed*, and
+  never launches it.
+- **Two models**, from [Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF)
+  on Hugging Face, into `%USERPROFILE%\.qwen-tts-studio\models`. The talker turns text into audio
+  tokens; the tokenizer turns those back into sound. It must be the **1.7b** talker — model size
+  fixes the embedding dimension, and every voice the mod ships is d2048, which only the larger
+  model produces.
+
+If you would rather do it yourself — or the button is not offered because your machine is locked
+down — [the manual road is here](voices-without-admin.md), and the mod finds the pieces either way.
+Already have Studio installed with a model in it? Then there is nothing to fetch and the button
+never appears.
+
+</details>
 
 ### You do not have to cast everybody
 
@@ -155,6 +180,13 @@ you only ever need the third:
 Voices are cloned in **Qwen-TTS Studio** and then brought across. (Cloning from inside the game is
 planned; until then this is the road — and it is the one most people will keep using anyway.)
 
+**This is the one thing the download button does not give you.** It fetches the engine and the
+models, which is everything needed to *play* with voices; Studio's own window is a separate program
+and you only want it if you mean to *make* a voice. Get it from
+[its releases page](https://github.com/Danmoreng/qwen-tts-studio/releases) — take the `.zip` of
+`windows-cuda-bundled` and just unpack it, no installing and no administrator rights — and point it
+at the models you already have, under `%USERPROFILE%\.qwen-tts-studio\models`.
+
 ### What you need
 
 **A few seconds of clean speech** — one person, no music, no background noise, no second voice.
@@ -177,8 +209,9 @@ clip with a soundtrack under it, two people talking over each other, or four sec
 
 ### Bringing it into the game
 
-**Soon:** one **"Import from Qwen-TTS Studio"** button in the game's Voice panel that brings every
-preset across at once. Until that lands, by hand:
+**Press "Bring over from Studio"** in the game's Voice panel and every preset you have made comes
+across at once. That is the whole of it — the rest of this section is for anyone who would rather
+move a voice by hand, or who wants to know what a voice actually is.
 
 Studio keeps its voices under `C:\Users\<you>\.qwen-tts-studio\` :
 
@@ -260,9 +293,14 @@ rarely need it: every line is given an audio ceiling worked out from its own len
 cut off after seconds instead of running on — and a line that had to be cut is never kept, so it
 cannot come back the next time you scroll past those words.
 
-**Nothing happens at all.** Check the options are on and the model downloaded. The mod says where
-it looked for the engine; the most common cause is that Qwen-TTS Studio was installed but no model
-was ever downloaded in it.
+**Nothing happens at all.** Open the Voices panel — it says in plain words what is missing, and if
+anything is, the download button is right there. The mod also writes where it looked for the engine
+into its log.
+
+**There is no "Download the voices" button.** Three reasons, and the panel says which: everything is
+already installed (nothing to fetch), or the machine has no NVIDIA card (see the top of this page —
+the hosted road is the answer), or the mod's own voice program is missing from its folder, which
+reinstalling Immersive AI puts back.
 
 **The game stutters while she talks.** Speech and Bannerlord are sharing your graphics card. Try
 the smaller model, or lower your graphics settings a notch.
@@ -307,6 +345,8 @@ the words — the gesture still appears in the conversation, as it always did.
 Set voices off in the options. Nothing else changes — every word still arrives as text, exactly as
 it did before. Your voice folders stay where they are, so turning it back on costs nothing.
 
-To reclaim the disk space, delete the models from Qwen-TTS Studio's own folder; to clear just the
+To reclaim the disk space, delete `%USERPROFILE%\.qwen-tts-studio\models` (2.2 GB) and
+`%LOCALAPPDATA%\Programs\qwen-tts-studio` (662 MB) — the two folders the download button wrote, and
+nothing else on your machine depends on either. To clear just the
 generated speech, delete `Configs\ImmersiveAI\Voices\_cache\` — it is rebuilt as needed and safe to
 remove at any time.

@@ -131,7 +131,7 @@
                                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@Detail" />
                                       </Children>
                                     </ListPanel>
-                                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="12" Brush="Popup.Description.Text" Brush.FontColor="#E3B54AFF" Text="●" IsVisible="@HasUnread" />
+                                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="12" Brush="Popup.Description.Text" Brush.FontColor="#E3B54AFF" Text="✦" IsVisible="@HasUnread" />
                                   </Children>
                                 </ButtonWidget>
                               </ItemTemplate>
@@ -611,6 +611,16 @@
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#0B0906FF" AlphaFactor="0.99" />
 
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="14" MarginLeft="20" MarginRight="20" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@VoiceTitleText" />
+
+                <!-- The one button that replaces the setup page. Beside the title rather than down
+                     with the housekeeping row: it is the first thing to do on a machine with no
+                     voices, and the bottom row is already full. It shows only when it is the right
+                     answer - see ShowVoiceFetch. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="270" SuggestedHeight="38" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="14" MarginRight="20" Brush="Popup.Done.Button" IsVisible="@ShowVoiceFetch" Command.Click="ExecuteVoiceFetch">
+                  <Children>
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceFetchText" />
+                  </Children>
+                </ButtonWidget>
                 <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="54" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceStatusText" />
                 <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="104" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceHintText" />
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="176" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@NoVoicesText" IsHidden="@HasVoices" />

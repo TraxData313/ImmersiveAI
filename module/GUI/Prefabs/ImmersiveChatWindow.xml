@@ -60,7 +60,7 @@
                                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@Detail" />
                                       </Children>
                                     </ListPanel>
-                                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="12" Brush="Popup.Description.Text" Brush.FontColor="#E3B54AFF" Text="●" IsVisible="@HasUnread" />
+                                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="12" Brush="Popup.Description.Text" Brush.FontColor="#E3B54AFF" Text="✦" IsVisible="@HasUnread" />
                                   </Children>
                                 </ButtonWidget>
                               </ItemTemplate>

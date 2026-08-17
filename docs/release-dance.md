@@ -7,8 +7,8 @@ The whole shipping ritual in one place, written down so it is never improvised a
 
 | | |
 |---|---|
-| **Claude** | version bump · the three change-note tiers · the store-page edits (measured) · `package.ps1` · **runs the Steam Workshop uploader** · git commit |
-| **Anton** | pastes the descriptions into Steam and Nexus · uploads the zip to Nexus with its 255-char changelog · playtests |
+| **Claude** | version bump · the three change-note tiers · the store-page edits (measured) · `package.ps1` · **runs the Steam Workshop uploader** · **uploads the Nexus file when asked** (browser, Anton logged in) · git commit |
+| **Anton** | pastes the descriptions into Steam and Nexus · clears any Nexus virus-scan quarantine (only the owner can appeal) · playtests |
 
 Everything Claude does is repo-side and reversible. The two store *descriptions* and the Nexus
 file are Anton's hands, because they are his pages.
@@ -105,11 +105,27 @@ Steam client open and logged in. Details and uploader quirks: `tools/WORKSHOP-UP
   still shows the old version right after an upload. That is Steam's download schedule, not a
   failed upload. Verify on the item page, or launch the game once.
 
-### 8. Anton's half
+### 8. Upload to Nexus
+Claude can do this from the browser when asked (Anton logged in; first done 2026.08.17), otherwise
+it is Anton's. Mod 12119 → Manage → Files.
+
+- **Update existing file**, pick the current main file, tick **Archive existing file**. Selecting it
+  **silently overwrites the display name with the old file's** — set it back to `ImmersiveAI VX.Y.Z`.
+- **Two different fields want the change notes**, and both are wanted: the file's **Description**
+  (under File options, itself capped at 255 characters — this is where the fenced block goes, it is
+  what people read under the download) and **Add changelog** (which feeds the version history).
+- **Set the MOD version too**, on the General step. It is a *separate field* from the file's version
+  and it is the one **Vortex** compares against — ours sat at V1.3.2 while the main file was V3.0.0,
+  so Vortex users were never told an update existed. Check it every time.
+- **THE UPLOAD IS NOT DONE WHEN THE FILE SAVES — IT IS DONE WHEN THE SCAN IS GREEN.** Nexus scans
+  every upload; ours now carries `ImmersiveAI.VoiceHost.exe`, and **v3.0.0 was automatically
+  quarantined** ("may be unsafe", undownloadable by anybody) and sat that way for a day because
+  nobody looked at the page afterwards. Come back to the Files tab an hour later. A green tick means
+  shipped; a red cross means the "How can I fix this?" appeal, which only the account owner can file.
+
+### 8b. Anton's half
 1. Item page → Owner Controls → paste `docs/steam-page-final.bbcode.txt` into the description.
-2. Nexus → upload `dist\ImmersiveAI_vX.Y.Z.zip`, paste `docs/nexus-page.bbcode.txt` as the
-   description and the CHANGELOG's fenced block into the per-version changelog field.
-3. Both pinned FAQ threads, if `docs/steam-faq.bbcode.txt` changed.
+2. Both pinned FAQ threads, if `docs/steam-faq.bbcode.txt` changed.
 
 ### 9. Close the loop
 - `TASKS_DONE.md` gets the release entry; `TASKS_TODO.md`'s shipping item is replaced with the

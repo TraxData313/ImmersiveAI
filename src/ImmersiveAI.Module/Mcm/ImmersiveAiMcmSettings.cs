@@ -221,7 +221,7 @@ namespace ImmersiveAI.Mcm
         // ---------------------------- Voices ----------------------------
 
         [SettingPropertyBool("Speak their words aloud", Order = 0, RequireRestart = false,
-            HintText = "Characters read their replies out loud in a voice you choose, made on your own machine. Needs Qwen-TTS Studio installed with a model downloaded, and a graphics card with a few GB to spare. Off costs nothing and changes nothing else.")]
+            HintText = "Characters read their replies out loud in a voice you choose, made on your own machine. The talk screen's Voices page fetches what it needs itself (about 2.8 GB) — it wants an NVIDIA card, or a key for the hosted voices instead. Off costs nothing and changes nothing else.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool EnableVoice { get; set; }
 

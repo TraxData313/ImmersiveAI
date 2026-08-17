@@ -43,6 +43,88 @@ public class VoiceHostProtocolTests
         Assert.Equal(@"{""event"":""pong""}", new VoicePongEvent().Serialize());
     }
 
+    // ==================================================================
+    // the errand: fetching the engine and its models
+    // ==================================================================
+
+    [Fact]
+    public void FetchProgress_ReadsTheLineTheHostActuallyWrites()
+    {
+        // Copied from a real run of the host on 2026.08.17, byte for byte.
+        var message = VoiceHostProtocol.ParseMessage(
+            @"{""event"":""fetch"",""stage"":""engine"",""note"":""The speech engine"",""done"":46185078,""total"":662661830}");
+
+        var fetch = Assert.IsType<VoiceFetchEvent>(message);
+        Assert.Equal("engine", fetch.Stage);
+        Assert.Equal(46185078, fetch.Done);
+        Assert.Equal(662661830, fetch.Total);
+        Assert.False(fetch.IsFinished);
+        // A progress line carries no verdict, and must never be read as a failed one — that would
+        // end the errand at its first megabyte.
+        Assert.True(fetch.Ok);
+    }
+
+    [Fact]
+    public void FetchVerdict_IsTheOnlyLineThatFinishes()
+    {
+        var good = Assert.IsType<VoiceFetchEvent>(
+            VoiceHostProtocol.ParseMessage(@"{""event"":""fetch"",""stage"":""done"",""ok"":true}"));
+        Assert.True(good.IsFinished);
+        Assert.True(good.Ok);
+
+        var bad = Assert.IsType<VoiceFetchEvent>(VoiceHostProtocol.ParseMessage(
+            @"{""event"":""fetch"",""stage"":""done"",""ok"":false,""error"":""there is not enough room on C:""}"));
+        Assert.True(bad.IsFinished);
+        Assert.False(bad.Ok);
+        Assert.Equal("there is not enough room on C:", bad.Error);
+        Assert.Equal("there is not enough room on C:", bad.Describe());
+    }
+
+    [Fact]
+    public void FetchProgress_ReadsAsSomethingAPlayerCanWatch()
+    {
+        var fetch = new VoiceFetchEvent
+        {
+            Stage = VoiceHostProtocol.StageModel,
+            Note = "the voice model",
+            Done = 123276006,
+            Total = 2079448256,
+        };
+
+        Assert.Equal("the voice model — 118 MB of 1.9 GB (6%)", fetch.Describe());
+    }
+
+    [Fact]
+    public void FetchProgress_WithNoKnownSize_ClaimsNothing()
+    {
+        // A server that sends no length gives an honest bar of nothing rather than a made-up one.
+        var fetch = new VoiceFetchEvent { Stage = VoiceHostProtocol.StageChecking, Note = "Looking at what is already here" };
+        Assert.Equal(0, fetch.Fraction);
+        Assert.Equal("Looking at what is already here", fetch.Describe());
+    }
+
+    [Fact]
+    public void FetchEvent_RoundTrips()
+    {
+        var sent = new VoiceFetchEvent { Stage = "unpacking", Note = "Unpacking the speech engine", Done = 52697712, Total = 694099792 };
+        var back = Assert.IsType<VoiceFetchEvent>(VoiceHostProtocol.ParseMessage(sent.Serialize()));
+
+        Assert.Equal(sent.Stage, back.Stage);
+        Assert.Equal(sent.Note, back.Note);
+        Assert.Equal(sent.Done, back.Done);
+        Assert.Equal(sent.Total, back.Total);
+        Assert.Equal(sent.Describe(), back.Describe());
+    }
+
+    [Fact]
+    public void FetchEvent_IsNotMistakenForASynthesisResult()
+    {
+        // It wears an "ok" on its closing line, which is the shape a result is known by. Read as
+        // one it would answer a request nobody made, with an empty id.
+        var message = VoiceHostProtocol.ParseMessage(@"{""event"":""fetch"",""stage"":""done"",""ok"":true}");
+        Assert.IsNotType<VoiceSynthesisResult>(message);
+    }
+
     [Fact]
     public void SuccessResult_SerializesExactlyAsDocumented()
     {
