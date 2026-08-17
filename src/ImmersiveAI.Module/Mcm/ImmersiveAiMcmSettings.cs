@@ -1,4 +1,4 @@
-﻿using MCM.Abstractions.Attributes;
+using MCM.Abstractions.Attributes;
 using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
 using MCM.Common;
@@ -217,6 +217,11 @@ namespace ImmersiveAI.Mcm
             HintText = "How far words can move a hiring price from the game's own reckoning, either way. 0 = no haggling (the reckoned price or nothing); 30 = up to 30% above or below. A hard rule the mod enforces, whatever is said. The daily wage is never negotiable.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int ConversationHiringHagglePercent { get; set; } = 30;
+
+        [SettingPropertyBool("Take up and report quests in conversation", Order = 10, RequireRestart = false,
+            HintText = "Allows discovering, taking on, and reporting native Bannerlord issues and quests directly through natural conversation with village notables, merchants, and lords.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableQuestDialogueBridge { get; set; } = true;
 
         // ---------------------------- Voices ----------------------------
 

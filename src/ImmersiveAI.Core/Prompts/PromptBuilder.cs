@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -720,6 +720,10 @@ namespace ImmersiveAI.Core.Prompts
             // telling them what to do"). A tool's contract belongs beside its schema, where it is
             // sent on every call that carries the tool — not in a wall of sheet prose. The persona's
             // Can* flags still decide which tools are offered at all; only the words moved.
+
+            // Offered only when the quest bridge tool rides along
+            if (persona.CanBridgeQuests)
+                sb.AppendLine("- When a trouble or task weighs upon me and the traveler plainly agrees in their words to take it upon themselves, I accept their aid and MUST call accept_quest in that very breath to hand the burden over; nothing is settled in the world until the tool is called. When they return having fulfilled what I asked, I MUST call report_quest to acknowledge their deed.");
 
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))

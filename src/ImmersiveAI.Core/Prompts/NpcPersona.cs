@@ -109,6 +109,11 @@ namespace ImmersiveAI.Core.Prompts
         /// price — and that the gold and the choice remain wholly the suitor's.</summary>
         public bool CanBlessTroth { get; set; }
 
+        /// <summary>True when this NPC carries an available native issue or active quest and the
+        /// accept_quest / report_quest tools ride along (QuestTool). Adds a whisper that accepting
+        /// aid or receiving a report requires calling the tool in that very breath.</summary>
+        public bool CanBridgeQuests { get; set; }
+
         /// <summary>Her private courtship stance — where her heart stands on the road and the
         /// misgivings she set down by her own hand (standing or laid to rest), built by the game
         /// layer from persisted memory via Core CourtshipText.RoadSection. Folded into the sheet

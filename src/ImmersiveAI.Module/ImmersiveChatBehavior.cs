@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -184,7 +184,8 @@ namespace ImmersiveAI
         // a tally was handed in — so the preview can ask for the list without inventing one.
         private List<ToolDefinition> GatherSpokenTools(Hero npc,
             Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
-            Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null)
+            Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null,
+            Tools.QuestTool.Tally? quest = null)
         {
             var tools = new List<ToolDefinition>();
             if (CanRecallWorld()) tools.AddRange(Tools.WorldRecall.Tools);
@@ -219,15 +220,21 @@ namespace ImmersiveAI
             // lover, face to face or in writing. It is the only way anything on that list ever
             // moves, in either direction, so it must never be quietly absent.
             if (door != null) tools.Add(Tools.DoorTool.Tool);
+            if (quest != null)
+            {
+                if (Tools.QuestTool.GetAvailableIssue(npc) != null) tools.Add(Tools.QuestTool.AcceptTool);
+                if (Tools.QuestTool.GetActiveQuest(npc) != null) tools.Add(Tools.QuestTool.ReportTool);
+            }
             return tools;
         }
 
         private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc,
             Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null,
             Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
-            Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null)
+            Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null,
+            Tools.QuestTool.Tally? quest = null)
         {
-            var tools = GatherSpokenTools(npc, bargain, troth, bless, door);
+            var tools = GatherSpokenTools(npc, bargain, troth, bless, door, quest);
             if (tools.Count == 0)
                 return _client.CompleteAsync(messages);
 
@@ -238,11 +245,11 @@ namespace ImmersiveAI
             // The heart's hand and the personal hands (the bargain, the troth) are not recalls:
             // they keep at least one round even when the recall budget is zeroed out.
             bool heartRides = CanMoveHeart();
-            int rounds = (heartRides || bargain != null || troth != null || bless != null || door != null)
+            int rounds = (heartRides || bargain != null || troth != null || bless != null || door != null || quest != null)
                 ? Math.Max(1, _config.MaxRecallsPerReply) : _config.MaxRecallsPerReply;
             return ToolLoopRunner.RunAsync(
                 _client, messages, tools,
-                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain, troth, bless, door),
+                call => ResolveToolAsync(call, npc, heart, liveMemory, recentContext, bargain, troth, bless, door, quest),
                 rounds);
         }
 
@@ -266,7 +273,7 @@ namespace ImmersiveAI
         // Routes one tool call to its resolver, announcing the activity to the player first so the
         // wait is never silent ("remembering…", "researching…"). The heart's shift gets no notice
         // of its own — the colored relation line that follows IS the notice.
-        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null)
+        private Task<string> ResolveToolAsync(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart, NpcMemory? liveMemory, string recentContext, Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null, Tools.DoorTool.Tally? door = null, Tools.QuestTool.Tally? quest = null)
         {
             if (call.Name == Tools.DoorTool.WeighWhatStands)
                 return Task.FromResult(ResolveWeighTheDoor(call, npc, door, liveMemory));
@@ -291,6 +298,12 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.LoverTool.NameHerPrice)
                 return Task.FromResult(ResolveRansomLay(call, npc, bless));
+
+            if (call.Name == Tools.QuestTool.AcceptQuest)
+                return Task.FromResult(ResolveAcceptQuest(call, npc, quest));
+
+            if (call.Name == Tools.QuestTool.ReportQuest)
+                return Task.FromResult(ResolveReportQuest(call, npc, quest));
 
             NotifyActivity(npc, call);
             if (call.Name == Tools.WebWisdom.SeekWisdom)
@@ -1252,15 +1265,14 @@ namespace ImmersiveAI
             starter.AddPlayerLine("immersiveai_bye", "immersiveai_input", "close_window",
                 "{=ImmersiveAI_Done}Farewell.", null, RequestLeaveFromPartyEncounter, 85);
 
-            // Await state, reply is in -> show it and return to the menu.
-            // Registered before the "still thinking" line so it wins when the condition holds.
+            // Priority 300: shields the private await state against any external mod (e.g. Homesteads) event hijacking.
             // The fourth argument is the CONSEQUENCE, and it is the honest moment to speak: the line
             // is set long before this, but the panel does not show it until the player clicks to
             // advance. Speak at generation and the voice arrives while the box still reads "..." —
             // for however long they pause. The audio is normally already cached by then (Prewarm ran
             // off-thread the moment the reply landed), so this is a cache hit, not a wait.
             starter.AddDialogLine("immersiveai_reply", "immersiveai_await", "immersiveai_input",
-                "{=!}{" + ResponseVar + "}", () => _responseReady, SpeakTheShownLine);
+                "{=!}{" + ResponseVar + "}", () => _responseReady, SpeakTheShownLine, 300);
 
             // (RequestLeaveFromPartyEncounter lives below with the other encounter care —
             // every close_window line above must carry it, or a map-party talk ends in the
@@ -1269,11 +1281,11 @@ namespace ImmersiveAI
             // Await state, still waiting -> keep the NPC's last line on screen (re-readable while the
             // player types) with a gentle note that they are considering, instead of a bare holding line.
             starter.AddDialogLine("immersiveai_thinking", "immersiveai_await", "immersiveai_wait",
-                "{=!}{" + ThinkingVar + "}", () => !_responseReady, null);
+                "{=!}{" + ThinkingVar + "}", () => !_responseReady, null, 300);
 
             // Re-checks the await state; loops until the reply arrives.
             starter.AddPlayerLine("immersiveai_wait", "immersiveai_wait", "immersiveai_await",
-                "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 110);
+                "{=ImmersiveAI_Wait}(wait for them to answer)", null, null, 300);
 
             // (The courier menu options are added in OnSessionLaunched, not here: this runs at game
             // start, when "town"/"castle"/"village" are only presumed placeholders — their real
@@ -1836,6 +1848,8 @@ namespace ImmersiveAI
                     PresentBargainIfAny(npc, outcome);
                     // Same law for the troth and the blessing: the words first, then the seal.
                     PresentTrothIfAny(npc, outcome);
+                    // Same law for quests: words delivered first, then trigger consequences.
+                    DispatchQuestOutcomes(outcome.Quest, reply);
                 });
             }
             catch (Exception ex)
@@ -1855,10 +1869,11 @@ namespace ImmersiveAI
         private readonly struct TurnOutcome
         {
             public TurnOutcome(string reply, int feltShift, bool feltShiftApplied, int bargainPrice = 0,
-                Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null)
+                Tools.TrothTool.Tally? troth = null, Tools.TrothTool.BlessTally? bless = null,
+                Tools.QuestTool.Tally? quest = null)
             {
                 Reply = reply; FeltShift = feltShift; FeltShiftApplied = feltShiftApplied;
-                BargainPrice = bargainPrice; Troth = troth; Bless = bless;
+                BargainPrice = bargainPrice; Troth = troth; Bless = bless; Quest = quest;
             }
             public string Reply { get; }
             public int FeltShift { get; }
@@ -1874,6 +1889,7 @@ namespace ImmersiveAI
             public Tools.TrothTool.Tally? Troth { get; }
             /// <summary>The blessing's tally when the head of a house weighed the suitor.</summary>
             public Tools.TrothTool.BlessTally? Bless { get; }
+            public Tools.QuestTool.Tally? Quest { get; }
         }
 
         // The trunk of one player→NPC exchange, shared by the conversation panel and the chat window:
@@ -1916,6 +1932,7 @@ namespace ImmersiveAI
             var troth = (trothRides || loverRides)
                 ? new Tools.TrothTool.Tally { TrothRides = trothRides, LoverRides = loverRides } : null;
             if (trothRides) await EnsureCourtshipReadyAsync(npc).ConfigureAwait(false);
+            var quest = CanBridgeQuests(npc) ? new Tools.QuestTool.Tally() : null;
 
             // Her hand on the door — the only thing that ever moves what stands between them, in
             // either direction. It rides beside everything else rather than instead of it: a wife
@@ -1935,7 +1952,7 @@ namespace ImmersiveAI
             // The live memory rides along so a mid-reply hand upon it (a misgiving set down, a
             // courtship step) lands in the same instance this turn will record into and save —
             // the end-of-exchange save can never clobber it.
-            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless, door).ConfigureAwait(false);
+            var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless, door, quest).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
             // How the exchange moved her heart. In the tool shape she moves it herself mid-reply
@@ -1964,6 +1981,9 @@ namespace ImmersiveAI
                 }
                 catch { /* the number is best-effort; never let it cost us the conversation */ }
             }
+
+            // Dispatch quest lifecycle outcomes (starting accepted issues or finishing reported quests)
+            DispatchQuestOutcomes(quest);
 
             memory.AddTurn(new ConversationTurn
             {
@@ -2006,7 +2026,7 @@ namespace ImmersiveAI
 
             SaveMemory(npc, memory);
             return new TurnOutcome(reply, feltShift, feltShiftApplied,
-                bargain != null && bargain.Laid ? bargain.Price : 0, troth, bless);
+                bargain != null && bargain.Laid ? bargain.Price : 0, troth, bless, quest);
         }
 
         // The NPC's current standing toward the player, read from the live game relation. Used to give
@@ -3918,6 +3938,7 @@ namespace ImmersiveAI
             persona.CanMoveHeart = CanMoveHeart();
             persona.CanSurveyField = CanSurveyField(npc);
             persona.CanRecallChronicle = CanRecallChronicle(npc);
+            persona.CanBridgeQuests = CanBridgeQuests(npc);
             // The bargain's whisper is keyed to the caller's tally (the live reply trunk alone), so
             // whisper and tool always ride together — a letter or a greeting never speaks of it.
             persona.CanStrikeBargain = bargainRides;
