@@ -220,7 +220,7 @@ namespace ImmersiveAI
             // lover, face to face or in writing. It is the only way anything on that list ever
             // moves, in either direction, so it must never be quietly absent.
             if (door != null) tools.Add(Tools.DoorTool.Tool);
-            if (quest != null)
+            if (CanBridgeQuests(npc))
             {
                 if (Tools.QuestTool.GetAvailableIssue(npc) != null) tools.Add(Tools.QuestTool.AcceptTool);
                 if (Tools.QuestTool.GetActiveQuest(npc) != null) tools.Add(Tools.QuestTool.ReportTool);
