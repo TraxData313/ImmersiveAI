@@ -1,4 +1,4 @@
-# Builds the mod and installs it into the Bannerlord Modules folder.
+﻿# Builds the mod and installs it into the Bannerlord Modules folder.
 # Usage: powershell -ExecutionPolicy Bypass -File tools\deploy.ps1 [-Configuration Release]
 param(
     [string]$Configuration = "Release",
@@ -60,16 +60,14 @@ Copy-Item (Join-Path $repoRoot "lib\0Harmony.LICENSE.txt") $binDir -Force -Error
 # A folder outside bin answers both at once: the game never looks there, so the loader is safe, and
 # a plain apphost with two DLLs beside it looks like the ordinary program it is.
 #
-# FRAMEWORK-DEPENDENT on purpose - it needs the .NET 8 runtime present on the player's machine.
-# Measured, not guessed: 0.15 MB this way against 33 MB self-contained-and-compressed (64 MB
-# uncompressed), on a mod whose whole download is 1.3 MB today. The trade reads clearly once you
-# remember what voices already cost: they are gated behind a hand-installed, multi-gigabyte local
-# TTS engine with its own CUDA siblings and a settings.properties to fill in. Nobody reaches this
-# exe without having installed heavier things by hand first, so the runtime prerequisite is nearly
-# free for the few who want voices - while a self-contained copy would put 33 MB into EVERY
-# player's download, on EVERY update, for a feature most of them never switch on. And a missing
-# runtime is the politest failure available to us: the exe exits at once without ever writing its
-# "ready" line, so the mod hears silence on the pipe and simply keeps speaking in text.
+# SELF-CONTAINED since 2026.08.21 (Anton: "click-agree-click-done"). It was framework-dependent
+# until then, on an argument that has since expired: voices used to be gated behind a hand-installed
+# multi-gigabyte engine, so a player reaching this exe had already installed heavier things by hand
+# and one more prerequisite was nearly free. The in-game download button killed that premise - the
+# engine now installs itself with one click, which leaves the .NET 8 runtime as the ONLY thing a
+# player must go and fetch from a website, needing admin, to hear a voice. Worse, its failure is
+# silent: the exe exits before writing its "ready" line and the mod simply keeps speaking in text.
+# So we pay the bytes (measured at package time and printed) to delete the last manual step.
 $voiceHostProj = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\ImmersiveAI.VoiceHost.csproj"
 if (Test-Path $voiceHostProj) {
     # A host stranded by a crashed game holds its own exe open and would block the copy below.
@@ -78,7 +76,7 @@ if (Test-Path $voiceHostProj) {
 
     $voiceOut = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\bin\publish\$Configuration"
     if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force -ErrorAction SilentlyContinue }
-    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained false -o $voiceOut
+    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained true -o $voiceOut
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "The voice host did not build - deploying without it. The mod runs fine; the NPCs simply keep their voices to themselves."
     } else {
@@ -95,6 +93,9 @@ if (Test-Path $voiceHostProj) {
             # Anything the host bundles that obliges a notice travels with it, same habit as Harmony.
             # (Dev builds keep the pdb the publish already produced - it is what turns a host stack
             # trace into line numbers.)
+            # createdump.exe is the runtime's crash-dump helper, never invoked by us. Dropping it
+            # leaves ONE executable in the package for a scanner to weigh, instead of two.
+            Remove-Item (Join-Path $hostDir "createdump.exe") -Force -ErrorAction SilentlyContinue
             Copy-Item (Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\THIRD-PARTY-NOTICES.txt") $hostDir -Force -ErrorAction SilentlyContinue
 
             # A single-file bundle from a pre-2026.08.17 deploy still sits in bin and is still a
@@ -104,7 +105,7 @@ if (Test-Path $voiceHostProj) {
             Remove-Item (Join-Path $binDir "ImmersiveAI.VoiceHost.exe") -Force -ErrorAction SilentlyContinue
             Remove-Item (Join-Path $binDir "ImmersiveAI.VoiceHost.pdb") -Force -ErrorAction SilentlyContinue
 
-            Write-Host "Voice host installed to VoiceHost\ (framework-dependent - needs the .NET 8 runtime at play time)."
+            Write-Host "Voice host installed to VoiceHost\ (self-contained - no .NET runtime needed)."
         } else {
             $made = (Get-ChildItem $voiceOut -Filter "*.exe" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name }) -join ", "
             if (-not $made) { $made = "(no exe at all)" }

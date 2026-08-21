@@ -1,4 +1,4 @@
-# Builds the mod and assembles a CLEAN, reproducible module layout for the Steam Workshop
+﻿# Builds the mod and assembles a CLEAN, reproducible module layout for the Steam Workshop
 # (or any manual distribution) under dist\ImmersiveAI - exactly what deploy.ps1 puts into the
 # game, but from scratch every time, so no stale file from an old build can ride along.
 # Also drops a versioned zip beside it, reading the version from module\SubModule.xml.
@@ -37,48 +37,45 @@ Copy-Item (Join-Path $repoRoot "lib\0Harmony.LICENSE.txt") $binDir -Force -Error
 # hand-installed, multi-gigabyte local engine, and that the folder sits outside bin because the
 # game must never see net8.0 assemblies among the ones it loads.
 #
-# IT DOES NOT GO IN THE MAIN DOWNLOAD, and that is the whole point of this comment (2026.08.17).
-# It is staged HERE, outside the module folder, and zipped SEPARATELY at the bottom of this script.
+# IT GOES BACK IN THE MAIN DOWNLOAD (2026.08.21, Anton's call). It was split out on 2026.08.17
+# because Nexus auto-quarantined v3.0.0, v3.1.0 and then v3.1.1: the first two shipped the host as a
+# .NET single-file bundle, which their rules read as a self-extracting archive, and the third shipped
+# it as ordinary files and was blocked anyway. From that we concluded that ANY executable in an
+# archive is blocked, and split the download in two.
 #
-# Learned the expensive way, twice in one day. Nexus auto-quarantined v3.0.0 and v3.1.0, which
-# shipped the host as a .NET single-file bundle - their rules name "any kind of self-extracting
-# file", and a single-file publish is exactly that. So it was republished as an ordinary exe with
-# its DLLs beside it... and v3.1.1 was quarantined too. Three theories died getting here: the file
-# is clean on VirusTotal (0/70), their own previewer reads our archive perfectly, and plain
-# publishing changed nothing. What is left is that an archive containing ANY executable is blocked.
-# Every release without one (v1.x, v2.x) passed; both releases with one were blocked.
+# The split cost more than it saved. It is invisible on the mod page, so a player installs the main
+# file, finds "no speech engine installed", and has no way to know a second file exists - which is
+# exactly what happened (Fritz3593, 2026.08.21). One download that MIGHT be flagged and can be
+# argued with support beats two downloads where half the players silently get no voices.
 #
-# So the main zip carries no exe at all and always installs. Voices become a small separate
-# download that unzips over the same Modules folder - VoiceEngineDiscovery already probes
-# <module>\VoiceHost, so nothing in the game needs to know which of the two a player has.
-# If that optional file is ever quarantined in its turn, it costs the voices and nothing else.
+# So: one zip, host inside, and if it is quarantined again we ask Nexus support - they were never
+# actually asked, and they said nothing about it when the earlier ones came back.
 #
 # Differences from deploy.ps1, both deliberate: no pdb ships, and a voice host that EXISTS but
 # fails to build stops the packaging dead. A release that quietly lost its voices is a defect, and
 # a clean-slate packager is exactly where that must be caught.
 $voiceHostProj = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\ImmersiveAI.VoiceHost.csproj"
 $voiceHostShipped = $false
-# Staged as <staging>\ImmersiveAI\VoiceHost\... so the optional zip unpacks into Modules\ and merges
-# into the module folder the main download already made.
-$hostStaging = Join-Path $distRoot "VoiceHostPackage"
-if (Test-Path $hostStaging) { Remove-Item $hostStaging -Recurse -Force }
 
 if (Test-Path $voiceHostProj) {
     # Clean slate here too - a stale file from an older build must never ride along.
     $voiceOut = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\bin\publish\package-$Configuration"
     if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force }
 
-    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained false -p:DebugType=none -o $voiceOut
+    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained true -p:DebugType=none -o $voiceOut
     if ($LASTEXITCODE -ne 0) { throw "The voice host failed to build - refusing to package a release without it." }
 
     # The game spawns it BY NAME; a renamed exe would ship as a silent no-voices bug.
     $hostExe = Join-Path $voiceOut "ImmersiveAI.VoiceHost.exe"
     if (-not (Test-Path $hostExe)) { throw "Published the voice host but no ImmersiveAI.VoiceHost.exe came out - the game spawns it by that exact name." }
 
-    $hostDir = Join-Path $hostStaging "ImmersiveAI\VoiceHost"
+    $hostDir = Join-Path $moduleDir "VoiceHost"
     New-Item -ItemType Directory -Force $hostDir | Out-Null
     Copy-Item (Join-Path $voiceOut "*") $hostDir -Recurse -Force
     # Anything the host bundles that obliges a notice travels with it, same habit as Harmony.
+    # createdump.exe is the runtime's crash-dump helper, never invoked by us. Dropping it
+    # leaves ONE executable in the package for a scanner to weigh, instead of two.
+    Remove-Item (Join-Path $hostDir "createdump.exe") -Force -ErrorAction SilentlyContinue
     Copy-Item (Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\THIRD-PARTY-NOTICES.txt") $hostDir -Force -ErrorAction SilentlyContinue
     $voiceHostShipped = $true
 }
@@ -188,53 +185,28 @@ function Write-ModuleZip {
     }
 }
 
-# THE GUARD THIS WHOLE SPLIT EXISTS FOR. An executable anywhere in the main module folder gets the
-# download auto-quarantined on Nexus, which blocks the mod itself rather than merely the voices -
-# so it stops the release here instead of being discovered on the mod page an hour later.
+# The executable inventory. The voice host is DELIBERATELY in here now (see above), so this no
+# longer stops the packaging - but it still prints what a Nexus scanner will see, because that list
+# is the first thing to check if a download is ever flagged again.
 $strayExes = @(Get-ChildItem $moduleDir -Recurse -File -Include *.exe, *.com, *.scr, *.bat, *.cmd -ErrorAction SilentlyContinue)
 if ($strayExes.Count -gt 0) {
-    $names = ($strayExes | ForEach-Object { $_.FullName.Substring($moduleDir.Length).TrimStart('\') }) -join ", "
-    throw "Refusing to package: the main module folder holds executable file(s) - $names. Nexus quarantines any archive containing one, which blocks the whole mod. Ship it as the separate VoiceHost download instead."
+    $names = ($strayExes | ForEach-Object { $_.FullName.Substring($moduleDir.Length).TrimStart('') }) -join ", "
+    Write-Host "Executables in this package (what a Nexus scan sees): $names"
 }
 
 $zipPath = Join-Path $distRoot "ImmersiveAI_$version.zip"
 Write-ModuleZip -ModuleFolder $moduleDir -ZipPath $zipPath
 
-# The optional voice-host download. Same shape as the main zip (ImmersiveAI\... inside), so it
-# unpacks into Modules\ and merges into the folder the main download already made.
+# ONE zip for both stores now. Steam gets the same folder it always did; Nexus gets the same
+# archive rather than a main file plus an optional extra.
 $hostZipPath = ""
-if ($voiceHostShipped) {
-    $hostZipPath = Join-Path $distRoot "ImmersiveAI_VoiceHost_$version.zip"
-    Write-ModuleZip -ModuleFolder (Join-Path $hostStaging "ImmersiveAI") -ZipPath $hostZipPath
-}
-
-# --- The Steam payload, assembled AFTER the zips are cut -------------------------------------
-# The two stores want different shapes and this is the one place that difference lives.
-# NEXUS scans uploads and quarantines any archive holding an executable, so its main download must
-# not have one - hence the split zips above. STEAM has no such scan, and a Workshop item is a single
-# folder with no notion of an optional extra file: split there, and a Workshop player simply loses
-# voices with nothing to go and fetch. So the folder the uploader points at gets the host put back.
-# ORDER IS LOAD-BEARING: this runs after Write-ModuleZip, so the Nexus zip is already sealed without
-# it, and after the stray-executable guard, which must judge what NEXUS receives.
-if ($voiceHostShipped) {
-    Copy-Item (Join-Path $hostStaging "ImmersiveAI\VoiceHost") $moduleDir -Recurse -Force
-}
 
 Write-Host "Packaged $version to $moduleDir"
-# The release dance wants this visible: a package is either voiced or it is not - and since
-# 2026.08.17 that is TWO uploads, so say plainly that the second one exists and must go up too.
 if ($voiceHostShipped) {
-    Write-Host "Voice host: SEPARATE optional download (framework-dependent - players need the .NET 8 runtime for voices)."
+    Write-Host "Voice host: INSIDE the main package (self-contained - players need no .NET runtime)."
 } else {
     Write-Host "Voice host: NOT built (no project in this tree) - this build ships without voices."
 }
 Write-Host "Voices shipped with the mod: $shippedVoices"
-Write-Host "Main zip:  $zipPath   (no executable - this is the one that must never be blocked)"
-if ($hostZipPath) {
-    Write-Host "Voice zip: $hostZipPath   (upload as an OPTIONAL file, not Main)"
-}
+Write-Host "The one zip: $zipPath   (holds the voice host; ONE upload, no optional extra)"
 Write-Host "Workshop upload: point the uploader at the dist\ImmersiveAI folder."
-if ($voiceHostShipped) {
-    Write-Host "  That folder HAS the voice host inside it, on purpose - Steam does not scan uploads and"
-    Write-Host "  has no optional-file slot, so the Workshop copy ships whole. Only the Nexus zip is split."
-}

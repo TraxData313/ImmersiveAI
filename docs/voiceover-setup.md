@@ -15,14 +15,14 @@
 
 ## Fast start
 
-Six steps, and only one of them is a wait.
+Five steps, and only one of them is a wait. Nothing to install first — the mod carries everything
+it needs, and the rest it fetches itself.
 
-1. **Installed from Nexus?** Then you also need the separate **"Voice host"** optional file from the mod's Files tab — unzip it into your `Modules` folder, exactly like the mod itself. The main download deliberately carries no program in it (Nexus quarantines any archive that does), so **without this second file there are no voices at all** and the Download button has nothing to run. It wants the free [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0) too. *Installed from the Steam Workshop? You already have it — the Workshop copy ships whole.*
-2. **Have an NVIDIA card?** If not, skip to [the other road](#the-other-road-no-download-no-graphics-card) — a key, no download, no card. It is the one requirement with no way around it.
-3. In game, open the talk screen (**O**) → press **Voices**.
-4. Press **Download the voices** → say yes. ~2.8 GB, in the background, while you carry on playing. Nothing installs, nothing asks for administrator rights. Connection drops? Press it again, it carries on.
-5. Press **Turn voices on**. You are told when it is ready.
-6. Press **♪** beside a voice to hear it, and give it to whoever you are talking to. Or give it to nobody: everyone is handed a voice of their own people and their own sex, automatically.
+1. **Have an NVIDIA card?** If not, skip to [the other road](#the-other-road-no-download-no-graphics-card) — a key, no download, no card. It is the one requirement with no way around it.
+2. In game, open the talk screen (**O**) → press **Voices**.
+3. Press **Download the voices** → say yes. ~2.8 GB, in the background, while you carry on playing. Nothing installs, nothing asks for administrator rights. Connection drops? Press it again, it carries on.
+4. Press **Turn voices on**. You are told when it is ready.
+5. Press **♪** beside a voice to hear it, and give it to whoever you are talking to. Or give it to nobody: everyone is handed a voice of their own people and their own sex, automatically.
 
 Then: a **▶** sits beside every line, and **Backspace** silences anything, anywhere.
 
@@ -323,9 +323,8 @@ plain words, and it is worth posting those lines in a bug report.
 
 **There is no "Download the voices" button.** Three reasons, and the panel says which: everything is
 already installed (nothing to fetch), or the machine has no NVIDIA card (see the top of this page —
-the hosted road is the answer), or the mod's own voice program is missing
-from its folder — **on Nexus that is the separate "Voice host" file on the Files tab**, which the
-main download does not include; unzip it into `Modules` and the button appears.
+the hosted road is the answer), or the mod's own voice program is missing from its folder, which
+reinstalling Immersive AI puts back.
 
 **The game stutters while she talks.** Speech and Bannerlord are sharing your graphics card. Try
 the smaller model, or lower your graphics settings a notch.

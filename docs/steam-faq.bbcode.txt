@@ -43,7 +43,6 @@ Still stuck? Post the last lines of log.txt in the Bug reports thread — the mo
 
 [b]How do I get the voices working? "No speech engine installed"[/b]
 Voices are [b]off by default[/b] and need a speech engine on your own PC — a real ~2.9 GB download, and it wants an [b]NVIDIA[/b] card. The engine ships only as a CUDA build, so there is no AMD, Intel or CPU road. Open the talk screen (O) -> [b]Voices[/b] -> [b]Download the voices[/b], say yes, and it fetches everything in the background while you play; then [b]Turn voices on[/b] and press the play mark beside any line.
-From the Workshop, everything needed is already in the mod folder. (Installed from Nexus instead? Their rules block any download holding a program, so the voice helper is a [b]separate optional file[/b] there — you need that one too, plus the free .NET 8 runtime.)
 No download button, or nothing happens when you press it? The panel says which of three it is: everything is already installed, the machine has no NVIDIA card, or the mod's own voice helper is missing from its folder (reinstalling Immersive AI puts it back). log.txt records where it looked.
 [b]No NVIDIA card?[/b] Put an OpenAI key into [b]Voices -> Hosted voices: API key[/b] instead — thirteen voices appear at once, nothing is downloaded, nothing touches your card, about 1.5 cents a minute of speech. Full guide: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url]
 

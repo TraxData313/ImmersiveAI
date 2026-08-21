@@ -24,8 +24,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - And it should now happen far more rarely: typographic marks that a voice cannot read — long
   dashes, curly quotes, invisible spaces, the little symbols the conversation draws its cards with —
   are turned into what they mean before a word is spoken, instead of being handed over as-is.
-- The Voices page now says what to do when the voice program is missing, instead of only that it is
-  missing: on Nexus it is the separate "Voice host" download, and it wants the .NET 8 runtime.
+- Voices are back inside the one download. There is no separate "Voice host" file to fetch any
+  more, and no .NET runtime to install either - the mod now carries everything it needs.
 - The voices also read with the speech engine's own settings again. We had quietened them to fix an
   older problem that no longer exists, and the quietening was making the voices lose their way.
 

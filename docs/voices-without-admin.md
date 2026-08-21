@@ -23,13 +23,6 @@ Three downloads, two folders, done. Everything below this is the same thing said
 
 Then start the game → talk screen (**O**) → **Voices** → **Turn voices on**.
 
-**Installed the mod from Nexus?** One more piece, and it is not on this list: the separate
-**"Voice host"** optional file on the mod's Files tab, unzipped into your `Modules` folder. The main
-download carries no program at all (Nexus quarantines any archive that does), so without it nothing
-here can run. It needs the free [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
-as well — that one *does* want administrator rights, and is the only thing on this page that does.
-Steam Workshop copies already have the host.
-
 Three things that will bite you, all explained further down:
 
 - **It must be an NVIDIA card.** Check first ([here](#before-you-start-is-there-a-graphics-card)); no other card can run this at all.

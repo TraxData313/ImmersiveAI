@@ -117,8 +117,6 @@ had a proper talk.*
   the mod, clone your own locally, or use hosted ones by the minute. Off by default. One button on
   that page fetches everything the local road needs (~2.8 GB) — nothing to install, no administrator
   rights, and it wants an **NVIDIA** card; hosted voices want none at all.
-  **From Nexus, voices need the separate "Voice host" file too** — the main download carries no
-  program in it, by their rules. Steam Workshop copies ship whole.
   📖 [Hearing them speak](docs/voiceover-setup.md) — what it costs, how to set it up, and
   what to do when it says *no speech engine installed* or the download button does nothing
   (or [do it by hand](docs/voices-without-admin.md)).
