@@ -15,6 +15,21 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v3.1.3 — 2026.08.21
+
+The voices stop wandering off, and they come home to the one download. Nothing has to be installed
+before you press the button any more — the mod carries everything it needs.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Voices no longer wander off mid-sentence
+* And are back inside the one download
+* Nothing to install first - not even .NET
+* Voices sound like themselves again
+* NPCs remember you in your own language
+```
+
 ### Fixed
 
 - A voice that loses its way mid-sentence — a long, wordless held note in place of the words — is

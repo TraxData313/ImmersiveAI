@@ -1083,3 +1083,48 @@ release ritual warns about.
   works do differently?" beat every hypothesis reasoned from our own code alone — mine included, and
   mine was only half right.
   829 Core tests green, deployed. (2026.08.17 15.10.00)
+
+## v3.1.3 SHIPPED — one download again, and nothing to install first
+
+  Anton's call after a Nexus report (Fritz3593: "no speech engine installed", and the download
+  button does nothing). Root cause was never a bug in the code: the VOICE HOST WAS A SEPARATE
+  NEXUS FILE since v3.1.2, that fact appeared in no player-facing text anywhere, and the panel's
+  own message named the lack without naming the cure. He installed the main file alone, as anyone
+  would.
+
+  FIRST the documentation pass, which is what the report actually asked for: a Fast start at the
+  top of both voice pages (docs/voiceover-setup.md in five steps; docs/voices-without-admin.md as
+  a three-row table of what to download and where to put it), and "Hearing them speak" linked from
+  README, the Steam description (7821/8000 bytes, 179 spare), the Nexus page, and a new voices
+  question in the pinned Steam FAQ written in the words people actually search for.
+
+  THEN Anton reversed the split itself: one zip, host inside, and if Nexus quarantines it we ask
+  their support — which was never actually done, and they said nothing about it when the earlier
+  files came back. The split cost more than it saved. It was invisible on the mod page, so half
+  the players silently got no voices; one download that MIGHT be argued about beats that.
+
+  AND THE OTHER MANUAL STEP WENT WITH IT, which is the part worth remembering. The host was
+  framework-dependent on an argument that had quietly EXPIRED: voices used to be gated behind a
+  hand-installed multi-gigabyte engine, so a player reaching that exe had already installed heavier
+  things by hand and one more prerequisite was nearly free. The in-game download button killed that
+  premise on 2026.08.17 and nobody re-examined the decision it had been resting on — leaving the
+  .NET 8 runtime as the ONLY thing a player had to fetch from a website, with admin, to hear a
+  voice, and its failure was SILENT (the exe exits before writing "ready" and the mod simply keeps
+  speaking in text). Self-contained now, and TRIMMED because untrimmed it is 71 MB on disk and this
+  is not a program that reflects — JsonDocument.Parse only, no serializers, no plugin loading:
+  20 MB on disk, 13.5 MB zipped against 4.9 MB before. Smoke-tested: the trimmed host loads the
+  engine on CUDA and reports ready. createdump.exe dropped, so a scanner weighs one executable.
+
+  CHECKED claude-voice for a leaner install road, on Anton's hunch that an agent there had removed
+  the Studio dependency. It had not — that project fetches the WHOLE 663 MB Studio release, keeps
+  the Java app, boots the JVM in-process through JNI, and auto-installs Python 3.13. Our fetcher
+  was already the leaner side: it works the eight native DLLs out of qwen3_tts.dll's own folder
+  and throws the Java away, 662 MB against 833. Nothing to adopt. Noted for later: `-Build system`
+  cuts the engine download to 268 MB, but only where the CUDA runtime is already present.
+
+  THE RELEASE FOUND THE OLD TRAP AGAIN — the Workshop was still on v3.0.0 while the repo said
+  v3.1.2, so this upload carried three releases at once and the Steam notes say so. It also meant
+  the Steam notes must NOT mention the split at all: Workshop copies always shipped whole, so for
+  those players it never happened.
+
+  829 Core tests green, packaged, Steam uploaded ("Uploading done!"). (2026.08.21 12.30.00)
