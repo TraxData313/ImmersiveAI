@@ -11,6 +11,35 @@
 > mod's own programs from reaching the internet), or when you want to see precisely what is being
 > put on your disk.
 
+## Fast start
+
+Three downloads, two folders, done. Everything below this is the same thing said slowly.
+
+| # | Get this | Put it here |
+|---|---|---|
+| 1 | **The engine** — `qwen-tts-studio-…-windows-cuda-bundled.zip` (632 MB) from [Studio's releases](https://github.com/Danmoreng/qwen-tts-studio/releases) — take the **zip**, not the msi | unpack it into `Downloads\` |
+| 2 | **The talker model** — `qwen-talker-1.7b-base-Q8_0.gguf` (1.9 GB) from [Serveurperso/Qwen3-TTS-GGUF](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF/tree/main) | `%USERPROFILE%\.qwen-tts-studio\models\` |
+| 3 | **The tokenizer model** — `qwen-tokenizer-12hz-Q8_0.gguf` (278 MB), same page | the same folder |
+
+Then start the game → talk screen (**O**) → **Voices** → **Turn voices on**.
+
+**Installed the mod from Nexus?** One more piece, and it is not on this list: the separate
+**"Voice host"** optional file on the mod's Files tab, unzipped into your `Modules` folder. The main
+download carries no program at all (Nexus quarantines any archive that does), so without it nothing
+here can run. It needs the free [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
+as well — that one *does* want administrator rights, and is the only thing on this page that does.
+Steam Workshop copies already have the host.
+
+Three things that will bite you, all explained further down:
+
+- **It must be an NVIDIA card.** Check first ([here](#before-you-start-is-there-a-graphics-card)); no other card can run this at all.
+- **It must be the `1.7b` talker**, not `0.6b` — the smaller one cannot load a single voice the mod ships.
+- **It must be `cuda-bundled`**, not `cuda-system` — the other build wants a CUDA toolkit installed, which wants admin.
+
+No administrator rights anywhere, and nothing is written outside your own user folder.
+
+---
+
 Immersive AI's local voices need two things from Qwen-TTS Studio: its **engine files** and its
 **models**. It never needs the app *installed*, and it never launches it.
 

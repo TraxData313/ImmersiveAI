@@ -43,7 +43,7 @@ Ask anyone anything about the game — they quietly search the web mid-reply and
 [list]
 [*]Face to face — they greet you as you approach.
 [*][b]One talk screen[/b] (hotkey [b]O[/b]) — everyone you know in one list — near, far or gone — the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
-[*][b]Hear them[/b] — a play mark beside every line, and a Voices page to cast anyone. Off by default; one button installs it (NVIDIA card, or a key for hosted voices).
+[*][b]Hear them[/b] — a play mark beside every line, and a Voices page to cast anyone. Off by default; one button installs it — NVIDIA card, or a key for hosted voices: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [*]Edit a character's prompt, or the world's, [b]without leaving the game[/b].
 [*][b]Think[/b] (Shift+Enter) — stuck for words? Your own hero drafts your next line from all you two have said. Keep it, change it, or bin it.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)

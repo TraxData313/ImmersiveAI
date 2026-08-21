@@ -13,6 +13,24 @@
 
 # Hearing them speak
 
+## Fast start
+
+Six steps, and only one of them is a wait.
+
+1. **Installed from Nexus?** Then you also need the separate **"Voice host"** optional file from the mod's Files tab — unzip it into your `Modules` folder, exactly like the mod itself. The main download deliberately carries no program in it (Nexus quarantines any archive that does), so **without this second file there are no voices at all** and the Download button has nothing to run. It wants the free [.NET 8 runtime](https://dotnet.microsoft.com/download/dotnet/8.0) too. *Installed from the Steam Workshop? You already have it — the Workshop copy ships whole.*
+2. **Have an NVIDIA card?** If not, skip to [the other road](#the-other-road-no-download-no-graphics-card) — a key, no download, no card. It is the one requirement with no way around it.
+3. In game, open the talk screen (**O**) → press **Voices**.
+4. Press **Download the voices** → say yes. ~2.8 GB, in the background, while you carry on playing. Nothing installs, nothing asks for administrator rights. Connection drops? Press it again, it carries on.
+5. Press **Turn voices on**. You are told when it is ready.
+6. Press **♪** beside a voice to hear it, and give it to whoever you are talking to. Or give it to nobody: everyone is handed a voice of their own people and their own sex, automatically.
+
+Then: a **▶** sits beside every line, and **Backspace** silences anything, anywhere.
+
+Nothing happening? Jump to [When it goes wrong](#when-it-goes-wrong). A voice problem never costs
+you a word — the reply always arrives, whatever the sound is doing.
+
+---
+
 Immersive AI can read every NPC's words aloud, in a voice you choose — including voices **you
 clone yourself** from a few seconds of audio. This page tells you how. It gets more detailed as
 you scroll: **read only as far as you need.**
@@ -297,10 +315,17 @@ cannot come back the next time you scroll past those words.
 anything is, the download button is right there. The mod also writes where it looked for the engine
 into its log.
 
+**I pressed "Download the voices" and nothing happened.** It works quietly, in the background,
+while you carry on playing — there is no window and no progress bar outside the Voices panel, so
+give it a minute and look there. If the panel still says nothing is installed, the fetch never
+started: `log.txt` in `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\` says why in
+plain words, and it is worth posting those lines in a bug report.
+
 **There is no "Download the voices" button.** Three reasons, and the panel says which: everything is
 already installed (nothing to fetch), or the machine has no NVIDIA card (see the top of this page —
-the hosted road is the answer), or the mod's own voice program is missing from its folder, which
-reinstalling Immersive AI puts back.
+the hosted road is the answer), or the mod's own voice program is missing
+from its folder — **on Nexus that is the separate "Voice host" file on the Files tab**, which the
+main download does not include; unzip it into `Modules` and the button appears.
 
 **The game stutters while she talks.** Speech and Bannerlord are sharing your graphics card. Try
 the smaller model, or lower your graphics settings a notch.
