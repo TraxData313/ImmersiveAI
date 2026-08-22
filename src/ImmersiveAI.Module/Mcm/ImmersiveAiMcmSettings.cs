@@ -1,4 +1,4 @@
-﻿using MCM.Abstractions.Attributes;
+using MCM.Abstractions.Attributes;
 using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
 using MCM.Common;
@@ -217,6 +217,11 @@ namespace ImmersiveAI.Mcm
             HintText = "How far words can move a hiring price from the game's own reckoning, either way. 0 = no haggling (the reckoned price or nothing); 30 = up to 30% above or below. A hard rule the mod enforces, whatever is said. The daily wage is never negotiable.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public int ConversationHiringHagglePercent { get; set; } = 30;
+
+        [SettingPropertyBool("Take up and report quests in conversation", Order = 10, RequireRestart = false,
+            HintText = "Allows discovering, taking on, and reporting native Bannerlord issues and quests directly through natural conversation with village notables, merchants, and lords.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableQuestDialogueBridge { get; set; } = true;
 
         // ---------------------------- Voices ----------------------------
 
@@ -442,19 +447,19 @@ namespace ImmersiveAI.Mcm
 
         [SettingPropertyBool("Show cost notices", Order = 0, RequireRestart = false,
             HintText = "After each exchange, a soft gray line shows what it took: tokens in/out, number of calls, and the price when the model's rates are known. The same lines also go to log.txt, and daily totals persist in usage.json.")]
-        [SettingPropertyGroup("Costs", GroupOrder = 4)]
+        [SettingPropertyGroup("Costs", GroupOrder = 5)]
         public bool ShowCostNotices { get; set; } = true;
 
         [SettingPropertyInteger("Daily request cap (0 = none)", 0, 2000, "0", Order = 1, RequireRestart = false,
             HintText = "A safety valve: at most this many AI requests per real day, across all sessions. When reached, the world goes quiet until the day turns or the cap is raised. 0 means no cap.")]
-        [SettingPropertyGroup("Costs", GroupOrder = 4)]
+        [SettingPropertyGroup("Costs", GroupOrder = 5)]
         public int MaxDailyRequests { get; set; } = 0;
 
         // ── Advanced ────────────────────────────────────────────────────────────────
 
         [SettingPropertyBool("Developer mode", Order = 0, RequireRestart = false,
             HintText = "Shows the mod's test levers and the 'reveal the whole of your mind' prompt inspector. Leave OFF for normal play.")]
-        [SettingPropertyGroup("Advanced", GroupOrder = 5)]
+        [SettingPropertyGroup("Advanced", GroupOrder = 6)]
         public bool DevMode { get; set; } = false;
 
         /// <summary>A curated set of map-safe keys for the window hotkeys, with <paramref name="preferred"/>

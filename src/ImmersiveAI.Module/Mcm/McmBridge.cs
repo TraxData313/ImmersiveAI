@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -246,7 +246,7 @@ namespace ImmersiveAI.Mcm
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch,
                 s.EnableGearNotes, s.EnableConversationHiring, s.ConversationHiringHagglePercent,
-                s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
+                s.EnableConversationMarriage, s.EnableQuestDialogueBridge, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 s.EnableLoversRoad, s.LoverRansomHagglePercent, s.EnableClosedDoors, s.AllowDutyNights,
                 SelectedOf(s.PersonaSparkMode),
@@ -269,7 +269,7 @@ namespace ImmersiveAI.Mcm
         /// <summary>The config side of the same fields — raw values; any change means "push to menu".</summary>
         private static string CfgSignature(ModConfig c)
         {
-            return string.Join("",
+            return string.Join(" ",
                 c.Backend, c.AnthropicApiKey, c.AnthropicModel,
                 c.OpenAIApiKey, c.OpenAIModel,
                 c.OpenRouterApiKey, c.OpenRouterModel,
@@ -280,7 +280,7 @@ namespace ImmersiveAI.Mcm
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
                 c.EnableLetters, c.EnableWorldRecall, c.EnableWebSearch,
                 c.EnableGearNotes, c.EnableConversationHiring, c.ConversationHiringHagglePercent,
-                c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
+                c.EnableConversationMarriage, c.EnableQuestDialogueBridge, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.EnableLoversRoad, c.LoverRansomHagglePercent, c.EnableClosedDoors, c.AllowDutyNights,
                 c.PersonaSparkMode,
@@ -343,6 +343,7 @@ namespace ImmersiveAI.Mcm
             s.EnableConversationHiring = c.EnableConversationHiring;
             s.ConversationHiringHagglePercent = Clamp(c.ConversationHiringHagglePercent, 0, 90);
             s.EnableConversationMarriage = c.EnableConversationMarriage;
+            s.EnableQuestDialogueBridge = c.EnableQuestDialogueBridge;
             s.AllowCompanionMarriage = c.AllowCompanionMarriage;
             s.MarriageNeedsFamilyConsent = c.MarriageNeedsFamilyConsent;
             s.MarriageDowryHagglePercent = Clamp(c.MarriageDowryHagglePercent, 0, 90);
@@ -454,6 +455,7 @@ namespace ImmersiveAI.Mcm
             c.EnableConversationHiring = s.EnableConversationHiring;
             c.ConversationHiringHagglePercent = s.ConversationHiringHagglePercent;
             c.EnableConversationMarriage = s.EnableConversationMarriage;
+            c.EnableQuestDialogueBridge = s.EnableQuestDialogueBridge;
             c.AllowCompanionMarriage = s.AllowCompanionMarriage;
             c.MarriageNeedsFamilyConsent = s.MarriageNeedsFamilyConsent;
             c.MarriageDowryHagglePercent = s.MarriageDowryHagglePercent;
