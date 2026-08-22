@@ -4,48 +4,39 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using ImmersiveAI.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Issues;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.Core;
-using TaleWorlds.Library;
 using TaleWorlds.Localization;
 
 namespace ImmersiveAI.Tools
 {
     /// <summary>
-    /// Universal Dialogue Tree Bridge Engine (Single Source of Truth):
-    /// Dynamically inspects TaleWorlds DialogFlow trees (Offer & Discuss) across vanilla and mods,
-    /// tracking state-machine token graphs and option branches, evaluating conditions and clickable constraints
-    /// with dynamic explanations and universal balance guards, formatting prompts for LLM with universal opening etiquette,
-    /// providing live inspection verification on Tool Calls, and safely executing the chosen native Consequence delegates on the game thread.
+    /// Universal Dialogue Tree Bridge Engine:
+    /// Dynamically inspects TaleWorlds DialogFlow trees (Offer & Discuss) across vanilla and mods
+    /// using pure DFS graph traversal over DialogFlow.Lines and dynamic condition pruning.
+    /// Emits reachable player dialogue branches for native UI confirmation popups without fragile IL bytecode inspection.
     /// </summary>
     public static class QuestDialogTreeBridge
     {
         private static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        // Precondition flags defined by TaleWorlds.CampaignSystem.Issues.IssueBase.PreconditionFlags
-        private const int PreconditionFlagNone = 0;
-        private const int PreconditionFlagRelation = 1;
-        private const int PreconditionFlagSkill = 2;
-        private const int PreconditionFlagMoney = 4;
-        private const int PreconditionFlagRenown = 8;
-        private const int PreconditionFlagInfluence = 16;
-        private const int PreconditionFlagWounded = 32;
-        private const int PreconditionFlagAtWar = 64;
-        private const int PreconditionFlagClanTier = 128;
-        private const int PreconditionFlagNotEnoughTroops = 256;
-        private const int PreconditionFlagNotInSameFaction = 512;
-        private const int PreconditionFlagPartySizeLimit = 1024;
-        private const int PreconditionFlagClanIsMercenary = 2048;
-
-        private static readonly PropertyInfo? IssueQuestCanBeDuplicatedProperty =
-            typeof(IssueBase).GetProperty("IssueQuestCanBeDuplicated", Flags);
+        private static readonly MethodInfo? CheckPreconditionsMethod =
+            typeof(IssueBase).GetMethod("CheckPreconditions", Flags);
 
         private static readonly MethodInfo? CanPlayerTakeQuestConditionsMethod =
             typeof(IssueBase).GetMethod("CanPlayerTakeQuestConditions", Flags);
+
+        public enum SolutionKind
+        {
+            DirectQuest,
+            CompanionDispatch,
+            LordSolution,
+            Decline
+        }
 
         public sealed class DialogOptionNode
         {
@@ -56,786 +47,133 @@ namespace ImmersiveAI.Tools
             public Delegate? ConsequenceDelegate { get; set; }
             public Delegate? ConditionDelegate { get; set; }
             public Delegate? ClickableConditionDelegate { get; set; }
-            public string ConsequenceMethodName { get; set; } = string.Empty;
             public bool IsAvailable { get; set; } = true;
             public string UnavailableReason { get; set; } = string.Empty;
-            public bool IsStandardAccept { get; set; }
-            public bool IsInstantResolve { get; set; }
-            public bool IsSuccess { get; set; }
-            public bool IsFail { get; set; }
-            public bool IsRefusal { get; set; }
-            public bool IsCloseOnly { get; set; }
+            public SolutionKind Kind { get; set; } = SolutionKind.DirectQuest;
         }
 
-        /// <summary>
-        /// Extracts all valid player option branches from a DialogFlow instance.
-        /// Evaluates ConditionDelegate to prune structurally unreachable branches for the current worldline,
-        /// performs semantic classification based on state machine roles (Success vs CloseOnly vs Refusal),
-        /// and evaluates ClickableConditionDelegate & universal balance guards to determine availability.
-        /// </summary>
-        public static List<DialogOptionNode> ExtractOptions(DialogFlow? flow, bool evaluateConditions = true, QuestBase? quest = null)
+        public static QuestBase? GetOrCreatePreviewQuest(IssueBase issue)
         {
-            var results = new List<DialogOptionNode>();
-            if (flow == null) return results;
+            if (issue == null) return null;
+            if (issue.IssueQuest != null)
+            {
+                EnsureQuestDialogs(issue.IssueQuest);
+                return issue.IssueQuest;
+            }
+            return null;
+        }
 
+        private static QuestBase? CreateTemporaryPreviewQuest(IssueBase issue)
+        {
+            if (issue == null) return null;
             try
             {
-                var linesField = typeof(DialogFlow).GetField("Lines", Flags) ?? typeof(DialogFlow).GetField("_lines", Flags);
-                var lines = linesField?.GetValue(flow) as IEnumerable;
-                if (lines == null) return results;
-
-                var rawLines = new List<RawDialogLine>();
-
-                foreach (var lineObj in lines)
+                var prevIssueQuest = issue.IssueQuest;
+                var genMethod = issue.GetType().GetMethod("GenerateIssueQuest", Flags);
+                if (genMethod != null)
                 {
-                    if (lineObj == null) continue;
-                    var lineType = lineObj.GetType();
-
-                    bool byPlayer = false;
-                    var byPlayerField = lineType.GetField("ByPlayer", Flags) ?? lineType.GetField("_byPlayer", Flags);
-                    if (byPlayerField != null) byPlayer = Convert.ToBoolean(byPlayerField.GetValue(lineObj));
-
-                    var inToken = (lineType.GetField("InputToken", Flags) ?? lineType.GetField("_inputToken", Flags))?.GetValue(lineObj) as string ?? string.Empty;
-                    var outToken = (lineType.GetField("OutputToken", Flags) ?? lineType.GetField("_outputToken", Flags))?.GetValue(lineObj) as string ?? string.Empty;
-                    var consDel = (lineType.GetField("ConsequenceDelegate", Flags) ?? lineType.GetField("_consequenceDelegate", Flags))?.GetValue(lineObj) as Delegate;
-                    var condDel = (lineType.GetField("ConditionDelegate", Flags) ?? lineType.GetField("_conditionDelegate", Flags))?.GetValue(lineObj) as Delegate;
-                    var clickDel = (lineType.GetField("ClickableConditionDelegate", Flags) ?? lineType.GetField("_clickableConditionDelegate", Flags))?.GetValue(lineObj) as Delegate;
-                    var textField = lineType.GetField("Text", Flags) ?? lineType.GetField("_text", Flags);
-                    var textObj = textField?.GetValue(lineObj) as TextObject;
-                    string lineText = textObj?.ToString() ?? string.Empty;
-
-                    rawLines.Add(new RawDialogLine
-                    {
-                        ByPlayer = byPlayer,
-                        Text = lineText,
-                        InputToken = inToken,
-                        OutputToken = outToken,
-                        ConsequenceDelegate = consDel,
-                        ConditionDelegate = condDel,
-                        ClickableConditionDelegate = clickDel
-                    });
-                }
-
-                // Traverse all valid Root-to-Leaf paths in the DialogFlow DAG
-                var paths = TraverseAllPathsDFS(rawLines, evaluateConditions);
-
-                bool isReportingTree = (quest != null);
-                var finalResults = new List<DialogOptionNode>();
-                int idx = 0;
-
-                foreach (var node in paths)
-                {
-                    bool isAvailable = true;
-                    string unavailableReason = string.Empty;
-
-                    if (evaluateConditions)
-                    {
-                        // 1. Structural Visibility Filter (ConditionDelegate):
-                        // If ConditionDelegate returns false, this branch does not exist in the current worldline. Prune it!
-                        if (node.ConditionDelegate != null)
-                        {
-                            try
-                            {
-                                bool passed = (bool)node.ConditionDelegate.DynamicInvoke();
-                                if (!passed) continue; // PRUNED: Invisible in current state!
-                            }
-                            catch { continue; }
-                        }
-
-                        // 2. Resource & Clickable availability check
-                        isAvailable = VerifyOptionAvailability(node, quest, out unavailableReason);
-                    }
-
-                    var invokedMethods = GetInvokedMethodNamesFromDelegate(node.ConsequenceDelegate);
-
-                    bool isRefusal = invokedMethods.Any(m => m.IndexOf("CompleteQuestWithFail", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("QuestFail", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("BrokeAgreement", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("PlayerBroke", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Refuse", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Decline", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Cancel", StringComparison.OrdinalIgnoreCase) >= 0);
-
-                    // CloseOnly: No consequence, or explicitly only CloseDialog without clickable requirement / item transfer
-                    bool isCloseOnly = (node.ConsequenceDelegate == null || invokedMethods.Any(m => m.IndexOf("Close", StringComparison.OrdinalIgnoreCase) >= 0))
-                                       && node.ClickableConditionDelegate == null && !isRefusal;
-
-                    bool isInstant = invokedMethods.Any(m => m.IndexOf("Bought", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Instant", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("PayDirectly", StringComparison.OrdinalIgnoreCase) >= 0);
-
-                    bool isSuccess;
-                    bool isStandard;
-
-                    if (isReportingTree)
-                    {
-                        // In Discuss/Reporting mode:
-                        // Any non-refusal, non-close-only consequence (whether named or anonymous lambda) IS a task conclusion/handover!
-                        isSuccess = !isRefusal && !isCloseOnly &&
-                                    (node.ConsequenceDelegate != null ||
-                                     node.ClickableConditionDelegate != null ||
-                                     invokedMethods.Any(m => m.IndexOf("Success", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Deliver", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Sold", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Paid", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Finish", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                             m.IndexOf("Complete", StringComparison.OrdinalIgnoreCase) >= 0));
-                        isStandard = false;
-                    }
-                    else
-                    {
-                        // In Offer/Acceptance mode:
-                        isSuccess = isInstant;
-                        isStandard = !isRefusal && !isInstant && !isCloseOnly &&
-                                     (node.ConsequenceDelegate != null ||
-                                      invokedMethods.Any(m => m.IndexOf("Accept", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                              m.IndexOf("Start", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                              m.IndexOf("Take", StringComparison.OrdinalIgnoreCase) >= 0));
-                    }
-
-                    string primaryMethodName = invokedMethods.FirstOrDefault(m => m.IndexOf("Quest", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                                                   m.IndexOf("Success", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                                                   m.IndexOf("Fail", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                                                   m.IndexOf("Broke", StringComparison.OrdinalIgnoreCase) >= 0)
-                                               ?? node.ConsequenceDelegate?.Method?.Name ?? string.Empty;
-
-                    node.Index = idx++;
-                    node.ConsequenceMethodName = primaryMethodName;
-                    node.IsAvailable = isAvailable;
-                    node.UnavailableReason = unavailableReason;
-                    node.IsStandardAccept = isStandard;
-                    node.IsInstantResolve = isInstant;
-                    node.IsRefusal = isRefusal;
-                    node.IsSuccess = isSuccess;
-                    node.IsFail = isRefusal;
-                    node.IsCloseOnly = isCloseOnly;
-                    finalResults.Add(node);
-                }
-
-                return finalResults;
-            }
-            catch (Exception ex)
-            {
-                ModLog.Warn($"[QuestDialogTreeBridge] Error extracting options from DialogFlow: {ex.Message}");
-                return results;
-            }
-        }
-
-        private sealed class RawDialogLine
-        {
-            public bool ByPlayer { get; set; }
-            public string Text { get; set; } = string.Empty;
-            public string InputToken { get; set; } = string.Empty;
-            public string OutputToken { get; set; } = string.Empty;
-            public Delegate? ConsequenceDelegate { get; set; }
-            public Delegate? ConditionDelegate { get; set; }
-            public Delegate? ClickableConditionDelegate { get; set; }
-        }
-
-        private static List<DialogOptionNode> TraverseAllPathsDFS(List<RawDialogLine> rawLines, bool evaluateConditions)
-        {
-            var results = new List<DialogOptionNode>();
-            if (rawLines == null || rawLines.Count == 0) return results;
-
-            var playerLines = rawLines.Where(r => r.ByPlayer).ToList();
-            if (playerLines.Count == 0)
-            {
-                foreach (var raw in rawLines.Where(r => r.ConsequenceDelegate != null))
-                {
-                    results.Add(new DialogOptionNode
-                    {
-                        Index = results.Count,
-                        Text = raw.Text,
-                        InputToken = raw.InputToken,
-                        OutputToken = raw.OutputToken,
-                        ConditionDelegate = raw.ConditionDelegate,
-                        ClickableConditionDelegate = raw.ClickableConditionDelegate,
-                        ConsequenceDelegate = raw.ConsequenceDelegate
-                    });
-                }
-                return results;
-            }
-
-            var allPlayerOutputTokens = new HashSet<string>(playerLines.Select(p => p.OutputToken).Where(t => !string.IsNullOrEmpty(t)), StringComparer.OrdinalIgnoreCase);
-
-            var rootPlayerLines = playerLines.Where(p =>
-                string.Equals(p.InputToken, "quest_discuss", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(p.InputToken, "issue_classic_quest_start", StringComparison.OrdinalIgnoreCase) ||
-                !allPlayerOutputTokens.Contains(p.InputToken)
-            ).ToList();
-
-            if (rootPlayerLines.Count == 0)
-            {
-                rootPlayerLines = playerLines;
-            }
-
-            foreach (var rootLine in rootPlayerLines)
-            {
-                var visitedTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                CollectPathsFromNode(rootLine, rootLine.Text, rootLine.ConditionDelegate, rootLine.ClickableConditionDelegate, rootLine.ConsequenceDelegate, rawLines, visitedTokens, results, evaluateConditions);
-            }
-
-            return results;
-        }
-
-        private static void CollectPathsFromNode(
-            RawDialogLine currentLine,
-            string currentText,
-            Delegate? accumulatedCondition,
-            Delegate? accumulatedClickable,
-            Delegate? accumulatedConsequence,
-            List<RawDialogLine> allLines,
-            HashSet<string> visitedTokens,
-            List<DialogOptionNode> results,
-            bool evaluateConditions)
-        {
-            var cond = accumulatedCondition ?? currentLine.ConditionDelegate;
-            var click = accumulatedClickable ?? currentLine.ClickableConditionDelegate;
-            var cons = accumulatedConsequence ?? currentLine.ConsequenceDelegate;
-
-            // Structural prune: If node has ConditionDelegate and returns false in current worldline, drop entire path
-            if (evaluateConditions && currentLine.ConditionDelegate != null)
-            {
-                try
-                {
-                    bool passed = (bool)currentLine.ConditionDelegate.DynamicInvoke();
-                    if (!passed) return;
-                }
-                catch { return; }
-            }
-
-            if (cons != null || string.IsNullOrEmpty(currentLine.OutputToken) || !visitedTokens.Add(currentLine.OutputToken) || visitedTokens.Count > 16)
-            {
-                results.Add(new DialogOptionNode
-                {
-                    Index = results.Count,
-                    Text = currentText,
-                    InputToken = currentLine.InputToken,
-                    OutputToken = currentLine.OutputToken,
-                    ConditionDelegate = cond,
-                    ClickableConditionDelegate = click,
-                    ConsequenceDelegate = cons
-                });
-                return;
-            }
-
-            var childLines = allLines.Where(l => string.Equals(l.InputToken, currentLine.OutputToken, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            if (childLines.Count == 0)
-            {
-                results.Add(new DialogOptionNode
-                {
-                    Index = results.Count,
-                    Text = currentText,
-                    InputToken = currentLine.InputToken,
-                    OutputToken = currentLine.OutputToken,
-                    ConditionDelegate = cond,
-                    ClickableConditionDelegate = click,
-                    ConsequenceDelegate = cons
-                });
-                return;
-            }
-
-            foreach (var child in childLines)
-            {
-                if (child.ByPlayer)
-                {
-                    string combinedText = string.IsNullOrWhiteSpace(currentText)
-                        ? child.Text
-                        : $"{currentText} ({child.Text})";
-
-                    var childVisited = new HashSet<string>(visitedTokens, StringComparer.OrdinalIgnoreCase);
-                    CollectPathsFromNode(child, combinedText, cond, click, cons, allLines, childVisited, results, evaluateConditions);
-                }
-                else
-                {
-                    var childVisited = new HashSet<string>(visitedTokens, StringComparer.OrdinalIgnoreCase);
-                    CollectPathsFromNode(child, currentText, cond, click, cons, allLines, childVisited, results, evaluateConditions);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Single Pure Verification Engine:
-        /// Verifies whether an active visible option branch is currently available by evaluating
-        /// universal balance/inventory checks FIRST (for rich, exact numeric reasoning) and clickable conditions.
-        /// </summary>
-        public static bool VerifyOptionAvailability(DialogOptionNode node, QuestBase? quest, out string unavailableReason)
-        {
-            unavailableReason = string.Empty;
-            if (node == null) return false;
-
-            // 1. Universal Balance & Inventory Guard FIRST (provides exact amounts & deficits)
-            if (!CheckUniversalOptionRequirements(node, quest, out string reqReason))
-            {
-                unavailableReason = reqReason;
-                return false;
-            }
-
-            // 2. Clickable condition delegate
-            if (node.ClickableConditionDelegate != null)
-            {
-                try
-                {
-                    var expText = new TextObject(string.Empty);
-                    object[] args = new object[] { expText };
-                    bool clickable = (bool)node.ClickableConditionDelegate.DynamicInvoke(args);
-                    if (!clickable)
-                    {
-                        unavailableReason = args[0] is TextObject t && !string.IsNullOrWhiteSpace(t.ToString())
-                            ? t.ToString()
-                            : "Requirements not met";
-                        return false;
-                    }
-                }
-                catch { }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Universal Requirements Scanner (0 Hardcoding):
-        /// Scans option text and dynamic quest fields for required gold or delivery item counts,
-        /// calculating exact current possession and shortfall deficits.
-        /// </summary>
-        public static bool CheckUniversalOptionRequirements(DialogOptionNode node, QuestBase? quest, out string reason)
-        {
-            reason = string.Empty;
-            if (node == null || Hero.MainHero == null) return true;
-
-            // 1. Universal Gold Requirement Scanner: matches amounts like "275 denars", "275<img...", "275 gold", "275 coins"
-            var match = Regex.Match(node.Text, @"(\d+)\s*(?:<img|denar|gold|coin)", RegexOptions.IgnoreCase);
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int reqGold) && reqGold > 0)
-            {
-                int currentGold = Hero.MainHero.Gold;
-                if (currentGold < reqGold)
-                {
-                    reason = $"Requires {reqGold} denars; traveler currently holds {currentGold} denars";
-                    return false;
-                }
-            }
-
-            // 2. Quest-level delivery item / gold checks
-            if (quest != null)
-            {
-                try
-                {
-                    var qType = quest.GetType();
-                    var invoked = GetInvokedMethodNamesFromDelegate(node.ConsequenceDelegate);
-                    bool isPayAction = node.IsSuccess ||
-                                       invoked.Any(m => m.IndexOf("Paid", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                        m.IndexOf("Success", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                                        m.IndexOf("Sold", StringComparison.OrdinalIgnoreCase) >= 0);
-
-                    if (isPayAction)
-                    {
-                        var targetGoldField = qType.GetField("_targetDenarsToAchieve", Flags) ?? qType.GetField("_targetDenars", Flags);
-                        if (targetGoldField != null)
-                        {
-                            int targetGold = Convert.ToInt32(targetGoldField.GetValue(quest));
-                            if (targetGold > 0 && Hero.MainHero.Gold < targetGold)
-                            {
-                                reason = $"Requires {targetGold} denars; traveler currently holds {Hero.MainHero.Gold} denars";
-                                return false;
-                            }
-                        }
-                    }
-                }
-                catch { }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Deep IL Bytecode Call Inspector:
-        /// Traverses method body bytecode instructions (OpCodes.Call, Callvirt, Newobj, Ldftn, Ldvirtftn)
-        /// to resolve all underlying method names invoked inside compiler-generated lambdas and delegates.
-        /// </summary>
-        public static HashSet<string> GetInvokedMethodNamesFromDelegate(Delegate? del)
-        {
-            var methodNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (del == null) return methodNames;
-
-            try
-            {
-                var method = del.Method;
-                methodNames.Add(method.Name);
-
-                InspectMethodBodyIL(method, methodNames, depth: 0);
-            }
-            catch { }
-
-            return methodNames;
-        }
-
-        private static void InspectMethodBodyIL(System.Reflection.MethodInfo? method, HashSet<string> methodNames, int depth)
-        {
-            if (method == null || depth > 2) return;
-
-            try
-            {
-                var body = method.GetMethodBody();
-                if (body == null) return;
-
-                var il = body.GetILAsByteArray();
-                if (il == null || il.Length == 0) return;
-
-                var module = method.Module;
-                for (int i = 0; i < il.Length - 4; i++)
-                {
-                    byte op = il[i];
-                    int token = 0;
-
-                    // 0x28 = OpCodes.Call, 0x6F = OpCodes.Callvirt, 0x73 = OpCodes.Newobj
-                    if (op == 0x28 || op == 0x6F || op == 0x73)
-                    {
-                        token = BitConverter.ToInt32(il, i + 1);
-                    }
-                    // 0xFE prefix for two-byte opcodes: 0xFE 0x06 = Ldftn, 0xFE 0x07 = Ldvirtftn
-                    else if (op == 0xFE && i < il.Length - 5)
-                    {
-                        byte subOp = il[i + 1];
-                        if (subOp == 0x06 || subOp == 0x07)
-                        {
-                            token = BitConverter.ToInt32(il, i + 2);
-                        }
-                    }
-
-                    if (token != 0)
+                    var q = genMethod.Invoke(issue, new object[] { (issue.StringId ?? "issue") + "_preview" }) as QuestBase;
+                    if (issue.IssueQuest != prevIssueQuest)
                     {
                         try
                         {
-                            var resolvedMethod = module.ResolveMethod(token) as System.Reflection.MethodInfo;
-                            if (resolvedMethod != null)
-                            {
-                                if (methodNames.Add(resolvedMethod.Name))
-                                {
-                                    // If resolved method is another compiler-generated closure method (e.g. <SetDialogs>b__), recurse
-                                    if (resolvedMethod.Name.IndexOf("b__", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                        resolvedMethod.Name.IndexOf("<", StringComparison.OrdinalIgnoreCase) >= 0)
-                                    {
-                                        InspectMethodBodyIL(resolvedMethod, methodNames, depth + 1);
-                                    }
-                                }
-                            }
+                            var setQuestProp = typeof(IssueBase).GetProperty("IssueQuest", Flags);
+                            setQuestProp?.SetValue(issue, prevIssueQuest);
                         }
-                        catch { }
+                        catch
+                        {
+                            var setQuestField = typeof(IssueBase).GetField("IssueQuest", Flags) ?? typeof(IssueBase).GetField("_issueQuest", Flags);
+                            setQuestField?.SetValue(issue, prevIssueQuest);
+                        }
                     }
+                    return q;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static void DestroyTemporaryPreviewQuest(IssueBase issue, QuestBase? q)
+        {
+            if (q == null) return;
+
+            try
+            {
+                // 1. Remove all dialogue lines injected into global ConversationManager (especially for quests like RuralNotableInnAndOut)
+                Campaign.Current?.ConversationManager?.RemoveRelatedLines(q);
+            }
+            catch { }
+
+            try
+            {
+                // 2. Clear all internal tracked objects and related fields
+                var clearMethod = typeof(QuestBase).GetMethod("ClearRelatedFields", Flags);
+                clearMethod?.Invoke(q, null);
+            }
+            catch { }
+
+            try
+            {
+                // 3. Remove from QuestManager if registered
+                Campaign.Current?.QuestManager?.OnQuestFinalized(q);
+            }
+            catch { }
+
+            try
+            {
+                // 4. Unregister from MBObjectManager so it never survives as a ghost in the campaign
+                TaleWorlds.ObjectSystem.MBObjectManager.Instance?.UnregisterObject(q);
+            }
+            catch { }
+
+            try
+            {
+                if (issue != null && issue.IssueQuest == q)
+                {
+                    var setQuestProp = typeof(IssueBase).GetProperty("IssueQuest", Flags);
+                    setQuestProp?.SetValue(issue, null);
                 }
             }
             catch { }
         }
 
-        /// <summary>
-        /// Universal Conversation & Action Guidance (Single Source of Truth):
-        /// Pure event-driven direction: 0 behavioral interference, 0 emotion forcing, clear branch ownership.
-        /// </summary>
-        public static string GetUniversalConversationGuidance(bool isReporting)
+        public static void PurgeLingeringPreviewQuests()
         {
-            var sb = new StringBuilder();
-            sb.AppendLine("Conversation & Action Rules:");
-            sb.AppendLine("1. Dialogue Branch Ownership:");
-            sb.AppendLine("   The dialogue branches listed above represent the TRAVELER'S potential choices or responses, NOT your own lines. Do NOT speak, quote, or assume the traveler's option text as your own words.");
-            sb.AppendLine("2. Physical World Gate & Action Execution:");
-            sb.AppendLine("   Spoken words alone CANNOT modify the state of the world or transfer goods/gold.");
-            if (isReporting)
+            try
             {
-                sb.AppendLine("   - Merely reporting that a deed was done (such as goods being sold or enemies encountered) is a status report, NOT a handover.");
-                sb.AppendLine("   - Each available branch above represents a distinct in-game decision or physical action. When the traveler's spoken words or physical actions align with the decision of an available branch, you MUST invoke report_quest with that branch's option_index to execute the action in the world.");
-                sb.AppendLine("   - If the traveler has not taken or committed to any of the available branches (such as casual chatting, joking, or undecided discussion), do NOT invoke tools; respond naturally in dialogue.");
-            }
-            else
-            {
-                sb.AppendLine("   - When the traveler's spoken words or physical actions align with accepting a task or choosing an agreement branch, you MUST invoke accept_quest with that branch's option_index.");
-                sb.AppendLine("   - If the traveler is merely inquiring, hesitating, or discussing possibilities, do NOT invoke tools; respond naturally in dialogue.");
-            }
-
-            return sb.ToString().TrimEnd();
-        }
-
-        /// <summary>
-        /// Strict Deterministic Option Index Resolver:
-        /// - If explicitIndex is passed and valid (and not CloseOnly), returns explicitIndex.
-        /// - If no explicitIndex, checks if there is EXACTLY ONE available non-close-only option in the tree. If so, returns that single option.
-        /// - If multiple available options exist or none exist, returns -1 (Refuses ambiguous execution, 0 blind guessing).
-        /// </summary>
-        public static int ResolveOptionIndex(List<DialogOptionNode>? options, int explicitIndex, bool hasExplicitIndex, bool isReporting, bool isReneged = false)
-        {
-            if (options == null || options.Count == 0) return -1;
-
-            if (hasExplicitIndex && explicitIndex >= 0 && explicitIndex < options.Count)
-            {
-                var explicitNode = options[explicitIndex];
-                if (explicitNode.IsCloseOnly) return -1; // CloseOnly options cannot conclude or accept quests!
-                return explicitIndex;
-            }
-
-            // Single Available Option Direct Pass:
-            // When there is only 1 available active actionable option in the entire tree (e.g. standard accept for 90% of quests),
-            // safely execute it without ambiguity.
-            var availableActionable = options.FindAll(o => o.IsAvailable && !o.IsCloseOnly);
-            if (availableActionable.Count == 1)
-            {
-                return availableActionable[0].Index;
-            }
-
-            // Ambiguous multiple options or 0 options: strictly return -1 (0 guessing)
-            return -1;
-        }
-
-        /// <summary>
-        /// Formats extracted options into structured guidance for the LLM with clear availability status and reasons.
-        /// </summary>
-        public static string FormatOptionsPrompt(List<DialogOptionNode> options, string header = "Available dialogue resolution branches:")
-        {
-            if (options == null || options.Count == 0) return string.Empty;
-
-            var sb = new StringBuilder();
-            sb.AppendLine(header);
-            foreach (var opt in options)
-            {
-                string desc = !string.IsNullOrWhiteSpace(opt.Text) ? opt.Text : opt.ConsequenceMethodName;
-                string status = opt.IsAvailable ? "[AVAILABLE]" : $"[UNAVAILABLE: {opt.UnavailableReason}]";
-                string type = opt.IsStandardAccept ? "Standard Task Agreement"
-                    : (opt.IsInstantResolve ? "Direct Cash Buyout / Alternative"
-                    : (opt.IsSuccess ? "Success Handover / Completion"
-                    : (opt.IsRefusal ? "Refusal / Breach"
-                    : (opt.IsCloseOnly ? "Checking in / Inquire only" : "Dialogue Branch"))));
-
-                sb.AppendLine($"- option {opt.Index}: {status} ({type}) \"{desc}\"");
-            }
-
-            return sb.ToString().TrimEnd();
-        }
-
-        /// <summary>
-        /// Single Unified Quest Tool Call Resolver:
-        /// Automatically handles both accept_quest and report_quest with live inspection verification,
-        /// returning synchronous, roleplay-ready tool responses to the LLM and binding game-thread executions.
-        /// </summary>
-        public static string ResolveToolCall(Core.Llm.ToolCall call, Hero npc, QuestTool.Tally? tally)
-        {
-            if (tally == null || npc == null) return "No quest context available.";
-
-            bool isReporting = string.Equals(call.Name, QuestTool.ReportQuest, StringComparison.OrdinalIgnoreCase);
-
-            int optionIndex = 0;
-            bool hasExplicitIndex = false;
-            bool isReneged = false;
-
-            if (!string.IsNullOrWhiteSpace(call.ArgumentsJson))
-            {
-                try
+                var quests = Campaign.Current?.QuestManager?.Quests;
+                if (quests != null)
                 {
-                    var jObj = Newtonsoft.Json.Linq.JObject.Parse(call.ArgumentsJson);
-                    if (jObj.TryGetValue("option_index", out var optToken) && optToken.Type != Newtonsoft.Json.Linq.JTokenType.Null)
+                    var ghosts = quests.Where(q => q != null && (q.StringId?.EndsWith("_preview", StringComparison.OrdinalIgnoreCase) == true || q.StringId?.Contains("_preview") == true)).ToList();
+                    var clearMethod = typeof(QuestBase).GetMethod("ClearRelatedFields", Flags);
+                    foreach (var ghost in ghosts)
                     {
-                        optionIndex = Convert.ToInt32(optToken);
-                        hasExplicitIndex = true;
+                        ModLog.Info($"[QuestDialogTreeBridge] Purging lingering preview ghost quest: {ghost.StringId}");
+                        try { Campaign.Current?.ConversationManager?.RemoveRelatedLines(ghost); } catch { }
+                        try { clearMethod?.Invoke(ghost, null); } catch { }
+                        try { Campaign.Current?.QuestManager?.OnQuestFinalized(ghost); } catch { }
+                        try { TaleWorlds.ObjectSystem.MBObjectManager.Instance?.UnregisterObject(ghost); } catch { }
                     }
                 }
-                catch { }
-
-                var json = call.ArgumentsJson;
-                if (json.IndexOf("renege", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    json.IndexOf("refuse", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    json.IndexOf("broke", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    json.IndexOf("betray", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    isReneged = true;
-                }
             }
-
-            if (isReporting)
+            catch (Exception ex)
             {
-                var activeQuest = QuestTool.GetActiveQuest(npc);
-                var questTitle = activeQuest?.Title?.ToString() ?? "Unknown";
-                ModLog.Info($"[QuestBridge] LLM called report_quest for {npc.Name} (Active quest: '{questTitle}')");
-
-                if (activeQuest == null)
-                {
-                    ModLog.Warn($"[QuestBridge] report_quest called for {npc.Name}, but no active quest was found.");
-                    return "No ongoing task was found.";
-                }
-
-                var flowField = typeof(QuestBase).GetField("DiscussDialogFlow", Flags);
-                var discussFlow = flowField?.GetValue(activeQuest) as DialogFlow;
-                // Evaluate conditions: prunes unreachable worldlines, leaving only active options
-                var options = ExtractOptions(discussFlow, evaluateConditions: true, quest: activeQuest);
-
-                if (options.Count == 0)
-                {
-                    return "No dialogue resolution branches available.";
-                }
-
-                int chosenIdx = ResolveOptionIndex(options, optionIndex, hasExplicitIndex, isReporting: true, isReneged: isReneged);
-                if (chosenIdx < 0 || chosenIdx >= options.Count)
-                {
-                    tally.ReportedQuest = null;
-                    tally.CompletionDelegate = null;
-                    ModLog.Warn($"[QuestBridge] No valid completion branch matched for {npc.Name} (report_quest).");
-                    return "TASK RESOLUTION AMBIGUOUS / FAILED: Multiple resolution branches are available. You MUST pass the specific option_index corresponding to the traveler's stated commitment. If the traveler made no final decision, respond in dialogue without calling tools.";
-                }
-
-                var chosenNode = options[chosenIdx];
-
-                // Live inspection verification
-                bool isAvailable = VerifyOptionAvailability(chosenNode, activeQuest, out string failReason);
-                if (!isAvailable)
-                {
-                    tally.ReportedQuest = null;
-                    tally.CompletionDelegate = null;
-                    ModLog.Warn($"[QuestBridge] Live inspection blocked report_quest for {npc.Name} on option {chosenIdx} ('{chosenNode.Text}'): {failReason}");
-                    return $"TASK CONCLUDE FAILED: Requirements not met ({failReason}). The required conditions or deliverables are not met in the world. React naturally in your own authentic voice and persona.";
-                }
-
-                tally.Npc = npc;
-                tally.ReportedQuest = activeQuest;
-                tally.OptionIndex = chosenIdx;
-                tally.HasExplicitOptionIndex = hasExplicitIndex;
-                tally.IsReneged = isReneged || chosenNode.IsFail || chosenNode.IsRefusal;
-                tally.CompletionDelegate = () => ExecuteOption(options, chosenIdx, true, out _, activeQuest);
-
-                ModLog.Info($"[QuestBridge] Live inspection passed for report option {chosenIdx} ('{chosenNode.Text}'). Binding execution.");
-                return tally.IsReneged
-                    ? "I acknowledge their refusal/breach of agreement with anger or outrage, and hold them to account. I speak on in my authentic words."
-                    : "TASK CONCLUDED SUCCESSFULLY: The goods, payment, or deeds have been verified and received in full. Settle the account and speak naturally in your own authentic voice and persona.";
-            }
-            else
-            {
-                var issue = QuestTool.GetAvailableIssue(npc);
-                var issueTitle = issue?.Title?.ToString() ?? "Unknown";
-                ModLog.Info($"[QuestBridge] LLM called accept_quest for {npc.Name} (Available issue: '{issueTitle}')");
-
-                if (issue == null)
-                {
-                    ModLog.Warn($"[QuestBridge] accept_quest called for {npc.Name}, but no available issue was found.");
-                    return "No pending task/issue is available from this person.";
-                }
-
-                // Check TaleWorlds Issue Preconditions
-                int flagsInt = 0;
-                try
-                {
-                    if (CanPlayerTakeQuestConditionsMethod != null)
-                    {
-                        var expText = new TextObject(string.Empty);
-                        object[] args = new object[] { Hero.MainHero, null, expText };
-                        bool canTake = (bool)CanPlayerTakeQuestConditionsMethod.Invoke(issue, args);
-                        if (!canTake && args[1] != null)
-                        {
-                            flagsInt = Convert.ToInt32(args[1]);
-                        }
-                    }
-                }
-                catch { }
-
-                if ((flagsInt & PreconditionFlagAtWar) != 0)
-                    return "We are at war. I cannot give you this task.";
-                if ((flagsInt & PreconditionFlagWounded) != 0)
-                    return "You are too severely wounded to undertake this task.";
-                if ((flagsInt & PreconditionFlagRelation) != 0)
-                    return "You and I do not have a good history. I do not trust you with this business.";
-
-                // Extract Offer branches
-                QuestBase? previewQ = issue.IssueQuest;
-                if (previewQ == null)
-                {
-                    var genMethod = issue.GetType().GetMethod("GenerateIssueQuest", Flags);
-                    if (genMethod != null)
-                    {
-                        try { previewQ = genMethod.Invoke(issue, new object[] { (issue.StringId ?? "issue") + "_bridge_preview" }) as QuestBase; }
-                        catch { }
-                    }
-                }
-
-                var offerField = typeof(QuestBase).GetField("OfferDialogFlow", Flags);
-                var offerFlow = offerField?.GetValue(previewQ) as DialogFlow;
-                var options = ExtractOptions(offerFlow, evaluateConditions: true, quest: previewQ);
-
-                int chosenIdx = ResolveOptionIndex(options, optionIndex, hasExplicitIndex, isReporting: false);
-                if (chosenIdx >= 0 && chosenIdx < options.Count)
-                {
-                    var chosenNode = options[chosenIdx];
-                    bool isAvailable = VerifyOptionAvailability(chosenNode, previewQ, out string failReason);
-                    if (!isAvailable)
-                    {
-                        tally.AcceptedIssue = null;
-                        ModLog.Warn($"[QuestBridge] Live inspection blocked accept_quest for {npc.Name}: {failReason}");
-                        return $"TASK ACCEPTANCE BLOCKED: ({failReason}). React naturally in your own authentic voice and persona.";
-                    }
-                }
-
-                tally.Npc = npc;
-                tally.AcceptedIssue = issue;
-                tally.OptionIndex = chosenIdx >= 0 ? chosenIdx : 0;
-                tally.HasExplicitOptionIndex = hasExplicitIndex;
-
-                bool isSoloOrSmallParty = (flagsInt & PreconditionFlagNotEnoughTroops) != 0;
-                if (isSoloOrSmallParty)
-                {
-                    ModLog.Info($"[QuestBridge] Player taking quest with small/solo party ({npc.Name}). Granting solo player freedom with dialogue guidance.");
-                    return "The agreement is struck. The task is officially given into their hands. Note: since the player rides with few or no troops, the speaker may briefly remark with caution or admiration at their daring ('You ride with only a handful of men... be cautious'), offering parting advice and blessing their journey.";
-                }
-
-                return "The agreement is struck. The task is officially given into their hands. I speak on in my own words, thanking them, giving parting advice, or noting their courage.";
+                ModLog.Warn($"[QuestDialogTreeBridge] Error during PurgeLingeringPreviewQuests: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Executes the chosen option consequence delegate safely on the game thread with runtime safety checks.
-        /// </summary>
-        public static bool ExecuteOption(List<DialogOptionNode> options, int optionIndex, bool isReporting, out string executedMethod, QuestBase? quest = null)
+        public static void EnsureQuestDialogs(QuestBase q)
         {
-            executedMethod = string.Empty;
-            if (options == null || options.Count == 0) return false;
-
-            if (optionIndex < 0 || optionIndex >= options.Count)
+            if (q == null) return;
+            try
             {
-                optionIndex = ResolveOptionIndex(options, 0, false, isReporting);
-                if (optionIndex < 0 || optionIndex >= options.Count) return false;
+                var setDialogsMethod = q.GetType().GetMethod("SetDialogs", Flags);
+                setDialogsMethod?.Invoke(q, null);
             }
-
-            var node = options[optionIndex];
-
-            // Re-verify on game thread before executing
-            if (!VerifyOptionAvailability(node, quest, out string reqReason))
-            {
-                ModLog.Warn($"[QuestBridge] Blocked execution of option {optionIndex}: {reqReason}.");
-                return false;
-            }
-
-            if (node.ConsequenceDelegate != null)
-            {
-                try
-                {
-                    var beforeEndOneShot = GetConversationEndOneShot();
-                    node.ConsequenceDelegate.DynamicInvoke();
-                    executedMethod = node.ConsequenceMethodName;
-                    ModLog.Info($"[QuestBridge] Successfully executed option {optionIndex} consequence: {executedMethod}");
-
-                    var afterEndOneShot = GetConversationEndOneShot();
-                    if (afterEndOneShot != null && afterEndOneShot != beforeEndOneShot)
-                    {
-                        ClearConversationEndOneShot();
-                        ModLog.Info($"[QuestBridge] Executing registered ConversationEndOneShot action for option {optionIndex}...");
-                        afterEndOneShot.Invoke();
-                    }
-
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    ModLog.Error($"[QuestBridge] Error executing option {optionIndex} ({node.ConsequenceMethodName})", ex);
-                }
-            }
-
-            return false;
+            catch { }
         }
 
-        private static Action? GetConversationEndOneShot()
+        public static Action? GetConversationEndOneShot()
         {
             try
             {
@@ -847,7 +185,7 @@ namespace ImmersiveAI.Tools
             catch { return null; }
         }
 
-        private static void ClearConversationEndOneShot()
+        public static void ClearConversationEndOneShot()
         {
             try
             {
@@ -859,128 +197,982 @@ namespace ImmersiveAI.Tools
             catch { }
         }
 
-        /// <summary>
-        /// Dispatches and commits quest acceptance and reporting outcomes on the game thread.
-        /// </summary>
-        public static void DispatchOutcomes(QuestTool.Tally? quest, string? spokenReply = null)
+        private sealed class ConversationContextScope : IDisposable
         {
-            if (quest == null) return;
+            private readonly ConversationManager? _convMgr;
+            private readonly List<object>? _prevAgents;
+            private readonly object? _prevRepeatLines;
+            private readonly int _prevRepeatIndex;
 
-            if (quest.AcceptedIssue != null)
+            public ConversationContextScope(Hero? targetHero)
             {
-                var issue = quest.AcceptedIssue;
-                var npc = quest.Npc ?? issue.IssueOwner;
-                int chosenOptIndex = quest.OptionIndex;
-                bool hasExplicit = quest.HasExplicitOptionIndex;
-
-                MainThreadDispatcher.Enqueue(() =>
+                _convMgr = Campaign.Current?.ConversationManager;
+                if (_convMgr != null && targetHero != null)
                 {
                     try
                     {
-                        var title = issue.Title?.ToString() ?? "Issue";
-                        ModLog.Info($"[QuestBridge] Formally starting quest for issue '{title}' ({npc?.Name}) via native StartIssueQuest()...");
-
-                        if (Campaign.Current?.IssueManager != null && npc != null)
+                        var agentsField = typeof(ConversationManager).GetField("_conversationAgents", Flags);
+                        if (agentsField?.GetValue(_convMgr) is IList agentsList)
                         {
-                            Campaign.Current.IssueManager.StartIssueQuest(npc);
-                        }
-                        else
-                        {
-                            issue.StartIssueWithQuest();
-                        }
-
-                        var realQuest = issue.IssueQuest;
-                        if (realQuest != null)
-                        {
-                            var offerFlowField = typeof(QuestBase).GetField("OfferDialogFlow", Flags);
-                            var offerFlow = offerFlowField?.GetValue(realQuest) as DialogFlow;
-                            var options = ExtractOptions(offerFlow, evaluateConditions: false, quest: realQuest);
-                            if (options.Count > 0)
+                            _prevAgents = new List<object>();
+                            foreach (var a in agentsList)
                             {
-                                int finalIdx = ResolveOptionIndex(options, chosenOptIndex, hasExplicit, isReporting: false);
-                                if (finalIdx >= 0)
+                                if (a != null) _prevAgents.Add(a);
+                            }
+
+                            agentsList.Clear();
+                            var agent = new TaleWorlds.CampaignSystem.Conversation.MapConversationAgent(targetHero.CharacterObject);
+                            agentsList.Add(agent);
+                        }
+
+                        var repeatLinesField = typeof(ConversationManager).GetField("_dialogRepeatLines", Flags);
+                        var repeatIndexField = typeof(ConversationManager).GetField("_currentRepeatIndex", Flags);
+
+                        if (repeatLinesField != null)
+                        {
+                            _prevRepeatLines = repeatLinesField.GetValue(_convMgr);
+                            var newLines = new List<TextObject> { new TextObject(string.Empty) };
+                            repeatLinesField.SetValue(_convMgr, newLines);
+                        }
+
+                        if (repeatIndexField != null)
+                        {
+                            _prevRepeatIndex = Convert.ToInt32(repeatIndexField.GetValue(_convMgr));
+                            repeatIndexField.SetValue(_convMgr, 0);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ModLog.Warn($"[QuestDialogTreeBridge] Error setting conversation context scope: {ex.Message}");
+                    }
+                }
+            }
+
+            public void Dispose()
+            {
+                if (_convMgr != null)
+                {
+                    try
+                    {
+                        if (_prevAgents != null)
+                        {
+                            var agentsField = typeof(ConversationManager).GetField("_conversationAgents", Flags);
+                            if (agentsField?.GetValue(_convMgr) is IList agentsList)
+                            {
+                                agentsList.Clear();
+                                foreach (var a in _prevAgents)
                                 {
-                                    ExecuteOption(options, finalIdx, false, out var mName, realQuest);
-                                    ModLog.Info($"[QuestBridge] Executed OfferDialogFlow option {finalIdx} consequence: {mName}");
+                                    agentsList.Add(a);
                                 }
                             }
                         }
 
-                        ModLog.Info($"[QuestBridge] Successfully started quest: '{title}' for {npc?.Name}");
-                        InformationManager.DisplayMessage(
-                            new InformationMessage($"Quest Started: {title}", new Color(0.35f, 0.85f, 0.45f, 1f)));
+                        var repeatLinesField = typeof(ConversationManager).GetField("_dialogRepeatLines", Flags);
+                        var repeatIndexField = typeof(ConversationManager).GetField("_currentRepeatIndex", Flags);
 
-                        if (!string.IsNullOrWhiteSpace(spokenReply))
-                        {
-                            MBTextManager.SetTextVariable("IMMERSIVEAI_RESPONSE", spokenReply, false);
-                        }
+                        repeatLinesField?.SetValue(_convMgr, _prevRepeatLines);
+                        repeatIndexField?.SetValue(_convMgr, _prevRepeatIndex);
                     }
-                    catch (Exception ex)
-                    {
-                        ModLog.Error("starting quest via native dialogue pipeline", ex);
-                        InformationManager.DisplayMessage(
-                            new InformationMessage($"Quest Error: {ex.Message}", new Color(0.9f, 0.3f, 0.3f, 1f)));
-                    }
-                });
+                    catch { }
+                }
             }
+        }
 
-            if (quest.ReportedQuest != null)
+        /// <summary>
+        /// Extracts all valid, reachable player option branches from a DialogFlow instance.
+        /// Evaluates ConditionDelegate to prune structurally unreachable branches for the current worldline,
+        /// and evaluates ClickableConditionDelegate to determine availability.
+        /// </summary>
+        public static List<DialogOptionNode> ExtractOptions(DialogFlow? flow, bool evaluateConditions = true, QuestBase? quest = null, Hero? npc = null)
+        {
+            var results = new List<DialogOptionNode>();
+            if (flow == null) return results;
+
+            var targetHero = npc ?? quest?.QuestGiver;
+
+            using (new ConversationContextScope(targetHero))
             {
-                var questToReport = quest.ReportedQuest;
-                var npc = quest.Npc ?? questToReport.QuestGiver;
-                var delToInvoke = quest.CompletionDelegate;
-                bool isReneged = quest.IsReneged;
+                try
+                {
+                    var linesField = typeof(DialogFlow).GetField("Lines", Flags) ?? typeof(DialogFlow).GetField("_lines", Flags);
+                    var lines = linesField?.GetValue(flow) as IEnumerable;
+                    if (lines == null) return results;
 
-                MainThreadDispatcher.Enqueue(() =>
+                    var rawLines = new List<RawDialogLine>();
+
+                    foreach (var lineObj in lines)
+                    {
+                        if (lineObj == null) continue;
+                        var lineType = lineObj.GetType();
+
+                        bool byPlayer = false;
+                        var byPlayerField = lineType.GetField("ByPlayer", Flags) ?? lineType.GetField("_byPlayer", Flags);
+                        if (byPlayerField != null) byPlayer = Convert.ToBoolean(byPlayerField.GetValue(lineObj));
+
+                        var inToken = (lineType.GetField("InputToken", Flags) ?? lineType.GetField("_inputToken", Flags))?.GetValue(lineObj) as string ?? string.Empty;
+                        var outToken = (lineType.GetField("OutputToken", Flags) ?? lineType.GetField("_outputToken", Flags))?.GetValue(lineObj) as string ?? string.Empty;
+                        var consDel = (lineType.GetField("ConsequenceDelegate", Flags) ?? lineType.GetField("_consequenceDelegate", Flags))?.GetValue(lineObj) as Delegate;
+                        var condDel = (lineType.GetField("ConditionDelegate", Flags) ?? lineType.GetField("_conditionDelegate", Flags))?.GetValue(lineObj) as Delegate;
+                        var clickDel = (lineType.GetField("ClickableConditionDelegate", Flags) ?? lineType.GetField("_clickableConditionDelegate", Flags))?.GetValue(lineObj) as Delegate;
+                        var textField = lineType.GetField("Text", Flags) ?? lineType.GetField("_text", Flags);
+                        var textObj = textField?.GetValue(lineObj) as TextObject;
+                        string lineText = textObj?.ToString() ?? string.Empty;
+
+                        rawLines.Add(new RawDialogLine
+                        {
+                            ByPlayer = byPlayer,
+                            Text = lineText,
+                            TextObject = textObj,
+                            InputToken = inToken,
+                            OutputToken = outToken,
+                            ConsequenceDelegate = consDel,
+                            ConditionDelegate = condDel,
+                            ClickableConditionDelegate = clickDel
+                        });
+                    }
+
+                    var paths = TraverseAllPathsDFS(rawLines, evaluateConditions);
+                    var finalResults = new List<DialogOptionNode>();
+                    int idx = 0;
+
+                    foreach (var node in paths)
+                    {
+                        bool isAvailable = true;
+                        string unavailableReason = string.Empty;
+
+                        if (evaluateConditions && node.ClickableConditionDelegate != null)
+                        {
+                            try
+                            {
+                                var parameters = node.ClickableConditionDelegate.Method.GetParameters();
+                                if (parameters.Length == 1 && parameters[0].ParameterType == typeof(TextObject).MakeByRefType())
+                                {
+                                    object[] invokeArgs = new object[] { new TextObject(string.Empty) };
+                                    isAvailable = (bool)node.ClickableConditionDelegate.DynamicInvoke(invokeArgs);
+                                    if (!isAvailable && invokeArgs[0] is TextObject reasonTextObj)
+                                    {
+                                        unavailableReason = reasonTextObj.ToString();
+                                    }
+                                }
+                                else if (parameters.Length == 0)
+                                {
+                                    isAvailable = (bool)node.ClickableConditionDelegate.DynamicInvoke();
+                                }
+                            }
+                            catch { }
+                        }
+
+                        node.Index = idx++;
+                        node.IsAvailable = isAvailable;
+                        node.UnavailableReason = unavailableReason;
+                        finalResults.Add(node);
+                    }
+
+                    return finalResults;
+                }
+                catch (Exception ex)
+                {
+                    ModLog.Warn($"[QuestDialogTreeBridge] Error extracting options from DialogFlow: {ex.Message}");
+                    return results;
+                }
+            }
+        }
+
+        private sealed class RawDialogLine
+        {
+            public bool ByPlayer { get; set; }
+            public string Text { get; set; } = string.Empty;
+            public TextObject? TextObject { get; set; }
+            public string InputToken { get; set; } = string.Empty;
+            public string OutputToken { get; set; } = string.Empty;
+            public Delegate? ConsequenceDelegate { get; set; }
+            public Delegate? ConditionDelegate { get; set; }
+            public Delegate? ClickableConditionDelegate { get; set; }
+        }
+
+        private static Delegate? CombineDelegates(List<Delegate> delegates)
+        {
+            if (delegates == null || delegates.Count == 0) return null;
+            var nonNull = delegates.Where(d => d != null).ToList();
+            if (nonNull.Count == 0) return null;
+            if (nonNull.Count == 1) return nonNull[0];
+
+            return new Action(() =>
+            {
+                foreach (var d in nonNull)
                 {
                     try
                     {
-                        var title = questToReport.Title?.ToString() ?? "Quest";
-                        bool executedOk = false;
-
-                        if (delToInvoke != null)
-                        {
-                            ModLog.Info($"[QuestBridge] Executing DiscussDialogFlow consequence delegate for '{title}' ({npc?.Name})");
-                            executedOk = delToInvoke.Invoke();
-                        }
-
-                        if (!executedOk)
-                        {
-                            ModLog.Warn($"[QuestBridge] Quest conclusion for '{title}' ({npc?.Name}) was blocked by requirement guards. Quest remains active/ongoing.");
-                            return;
-                        }
-
-                        if (questToReport.IsFinalized)
-                        {
-                            if (isReneged)
-                            {
-                                InformationManager.DisplayMessage(
-                                    new InformationMessage($"Quest Failed (Breach of Agreement): {title}", new Color(0.95f, 0.4f, 0.35f, 1f)));
-                            }
-                            else
-                            {
-                                InformationManager.DisplayMessage(
-                                    new InformationMessage($"Quest Completed: {title}", new Color(0.95f, 0.85f, 0.35f, 1f)));
-                            }
-                        }
-                        else
-                        {
-                            ModLog.Info($"[QuestBridge] DiscussDialogFlow option executed, quest '{title}' remains active/ongoing.");
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(spokenReply))
-                        {
-                            MBTextManager.SetTextVariable("IMMERSIVEAI_RESPONSE", spokenReply, false);
-                        }
+                        d.DynamicInvoke();
                     }
                     catch (Exception ex)
                     {
-                        ModLog.Error("completing quest via dialogue", ex);
-                        InformationManager.DisplayMessage(
-                            new InformationMessage($"Quest Error: {ex.Message}", new Color(0.9f, 0.3f, 0.3f, 1f)));
+                        ModLog.Warn($"[QuestDialogTreeBridge] Error invoking chained consequence ({d.Method?.Name}): {ex.Message}");
                     }
+                }
+            });
+        }
+
+        private static List<DialogOptionNode> TraverseAllPathsDFS(List<RawDialogLine> rawLines, bool evaluateConditions)
+        {
+            var results = new List<DialogOptionNode>();
+            if (rawLines == null || rawLines.Count == 0) return results;
+
+            var linesByInToken = new Dictionary<string, List<RawDialogLine>>(StringComparer.OrdinalIgnoreCase);
+            var outputTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var line in rawLines)
+            {
+                if (string.IsNullOrWhiteSpace(line.InputToken)) continue;
+                if (!linesByInToken.TryGetValue(line.InputToken, out var list))
+                {
+                    list = new List<RawDialogLine>();
+                    linesByInToken[line.InputToken] = list;
+                }
+                list.Add(line);
+
+                if (!string.IsNullOrWhiteSpace(line.OutputToken))
+                {
+                    outputTokens.Add(line.OutputToken);
+                }
+            }
+
+            var rootTokens = linesByInToken.Keys.Where(tok => !outputTokens.Contains(tok)).ToList();
+            if (rootTokens.Count == 0 && rawLines.Count > 0 && !string.IsNullOrWhiteSpace(rawLines[0].InputToken))
+            {
+                rootTokens.Add(rawLines[0].InputToken);
+            }
+
+            var visitedTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var rootToken in rootTokens)
+            {
+                TraverseGraphDFS(rootToken, linesByInToken, visitedTokens, new List<Delegate>(), results, evaluateConditions);
+            }
+
+            return results;
+        }
+
+        private static void TraverseGraphDFS(
+            string currentToken,
+            Dictionary<string, List<RawDialogLine>> linesByInToken,
+            HashSet<string> visitedTokens,
+            List<Delegate> accumulatedConsequences,
+            List<DialogOptionNode> results,
+            bool evaluateConditions)
+        {
+            if (string.IsNullOrWhiteSpace(currentToken) || visitedTokens.Contains(currentToken))
+                return;
+
+            visitedTokens.Add(currentToken);
+
+            if (!linesByInToken.TryGetValue(currentToken, out var lines) || lines.Count == 0)
+                return;
+
+            foreach (var line in lines)
+            {
+                string resolvedText = line.Text;
+
+                if (evaluateConditions && line.ConditionDelegate != null)
+                {
+                    try
+                    {
+                        var repeatLinesField = typeof(ConversationManager).GetField("_dialogRepeatLines", Flags);
+                        var convMgr = Campaign.Current?.ConversationManager;
+                        if (convMgr != null && repeatLinesField?.GetValue(convMgr) is IList repList)
+                        {
+                            var initialTextObj = line.TextObject ?? new TextObject(line.Text);
+                            if (repList.Count == 0) repList.Add(initialTextObj);
+                            else repList[0] = initialTextObj;
+                        }
+
+                        bool passed = (bool)line.ConditionDelegate.DynamicInvoke();
+                        if (!passed) continue;
+
+                        if (line.TextObject != null)
+                        {
+                            var refreshed = line.TextObject.ToString();
+                            if (!string.IsNullOrWhiteSpace(refreshed))
+                            {
+                                resolvedText = refreshed;
+                            }
+                        }
+
+                        if (convMgr != null && repeatLinesField?.GetValue(convMgr) is IList repListAfter && repListAfter.Count > 0)
+                        {
+                            var dynText = repListAfter[0]?.ToString();
+                            if (!string.IsNullOrWhiteSpace(dynText))
+                            {
+                                resolvedText = dynText;
+                            }
+                        }
+                    }
+                    catch { continue; }
+                }
+                else if (line.TextObject != null)
+                {
+                    var fresh = line.TextObject.ToString();
+                    if (!string.IsNullOrWhiteSpace(fresh))
+                    {
+                        resolvedText = fresh;
+                    }
+                }
+
+                if (line.ByPlayer)
+                {
+                    var pathConsequences = new List<Delegate>(accumulatedConsequences);
+                    if (line.ConsequenceDelegate != null)
+                    {
+                        pathConsequences.Add(line.ConsequenceDelegate);
+                    }
+
+                    var childNodes = new List<DialogOptionNode>();
+                    if (!string.IsNullOrWhiteSpace(line.OutputToken) && linesByInToken.ContainsKey(line.OutputToken))
+                    {
+                        TraverseDownstreamDFS(
+                            line.OutputToken,
+                            linesByInToken,
+                            new HashSet<string>(visitedTokens, StringComparer.OrdinalIgnoreCase),
+                            pathConsequences,
+                            childNodes,
+                            evaluateConditions);
+                    }
+
+                    if (childNodes.Count > 0)
+                    {
+                        // Sub-branches exist downstream (e.g. multi-step player choices)
+                        results.AddRange(childNodes);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(resolvedText))
+                    {
+                        // Leaf player option node
+                        results.Add(new DialogOptionNode
+                        {
+                            Text = resolvedText,
+                            InputToken = line.InputToken,
+                            OutputToken = line.OutputToken,
+                            ConsequenceDelegate = CombineDelegates(pathConsequences),
+                            ConditionDelegate = line.ConditionDelegate,
+                            ClickableConditionDelegate = line.ClickableConditionDelegate
+                        });
+                    }
+                }
+                else
+                {
+                    var nextConsequences = new List<Delegate>(accumulatedConsequences);
+                    if (line.ConsequenceDelegate != null)
+                    {
+                        nextConsequences.Add(line.ConsequenceDelegate);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(line.OutputToken) && linesByInToken.ContainsKey(line.OutputToken))
+                    {
+                        TraverseGraphDFS(
+                            line.OutputToken,
+                            linesByInToken,
+                            new HashSet<string>(visitedTokens, StringComparer.OrdinalIgnoreCase),
+                            nextConsequences,
+                            results,
+                            evaluateConditions);
+                    }
+                }
+            }
+        }
+
+        private static void TraverseDownstreamDFS(
+            string currentToken,
+            Dictionary<string, List<RawDialogLine>> linesByInToken,
+            HashSet<string> visitedTokens,
+            List<Delegate> accumulatedConsequences,
+            List<DialogOptionNode> results,
+            bool evaluateConditions)
+        {
+            if (string.IsNullOrWhiteSpace(currentToken) || visitedTokens.Contains(currentToken))
+                return;
+
+            visitedTokens.Add(currentToken);
+
+            if (!linesByInToken.TryGetValue(currentToken, out var lines) || lines.Count == 0)
+                return;
+
+            // Check if there are multiple player options at this token (branch point)
+            bool isBranchPoint = lines.Count(l => l.ByPlayer && !string.IsNullOrWhiteSpace(l.Text)) > 1;
+
+            if (isBranchPoint)
+            {
+                TraverseGraphDFS(
+                    currentToken,
+                    linesByInToken,
+                    visitedTokens,
+                    accumulatedConsequences,
+                    results,
+                    evaluateConditions);
+                return;
+            }
+
+            foreach (var line in lines)
+            {
+                if (evaluateConditions && line.ConditionDelegate != null)
+                {
+                    try
+                    {
+                        bool passed = (bool)line.ConditionDelegate.DynamicInvoke();
+                        if (!passed) continue;
+                    }
+                    catch { continue; }
+                }
+
+                if (line.ConsequenceDelegate != null)
+                {
+                    accumulatedConsequences.Add(line.ConsequenceDelegate);
+                }
+
+                if (!string.IsNullOrWhiteSpace(line.OutputToken) && linesByInToken.ContainsKey(line.OutputToken))
+                {
+                    TraverseDownstreamDFS(
+                        line.OutputToken,
+                        linesByInToken,
+                        new HashSet<string>(visitedTokens, StringComparer.OrdinalIgnoreCase),
+                        accumulatedConsequences,
+                        results,
+                        evaluateConditions);
+                }
+            }
+        }
+
+        private static Delegate? FindFirstDownstreamConsequence(
+            string currentToken,
+            Dictionary<string, List<RawDialogLine>> linesByInToken,
+            HashSet<string> visited,
+            bool evaluateConditions)
+        {
+            if (string.IsNullOrWhiteSpace(currentToken) || visited.Contains(currentToken))
+                return null;
+
+            visited.Add(currentToken);
+
+            if (!linesByInToken.TryGetValue(currentToken, out var lines))
+                return null;
+
+            foreach (var line in lines)
+            {
+                if (evaluateConditions && line.ConditionDelegate != null)
+                {
+                    try
+                    {
+                        bool passed = (bool)line.ConditionDelegate.DynamicInvoke();
+                        if (!passed) continue;
+                    }
+                    catch { continue; }
+                }
+
+                if (line.ConsequenceDelegate != null)
+                    return line.ConsequenceDelegate;
+
+                if (!string.IsNullOrWhiteSpace(line.OutputToken))
+                {
+                    var found = FindFirstDownstreamConsequence(line.OutputToken, linesByInToken, visited, evaluateConditions);
+                    if (found != null) return found;
+                }
+            }
+
+            return null;
+        }
+
+        public static Delegate? FindFirstDownstreamConsequence(DialogFlow? flow, bool evaluateConditions = false)
+        {
+            if (flow == null) return null;
+            try
+            {
+                var linesField = typeof(DialogFlow).GetField("Lines", Flags) ?? typeof(DialogFlow).GetField("_lines", Flags);
+                var lines = linesField?.GetValue(flow) as IEnumerable;
+                if (lines == null) return null;
+
+                var linesByInToken = new Dictionary<string, List<RawDialogLine>>(StringComparer.OrdinalIgnoreCase);
+                var outputTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                string? firstToken = null;
+
+                foreach (var lineObj in lines)
+                {
+                    if (lineObj == null) continue;
+                    var lineType = lineObj.GetType();
+
+                    var inToken = (lineType.GetField("InputToken", Flags) ?? lineType.GetField("_inputToken", Flags))?.GetValue(lineObj) as string ?? string.Empty;
+                    var outToken = (lineType.GetField("OutputToken", Flags) ?? lineType.GetField("_outputToken", Flags))?.GetValue(lineObj) as string ?? string.Empty;
+                    var consDel = (lineType.GetField("ConsequenceDelegate", Flags) ?? lineType.GetField("_consequenceDelegate", Flags))?.GetValue(lineObj) as Delegate;
+                    var condDel = (lineType.GetField("ConditionDelegate", Flags) ?? lineType.GetField("_conditionDelegate", Flags))?.GetValue(lineObj) as Delegate;
+
+                    if (firstToken == null && !string.IsNullOrWhiteSpace(inToken))
+                    {
+                        firstToken = inToken;
+                    }
+
+                    var raw = new RawDialogLine
+                    {
+                        InputToken = inToken,
+                        OutputToken = outToken,
+                        ConsequenceDelegate = consDel,
+                        ConditionDelegate = condDel
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(inToken))
+                    {
+                        if (!linesByInToken.TryGetValue(inToken, out var list))
+                        {
+                            list = new List<RawDialogLine>();
+                            linesByInToken[inToken] = list;
+                        }
+                        list.Add(raw);
+                    }
+                    if (!string.IsNullOrWhiteSpace(outToken))
+                    {
+                        outputTokens.Add(outToken);
+                    }
+                }
+
+                var rootTokens = linesByInToken.Keys.Where(tok => !outputTokens.Contains(tok)).ToList();
+                if (rootTokens.Count == 0 && firstToken != null)
+                {
+                    rootTokens.Add(firstToken);
+                }
+
+                foreach (var root in rootTokens)
+                {
+                    var found = FindFirstDownstreamConsequence(root, linesByInToken, new HashSet<string>(StringComparer.OrdinalIgnoreCase), evaluateConditions);
+                    if (found != null) return found;
+                }
+            }
+            catch (Exception ex)
+            {
+                ModLog.Warn($"[QuestDialogTreeBridge] Error finding downstream consequence from DialogFlow: {ex.Message}");
+            }
+            return null;
+        }
+
+        public static void ExecuteQuestAcceptance(QuestBase? realQuest, DialogOptionNode? branch)
+        {
+            if (realQuest == null) return;
+
+            EnsureQuestDialogs(realQuest);
+            bool consequenceExecuted = false;
+
+            var beforeEndOneShot = GetConversationEndOneShot();
+
+            try
+            {
+                var offerFlowField = typeof(QuestBase).GetField("OfferDialogFlow", Flags) ?? typeof(QuestBase).GetField("_offerDialogFlow", Flags);
+                var offerFlow = offerFlowField?.GetValue(realQuest) as DialogFlow;
+                if (offerFlow != null)
+                {
+                    Delegate? targetConsDel = null;
+
+                    // 1. Check if realQuest has player options that match branch index (for multi-branch acceptance flows)
+                    var realOptions = ExtractOptions(offerFlow, evaluateConditions: false, quest: realQuest);
+                    if (branch != null && realOptions.Count > branch.Index && branch.Index >= 0)
+                    {
+                        targetConsDel = realOptions[branch.Index].ConsequenceDelegate;
+                    }
+
+                    // 2. For standard single-path quests (~80% vanilla quests), find downstream ConsequenceDelegate on the live realQuest
+                    if (targetConsDel == null)
+                    {
+                        targetConsDel = FindFirstDownstreamConsequence(offerFlow, evaluateConditions: false);
+                    }
+
+                    if (targetConsDel != null)
+                    {
+                        targetConsDel.DynamicInvoke();
+                        consequenceExecuted = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error($"[QuestDialogTreeBridge] Error executing OfferDialogFlow consequence for quest {realQuest.StringId}: {ex.Message}", ex);
+            }
+
+            // 3. Fallback: reflection on QuestAcceptedConsequences method
+            if (!consequenceExecuted)
+            {
+                try
+                {
+                    var acceptMethod = realQuest.GetType().GetMethod("QuestAcceptedConsequences", Flags);
+                    if (acceptMethod != null)
+                    {
+                        acceptMethod.Invoke(realQuest, null);
+                        consequenceExecuted = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ModLog.Error($"[QuestDialogTreeBridge] Error invoking QuestAcceptedConsequences method directly on {realQuest.StringId}: {ex.Message}", ex);
+                }
+            }
+
+            // 4. Drain ConversationEndOneShot
+            try
+            {
+                var afterEndOneShot = GetConversationEndOneShot();
+                if (afterEndOneShot != null && afterEndOneShot != beforeEndOneShot)
+                {
+                    ClearConversationEndOneShot();
+                    afterEndOneShot.Invoke();
+                }
+            }
+            catch { }
+
+            // 5. Verification
+            if (!realQuest.IsOngoing)
+            {
+                ModLog.Warn($"[QuestDialogTreeBridge] Quest {realQuest.StringId} did not transition to Ongoing after acceptance consequences. Consequence executed: {consequenceExecuted}");
+            }
+        }
+
+        /// <summary>
+        /// Dedicated extraction method for Quest Discuss/Report options.
+        /// Extracts reachable player option branches from DiscussDialogFlow that have actionable consequences,
+        /// and captures terminal NPC consequence paths (for quests like Vlandian Gang Leader with pure NPC completion lines).
+        /// </summary>
+        public static List<DialogOptionNode> ExtractReportOptions(QuestBase? quest, Hero? npc = null)
+        {
+            var options = new List<DialogOptionNode>();
+            if (quest == null) return options;
+
+            EnsureQuestDialogs(quest);
+            var discussFlowField = typeof(QuestBase).GetField("DiscussDialogFlow", Flags) ?? typeof(QuestBase).GetField("_discussDialogFlow", Flags);
+            var discussFlow = discussFlowField?.GetValue(quest) as DialogFlow;
+            if (discussFlow == null) return options;
+
+            var rawOptions = ExtractOptions(discussFlow, evaluateConditions: true, quest: quest, npc: npc);
+            foreach (var opt in rawOptions)
+            {
+                // Only include actionable branches that execute state-changing consequences in the world
+                if (opt != null && opt.ConsequenceDelegate != null)
+                {
+                    options.Add(opt);
+                }
+            }
+
+            // If DFS found 0 player branches (e.g. terminal NPC consequence like GangLeaderNeedsRecruits),
+            // capture the downstream ConsequenceDelegate on discussFlow.
+            if (options.Count == 0)
+            {
+                var downstreamCons = FindFirstDownstreamConsequence(discussFlow, evaluateConditions: true);
+                if (downstreamCons != null)
+                {
+                    options.Add(new DialogOptionNode
+                    {
+                        Index = 0,
+                        Text = new TextObject("{=ImmersiveAI_ReportCompletion}Report completion and settle the matter.").ToString(),
+                        ConsequenceDelegate = downstreamCons,
+                        IsAvailable = true,
+                        Kind = SolutionKind.DirectQuest
+                    });
+                }
+            }
+
+            return options;
+        }
+
+        public static bool HasActionableReportBranches(QuestBase? quest, Hero? npc = null)
+        {
+            if (quest == null || quest.IsFinalized) return false;
+            var options = ExtractReportOptions(quest, npc);
+            return options.Any(o => o != null && o.IsAvailable && o.ConsequenceDelegate != null);
+        }
+
+        /// <summary>
+        /// Unified extraction method for Issue Offer options (Single Source of Truth).
+        /// Combines precondition checking, DFS DialogFlow extraction, DirectQuest fallback,
+        /// Companion Dispatch (Alternative Solution), and Lord Solution.
+        /// </summary>
+        public static List<DialogOptionNode> ExtractOfferOptions(IssueBase issue, Hero? npc = null)
+        {
+            var options = new List<DialogOptionNode>();
+            if (issue == null) return options;
+
+            var targetHero = npc ?? issue.IssueOwner;
+
+            // Precondition check for player taking quest personally
+            bool canTakePersonally = true;
+            string takePersonallyUnavailableReason = string.Empty;
+            try
+            {
+                if (targetHero != null)
+                {
+                    if (CheckPreconditionsMethod != null)
+                    {
+                        object[] args = new object[] { targetHero, new TextObject(string.Empty) };
+                        canTakePersonally = (bool)CheckPreconditionsMethod.Invoke(issue, args);
+                        if (!canTakePersonally && args[1] is TextObject explanation && !string.IsNullOrWhiteSpace(explanation.ToString()))
+                        {
+                            takePersonallyUnavailableReason = explanation.ToString();
+                        }
+                    }
+                    else if (CanPlayerTakeQuestConditionsMethod != null)
+                    {
+                        object[] args = new object[] { targetHero, null!, null!, null!, 0 };
+                        canTakePersonally = (bool)CanPlayerTakeQuestConditionsMethod.Invoke(issue, args);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModLog.Warn($"[QuestDialogTreeBridge] Error evaluating CheckPreconditions: {ex.Message}");
+            }
+
+            if (!canTakePersonally && string.IsNullOrWhiteSpace(takePersonallyUnavailableReason))
+            {
+                takePersonallyUnavailableReason = "Requirements not met to undertake personally.";
+            }
+
+            QuestBase? previewQuest = issue.IssueQuest;
+            bool isTemporaryPreview = false;
+            if (previewQuest == null)
+            {
+                previewQuest = CreateTemporaryPreviewQuest(issue);
+                isTemporaryPreview = true;
+            }
+
+            DialogFlow? offerFlow = null;
+            if (previewQuest != null)
+            {
+                EnsureQuestDialogs(previewQuest);
+                var offerFlowField = typeof(QuestBase).GetField("OfferDialogFlow", Flags) ?? typeof(QuestBase).GetField("_offerDialogFlow", Flags);
+                offerFlow = offerFlowField?.GetValue(previewQuest) as DialogFlow;
+            }
+
+            try
+            {
+                options = ExtractOptions(offerFlow, evaluateConditions: true, quest: previewQuest, npc: targetHero);
+            }
+            finally
+            {
+                if (isTemporaryPreview && previewQuest != null)
+                {
+                    DestroyTemporaryPreviewQuest(issue, previewQuest);
+                }
+            }
+
+            foreach (var opt in options)
+            {
+                opt.Kind = SolutionKind.DirectQuest;
+                if (!canTakePersonally)
+                {
+                    opt.IsAvailable = false;
+                    opt.UnavailableReason = takePersonallyUnavailableReason;
+                }
+            }
+
+            // If DFS didn't find any specific direct quest branches (common for standard issues),
+            // add the standard direct quest option from IssueBase using authentic native dialogue.
+            if (!options.Any(o => o.Kind == SolutionKind.DirectQuest))
+            {
+                var acceptText = issue.IssueQuestSolutionAcceptByPlayer?.ToString();
+                if (string.IsNullOrWhiteSpace(acceptText))
+                {
+                    acceptText = new TextObject("{=ImmersiveAI_TakeQuestPersonally}I will take care of this matter myself.").ToString();
+                }
+
+                options.Insert(0, new DialogOptionNode
+                {
+                    Index = 0,
+                    Text = acceptText,
+                    IsAvailable = canTakePersonally,
+                    UnavailableReason = canTakePersonally ? string.Empty : takePersonallyUnavailableReason,
+                    Kind = SolutionKind.DirectQuest
                 });
             }
+
+            // Extract Companion Dispatch (Alternative Solution) if supported
+            if (issue.IsThereAlternativeSolution)
+            {
+                TextObject explanation;
+                bool available = true;
+                try
+                {
+                    available = issue.AlternativeSolutionCondition(out explanation);
+                }
+                catch { available = true; explanation = new TextObject(string.Empty); }
+
+                // Check if player actually has an available companion hero in the main party
+                bool hasAvailableCompanion = Clan.PlayerClan?.Companions != null &&
+                    Clan.PlayerClan.Companions.Any(c => c.IsAlive && c.PartyBelongedTo == MobileParty.MainParty && !c.IsPrisoner && c.CanHaveCampaignIssues());
+
+                if (!hasAvailableCompanion)
+                {
+                    available = false;
+                    explanation = new TextObject("{=ImmersiveAI_NoCompanion}You have no available companions in your party.");
+                }
+
+                string altText = issue.IssueAlternativeSolutionAcceptByPlayer?.ToString();
+                if (string.IsNullOrWhiteSpace(altText))
+                {
+                    int menCount = 0;
+                    int durationDays = 0;
+                    try
+                    {
+                        menCount = issue.GetTotalAlternativeSolutionNeededMenCount();
+                        durationDays = issue.GetTotalAlternativeSolutionDurationInDays();
+                    }
+                    catch { }
+
+                    altText = durationDays > 0 && menCount > 0
+                        ? new TextObject("{=ImmersiveAI_SendCompanion}Assign a companion and {MEN_COUNT} troops to resolve this ({DURATION} days).")
+                            .SetTextVariable("MEN_COUNT", menCount)
+                            .SetTextVariable("DURATION", durationDays)
+                            .ToString()
+                        : "Assign a companion and troops to resolve this task.";
+                }
+
+                options.Add(new DialogOptionNode
+                {
+                    Index = options.Count,
+                    Text = altText,
+                    IsAvailable = available,
+                    UnavailableReason = explanation?.ToString() ?? string.Empty,
+                    Kind = SolutionKind.CompanionDispatch
+                });
+            }
+
+            // Extract Lord Solution if supported
+            if (issue.IsThereLordSolution)
+            {
+                TextObject lordExplanation;
+                bool lordAvailable = false;
+                try
+                {
+                    lordAvailable = issue.LordSolutionCondition(out lordExplanation);
+                }
+                catch { lordExplanation = new TextObject(string.Empty); }
+
+                string lordText = issue.IssueLordSolutionAcceptByPlayer?.ToString();
+                if (string.IsNullOrWhiteSpace(lordText))
+                {
+                    int influence = 0;
+                    try
+                    {
+                        influence = issue.NeededInfluenceForLordSolution;
+                    }
+                    catch { }
+
+                    lordText = influence > 0
+                        ? new TextObject("{=ImmersiveAI_LordSolution}Issue a ruler's decree to resolve the matter ({INFLUENCE} influence).")
+                            .SetTextVariable("INFLUENCE", influence)
+                            .ToString()
+                        : "Issue a ruler's decree to resolve the matter.";
+                }
+
+                options.Add(new DialogOptionNode
+                {
+                    Index = options.Count,
+                    Text = lordText,
+                    IsAvailable = lordAvailable,
+                    UnavailableReason = lordExplanation?.ToString() ?? string.Empty,
+                    Kind = SolutionKind.LordSolution
+                });
+            }
+
+            return options;
+        }
+
+        /// <summary>
+        /// Handles tool calls from the LLM.
+        /// Strictly adheres to the confirmation blocker law: validates preconditions and populates the tally,
+        /// laying the offer or handover before the player without modifying game state directly.
+        /// </summary>
+        public static string ResolveToolCall(Core.Llm.ToolCall call, Hero npc, QuestTool.Tally? tally)
+        {
+            if (call == null || npc == null) return "The moment does not allow it; I let the matter rest.";
+
+            try
+            {
+                if (call.Name == QuestTool.OfferQuest || call.Name == QuestTool.AcceptQuest)
+                {
+                    if (tally == null)
+                        return "This is not the moment for taking on tasks — I let the talk carry on.";
+                    if (tally.Laid)
+                        return "The offer already lies before them, laid this very breath — theirs to choose or let lie.";
+
+                    var issue = QuestTool.GetAvailableIssue(npc);
+                    if (issue == null)
+                        return "I have no open task or trouble to lay before them just now; I speak of other matters.";
+
+                    var options = ExtractOfferOptions(issue, npc);
+
+                    tally.Laid = true;
+                    tally.IsReport = false;
+                    tally.Npc = npc;
+                    tally.AcceptedIssue = issue;
+                    tally.ReportedQuest = null;
+                    tally.Branches = options;
+
+                    return "The task and its terms lie before the traveler. Describe the situation, state what is required, and invite their choice. Nothing is begun until they seal their choice in the world.";
+                }
+
+                if (call.Name == QuestTool.ReportQuest)
+                {
+                    if (tally == null)
+                        return "This is not the moment for quest reports — I let the talk carry on.";
+                    if (tally.Laid)
+                        return "The handover already lies before them to confirm or choose; I need not lay it twice.";
+
+                    var quest = QuestTool.GetActiveQuest(npc);
+                    if (quest == null)
+                        return "There is no ongoing task between us to report upon; I speak of other matters.";
+
+                    var options = ExtractReportOptions(quest, npc);
+
+                    tally.Laid = true;
+                    tally.IsReport = true;
+                    tally.Npc = npc;
+                    tally.ReportedQuest = quest;
+                    tally.Branches = options;
+
+                    return "TOOL LAYS TERMS. Inspection/verification terms lie before the traveler. Until their choice is confirmed in the world, nothing has changed hands. Speak of inspecting or examining what is brought (e.g. 'Let me take a look'); do not declare the transaction completed or hand over payment in this breath.";
+                }
+
+                return "I let the matter rest.";
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error($"[QuestDialogTreeBridge] Error resolving tool call {call.Name}: {ex.Message}", ex);
+                return "The moment does not allow it; I let the matter rest.";
+            }
+        }
+
+        public static string FormatOptionsPrompt(List<DialogOptionNode> options, string header = "Available dialogue branches:")
+        {
+            if (options == null || options.Count == 0) return string.Empty;
+
+            var sb = new StringBuilder();
+            sb.AppendLine(header);
+            foreach (var opt in options)
+            {
+                if (string.IsNullOrWhiteSpace(opt.Text)) continue;
+                string status = opt.IsAvailable ? "[AVAILABLE]" : $"[UNAVAILABLE: {opt.UnavailableReason}]";
+                sb.AppendLine($"- \"{opt.Text}\" {status}");
+            }
+            return sb.ToString().TrimEnd();
+        }
+
+        public static string GetUniversalConversationGuidance(bool isReporting)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("QUEST INTERACTION RULES (LAY VS. SEAL PROTOCOL):");
+            sb.AppendLine("1. The dialogue branches above represent the TRAVELER'S available choices.");
+            if (isReporting)
+            {
+                sb.AppendLine("2. When the traveler reports progress or proposes delivering upon the ongoing task in this turn, call report_quest to lay the formal resolution choices before them.");
+                sb.AppendLine("3. Calling report_quest enters the INSPECTION / PROPOSAL phase (Uncommitted State) — speak only of inspecting, checking, or examining the matter (e.g. 'Let me inspect what you brought'); strictly do NOT narrate receiving the items or hand over payment in the same breath you call report_quest.");
+                sb.AppendLine("4. Once the traveler confirms the resolution via popup, the physical transfer occurs in the world, and you will receive the confirmed outcome in the follow-up turn to deliver your genuine gratitude and closing settlement.");
+            }
+            else
+            {
+                sb.AppendLine("2. When explaining, introducing, or proposing an unundertaken task to the traveler, call offer_quest in that turn to lay the formal choices before them.");
+                sb.AppendLine("3. Calling offer_quest only LAYS the task on the table (Uncommitted State) — nothing is begun until the traveler confirms via popup. Do not treat the agreement as sealed until their confirmed choice is received in the following turn.");
+            }
+            return sb.ToString().TrimEnd();
         }
     }
 }

@@ -12,6 +12,7 @@ using ImmersiveAI.Llm;
 using ImmersiveAI.Personas;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.GameState;
@@ -222,7 +223,7 @@ namespace ImmersiveAI
             if (door != null) tools.Add(Tools.DoorTool.Tool);
             if (CanBridgeQuests(npc))
             {
-                if (Tools.QuestTool.GetAvailableIssue(npc) != null) tools.Add(Tools.QuestTool.AcceptTool);
+                if (Tools.QuestTool.GetAvailableIssue(npc) != null) tools.Add(Tools.QuestTool.OfferTool);
                 if (Tools.QuestTool.GetActiveQuest(npc) != null) tools.Add(Tools.QuestTool.ReportTool);
             }
             return tools;
@@ -299,7 +300,7 @@ namespace ImmersiveAI
             if (call.Name == Tools.LoverTool.NameHerPrice)
                 return Task.FromResult(ResolveRansomLay(call, npc, bless));
 
-            if (call.Name == Tools.QuestTool.AcceptQuest || call.Name == Tools.QuestTool.ReportQuest)
+            if (call.Name == Tools.QuestTool.OfferQuest || call.Name == Tools.QuestTool.AcceptQuest || call.Name == Tools.QuestTool.ReportQuest)
                 return Task.FromResult(Tools.QuestDialogTreeBridge.ResolveToolCall(call, npc, quest));
 
             NotifyActivity(npc, call);
@@ -786,7 +787,7 @@ namespace ImmersiveAI
         }
 
         // Loads this NPC's memory from its own folder, migrating old flat-layout files forward first.
-        private NpcMemory LoadMemory(Hero npc)
+        internal NpcMemory LoadMemory(Hero npc)
         {
             NpcPaths.EnsureMigrated(npc);
             var memory = _memoryStore.LoadFrom(NpcPaths.MemoryFile(npc), npc.StringId);
@@ -1058,6 +1059,9 @@ namespace ImmersiveAI
             // restores nothing — it never blanks live memory.)
             if ((_config?.RevertMemoriesWithSaves ?? false) && !string.IsNullOrEmpty(_snapshotToken))
                 MemorySnapshotStore.Restore(NpcPaths.CampaignRoot, _snapshotToken);
+
+            // Self-heal: purge any preview ghost quests or residual dialog lines from existing saves
+            Tools.QuestDialogTreeBridge.PurgeLingeringPreviewQuests();
         }
 
         // New campaigns mint a fresh id here (nothing to adopt — a new world starts unremembered);
@@ -1082,6 +1086,9 @@ namespace ImmersiveAI
             LoadWeddingLedger();
             LoadBirthLedger();
             LoadNightLedger();
+
+            // Purge any lingering preview ghost quests
+            Tools.QuestDialogTreeBridge.PurgeLingeringPreviewQuests();
 
             // The world's nightly roll steps aside for the player's own marriages only while this
             // hook says so, and only while the feature is truly awake.
@@ -1803,11 +1810,11 @@ namespace ImmersiveAI
             _ = RespondAsync(npc, input.Trim());
         }
 
-        private async Task RespondAsync(Hero npc, string playerInput)
+        private async Task RespondAsync(Hero npc, string playerInput, string? situationOverride = null)
         {
             try
             {
-                var outcome = await ExecutePlayerTurnAsync(npc, playerInput).ConfigureAwait(false);
+                var outcome = await ExecutePlayerTurnAsync(npc, playerInput, situationOverride).ConfigureAwait(false);
                 var reply = outcome.Reply;
                 var feltShift = outcome.FeltShift;
                 _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
@@ -1845,8 +1852,8 @@ namespace ImmersiveAI
                     PresentBargainIfAny(npc, outcome);
                     // Same law for the troth and the blessing: the words first, then the seal.
                     PresentTrothIfAny(npc, outcome);
-                    // Same law for quests: words delivered first, then trigger consequences.
-                    DispatchQuestOutcomes(outcome.Quest, reply);
+                    // Same law for quests: words delivered first, then present the confirmation popup.
+                    PresentQuestIfAny(npc, outcome);
                 });
             }
             catch (Exception ex)
@@ -1994,9 +2001,6 @@ namespace ImmersiveAI
                 catch { /* the number is best-effort; never let it cost us the conversation */ }
             }
 
-            // Dispatch quest lifecycle outcomes (starting accepted issues or finishing reported quests)
-            DispatchQuestOutcomes(quest);
-
             memory.AddTurn(new ConversationTurn
             {
                 PlayerLine = playerInput,
@@ -2037,6 +2041,7 @@ namespace ImmersiveAI
             }
 
             SaveMemory(npc, memory);
+            Tools.QuestCompletionTracker.MarkAcknowledged(npc?.StringId);
             return new TurnOutcome(reply, feltShift, feltShiftApplied,
                 bargain != null && bargain.Laid ? bargain.Price : 0, troth, bless, quest);
         }
@@ -3720,6 +3725,7 @@ namespace ImmersiveAI
                     // window (4500), takes the keys while up, and returns them when it closes.
                     PresentBargainIfAny(npc, outcome);
                     PresentTrothIfAny(npc, outcome);
+                    PresentQuestIfAny(npc, outcome);
                 });
             }
             catch (Exception ex)
@@ -4227,3 +4233,4 @@ namespace ImmersiveAI
 
     }
 }
+

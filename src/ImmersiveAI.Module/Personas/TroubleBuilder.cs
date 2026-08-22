@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ImmersiveAI.Core.Prompts;
 using ImmersiveAI.Tools;
 using TaleWorlds.CampaignSystem;
@@ -22,9 +23,6 @@ namespace ImmersiveAI.Personas
     /// </summary>
     public static class TroubleBuilder
     {
-        private static readonly System.Reflection.MethodInfo? CanPlayerTakeQuestConditionsMethod =
-            typeof(IssueBase).GetMethod("CanPlayerTakeQuestConditions", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-
         /// <summary>The speaker's own trouble and given quests as a flowing paragraph, or empty
         /// when nothing weighs on them. <paramref name="partner"/> only shapes the phrasing (the
         /// taker of a quest is always the player, named outright even when speaking to another).</summary>
@@ -70,7 +68,7 @@ namespace ImmersiveAI.Personas
             return sentences.Count == 0 ? string.Empty : string.Join(" ", sentences);
         }
 
-        // Appends recent victory/settlement deeds completed since our last conversation.
+        // Appends recent victory/settlement deeds or resolution outcomes completed since our last conversation.
         private static void AppendRecentDeedsFact(Hero speaker, Hero partner, List<string> sentences)
         {
             if (speaker == null) return;
@@ -82,10 +80,27 @@ namespace ImmersiveAI.Personas
                 if (mem != null) lastTalkDay = mem.LastConversationGameDay;
             });
 
-            if (Tools.QuestCompletionTracker.TryGetRecentDeed(speaker.StringId, lastTalkDay, out string deedTitle))
+            if (Tools.QuestCompletionTracker.TryGetRecentDeed(speaker.StringId, lastTalkDay, out var record) && record != null)
             {
                 var player = partner?.Name?.ToString() ?? Hero.MainHero?.Name?.ToString() ?? "someone";
-                sentences.Add($"Recent deed since we last spoke: The matter of “{deedTitle}” was successfully resolved on the map by {player}. The threat is gone and our settlement enjoys peace thanks to their aid.");
+                string logSuffix = !string.IsNullOrWhiteSpace(record.LogSummary) ? $" Outcome details: {record.LogSummary}" : string.Empty;
+
+                switch (record.Detail)
+                {
+                    case TaleWorlds.CampaignSystem.QuestBase.QuestCompleteDetails.Success:
+                        sentences.Add($"Recent deed since we last spoke: The matter of “{record.Title}” with {player} was successfully completed in the world.{logSuffix}");
+                        break;
+                    case TaleWorlds.CampaignSystem.QuestBase.QuestCompleteDetails.Fail:
+                    case TaleWorlds.CampaignSystem.QuestBase.QuestCompleteDetails.FailWithBetrayal:
+                        sentences.Add($"Recent outcome since we last spoke: The matter of “{record.Title}” with {player} concluded as FAILED (Breach of Agreement). The task has permanently ended.{logSuffix}");
+                        break;
+                    case TaleWorlds.CampaignSystem.QuestBase.QuestCompleteDetails.Timeout:
+                        sentences.Add($"Recent outcome since we last spoke: The matter of “{record.Title}” with {player} concluded as TIMEOUT / LAPSED. The time expired and the task has permanently ended.{logSuffix}");
+                        break;
+                    case TaleWorlds.CampaignSystem.QuestBase.QuestCompleteDetails.Cancel:
+                        sentences.Add($"Recent outcome since we last spoke: The matter of “{record.Title}” with {player} was CANCELED.{logSuffix}");
+                        break;
+                }
             }
         }
 
@@ -154,20 +169,20 @@ namespace ImmersiveAI.Personas
 
             if (issue.IsSolvingWithQuest)
             {
-                sentences.Add($"{player} has taken this burden up at my asking.");
+                sentences.Add($"[QUEST STATE: ONGOING IN THE WORLD] The matter of “{title}” is active and uncommitted in the world: {player} has taken this burden up at my asking and is currently undertaking it on the road. PHYSICAL INVARIANT: Until a formal proposal is explicitly put forward in this conversation and sealed in the world, no state transition, transfer of physical possession, settlement, or compensation has occurred.");
                 Try(() => DescribeQuestProgress(issue.IssueQuest, sentences));
             }
             else if (issue.IsSolvingWithAlternative)
             {
-                sentences.Add($"{player} has sent trusted people with a company of men to see it done for me; I await word of how they fare.");
+                sentences.Add($"[QUEST STATE: ONGOING IN THE WORLD] {player} has sent trusted people with a company of men to see it done for me; I await word of how they fare.");
             }
             else if (issue.IsSolvingWithLordSolution)
             {
-                sentences.Add("The matter has been laid in a lord's hands to resolve, and I await their justice.");
+                sentences.Add($"[QUEST STATE: ONGOING IN THE WORLD] The matter has been laid in a lord's hands to resolve, and I await their justice.");
             }
             else
             {
-                sentences.Add("No one has yet taken this burden from me.");
+                sentences.Add("[QUEST STATE: PENDING_SELECTION] No one has yet taken this burden from me.");
 
                 if (!string.IsNullOrWhiteSpace(brief) && !string.Equals(brief, desc, StringComparison.OrdinalIgnoreCase))
                     sentences.Add($"Background of the trouble: {brief}");
@@ -184,22 +199,6 @@ namespace ImmersiveAI.Personas
                 if (!string.IsNullOrWhiteSpace(targetSettlementName) && !string.IsNullOrWhiteSpace(targetDir))
                     sentences.Add($"Target destination location: {targetSettlementName} (lies to the {targetDir} of where we stand).");
 
-                // Soft condition awareness in the discovery phase (solo traveler / small party)
-                int flagsInt = 0;
-                Try(() =>
-                {
-                    if (CanPlayerTakeQuestConditionsMethod != null && Hero.MainHero != null)
-                    {
-                        object[] args = new object[] { Hero.MainHero, null!, null!, null!, 0 };
-                        CanPlayerTakeQuestConditionsMethod.Invoke(issue, args);
-                        if (args[1] != null) flagsInt = Convert.ToInt32(args[1]);
-                    }
-                });
-
-                if ((flagsInt & 256) != 0) // PreconditionFlagNotEnoughTroops
-                {
-                    sentences.Add("Note on who stands before me: they ride with very few men or travel alone for a dangerous task. If they merely inquire about general local troubles or ask after the settlement, express realistic hesitation about their company size before formally proposing the charge.");
-                }
             }
         }
 
@@ -218,7 +217,7 @@ namespace ImmersiveAI.Personas
 
             if (!string.IsNullOrWhiteSpace(progressText))
             {
-                sentences.Add($"Task progress: {progressText}");
+                sentences.Add($"Ongoing task tracking: {progressText}. (Uncommitted state: No physical transfer of goods or settlement has occurred in this conversation yet).");
             }
 
             Try(() =>
@@ -249,9 +248,9 @@ namespace ImmersiveAI.Personas
                     int current = 0, target = 0;
                     string progress = LatestJournalLine(q, out current, out target);
                     if (string.IsNullOrWhiteSpace(progress))
-                        sentences.Add($"I have laid the charge of “{title}” on {Hero.MainHero?.Name?.ToString() ?? "someone"} to resolve.");
+                        sentences.Add($"[QUEST STATE: ONGOING IN THE WORLD] I have charged {Hero.MainHero?.Name?.ToString() ?? "someone"} with “{title}”. The task is ongoing and uncommitted in the world.");
                     else
-                        sentences.Add($"I have charged {Hero.MainHero?.Name?.ToString() ?? "someone"} with “{title}”, and where it stands is: {progress}");
+                        sentences.Add($"[QUEST STATE: ONGOING IN THE WORLD] I have charged {Hero.MainHero?.Name?.ToString() ?? "someone"} with “{title}”, and where it stands is: {progress}. (Uncommitted state: No physical transfer or conclusion has taken place in this conversation yet).");
                 });
             }
         }
@@ -281,7 +280,7 @@ namespace ImmersiveAI.Personas
                         {
                             var giverName = q.QuestGiver?.Name?.ToString() ?? "someone";
                             var questTitle = TidingsFormatter.StripMarkup(q.Title?.ToString() ?? "a delivery task");
-                            sentences.Add($"I am awaiting a delivery under the charge of “{questTitle}” arranged by {giverName}. If the traveler brings the cargo or livestock, I should acknowledge the delivery.");
+                            sentences.Add($"[QUEST STATE: AWAITING DELIVERY] I am awaiting a delivery under the charge of “{questTitle}” arranged by {giverName}. The delivery is currently ongoing and uncommitted in the world; until the traveler explicitly proposes the handover in conversation, nothing has been received.");
                         }
                     }
                 });
@@ -300,17 +299,10 @@ namespace ImmersiveAI.Personas
             var availableIssue = QuestTool.GetAvailableIssue(speaker);
             if (availableIssue != null)
             {
-                QuestBase previewQ = null;
-                var genMethod = availableIssue.GetType().GetMethod("GenerateIssueQuest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-                if (genMethod != null)
-                {
-                    try { previewQ = genMethod.Invoke(availableIssue, new object[] { (availableIssue.StringId ?? "issue") + "_preview" }) as QuestBase; }
-                    catch { }
-                }
-                var offerFlowField = typeof(QuestBase).GetField("OfferDialogFlow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-                var offerFlow = offerFlowField?.GetValue(previewQ) as DialogFlow;
-                var options = QuestDialogTreeBridge.ExtractOptions(offerFlow, evaluateConditions: true, quest: previewQ);
-                if (options.Count > 0)
+                var options = QuestDialogTreeBridge.ExtractOfferOptions(availableIssue, speaker);
+                bool hasAvailable = options.Any(o => o.IsAvailable);
+
+                if (hasAvailable)
                 {
                     string prompt = QuestDialogTreeBridge.FormatOptionsPrompt(options, "Available dialogue acceptance branches:");
                     if (!string.IsNullOrWhiteSpace(prompt))
@@ -318,6 +310,16 @@ namespace ImmersiveAI.Personas
                         sentences.Add(prompt);
                         sentences.Add(QuestDialogTreeBridge.GetUniversalConversationGuidance(isReporting: false));
                     }
+                }
+                else if (options.Count > 0)
+                {
+                    var reasons = options
+                        .Where(o => !o.IsAvailable && !string.IsNullOrWhiteSpace(o.UnavailableReason))
+                        .Select(o => o.UnavailableReason)
+                        .Distinct();
+                    string reasonText = string.Join("; ", reasons);
+
+                    sentences.Add($"[TASK STATUS: UNMET_REQUIREMENTS] The traveler cannot currently undertake this task ({reasonText}). Because no actionable options can be undertaken, explain the trouble or state that you cannot entrust it to them, and do NOT call offer_quest.");
                 }
             }
             else
@@ -329,9 +331,7 @@ namespace ImmersiveAI.Personas
                     {
                         if (q != null && !q.IsFinalized && (q.QuestGiver == speaker || QuestTool.IsQuestTargetHero(q, speaker)))
                         {
-                            var flowField = typeof(QuestBase).GetField("DiscussDialogFlow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-                            var discussFlow = flowField?.GetValue(q) as DialogFlow;
-                            var options = QuestDialogTreeBridge.ExtractOptions(discussFlow, evaluateConditions: true, quest: q);
+                            var options = QuestDialogTreeBridge.ExtractReportOptions(q, speaker);
                             if (options.Count > 0)
                             {
                                 string prompt = QuestDialogTreeBridge.FormatOptionsPrompt(options, "Available dialogue resolution branches:");

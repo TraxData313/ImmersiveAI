@@ -902,6 +902,24 @@ namespace ImmersiveAI
         /// there. A bigger model sounds better and takes longer; both are honest choices.</summary>
         public string VoiceModelName { get; set; } = string.Empty;
 
+        /// <summary>
+        /// How freely the voice may vary its reading, and how wide a choice it draws from
+        /// (temperature and top-p). 0 = leave both to the speech engine's own defaults, which is
+        /// what almost everyone should do.
+        /// <para>
+        /// Here because it is the one dial that has been shown to matter for the glitch where a
+        /// voice loses the words and holds a single note: a colder setting makes a speech model
+        /// likelier to fall into repeating itself, and that is what a held note IS. The engine's own
+        /// values (0.9 and 1.0) are what we now use, after a sister tool driving the same engine at
+        /// those values proved sixty times steadier. Lower it only if a voice wanders too far from
+        /// the one you cloned — and expect more stumbles if you do.
+        /// </para>
+        /// </summary>
+        public float VoiceTemperature { get; set; }
+
+        /// <summary>The other half of <see cref="VoiceTemperature"/>. 0 = the engine's own.</summary>
+        public float VoiceTopP { get; set; }
+
         /// <summary>How much disk the spoken lines may keep, in megabytes. Every line is made once
         /// and then simply played, so the cache is what makes a voice instant the second time; when
         /// it grows past this the oldest lines are quietly swept, whole replies at a time. 0 keeps
@@ -1296,6 +1314,12 @@ namespace ImmersiveAI
             VoiceEnginePath = (VoiceEnginePath ?? string.Empty).Trim();
             VoiceModelDir = (VoiceModelDir ?? string.Empty).Trim();
             VoiceModelName = (VoiceModelName ?? string.Empty).Trim();
+
+            // 0 means "the engine's own", so only a real setting is railed. Greedy decoding (a
+            // temperature at or near zero) is the one setting guaranteed to loop, which is the very
+            // fault these exist to avoid.
+            if (VoiceTemperature != 0f && (VoiceTemperature < 0.05f || VoiceTemperature > 2f)) VoiceTemperature = 0f;
+            if (VoiceTopP != 0f && (VoiceTopP < 0.05f || VoiceTopP > 1f)) VoiceTopP = 0f;
 
             // The cache budget: 0 stays a legitimate "keep everything", a negative is a typo, and
             // the ceiling is only there so a stray keystroke cannot promise a terabyte.

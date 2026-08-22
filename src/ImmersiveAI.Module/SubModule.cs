@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
@@ -118,6 +118,20 @@ namespace ImmersiveAI
             catch { /* a lost note must never touch the frame */ }
         }
 
+        private static bool _partyScreenWasOpen;
+
+        private static void TickPartyScreenWatch()
+        {
+            try
+            {
+                bool open = Game.Current?.GameStateManager?.ActiveState
+                            is TaleWorlds.CampaignSystem.GameState.PartyState;
+                if (!open && _partyScreenWasOpen) ImmersiveChatBehavior.NotePartyScreenClosed();
+                _partyScreenWasOpen = open;
+            }
+            catch { /* a lost note must never touch the frame */ }
+        }
+
         protected override void OnApplicationTick(float dt)
         {
             base.OnApplicationTick(dt);
@@ -141,6 +155,8 @@ namespace ImmersiveAI
             // The inventory screen coming up: the moment a soul's gear is about to change, and the
             // only place to stand to find out what it was before.
             TickInventoryWatch();
+            // The troop/party handover screen closing: evaluate active quest completion on return to map.
+            TickPartyScreenWatch();
             // And the one key that must work no matter what is on the screen.
             TickPanicKey();
         }

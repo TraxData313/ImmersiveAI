@@ -226,7 +226,7 @@ namespace ImmersiveAI.Mcm
         // ---------------------------- Voices ----------------------------
 
         [SettingPropertyBool("Speak their words aloud", Order = 0, RequireRestart = false,
-            HintText = "Characters read their replies out loud in a voice you choose, made on your own machine. Needs Qwen-TTS Studio installed with a model downloaded, and a graphics card with a few GB to spare. Off costs nothing and changes nothing else.")]
+            HintText = "Characters read their replies out loud in a voice you choose, made on your own machine. The talk screen's Voices page fetches what it needs itself (about 2.8 GB) — it wants an NVIDIA card, or a key for the hosted voices instead. Off costs nothing and changes nothing else.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool EnableVoice { get; set; }
 
@@ -447,19 +447,19 @@ namespace ImmersiveAI.Mcm
 
         [SettingPropertyBool("Show cost notices", Order = 0, RequireRestart = false,
             HintText = "After each exchange, a soft gray line shows what it took: tokens in/out, number of calls, and the price when the model's rates are known. The same lines also go to log.txt, and daily totals persist in usage.json.")]
-        [SettingPropertyGroup("Costs", GroupOrder = 4)]
+        [SettingPropertyGroup("Costs", GroupOrder = 5)]
         public bool ShowCostNotices { get; set; } = true;
 
         [SettingPropertyInteger("Daily request cap (0 = none)", 0, 2000, "0", Order = 1, RequireRestart = false,
             HintText = "A safety valve: at most this many AI requests per real day, across all sessions. When reached, the world goes quiet until the day turns or the cap is raised. 0 means no cap.")]
-        [SettingPropertyGroup("Costs", GroupOrder = 4)]
+        [SettingPropertyGroup("Costs", GroupOrder = 5)]
         public int MaxDailyRequests { get; set; } = 0;
 
         // ── Advanced ────────────────────────────────────────────────────────────────
 
         [SettingPropertyBool("Developer mode", Order = 0, RequireRestart = false,
             HintText = "Shows the mod's test levers and the 'reveal the whole of your mind' prompt inspector. Leave OFF for normal play.")]
-        [SettingPropertyGroup("Advanced", GroupOrder = 5)]
+        [SettingPropertyGroup("Advanced", GroupOrder = 6)]
         public bool DevMode { get; set; } = false;
 
         /// <summary>A curated set of map-safe keys for the window hotkeys, with <paramref name="preferred"/>
