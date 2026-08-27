@@ -61,6 +61,19 @@ You usually only need to open:
 - **The nights of a marriage & THE LINE** → Core `Nights\` + `Together\TogetherLine` (the line since we were last alone) (`NightRecord`/`NightLedger` `_nights.json` + `nights.txt`, `NightGifts` the 0/10/100/300/1000 tiers, `NightOdds` the fertility-spread arithmetic, `NightText` — the short Song-of-Songs prompt, the permanent beat marks, the roll; unit-tested) + `MoodTides.Fertility` + the `ImmersiveChatBehavior.Nights.cs` partial + `Nights\PregnancyPatch` (the SECOND Harmony touch) + `UI\NightWindow\` (hotkey H). Decision record docs/nights-and-conception-design.md.
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 
+- **THE SECTION MARKS** (2026.08.27, Anton: *"im not able to read good where the deep memory
+  starts, where what section starts"*) → Core `PromptBuilder.Section()`/`Sections`/`StripSections`
+  + `BuildMarkedSheet`, planted in `PromptBuilder` and `SituationBuilder`, drawn by
+  `TalkScreenVM.AddSheetBySection`. The sheet is ONE unbroken first-person stream on purpose —
+  that is what makes it read as a mind — and that same quality made it unreadable to the PLAYER
+  scrolling the screen. So an invisible `[[section:Name]]` mark opens each block, the screen cuts
+  on them and draws a named, coloured header with one line of plain English under it, and
+  **`Build()` STRIPS them before anything is sent** — a mark reaching a model would be the fourth
+  wall in its plainest form, and a test asserts every built message is clean. The scrollback reads
+  the SAME builder through `BuildMarkedSheet`, so the preview can never drift from the real sheet
+  by being assembled a second way; the situation file on disk renders them as `--- Name ---`.
+  Sixteen sections; adding one means a name in `Sections`, a colour in `ColorForSection` and a
+  hint in `HintForSection` (an unknown title still renders, just plainly).
 - **THE VOICES** (they can be HEARD, 2026.08.14–15) → Core `Voices\` (`SpeakableText` the words vs the
   gestures, `VoiceCacheKey` the identity of one utterance, `VoiceBudget` the anti-derail arithmetic,
   `WavFiles` the joiner that makes streaming gapless, `VoiceLibrary`/`VoicePreset`/`VoiceAssignments`
@@ -372,30 +385,23 @@ TaleWorlds API usage patterns, never copy from it.
 - **Core stays pure.** No `TaleWorlds.*`, no `System.Net.Http`, no game or HTTP dependencies
   in `ImmersiveAI.Core`. That is what keeps it unit-testable. LLM backends and game glue
   live in `ImmersiveAI.Module` behind the `IChatClient` interface.
-- **THE BITES (2026.08.27, Anton's design)** — the deep memory IS small keyed notes she edits one
-  at a time (`NpcMemory.Bites`, Core `Memory\MemoryBites`), and **THE PAGE IS RETIRED WHOLE**.
-  A reserved prose key held "how things stand between us" for one afternoon; the same evening,
-  having seen the first real run, Anton cut it: *"when the NPCs rethink remove all, keep only the
-  short key-value pair memory, that is the new variant"*. **THE FEELING IS A NOTE TOO** — she
-  writes it in her own words under her own word, and `MaxBiteChars` (320) is deliberately roomy
-  enough that a real sentence survives whole. The contract's own wording is what protects the
-  voice: it asks for that note *"in my own true words… as I would say it, not as a ledger entry,
-  for it is the one that is really me"*. Written at compression (a `BITES:` section that is a
-  **DELTA** — `key: note` to write, `-key` to strike; what she does not name keeps standing) and
-  LIVE mid-talk through `keep_note` (Module `Tools\NoteTool`, gated by `EnableMemoryNotes`). Keys
-  are canonicalized so one subject never fragments into four (`CanonicalKey` — lowercased,
-  article-stripped; note that "the war" files under `war`). Caps: 24 notes, 320 chars each, and a
-  full shelf SAYS so rather than refusing silently. **This is not the retired `hold_truth`**: that
-  was a THIRD layer beside the page holding the same material twice; these ARE the memory now.
-  **MIGRATION IS BY HER OWN HAND, and three rails make it safe**: `NpcMemory.Summary` still holds
-  the old page (and still takes the backstory seed) until her next compression, whose `NeedsSeeding`
-  nudge asks her to set the whole of it down as notes; `ApplyCompression` then clears it — but ONLY
-  when notes actually stand, so a stumbling backend can never erase a soul and leave nothing;
-  and `ParseResponse` ignores unlabelled preamble whenever `BITES:` is present, or "Here are my
-  notes:" would be written back as a resurrected page. An old-shape `SUMMARY:` reply still lands.
-  **Read the deep memory through `NpcMemory.DeepMemoryText()`/`HasDeepMemory`, never `.Summary`** —
-  the chroniclers, `HasRememberedHistory` (a soul with notes and no page must not read as a
-  stranger), the courtship seed and both views all go through it.
+- **THE BITES: BUILT, PLAYED, AND REVERTED IN ONE DAY (2026.08.27)** — the deep memory is PROSE,
+  rewritten whole at every compression, exactly as it was. For one day it was small keyed notes
+  she edited one at a time (`MemoryBites`, the `keep_note` hand, a `BITES:` delta section); Anton
+  played both shapes and chose the prose back: *"revert it back to the original text and the old
+  way they managed it"*. **Do not rebuild it.** What the experiment proved is worth keeping: the
+  measured win was real (~15,300 → ~10,700 tokens an exchange) and it still came out worse to
+  live with, because a soul's memory reads as a filing cabinet rather than as a person the moment
+  it is keyed. The token savings that SURVIVED the revert are the honest ones — the folded battle
+  roll, the dropped pass-through stops, the gathered runs, the lean tool prose.
+  **THE ONE RAIL THAT MUST STAY**: `NpcMemory.Bites` is a DEAD field kept forever, and
+  `HealLegacyNotes()` (called from `JsonMemoryStore.LoadFrom`) folds whatever a save still holds
+  back into `Summary` as plain lines. A soul who compressed during that one day has her whole
+  memory in there and an EMPTY page — reverting without the heal would not have restored her, it
+  would have deleted her. Anton's own instruction: *"if there are current NPCs like Rhia that
+  switched to key: value just leave it as a text"*. `BITES:` also survives in `ParseResponse` as a
+  boundary-only label, like the retired `FACTS:`/`GOALS:`, so a model still holding the habit
+  cannot silt a key list into the page.
   **THE WRITING ROOM GROWS WITH THE BOND** (`StartingMemoryWriteTokens` 300
   + `MemoryWriteTokensPerTurn` 100 per lifetime exchange, up to `MaxMemoryWriteTokens`, default
   lowered 2000 → 1500 and deliberately NOT migrated — lowering a ceiling is taste): a model handed

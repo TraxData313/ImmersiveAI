@@ -1186,3 +1186,29 @@ release ritual warns about.
   five call sites plus HasRememberedHistory, which would otherwise have greeted an old friend
   with notes and no page as a stranger. The own-road clause was dropped and restored: a test
   caught it, and it is load-bearing. 847 Core tests green. (2026.08.27 18.20.00)
+
+- The keyed-notes memory reverted, and the prompt given readable sections. Anton slept on the
+  bites and changed his mind: "revert it back to the original text and the old way they managed
+  it, remove the key values stuff". The deep memory is prose again, rewritten whole, with the
+  SUMMARY: contract and its "what I do not set down fades from me" warning restored; MemoryBites,
+  NoteTool and keep_note are deleted. What SURVIVES the revert is the honest half of the token
+  diet - the folded battle roll, the dropped pass-through stops, the gathered runs, the lean tool
+  prose - and the growing memory-writing room. Worth recording that the notes' win was real and
+  measured (Rhia 6,190 -> 2,207 chars, ~15,300 -> ~10,700 tokens an exchange) and still lost: a
+  memory keyed under words reads as a filing cabinet rather than as a person, which no token count
+  shows. THE RAIL THAT MUST OUTLIVE IT: NpcMemory.Bites stays as a dead field and HealLegacyNotes()
+  (from JsonMemoryStore.LoadFrom) folds whatever a save still holds back into Summary as text -
+  a soul who compressed during that one day has her whole memory in there and an EMPTY page, so
+  reverting without the heal would have deleted her rather than restored her. His own words: "if
+  there are current NPCs like Rhia that switched to key: value just leave it as a text". BITES:
+  also survives in ParseResponse as a boundary-only label beside FACTS:/GOALS:.
+
+  Second half, his other ask: "im not able to read good where the deep memory starts, where what
+  section starts... make the different sections named for me to see in the chat, with names
+  colored". The sheet is one unbroken first-person stream by design - right for the NPC, unreadable
+  for the player hunting for what a companion knows - so PromptBuilder now plants invisible
+  [[section:Name]] marks (sixteen of them, in PromptBuilder and SituationBuilder) and the talk
+  screen cuts on them into named, coloured cards with a line of plain English under each. Build()
+  STRIPS them before anything is sent and a test asserts every built message is clean; the
+  scrollback reads the same builder through BuildMarkedSheet so the preview can never drift; the
+  situation file on disk renders them as --- Name ---. 838 Core tests green. (2026.08.27 21.10.00)

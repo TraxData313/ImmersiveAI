@@ -196,4 +196,61 @@ public class NpcMemoryTests
         memory.AddTurn(new ConversationTurn { PlayerLine = "Well met.", NpcLine = "And you.", GameDay = 11 });
         Assert.Equal(0, memory.UnansweredOutreachCount);
     }
+
+    // ------------------------- the one-day notes experiment -------------------------
+
+    [Fact]
+    public void HealLegacyNotes_FoldsAOneDayNoteShelfBackIntoThePage()
+    {
+        // 2026.08.27: the deep memory was keyed notes for a day, then reverted. A soul who
+        // compressed during that day has her WHOLE memory in Bites with an empty page — so the
+        // revert had to fold it back, or it would not have restored her memory, it would have
+        // deleted her. Anton: "if there are current NPCs like Rhia that switched to key: value
+        // just leave it as a text."
+        var rhia = new NpcMemory
+        {
+            NpcId = "CharacterObject_1884",
+            Bites =
+            {
+                ["ahil"] = "My captain, who hired me at Dunglanys and has kept me close.",
+                ["wage"] = "Ahil owes me 34 denars each day.",
+            },
+        };
+
+        rhia.HealLegacyNotes();
+
+        Assert.Empty(rhia.Bites);
+        Assert.Contains("ahil: My captain, who hired me at Dunglanys and has kept me close.", rhia.Summary);
+        Assert.Contains("wage: Ahil owes me 34 denars each day.", rhia.Summary);
+        Assert.True(rhia.HasDeepMemory);
+    }
+
+    [Fact]
+    public void HealLegacyNotes_KeepsAnyPageThatStands_AndIsIdempotent()
+    {
+        // A soul mid-experiment may hold BOTH — the page she had not yet converted and a note or
+        // two written live. Neither may be thrown away, and the page comes first because it is
+        // the older, fuller telling.
+        var both = new NpcMemory
+        {
+            Summary = "He found me at Dunglanys and gave me a place in his company.",
+            Bites = { ["wage"] = "34 denars a day." },
+        };
+
+        both.HealLegacyNotes();
+        Assert.Contains("He found me at Dunglanys", both.Summary);
+        Assert.Contains("wage: 34 denars a day.", both.Summary);
+        Assert.True(both.Summary.IndexOf("Dunglanys", StringComparison.Ordinal)
+                    < both.Summary.IndexOf("wage:", StringComparison.Ordinal));
+
+        // Running again changes nothing — it is a load-time heal and loads happen constantly.
+        var once = both.Summary;
+        both.HealLegacyNotes();
+        Assert.Equal(once, both.Summary);
+
+        // And a memory that never saw the experiment is untouched.
+        var plain = new NpcMemory { Summary = "Nothing to heal." };
+        plain.HealLegacyNotes();
+        Assert.Equal("Nothing to heal.", plain.Summary);
+    }
 }

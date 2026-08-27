@@ -139,10 +139,11 @@ public class MemoryCompressorTests
         Assert.Contains("what to carry forward and what to let go", prompt);
         Assert.DoesNotContain("Muse", prompt);   // no legacy turns folded, so the voice appears nowhere
         Assert.Contains("I set it down in exactly this shape:", prompt);
-        // The machine-readable contract the parser depends on — BITES only since 2026.08.27
-        // evening; SUMMARY: is not asked for at all, which is what retires the page.
-        Assert.Contains("BITES:", prompt);
-        Assert.DoesNotContain("SUMMARY:", prompt);
+        // Kept the machine-readable contract the parser depends on.
+        Assert.Contains("SUMMARY:", prompt);
+        // The keyed-notes experiment lived for one day (2026.08.27) and was reverted: the deep
+        // memory is prose again, and nothing asks her for a shelf of keys.
+        Assert.DoesNotContain("BITES:", prompt);
     }
 
     [Fact]
@@ -168,19 +169,16 @@ public class MemoryCompressorTests
 
         var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
 
-        // THE WHOLE-REWRITE WARNING IS GONE WITH THE PAGE (2026.08.27 evening). Notes are a delta
-        // and stand until she changes them, so there is nothing left that erodes by not being
-        // re-copied — and saying "what I do not set down fades" over a delta would be a lie that
-        // makes her re-copy her whole shelf every time.
-        Assert.DoesNotContain("fades from me", prompt);
-        Assert.Contains("keeps exactly what it already says", prompt);
-        // The invitation to the PARTICULARS survives, because a shelf of vague impressions is the
-        // failure this guards against.
-        Assert.Contains("a person, a promise, a debt", prompt);
-        // And the FEELING must be asked for as a note, or the whole of her voice is lost with the
-        // page — this is the sentence that carries it.
-        Assert.Contains("HOW THINGS STAND BETWEEN US", prompt);
-        Assert.Contains("in my own true words", prompt);
+        // The memory is written WHOLE, so the warning must stand or each pass quietly erodes what
+        // she simply did not think to re-copy.
+        Assert.Contains("I write it whole each time", prompt);
+        Assert.Contains("fades from me", prompt);
+        Assert.Contains("the story truly asks", prompt);
+        // And the invitation to the PARTICULARS, without which she writes a bare précis.
+        Assert.Contains("what was said and promised between us", prompt);
+        // The anti-hoarding clause from the token audit survives the revert: gifts are remembered
+        // for what they meant, never as an itemised gear ledger.
+        Assert.Contains("Ledgers I do not hoard", prompt);
         // The deep memory opens seeded with her own backstory (2026.08.08): without this clause the
         // "all I carry of them" framing would erode her past by shape, not by her choice.
         Assert.Contains("my own road", prompt);

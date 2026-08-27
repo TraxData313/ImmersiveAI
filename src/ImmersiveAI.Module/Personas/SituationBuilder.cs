@@ -199,6 +199,7 @@ namespace ImmersiveAI.Personas
             if (trouble.Length > 0)
             {
                 sb.AppendLine();
+                sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.Section(ImmersiveAI.Core.Prompts.PromptBuilder.Sections.TheirTrouble));
                 sb.AppendLine(trouble);
             }
 
@@ -211,6 +212,7 @@ namespace ImmersiveAI.Personas
                 if (tidings.Length > 0)
                 {
                     sb.AppendLine();
+                    sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.Section(ImmersiveAI.Core.Prompts.PromptBuilder.Sections.WorldNews));
                     sb.AppendLine(tidings);
                 }
             }
@@ -225,6 +227,7 @@ namespace ImmersiveAI.Personas
             if (battles.Length > 0)
             {
                 sb.AppendLine();
+                sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.Section(ImmersiveAI.Core.Prompts.PromptBuilder.Sections.SharedBattles));
                 sb.AppendLine(battles);
             }
 
@@ -236,6 +239,7 @@ namespace ImmersiveAI.Personas
             if (journey.Length > 0)
             {
                 sb.AppendLine();
+                sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.Section(ImmersiveAI.Core.Prompts.PromptBuilder.Sections.SharedRoad));
                 sb.AppendLine(journey);
             }
 
@@ -249,6 +253,7 @@ namespace ImmersiveAI.Personas
             if (nights.Length > 0)
             {
                 sb.AppendLine();
+                sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.Section(ImmersiveAI.Core.Prompts.PromptBuilder.Sections.TheNights));
                 sb.AppendLine(nights);
             }
 
@@ -264,6 +269,7 @@ namespace ImmersiveAI.Personas
             if (together.Length > 0)
             {
                 sb.AppendLine();
+                sb.AppendLine(ImmersiveAI.Core.Prompts.PromptBuilder.Section(ImmersiveAI.Core.Prompts.PromptBuilder.Sections.SinceYouTalked));
                 sb.AppendLine(together);
             }
 

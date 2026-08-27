@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using ImmersiveAI.Core.Courtship;
 
 namespace ImmersiveAI.Core.Memory
@@ -22,21 +23,21 @@ namespace ImmersiveAI.Core.Memory
 
         public List<ConversationTurn> RecentTurns { get; set; } = new List<ConversationTurn>();
 
-        /// <summary>The reserved PROSE bite — how things stand between her and the player, in her
-        /// own few sentences (see <see cref="MemoryBites.ProseKey"/>). It was the whole of the deep
-        /// memory until 2026.08.27; the facts live in <see cref="Bites"/> now, and this keeps the
-        /// part that would flatten if it were chopped into notes. Old saves need no migration: an
-        /// existing page simply IS the prose from here on.</summary>
+        /// <summary>THE DEEP MEMORY: everything she durably carries of this person, in her own
+        /// first-person prose, rewritten WHOLE at every compression. Briefly split into keyed notes
+        /// on 2026.08.27 and restored the same day (Anton, having played both: "revert it back to
+        /// the original text and the old way they managed it"). See <see cref="Bites"/> for what
+        /// happens to a soul who was mid-experiment.</summary>
         public string Summary { get; set; } = string.Empty;
 
         /// <summary>
-        /// THE BITES (2026.08.27): her deep memory of facts as small keyed notes she edits one at a
-        /// time — "ahil" → "he equips me well and listens to my counsel", "my wage" → "34 denars a
-        /// day, agreed at Dunglanys". Written at compression AND live, mid-talk, by the
-        /// <c>keep_note</c> hand. Keys are canonical (see <see cref="MemoryBites.CanonicalKey"/>)
-        /// so one subject never fragments into four.
-        /// <para>NOT the retired <c>KnownFacts</c>: that stood BESIDE the rolling page holding the
-        /// same material twice. These replace the page's facts — see <see cref="MemoryBites"/>.</para>
+        /// LEGACY, and it lived for one day (2026.08.27): the deep memory as small keyed notes she
+        /// edited one at a time. Anton played both shapes and chose the prose back — so nothing
+        /// writes this any more, and <see cref="HealLegacyNotes"/> folds whatever a save still
+        /// holds back into <see cref="Summary"/> the first time it is loaded.
+        /// <para>KEPT FOREVER as a field all the same: a soul who compressed during that one day
+        /// has her whole memory in here and nowhere else, and a dropped property is a deleted
+        /// person. The same rule as the retired <see cref="KnownFacts"/>.</para>
         /// </summary>
         public Dictionary<string, string> Bites { get; set; } = new Dictionary<string, string>();
 
@@ -357,35 +358,52 @@ namespace ImmersiveAI.Core.Memory
         /// </para>
         /// </summary>
         /// <summary>
-        /// Everything she durably holds of this person, as readable text — the notes if she keeps
-        /// any, else the old page while it still stands (2026.08.27 evening). ONE place answers it
-        /// so the chroniclers, the stranger test and the views cannot disagree about whether a soul
-        /// with notes and no page remembers anybody.
+        /// Everything she durably holds of this person, as readable text. ONE place answers it so
+        /// the chroniclers, the stranger test and the views can never disagree about whether a soul
+        /// remembers anybody.
         /// </summary>
-        public string DeepMemoryText()
+        public string DeepMemoryText() => (Summary ?? string.Empty).Trim();
+
+        /// <summary>True when anything durable is held at all.</summary>
+        public bool HasDeepMemory => !string.IsNullOrWhiteSpace(Summary);
+
+        /// <summary>
+        /// THE ONE-DAY MIGRATION BACK (2026.08.27). A soul who compressed while the memory was keyed
+        /// notes has her whole deep memory sitting in <see cref="Bites"/> with an EMPTY page — so
+        /// reverting without this would not restore her memory, it would delete it. Her notes are
+        /// folded back in as plain lines, exactly as they were written (Anton: "if there are current
+        /// NPCs like Rhia that switched to key: value just leave it as a text"), and she reshapes
+        /// them into her own prose at her next compression, which is where prose belongs anyway.
+        /// <para>Idempotent and additive: it runs at load, never drops a page that already stands,
+        /// and clears the notes only once they are safely inside it.</para>
+        /// </summary>
+        public void HealLegacyNotes()
         {
-            var notes = MemoryBites.Render(Bites);
-            if (notes.Length > 0) return notes;
-            return (Summary ?? string.Empty).Trim();
+            if (Bites == null || Bites.Count == 0) return;
+
+            var sb = new StringBuilder();
+            var page = (Summary ?? string.Empty).Trim();
+            if (page.Length > 0) sb.AppendLine(page).AppendLine();
+
+            foreach (var pair in Bites)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Value)) continue;
+                sb.Append(pair.Key).Append(": ").AppendLine(pair.Value.Trim());
+            }
+
+            Summary = sb.ToString().TrimEnd();
+            Bites.Clear();
         }
 
-        /// <summary>True when anything durable is held at all, in either shape.</summary>
-        public bool HasDeepMemory =>
-            Bites.Count > 0 || !string.IsNullOrWhiteSpace(Summary);
-
-        public void ApplyCompression(string? newSummary, int consumedTurnCount, string? biteSection)
+        /// <summary>
+        /// Drops the turns that were folded away and takes the rewritten deep memory as the whole of
+        /// what she now remembers. It is written anew at every compression — she is shown all of it
+        /// and asked to set it down whole — so what she did not carry forward is gone, which is what
+        /// lets her refactor her memory instead of piling up rewordings.
+        /// </summary>
+        public void ApplyCompression(string newSummary, int consumedTurnCount, string? unusedLegacy)
         {
-            if (consumedTurnCount < 0 || consumedTurnCount > RecentTurns.Count)
-                throw new ArgumentOutOfRangeException(nameof(consumedTurnCount));
-
-            int written = MemoryBites.ApplySection(Bites, biteSection);
-
-            if (!string.IsNullOrWhiteSpace(newSummary))
-                Summary = newSummary!;                       // an old-shape reply still lands
-            else if (written > 0 || Bites.Count > 0)
-                Summary = string.Empty;                      // the page has become notes; let it go
-
-            RecentTurns.RemoveRange(0, consumedTurnCount);
+            ApplyCompression(newSummary, consumedTurnCount);
         }
     }
 }

@@ -229,17 +229,13 @@ namespace ImmersiveAI
             var scene = asLetter ? SafeBuildApartSituation(npc) : SafeBuildSituation(npc);
 
             var ctx = BuildContext(npc, scene);
-            var messages = _promptBuilder.Build(
-                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, NextMessagePlaceholder,
-                _config.SystemVoiceName);
 
-            var sheet = string.Empty;
-            foreach (var msg in messages)
-            {
-                if (msg.Role != ChatRole.System) continue;
-                sheet = msg.Content ?? string.Empty;
-                break;
-            }
+            // The sheet WITH its section marks — the one reader in the mod that wants them, so the
+            // screen can draw a named, coloured header per block (2026.08.27). It is the very same
+            // builder the real send uses; Build() simply strips the marks on its way out, so the
+            // preview cannot drift from the truth by being assembled a second way.
+            var sheet = Core.Prompts.PromptBuilder.BuildMarkedSheet(
+                ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName);
 
             var tools = new List<PreviewTool>();
             foreach (var tool in GatherSpokenTools(npc))
@@ -272,10 +268,8 @@ namespace ImmersiveAI
                 int sheetTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(sheet);
                 int memoryTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
                     ctx.Memory == null ? string.Empty : ctx.Memory.DeepMemoryText());
-                int notesTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
-                    Core.Memory.MemoryBites.Render(ctx.Memory?.Bites));
                 int sceneTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(ctx.Scene);
-                int personaTok = Math.Max(0, sheetTok - memoryTok - notesTok - sceneTok);
+                int personaTok = Math.Max(0, sheetTok - memoryTok - sceneTok);
                 // Only what actually RIDES is weighed: the oldest silent marks stop being sent once
                 // the bookkeeping would hold more than a third of the window (BeatsThatStillRide).
                 var riding = new List<Core.Memory.ConversationTurn>();
@@ -310,14 +304,9 @@ namespace ImmersiveAI
                 var sb = new StringBuilder();
                 sb.Append("About ").Append(K(total)).Append(" tokens ride with your next message:");
                 sb.Append("\n   · their mind's sheet — ").Append(K(sheetTok))
-                  .Append("  (how things stand ").Append(K(memoryTok))
-                  .Append(" · notes ").Append(K(notesTok))
+                  .Append("  (deep memory ").Append(K(memoryTok))
                   .Append(" · this moment about them ").Append(K(sceneTok))
                   .Append(" · who they are ").Append(K(personaTok)).Append(')');
-                if (ctx.Memory != null && ctx.Memory.Bites.Count > 0)
-                    sb.Append("\n   · they keep ")
-                      .Append(Core.Memory.MemoryBites.CountLabel(ctx.Memory.Bites))
-                      .Append(", each written and rewritten by their own hand");
                 sb.Append("\n   · the hands they may reach for — ").Append(K(toolsTok))
                   .Append(" across ").Append(tools.Count).Append(" tools");
                 sb.Append("\n   · the words already between you — ").Append(K(turnsTok))

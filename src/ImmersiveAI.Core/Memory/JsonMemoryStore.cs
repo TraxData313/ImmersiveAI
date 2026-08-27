@@ -50,7 +50,13 @@ namespace ImmersiveAI.Core.Memory
 
             var json = File.ReadAllText(filePath);
             var memory = JsonConvert.DeserializeObject<NpcMemory>(json);
-            return memory ?? new NpcMemory { NpcId = npcId };
+            if (memory == null) return new NpcMemory { NpcId = npcId };
+
+            // A save written during the one day the deep memory was keyed notes (2026.08.27) holds
+            // it all in Bites with an empty page. Folding it back at LOAD rather than at save means
+            // a soul is whole the moment she is read, however she is reached.
+            memory.HealLegacyNotes();
+            return memory;
         }
 
         /// <summary>Saves a memory to an explicit file path, creating the folder and writing atomically.</summary>

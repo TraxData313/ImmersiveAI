@@ -263,14 +263,6 @@ namespace ImmersiveAI
             return (int)room;
         }
 
-        /// <summary>
-        /// THE NOTES (2026.08.27): an NPC's deep memory keeps its plain facts as small keyed notes
-        /// she writes, rewrites and strikes out one at a time — mid-talk through the
-        /// <c>keep_note</c> hand, and at every compression — instead of one page rewritten whole.
-        /// How things stand between them stays prose. Off restores the single rolling page and
-        /// drops the tool. See <see cref="Core.Memory.MemoryBites"/>.
-        /// </summary>
-        public bool EnableMemoryNotes { get; set; } = true;
 
         /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>

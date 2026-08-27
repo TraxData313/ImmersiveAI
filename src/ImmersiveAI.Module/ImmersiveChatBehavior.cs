@@ -198,9 +198,6 @@ namespace ImmersiveAI
             if (CanSeekWisdom()) tools.Add(Tools.WebWisdom.Tool);
             bool heartRides = CanMoveHeart();
             if (heartRides) tools.Add(Tools.HeartTool.Tool);
-            // The note-keeping hand: she files a plain fact the moment it is said, rather than
-            // waiting for a compression to rewrite her whole memory around it (2026.08.27).
-            if (CanKeepNotes()) tools.Add(Tools.NoteTool.Tool);
             // The chronicle's hand rides only for a soul with a shared battle to recall — a lean
             // tool list keeps tools used, and "our battles" means nothing to a stranger to war.
             if (CanRecallChronicle(npc)) tools.Add(Tools.ChronicleTool.Tool);
@@ -280,9 +277,6 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
-
-            if (call.Name == Tools.NoteTool.KeepNote)
-                return Task.FromResult(ResolveKeepNote(call, npc, liveMemory));
 
             if (call.Name == Tools.BargainTool.StrikeBargain)
                 return Task.FromResult(ResolveBargainLay(call, npc, bargain));
@@ -369,37 +363,6 @@ namespace ImmersiveAI
             if (heart != null) heart.Total += shift;
             MainThreadDispatcher.Enqueue(() => ApplyRelationShift(npc, shift));
             return Tools.HeartTool.Felt;
-        }
-
-        // ------------------------- the note-keeping hand (keep_note) -------------------------
-        //
-        // She files a plain fact under its own word the moment it is said. THE LIVE-INSTANCE
-        // DISCIPLINE (inherited from the retired truth/goal hands, still kept by the courtship
-        // resolvers): mutate the SAME memory object this turn will save, and save at once — write
-        // to a freshly loaded copy and the end-of-turn save clobbers it.
-        private string ResolveKeepNote(Core.Llm.ToolCall call, Hero npc, NpcMemory? liveMemory)
-        {
-            try
-            {
-                var memory = liveMemory ?? LoadMemory(npc);
-                var deed = Tools.NoteTool.ParseDeed(call);
-                var word = Tools.NoteTool.ParseWord(call);
-                var note = Tools.NoteTool.ParseNote(call);
-
-                var answer = Tools.NoteTool.Apply(memory, deed, word, note);
-                SaveMemory(npc, memory);
-
-                if (deed.Length > 0 && word.Length > 0)
-                    NotifyActivity(npc, deed == Tools.NoteTool.ActStrike
-                        ? $"lets a note go… ({Core.Memory.MemoryBites.CanonicalKey(word)})"
-                        : $"sets something down to remember… ({Core.Memory.MemoryBites.CanonicalKey(word)})");
-                return answer;
-            }
-            catch (Exception ex)
-            {
-                ModLog.Error("keeping a note", ex);
-                return "Nothing of mine takes it down just now.";
-            }
         }
 
         // ------------------------- the hiring bargain (strike_bargain) -------------------------
@@ -692,10 +655,6 @@ namespace ImmersiveAI
         private bool CanMoveHeart() =>
             _config.EnableRelationshipChanges && _config.RelationshipChangesViaTool && _client is IToolChatClient;
 
-        // The note-keeping hand (keep_note): her deep memory's plain facts, written mid-talk rather
-        // than only at compression (2026.08.27).
-        private bool CanKeepNotes() => _config.EnableMemoryNotes && _client is IToolChatClient;
-
         // ------------------------- the growing memory-writing room -------------------------
         //
         // A model handed room USES it, so a soul who has met the player once would otherwise write
@@ -719,9 +678,7 @@ namespace ImmersiveAI
         {
             try
             {
-                int held = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(memory?.Summary)
-                         + Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
-                               Core.Memory.MemoryBites.Render(memory?.Bites));
+                int held = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(memory?.Summary);
                 _memoryWriteRoom = _config.MemoryWriteTokensFor(memory?.StoryRichness ?? 0, held);
             }
             catch { _memoryWriteRoom = 0; }
@@ -1630,9 +1587,11 @@ namespace ImmersiveAI
                 NpcPaths.EnsureMigrated(npc);
                 Directory.CreateDirectory(NpcPaths.NpcFolder(npc));
                 // The scene/meeting separator is prompt plumbing (PromptBuilder splits on it to slot
-                // memory before the arrival); on disk it reads as a soft divider.
+                // memory before the arrival); on disk it reads as a soft divider. The section marks
+                // are plumbing too — they exist for the talk screen's headers alone — so on disk
+                // they become plain headings rather than raw brackets.
                 File.WriteAllText(NpcPaths.SituationFile(npc),
-                    situation.Replace(PromptBuilder.MeetingSeparator, "· · ·"));
+                    SectionsAsHeadings(situation).Replace(PromptBuilder.MeetingSeparator, "· · ·"));
             }
             catch (Exception ex)
             {
@@ -3744,6 +3703,32 @@ namespace ImmersiveAI
             PersistSituation(npc, situation);
             _ = self.QuickChatRespondAsync(npc, text.Trim(), situation);
             return true;
+        }
+
+        /// <summary>The section marks as readable headings, for the copy written to disk. The player
+        /// reads that file too, and "[[section:News of the world]]" helps nobody.</summary>
+        private static string SectionsAsHeadings(string text)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
+                var sb = new System.Text.StringBuilder(text.Length);
+                foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+                {
+                    var t = line.Trim();
+                    if (t.StartsWith(PromptBuilder.SectionOpen, StringComparison.Ordinal)
+                        && t.EndsWith(PromptBuilder.SectionClose, StringComparison.Ordinal))
+                    {
+                        var title = t.Substring(PromptBuilder.SectionOpen.Length,
+                            t.Length - PromptBuilder.SectionOpen.Length - PromptBuilder.SectionClose.Length);
+                        sb.AppendLine("--- " + title + " ---");
+                        continue;
+                    }
+                    sb.AppendLine(line);
+                }
+                return sb.ToString().TrimEnd();
+            }
+            catch { return PromptBuilder.StripSections(text); }
         }
 
         private async Task QuickChatRespondAsync(Hero npc, string playerInput, string situation)

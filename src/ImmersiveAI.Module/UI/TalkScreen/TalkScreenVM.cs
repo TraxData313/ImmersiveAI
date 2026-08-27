@@ -6,6 +6,7 @@ using ImmersiveAI.Core.Memory;
 using ImmersiveAI.UI.ChatWindow;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Library;
+using Sec = ImmersiveAI.Core.Prompts.PromptBuilder.Sections;
 
 namespace ImmersiveAI.UI.TalkScreen
 {
@@ -43,6 +44,62 @@ namespace ImmersiveAI.UI.TalkScreen
         private static readonly Color PromptFrameColor = new Color(0.58f, 0.68f, 0.80f, 1f);
         private static readonly Color PromptSheetColor = new Color(0.62f, 0.66f, 0.72f, 1f);
         private static readonly Color PromptToolColor = new Color(0.56f, 0.72f, 0.70f, 1f);
+
+        // THE SECTION COLOURS (2026.08.27, Anton: "make the different sections named for me to see
+        // in the chat, with names colored... so that is very easy and intuitive"). The sheet is one
+        // unbroken first-person stream — right for the NPC, unreadable for the player hunting for
+        // what their companion actually knows. Each block now wears a named, coloured header.
+        //
+        // Chosen to be told apart at a glance on the dark panel and to MEAN something: warm golds
+        // for who they are, cool blues for the world outside, steel for war, rose for the bond,
+        // violet for the moment itself. All well above mid-brightness — the panel is dark and a
+        // saturated dark hue reads as mud on it.
+        private static readonly Color SectionSelfColor = new Color(0.93f, 0.80f, 0.52f, 1f);
+        private static readonly Color SectionKinColor = new Color(0.88f, 0.72f, 0.62f, 1f);
+        private static readonly Color SectionWorldColor = new Color(0.62f, 0.84f, 0.72f, 1f);
+        private static readonly Color SectionNewsColor = new Color(0.58f, 0.80f, 0.88f, 1f);
+        private static readonly Color SectionWarColor = new Color(0.72f, 0.78f, 0.90f, 1f);
+        private static readonly Color SectionBondColor = new Color(0.93f, 0.62f, 0.72f, 1f);
+        private static readonly Color SectionMomentColor = new Color(0.78f, 0.72f, 0.95f, 1f);
+        private static readonly Color SectionRuleColor = new Color(0.70f, 0.70f, 0.74f, 1f);
+
+        /// <summary>The colour a section header wears. Unknown titles fall back to the sheet grey,
+        /// so a section added in Core without a colour here still renders — just plainly.</summary>
+        private static Color ColorForSection(string title)
+        {
+            if (title == Sec.WhoTheyAre || title == Sec.WhoTheyBecame) return SectionSelfColor;
+            if (title == Sec.TheirKin) return SectionKinColor;
+            if (title == Sec.TheMomentAround || title == Sec.TheirTrouble) return SectionWorldColor;
+            if (title == Sec.WorldNews) return SectionNewsColor;
+            if (title == Sec.SharedBattles || title == Sec.SharedRoad) return SectionWarColor;
+            if (title == Sec.DeepMemory || title == Sec.TheBond
+                || title == Sec.TheNights || title == Sec.SinceYouTalked) return SectionBondColor;
+            if (title == Sec.TheArrival) return SectionMomentColor;
+            if (title == Sec.HowTheySpeak || title == Sec.YourOwnWords) return SectionRuleColor;
+            return PromptSheetColor;
+        }
+
+        /// <summary>One line of plain English under each header, so a player who has never read a
+        /// prompt in their life knows what they are looking at.</summary>
+        private static string HintForSection(string title)
+        {
+            if (title == Sec.WhoTheyAre) return "Their nature, their trade and the way their words come out.";
+            if (title == Sec.TheirKin) return "The family and house they belong to.";
+            if (title == Sec.WhoTheyBecame) return "Who they feel themselves to be — written by them, not by you.";
+            if (title == Sec.TheMomentAround) return "Where they are standing, how their body fares, and the mood of the day.";
+            if (title == Sec.TheirTrouble) return "A problem of their own they would like solved.";
+            if (title == Sec.WorldNews) return "Wars, deaths and doings that have reached their ears.";
+            if (title == Sec.SharedBattles) return "The fights you stood in together, the last one told whole.";
+            if (title == Sec.SharedRoad) return "The stops, the trade and the tasks they witnessed riding with you.";
+            if (title == Sec.TheNights) return "The evenings lately, and whatever they came to hear of the rest.";
+            if (title == Sec.SinceYouTalked) return "Everything that has happened since the two of you last sat alone.";
+            if (title == Sec.DeepMemory) return "Their deep memory of you — rewritten in their own words each time they reflect.";
+            if (title == Sec.TheBond) return "Where the heart stands between you, and what it is still waiting on.";
+            if (title == Sec.TheArrival) return "You, arriving — the last thing they read before answering.";
+            if (title == Sec.HowTheySpeak) return "The few rules on how they talk. Kept short on purpose.";
+            if (title == Sec.YourOwnWords) return "Your own prompt files. These win when anything contradicts them.";
+            return string.Empty;
+        }
 
         private readonly ModConfig _config;
 
@@ -573,12 +630,57 @@ namespace ImmersiveAI.UI.TalkScreen
                 + "scrolling down for the conversation itself.",
                 isNarration: true, PromptFrameColor));
 
-            foreach (var block in SplitIntoBlocks(preview.Sheet))
-                messages.Add(new ChatMessageVM(string.Empty, block, isNarration: true, PromptSheetColor));
+            AddSheetBySection(messages, preview.Sheet);
 
             messages.Add(new ChatMessageVM("▼ And then everything between you",
                 "Every word below is remembered, and rides along with the rest.",
                 isNarration: true, PromptFrameColor));
+        }
+
+        // The sheet, cut at its OWN section marks and each part given a named, coloured header
+        // (2026.08.27). The marks are planted by PromptBuilder and stripped before anything is sent,
+        // so this is the one reader in the mod that sees them — and it must never invent a section
+        // the sheet does not carry, or the scrollback stops being the truth about the prompt.
+        private void AddSheetBySection(MBBindingList<ChatMessageVM> messages, string sheet)
+        {
+            var open = Core.Prompts.PromptBuilder.SectionOpen;
+            var close = Core.Prompts.PromptBuilder.SectionClose;
+
+            var title = string.Empty;
+            var body = new StringBuilder();
+
+            void Flush()
+            {
+                var text = body.ToString().Trim();
+                body.Clear();
+                if (text.Length == 0 && title.Length == 0) return;
+
+                if (title.Length == 0)
+                {
+                    // Anything standing before the first mark still belongs to the player's eye.
+                    messages.Add(new ChatMessageVM(string.Empty, text, isNarration: true, PromptSheetColor));
+                    return;
+                }
+
+                var hint = HintForSection(title);
+                var head = "◆ " + title;
+                messages.Add(new ChatMessageVM(head,
+                    hint.Length > 0 ? hint + "\n\n" + text : text,
+                    isNarration: true, ColorForSection(title)));
+            }
+
+            foreach (var raw in (sheet ?? string.Empty).Replace("\r\n", "\n").Split('\n'))
+            {
+                var t = raw.Trim();
+                if (t.StartsWith(open, StringComparison.Ordinal) && t.EndsWith(close, StringComparison.Ordinal))
+                {
+                    Flush();
+                    title = t.Substring(open.Length, t.Length - open.Length - close.Length);
+                    continue;
+                }
+                body.AppendLine(raw);
+            }
+            Flush();
         }
 
         // Paragraphs, kept whole. The sheet is written in blocks with blank lines between them, so

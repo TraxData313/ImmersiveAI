@@ -27,7 +27,7 @@ namespace ImmersiveAI.Core.Prompts
             var voice = Voice(voiceName);
             var messages = new List<ChatMessage>
             {
-                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
+                ChatMessage.System(StripSections(BuildSystemPrompt(persona, memory, sceneContext, playerName)))
             };
 
             // Every beat of the shared story — the player's visits (arrival + greeting), the NPC's own
@@ -167,7 +167,7 @@ namespace ImmersiveAI.Core.Prompts
             var voice = Voice(voiceName);
             var messages = new List<ChatMessage>
             {
-                ChatMessage.System(BuildSystemPrompt(persona, memory, sceneContext, playerName))
+                ChatMessage.System(StripSections(BuildSystemPrompt(persona, memory, sceneContext, playerName)))
             };
 
             var carried = AppendRememberedTurns(messages, memory, voice);
@@ -459,10 +459,6 @@ namespace ImmersiveAI.Core.Prompts
         public static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
             || memory.TotalTurns > 0
-            // Notes are durable history in their own right (2026.08.27 evening): once the page is
-            // retired a long-known soul may hold nothing BUT notes, and reading her as a stranger
-            // would greet an old friend with "I have not met you before".
-            || memory.Bites.Count > 0
             || (!string.IsNullOrWhiteSpace(memory.Summary) && !memory.SeededFromStory);
 
         /// <summary>The NPC's own awareness of the player coming to them, closing on the greeting
@@ -610,6 +606,82 @@ namespace ImmersiveAI.Core.Prompts
         /// </summary>
         public const string MeetingSeparator = "[[the-moment]]";
 
+        /// <summary>
+        /// THE SECTION MARKS (2026.08.27, Anton: "im not able to read good where the deep memory
+        /// starts, where what section starts"). The sheet is one long first-person stream by
+        /// design — that is what makes it read as a mind rather than a data sheet — but that same
+        /// quality makes it unreadable to the PLAYER scrolling the talk screen looking for what
+        /// their companion actually knows.
+        ///
+        /// <para>
+        /// So the builder plants an invisible mark before each block, exactly as
+        /// <see cref="MeetingSeparator"/> is planted, and exactly as strictly: it is STRIPPED
+        /// before the prompt is sent and never reaches a model. The talk screen splits on the
+        /// marks to draw a named, coloured header per section; every other reader strips them.
+        /// </para>
+        ///
+        /// <para>
+        /// The names are the PLAYER'S words, not the NPC's — this is the one piece of the sheet
+        /// written for the person outside the world, and it never travels inward.
+        /// </para>
+        /// </summary>
+        public const string SectionOpen = "[[section:";
+        public const string SectionClose = "]]";
+
+        /// <summary>One section mark, on a line of its own.</summary>
+        public static string Section(string title) => SectionOpen + title + SectionClose;
+
+        /// <summary>Every section title the sheet may carry, in the order they appear. The talk
+        /// screen colours by these, so a new section must be added here AND given a colour.</summary>
+        public static class Sections
+        {
+            public const string WhoTheyAre = "Who they are";
+            public const string TheirKin = "Their kin and house";
+            public const string WhoTheyBecame = "Who they have become";
+            public const string TheMomentAround = "Where they stand right now";
+            public const string TheirTrouble = "Troubles of their own";
+            public const string WorldNews = "News of the world";
+            public const string SharedBattles = "Battles you fought together";
+            public const string SharedRoad = "The road you rode together";
+            public const string TheNights = "Your nights";
+            public const string SinceYouTalked = "Since you last spoke";
+            public const string DeepMemory = "What you are to them";
+            public const string TheBond = "What stands between you";
+            public const string TheArrival = "The moment you spoke";
+            public const string HowTheySpeak = "How they speak";
+            public const string YourOwnWords = "Your own written words";
+        }
+
+        /// <summary>
+        /// Removes every section mark. Called on the real prompt before it is sent, and by every
+        /// reader that is not the talk screen's scrollback. A mark that escaped to a model would be
+        /// the fourth wall in its plainest form, so this is deliberately unforgiving: it eats the
+        /// mark AND the blank line it sat on.
+        /// </summary>
+        public static string StripSections(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
+            if (text!.IndexOf(SectionOpen, StringComparison.Ordinal) < 0) return text;
+
+            var sb = new StringBuilder(text.Length);
+            foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith(SectionOpen, StringComparison.Ordinal)
+                    && trimmed.EndsWith(SectionClose, StringComparison.Ordinal))
+                    continue;
+                sb.AppendLine(line);
+            }
+            return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>The sheet WITH its section marks intact — the talk screen's scrollback only.
+        /// Every other caller goes through <see cref="Build"/>, which strips them; this exists so
+        /// the preview can never drift from the real sheet by being built a second way.</summary>
+        public static string BuildMarkedSheet(
+            NpcPersona persona, NpcMemory memory, string sceneContext, string playerName) =>
+            BuildSystemPrompt(persona, memory, sceneContext, playerName);
+
         private static string BuildSystemPrompt(
             NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
         {
@@ -619,6 +691,7 @@ namespace ImmersiveAI.Core.Prompts
             // a clinical data sheet, never a long narrator talking at them (Anton's ask, 2026.07.11).
             // No fourth-wall labels: to them, Calradia is simply the world they live in. The opening
             // atmosphere line is player-configurable (name already substituted).
+            sb.AppendLine(Section(Sections.WhoTheyAre));
             sb.AppendLine(string.IsNullOrWhiteSpace(persona.AtmosphereLine)
                 ? $"I am {persona.Name}, a living soul in the world of Calradia in feudal times."
                 : persona.AtmosphereLine.Trim());
@@ -635,6 +708,7 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(persona.FamilyKnowledge))
             {
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.TheirKin));
                 sb.AppendLine(persona.FamilyKnowledge.Trim());
             }
 
@@ -642,6 +716,7 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(persona.SelfConcept))
             {
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.WhoTheyBecame));
                 sb.AppendLine("Who I have become:");
                 sb.AppendLine(persona.SelfConcept.Trim());
             }
@@ -665,14 +740,18 @@ namespace ImmersiveAI.Core.Prompts
 
             if (!string.IsNullOrWhiteSpace(scenePart) && meetingPart.Length > 0)
             {
-                // The setting first — written as the NPC's own present-tense awareness.
+                // The setting first — written as the NPC's own present-tense awareness. It carries
+                // its OWN section marks from the game layer (the tidings, the battles, the road),
+                // so it is not headed again here.
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.TheMomentAround));
                 sb.AppendLine(scenePart.Trim());
             }
 
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.DeepMemory));
                 if (memory.SeededFromStory && memory.StoryRichness == 0)
                 {
                     // Nothing lived with this person yet — the deep memory holds only the seeded
@@ -690,31 +769,6 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(memory.Summary.Trim());
             }
 
-            // THE NOTES (2026.08.27) — and since that evening they are the WHOLE of the deep memory,
-            // the feeling of it included; the page above survives only until she next gathers her
-            // thoughts. She writes them one at a time (the keep_note hand, and at every compression),
-            // and what she does not name keeps standing, which is what makes them cheap to hold and
-            // safe from the whole-rewrite. The heading has to carry the framing the page used to:
-            // with no page above them, a bare "notes" reads as a filing cabinet rather than as
-            // everything this person is to her.
-            var notes = MemoryBites.Render(memory.Bites);
-            if (notes.Length > 0)
-            {
-                sb.AppendLine();
-                if (string.IsNullOrWhiteSpace(memory.Summary))
-                {
-                    var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
-                        ? string.Empty
-                        : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
-                    sb.AppendLine($"All I carry of {playerName}{asOf}, each under its own word:");
-                }
-                else
-                {
-                    sb.AppendLine("Notes I keep, each under its own word:");
-                }
-                sb.AppendLine(notes);
-            }
-
             // The courtship road rides beside the deep memory of this person — where the heart
             // stands and what it quietly asks — and, for a clan head, the suitor's case. Both are
             // built by the game layer (persisted stage + live met-marks) and placed here so they
@@ -722,6 +776,7 @@ namespace ImmersiveAI.Core.Prompts
             if (!string.IsNullOrWhiteSpace(persona.CourtshipTerms))
             {
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.TheBond));
                 sb.AppendLine(persona.CourtshipTerms.Trim());
             }
 
@@ -770,15 +825,18 @@ namespace ImmersiveAI.Core.Prompts
             {
                 // The moment itself — right after what I remember of them, the last breath before talk.
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.TheArrival));
                 sb.AppendLine(meetingPart);
             }
             else if (!string.IsNullOrWhiteSpace(scenePart))
             {
                 sb.AppendLine();
+                sb.AppendLine(Section(Sections.TheMomentAround));
                 sb.AppendLine(scenePart.Trim());
             }
 
             sb.AppendLine();
+            sb.AppendLine(Section(Sections.HowTheySpeak));
             sb.AppendLine("How I speak:");
             sb.AppendLine(BrevityGuidance);
             sb.AppendLine(OldWorldToneGuidance);
@@ -833,6 +891,7 @@ namespace ImmersiveAI.Core.Prompts
             if (world.Length == 0 && mine.Length == 0) return;
 
             sb.AppendLine();
+            sb.AppendLine(Section(Sections.YourOwnWords));
             sb.AppendLine(HeldTruestFrame);
 
             if (world.Length > 0)

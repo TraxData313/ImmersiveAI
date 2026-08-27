@@ -39,12 +39,9 @@ namespace ImmersiveAI.Core.Memory
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
-            // A BITES-ONLY reply is the normal reply now that the page is retired (2026.08.27).
-            // Refusing one for want of a SUMMARY: would mean a soul who edited three notes and had
-            // nothing else to change quietly lost the whole compression, turns and all.
-            if (!parsed.HasAnything) return false;
+            if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary, turns.Count, parsed.Bites);
+            memory.ApplyCompression(parsed.Summary!, turns.Count);
             return true;
         }
 
@@ -65,8 +62,7 @@ namespace ImmersiveAI.Core.Memory
             var turns = memory.GetTurnsToCompress(keepMostRecent);
 
             // Nothing to reflect on at all — no history and no prior deep memory.
-            if (memory.RecentTurns.Count == 0 && string.IsNullOrWhiteSpace(memory.Summary)
-                && memory.Bites.Count == 0)
+            if (memory.RecentTurns.Count == 0 && string.IsNullOrWhiteSpace(memory.Summary))
                 return false;
 
             // When a self is supplied, the reflection also invites the NPC to look inward and, if they
@@ -75,9 +71,9 @@ namespace ImmersiveAI.Core.Memory
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
-            if (!parsed.HasAnything) return false;
+            if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary, turns.Count, parsed.Bites);
+            memory.ApplyCompression(parsed.Summary!, turns.Count);
 
             // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
             // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
@@ -151,11 +147,10 @@ namespace ImmersiveAI.Core.Memory
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("The long page I have carried until now (I am setting it down as notes instead):");
+                sb.AppendLine("What I already hold in memory (I weave the fading moments into it):");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
-            AppendCurrentBites(sb, memory);
 
             sb.AppendLine();
             sb.AppendLine("The moments now fading (I fold these into my memory):");
@@ -210,61 +205,18 @@ namespace ImmersiveAI.Core.Memory
         // 2026.08.08; without that clause the "all I carry of them" framing would erode her past by
         // shape, not by her choice). No length ceiling on purpose; MaxMemoryWriteTokens is the only
         // real bound, and it no longer shares its room with FACTS and GOALS.
-        /// <summary>Her own notes, shown back to her so an edit is an edit and not a guess. Empty
-        /// when she keeps none yet — a soul with no notes is simply invited to begin.</summary>
-        private static void AppendCurrentBites(StringBuilder sb, NpcMemory memory)
-        {
-            var rendered = MemoryBites.Render(memory?.Bites);
-            sb.AppendLine();
-            if (rendered.Length == 0)
-            {
-                // THE ONE-TIME TURNING (2026.08.27). A memory written the old way is one long page
-                // holding everything at once. Nothing is migrated by machine — only she knows which
-                // of it deserves a word of its own — so the first time she gathers her thoughts
-                // after the change she is invited to lift the plain facts out into notes. It rides
-                // a compression that was happening anyway, so it costs nothing, and her page keeps
-                // everything that does not become a note.
-                if (memory != null && MemoryBites.NeedsSeeding(memory))
-                {
-                    // THE ONE-TIME TURNING. The page above is everything she holds, written the old
-                    // way. She lifts ALL of it into notes now — the feeling of it too, in her own
-                    // words — and the page is let go the moment she has notes to stand on. Only she
-                    // knows which of it deserved a word, which is why no machine does this.
-                    sb.AppendLine("I keep no short notes yet — all I hold of them is the long page above, "
-                        + "written the old way. As I settle my thoughts now I set the whole of it down as notes "
-                        + "instead, each under its own word, and let the page go: the plain facts (a name, a "
-                        + "promise, a debt, a wage, a thing owed or owned) AND how things truly stand between us, "
-                        + "in my own words, under a word of my choosing. Whatever I do not carry across now is "
-                        + "gone, so I carry across everything I would keep.");
-                    return;
-                }
-                sb.AppendLine("I keep no short notes of my own yet — I may begin any I wish.");
-                return;
-            }
-            sb.AppendLine("The short notes I keep, each under its own word (these STAND unless I say otherwise):");
-            sb.AppendLine(rendered);
-            if (MemoryBites.IsFull(memory!.Bites))
-                sb.AppendLine(MemoryBites.ShelfFullNote());
-        }
-
         private static void AppendReplyFormat(StringBuilder sb)
         {
             sb.AppendLine();
             sb.AppendLine("I set it down in exactly this shape:");
-            sb.AppendLine("BITES:");
-            sb.AppendLine("<ONLY the notes I am changing, one per line, as 'word: the note'. A word I do not "
-                + "name here keeps exactly what it already says — I do not copy my whole shelf out again. To "
-                + "strike one out I write '-word' alone.");
-            sb.AppendLine("Everything I carry of them lives here, and nothing else does. A plain fact deserves "
-                + "a note — a person, a promise, a debt, a wage, a place, a thing owed or owned — and so does "
-                + "HOW THINGS STAND BETWEEN US: what they are to me and where my heart sits with them, in my "
-                + "own true words, under a word of my own choosing. I write that one as I would say it, not as "
-                + "a ledger entry, for it is the one that is really me.");
-            sb.AppendLine("What I carry of my own road from before lives here too, under its own words — mine "
-                + "to keep, reshape, or let fade, as I choose.");
-            sb.AppendLine("Each note a line or two, never a paragraph. Ledgers I never hoard — gear, goods and "
-                + "sums live with me as what they MEANT, for the world's own chronicles keep the numbers. If "
-                + "nothing needs changing I write nothing here at all.>");
+            sb.AppendLine("SUMMARY:");
+            sb.AppendLine("<all I carry of them, in my own first-person voice — who they are to me and how that came to be, "
+                + "and the particular things I would not lose: what was said and promised between us, what was given and done, the names that matter. "
+                + "Ledgers I do not hoard: gear, goods, and sums live with me as what they mean — a kindness, a debt, a trust growing — "
+                + "never as lists of items and prices; the world's own chronicles keep the numbers. "
+                + "What I carry of my own road from before also lives here — mine to keep, reshape, or let fade, as I choose.>");
+            sb.AppendLine("I write it whole each time, for what I do not set down here fades from me. "
+                + "I take as much room as the story truly asks — a few paragraphs, and more where there is more to hold.");
         }
 
         /// <summary>
@@ -305,11 +257,10 @@ namespace ImmersiveAI.Core.Memory
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("The long page I have carried until now (I am setting it down as notes instead):");
+                sb.AppendLine("What I already hold in memory (I revise it as I reflect):");
                 sb.AppendLine(memory.Summary.Trim());
             }
 
-            AppendCurrentBites(sb, memory);
 
             if (turnsToFold.Count > 0)
             {
@@ -389,29 +340,22 @@ namespace ImmersiveAI.Core.Memory
 
             var summaryIdx = response.IndexOf("SUMMARY:", StringComparison.OrdinalIgnoreCase);
             var selfIdx = response.IndexOf("SELF:", StringComparison.OrdinalIgnoreCase);
-            var bitesIdx = response.IndexOf("BITES:", StringComparison.OrdinalIgnoreCase);
 
             // The retired sections (FACTS:/GOALS:, 2026.08.08) are no longer asked for, but a model
             // trained on the habit — or an NPC whose replayed memory still shows the old shape — may
             // volunteer one anyway. They are never read; they only still BOUND their neighbours, so a
             // stray list can never silt up the summary or the self with bullet points.
+            // BITES: joins FACTS:/GOALS: as a retired label that is never READ but still BOUNDS its
+            // neighbours, so a model still holding the one-day note habit (2026.08.27) cannot silt a
+            // list of keys into the page or the self.
+            var bitesIdx = response.IndexOf("BITES:", StringComparison.OrdinalIgnoreCase);
             var factsIdx = response.IndexOf("FACTS:", StringComparison.OrdinalIgnoreCase);
             var goalsIdx = response.IndexOf("GOALS:", StringComparison.OrdinalIgnoreCase);
 
             string summary;
-            if (summaryIdx < 0 && bitesIdx >= 0)
+            if (summaryIdx < 0)
             {
-                // SHE ANSWERED IN THE NEW SHAPE (2026.08.27 evening). SUMMARY: is no longer asked
-                // for, so unlabelled words in front of BITES: are chatter ("Here is what I keep:"),
-                // NOT a page. Reading them as one would resurrect the very thing being retired —
-                // and worse, write junk into it. There is no page in this reply, and that is right.
-                summary = string.Empty;
-            }
-            else if (summaryIdx < 0)
-            {
-                // No BITES either: an old-shape reply, from a model still holding the habit or from
-                // a replayed memory. Treat everything up to the first known section as the page, as
-                // it always was — such a reply still lands and is not thrown away.
+                // Model ignored the SUMMARY label; treat everything up to the first known section as summary.
                 var end = NextSection(0, response.Length, selfIdx, bitesIdx, factsIdx, goalsIdx);
                 summary = response.Substring(0, end).Trim();
             }
@@ -431,17 +375,8 @@ namespace ImmersiveAI.Core.Memory
                 if (block.Length > 0) self = block;
             }
 
-            string? bites = null;
-            if (bitesIdx >= 0)
-            {
-                var start = bitesIdx + "BITES:".Length;
-                var end = NextSection(start, response.Length, summaryIdx, selfIdx, factsIdx, goalsIdx);
-                var block = response.Substring(start, end - start).Trim();
-                if (block.Length > 0) bites = block;
-            }
-
             summary = TrimToLastCompleteSentence(summary);
-            return new CompressionResult(summary.Length == 0 ? null : summary, self, bites);
+            return new CompressionResult(summary.Length == 0 ? null : summary, self);
         }
 
         // Sentence-final punctuation, in the hands a model may actually leave it in — Latin,
@@ -500,29 +435,18 @@ namespace ImmersiveAI.Core.Memory
 
         public sealed class CompressionResult
         {
-            /// <summary>The prose bite — how things stand between them — rewritten whole; null when
-            /// the reply carried nothing usable, in which case the caller keeps the old one.</summary>
+            /// <summary>The deep memory, rewritten whole; null when the reply carried nothing
+            /// usable, in which case the caller keeps the old one.</summary>
             public string? Summary { get; }
 
             /// <summary>The NPC's rewritten sense of self, if they offered one this reflection; otherwise
             /// null (no SELF section was asked for or returned). "unchanged" is handled by the caller.</summary>
             public string? Self { get; }
 
-            /// <summary>The raw BITES: block — the note edits she made in the same breath, a DELTA
-            /// (2026.08.27). Null when she changed none, which is the common and correct case.</summary>
-            public string? Bites { get; }
-
-            /// <summary>True when the reply carried anything worth applying. A BITES-only reply is
-            /// the normal one now that the page is retired; a reply with neither means the call
-            /// stumbled, and the caller keeps everything exactly as it was.</summary>
-            public bool HasAnything =>
-                !string.IsNullOrWhiteSpace(Summary) || !string.IsNullOrWhiteSpace(Bites);
-
-            public CompressionResult(string? summary, string? self = null, string? bites = null)
+            public CompressionResult(string? summary, string? self = null)
             {
                 Summary = summary;
                 Self = self;
-                Bites = bites;
             }
         }
     }

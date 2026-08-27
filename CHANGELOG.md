@@ -31,15 +31,11 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
   chronicles keep it all, and she can still call any of it back.
 - The conversation you see is now exactly what the NPC is given — once an old mark settles out of
   their memory it leaves the thread too, and the tally at the top tells you how many have gone.
-- An NPC's whole memory of you is now short notes, each filed under its own word — a name, a
-  promise, a debt, a wage, and how things stand between you, written in their own voice. They
-  write, rewrite and strike them out one at a time, even mid-conversation.
-- Because of that, remembering something no longer means rewriting everything: a note they set
-  down stands until they change it, so nothing is quietly lost in the retelling any more.
-- Memory-writing room now grows with the bond. Someone you have met once writes a note's worth;
+- Memory-writing room now grows with the bond. Someone you have met once writes a short memory;
   a lifelong companion gets the full page. Nobody loses memories they already hold.
-- Existing saves lose nothing: an NPC carries the long memory they already have until the next
-  time they gather their thoughts, and set it down as notes themselves in that moment.
+- Scrolling up through what an NPC is about to be given now shows it in named, coloured
+  sections — who they are, what you are to them, news of the world, the battles you shared, the
+  moment you are in — so you can find what you are looking for at a glance.
 
 ## v3.1.3 — 2026.08.21
 
