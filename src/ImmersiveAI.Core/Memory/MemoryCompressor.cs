@@ -338,19 +338,20 @@ namespace ImmersiveAI.Core.Memory
         {
             if (string.IsNullOrWhiteSpace(response)) return new CompressionResult(null, null);
 
-            var summaryIdx = response.IndexOf("SUMMARY:", StringComparison.OrdinalIgnoreCase);
-            var selfIdx = response.IndexOf("SELF:", StringComparison.OrdinalIgnoreCase);
+            var summaryIdx = FindSectionLabel(response, "SUMMARY:");
+            var selfIdx = FindSectionLabel(response, "SELF:");
 
             // The retired sections (FACTS:/GOALS:, 2026.08.08) are no longer asked for, but a model
             // trained on the habit — or an NPC whose replayed memory still shows the old shape — may
             // volunteer one anyway. They are never read; they only still BOUND their neighbours, so a
             // stray list can never silt up the summary or the self with bullet points.
-            // BITES: joins FACTS:/GOALS: as a retired label that is never READ but still BOUNDS its
-            // neighbours, so a model still holding the one-day note habit (2026.08.27) cannot silt a
-            // list of keys into the page or the self.
-            var bitesIdx = response.IndexOf("BITES:", StringComparison.OrdinalIgnoreCase);
-            var factsIdx = response.IndexOf("FACTS:", StringComparison.OrdinalIgnoreCase);
-            var goalsIdx = response.IndexOf("GOALS:", StringComparison.OrdinalIgnoreCase);
+            // BITES: joins them as a retired label (2026.08.27, reverted 2026.08.28) that is never
+            // READ but still BOUNDS. It rides FindSectionLabel rather than a raw IndexOf for the
+            // fullwidth colon alone: a CJK model writes "BITES：", and a bitesIdx of -1 would let
+            // exactly the key list this label exists to fence off run on into the page.
+            var bitesIdx = FindSectionLabel(response, "BITES:");
+            var factsIdx = FindLegacyRetiredSectionLabel(response, "FACTS:");
+            var goalsIdx = FindLegacyRetiredSectionLabel(response, "GOALS:");
 
             string summary;
             if (summaryIdx < 0)
@@ -378,6 +379,94 @@ namespace ImmersiveAI.Core.Memory
             summary = TrimToLastCompleteSentence(summary);
             return new CompressionResult(summary.Length == 0 ? null : summary, self);
         }
+
+        // Matches a live section label (SUMMARY: or SELF:) only when it is not part of a larger ASCII
+        // word (rejecting "herself:", "myself:" or "itself:"). Chinese characters before a label (e.g.
+        // "自己SELF:") are accepted. Fullwidth colons (e.g. "SELF：", "SUMMARY：") written by CJK models
+        // are recognized as equivalent to ASCII colons. If rejected, it continues searching so a summary
+        // containing "she told herself:" does not prevent a real SELF: section later from being found.
+        private static int FindSectionLabel(string response, string label)
+        {
+            var fullwidthLabel = label.EndsWith(":")
+                ? label.Substring(0, label.Length - 1) + "："
+                : null;
+
+            var idx = 0;
+            while (true)
+            {
+                var idxAscii = response.IndexOf(label, idx, StringComparison.OrdinalIgnoreCase);
+                var idxFull = fullwidthLabel != null
+                    ? response.IndexOf(fullwidthLabel, idx, StringComparison.OrdinalIgnoreCase)
+                    : -1;
+
+                int candidate;
+                if (idxAscii >= 0 && idxFull >= 0)
+                    candidate = Math.Min(idxAscii, idxFull);
+                else if (idxAscii >= 0)
+                    candidate = idxAscii;
+                else if (idxFull >= 0)
+                    candidate = idxFull;
+                else
+                    return -1;
+
+                if (candidate == 0 || !IsAsciiLetter(response[candidate - 1]))
+                    return candidate;
+
+                idx = candidate + label.Length;
+            }
+        }
+
+        // Recognises a retired section label (FACTS: or GOALS:) only in its legacy form: starting a line
+        // (preceded only by whitespace or start-of-response) and ending a line (followed only by whitespace
+        // up to the newline or end-of-response). Ordinary prose containing "My goals: ..." or "Goals: ..."
+        // followed by text on the same line is rejected so it never truncates the summary or the self.
+        private static int FindLegacyRetiredSectionLabel(string response, string label)
+        {
+            var idx = 0;
+            while (true)
+            {
+                idx = response.IndexOf(label, idx, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) return -1;
+
+                var lineStart = idx == 0;
+                if (!lineStart)
+                {
+                    var prevNl = response.LastIndexOf('\n', idx - 1);
+                    var checkFrom = prevNl >= 0 ? prevNl + 1 : 0;
+                    lineStart = true;
+                    for (var i = checkFrom; i < idx; i++)
+                    {
+                        if (!char.IsWhiteSpace(response[i]))
+                        {
+                            lineStart = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (lineStart)
+                {
+                    var endOfLabel = idx + label.Length;
+                    var lineEnd = true;
+                    for (var i = endOfLabel; i < response.Length; i++)
+                    {
+                        var c = response[i];
+                        if (c == '\r' || c == '\n') break;
+                        if (!char.IsWhiteSpace(c))
+                        {
+                            lineEnd = false;
+                            break;
+                        }
+                    }
+
+                    if (lineEnd) return idx;
+                }
+
+                idx += label.Length;
+            }
+        }
+
+        private static bool IsAsciiLetter(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 
         // Sentence-final punctuation, in the hands a model may actually leave it in — Latin,
         // the CJK full stop, and the Arabic full stop.

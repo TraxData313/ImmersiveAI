@@ -515,4 +515,76 @@ public class MemoryCompressorTests
 
         Assert.Equal("Станах смела.", self.Text);
     }
+
+    [Fact]
+    public void ParseResponse_IgnoresHerselfInsideSummarySentence()
+    {
+        var response = "SUMMARY:\nShe reminded herself: never trust a stranger on the road.\nSELF:\nI walk alone.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("She reminded herself: never trust a stranger on the road.", parsed.Summary);
+        Assert.Equal("I walk alone.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_FindsSelfMidLineAfterFullStop()
+    {
+        var response = "SUMMARY:\nWe met on the road. SELF:\nI am bold.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("We met on the road.", parsed.Summary);
+        Assert.Equal("I am bold.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_FindsSectionLabelDirectlyAfterChineseWord()
+    {
+        var response = "SUMMARY:\n我們在戰場上並肩作戰自己SELF:\n我已不再膽怯。";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("我們在戰場上並肩作戰自己", parsed.Summary);
+        Assert.Equal("我已不再膽怯。", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_FindsSectionLabelWithFullwidthColon()
+    {
+        var response = "SUMMARY：\n我們在戰場上並肩作戰。\nSELF：\n我是一名忠誠的戰士。";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("我們在戰場上並肩作戰。", parsed.Summary);
+        Assert.Equal("我是一名忠誠的戰士。", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_SelfWithMidSentenceGoals_PreservesWholeSelf()
+    {
+        var response = "SUMMARY:\nWe fought together.\nSELF:\nI am a scout who has seen the worst of people. My goals: to go home before I am too old to know the road.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("I am a scout who has seen the worst of people. My goals: to go home before I am too old to know the road.", parsed.Self);
+        Assert.Equal("We fought together.", parsed.Summary);
+    }
+
+    [Fact]
+    public void ParseResponse_SelfWithLineStartingGoalsFollowedByProse_PreservesWholeSelf()
+    {
+        var response = "SUMMARY:\nWe fought together.\nSELF:\nI am a scout who has seen the worst of people.\nGoals: to go home before I am too old to know the road.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("I am a scout who has seen the worst of people.\nGoals: to go home before I am too old to know the road.", parsed.Self);
+        Assert.Equal("We fought together.", parsed.Summary);
+    }
+
+    [Fact]
+    public void ParseResponse_SummaryWithMidSentenceGoals_PreservesWholeSummary()
+    {
+        var response = "SUMMARY:\nWe met near the castle. My goals: to protect our lands and avenge our fallen comrades.\nSELF:\nI am a loyal guardian.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("We met near the castle. My goals: to protect our lands and avenge our fallen comrades.", parsed.Summary);
+        Assert.Equal("I am a loyal guardian.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_SummaryWithLineStartingFactsFollowedByProse_PreservesWholeSummary()
+    {
+        var response = "SUMMARY:\nWe met near the castle.\nFacts: they were outnumbered three to one and held their ground.\nSELF:\nI am a loyal guardian.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("We met near the castle.\nFacts: they were outnumbered three to one and held their ground.", parsed.Summary);
+        Assert.Equal("I am a loyal guardian.", parsed.Self);
+    }
 }
