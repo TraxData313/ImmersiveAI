@@ -29,8 +29,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
   more than a third of what an NPC carries word-for-word, the oldest of them settle into her
   deeper memory instead of riding along with every single reply. Nothing is forgotten — the
   chronicles keep it all, and she can still call any of it back.
-- Marks that have settled are shown dimmed in the thread, so you can always see exactly what she
-  is carrying into her next reply and what she is not.
+- The conversation you see is now exactly what the NPC is given — once an old mark settles out of
+  their memory it leaves the thread too, and the tally at the top tells you how many have gone.
 - NPCs now keep their deep memory as short notes, each filed under its own word — a name, a
   promise, a debt, a wage — which they write, rewrite and strike out one at a time, even in the
   middle of a conversation. How they feel about you stays written out in their own words.

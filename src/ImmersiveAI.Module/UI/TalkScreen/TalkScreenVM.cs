@@ -44,10 +44,6 @@ namespace ImmersiveAI.UI.TalkScreen
         private static readonly Color PromptSheetColor = new Color(0.62f, 0.66f, 0.72f, 1f);
         private static readonly Color PromptToolColor = new Color(0.56f, 0.72f, 0.70f, 1f);
 
-        // A mark that has settled out of the verbatim window: dimmest of all, because it is the one
-        // thing in the thread the chosen one is NOT being handed again (2026.08.27).
-        private static readonly Color SettledMarkColor = new Color(0.46f, 0.46f, 0.50f, 1f);
-
         private readonly ModConfig _config;
 
         // The line sent but not yet answered, per soul — shown in the thread while the reply is on
@@ -333,24 +329,22 @@ namespace ImmersiveAI.UI.TalkScreen
 
             if (memory != null)
             {
-                // WHAT SHE IS ACTUALLY GIVEN, and nothing more (Anton, 2026.08.27). The oldest
-                // silent marks stop riding into her prompt once the bookkeeping would hold more
-                // than a third of the verbatim window — so drawing them here exactly like the rest
-                // would tell the player she carries something she no longer carries.
+                // WHAT SHE IS ACTUALLY GIVEN, AND NOTHING ELSE (Anton, 2026.08.27: "if they don't
+                // carry it I don't want to see them, I want it keeping exactly as their prompt
+                // is"). The oldest silent marks stop riding into her prompt once the bookkeeping
+                // would hold more than a third of the verbatim window — so they are simply not
+                // drawn. A first cut showed them dimmed with a "settled" note and that was the
+                // wrong instinct: the thread IS the prompt, and anything standing in it that she
+                // does not receive is a second thing to read and reason about. The weight card at
+                // the top of the scrollback still counts them, which is where a "where did my
+                // battle go?" belongs — as a fact about the prompt, not as a ghost inside it.
                 var carries = Core.Prompts.PromptBuilder.BeatsThatStillRide(memory);
                 for (int at = 0; at < memory.RecentTurns.Count; at++)
                 {
+                    if (!carries[at]) continue;
                     var turn = memory.RecentTurns[at];
                     var stamp = Stamp(turn);
                     DrawLineBefore(turn.GameDay);
-                    if (!carries[at])
-                    {
-                        messages.Add(new ChatMessageVM(string.Empty,
-                            WithStamp(stamp, "⌁ " + OneBreathOf(turn.PlayerLine)
-                                + "  — settled; no longer carried into their next reply."),
-                            isNarration: true, SettledMarkColor));
-                        continue;
-                    }
                     if (turn.IsFromAngel || turn.IsInnerThought)
                     {
                         // Letters wear their letters openly, in their place in the one thread — the
@@ -648,17 +642,6 @@ namespace ImmersiveAI.UI.TalkScreen
 
         private static string WithStamp(string stamp, string text) =>
             string.IsNullOrEmpty(stamp) ? text : $"[{stamp}]  {text}";
-
-        /// <summary>The first breath of a settled mark — enough to know which happening it was,
-        /// without spending the reader's eye on a thing that no longer rides.</summary>
-        private static string OneBreathOf(string? line)
-        {
-            var text = (line ?? string.Empty).Trim();
-            if (text.Length == 0) return "a mark of that day";
-            int stop = text.IndexOf(". ", StringComparison.Ordinal);
-            if (stop > 0 && stop < 110) return text.Substring(0, stop + 1);
-            return text.Length <= 110 ? text : text.Substring(0, 110).TrimEnd() + "…";
-        }
 
         // A spoken message may carry small acted gestures between *asterisks* (the acting-out
         // grammar — EmoteText): the words draw as the spoken card, each gesture as a soft narration
