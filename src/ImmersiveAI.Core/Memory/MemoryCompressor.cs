@@ -84,6 +84,12 @@ namespace ImmersiveAI.Core.Memory
             return true;
         }
 
+        // A single-token CJK or Thai marker dressed in markdown is at most 10-12 characters (e.g.
+        // "**沒有變化**", "(ไม่มีการเปลี่ยนแปลง)"). A genuine self in those languages is asked for
+        // as a short paragraph and is rarely under 30 characters. 24 characters cleanly separates them
+        // without relying on word boundaries that those scripts do not write.
+        private const int MinSelfLength = 24;
+
         // The second line of defence behind IsUnchangedMarker, and the one that does not need to know
         // every language (2026.08.17). The prompt asks for "unchanged" in those letters, but the tongue
         // rule now steers the whole answer into the player's own language, and a model that translates
@@ -94,9 +100,14 @@ namespace ImmersiveAI.Core.Memory
         private static bool LooksLikeSelf(string? text)
         {
             if (string.IsNullOrWhiteSpace(text)) return false;
-            return text!.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+
+            var tokens = text!.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(w => w.Trim(MarkerDressing))
-                .Count(w => w.Length > 0) > 1;
+                .Where(w => w.Length > 0)
+                .ToList();
+
+            if (tokens.Count > 1) return true;
+            return tokens.Count == 1 && tokens[0].Length >= MinSelfLength;
         }
 
         // Everything a model may dress the marker in: quotes, brackets, markdown bold/italic/rules/
@@ -469,12 +480,12 @@ namespace ImmersiveAI.Core.Memory
         private static bool IsAsciiLetter(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 
         // Sentence-final punctuation, in the hands a model may actually leave it in — Latin,
-        // the CJK full stop, and the Arabic full stop.
-        private static readonly char[] SentenceEnders = { '.', '!', '?', '…', '。', '۔' };
+        // the CJK full stop, exclamation mark, question mark, and the Arabic full stop.
+        private static readonly char[] SentenceEnders = { '.', '!', '?', '…', '。', '！', '？', '۔' };
 
         // What may legitimately close a sentence AFTER its full stop: quotes of several nations
-        // (including the Bulgarian „…“ and the guillemets) and brackets.
-        private static readonly char[] ClosingMarks = { '"', '\'', '”', '“', '’', '»', '«', ')', ']', '*', '`' };
+        // (including the Bulgarian „…“, the guillemets, and CJK corner brackets) and brackets.
+        private static readonly char[] ClosingMarks = { '"', '\'', '”', '“', '’', '»', '«', ')', ']', '*', '`', '」', '』', '）' };
 
         /// <summary>
         /// Guards against a memory cut off in mid-word. The summary is written WHOLE at every

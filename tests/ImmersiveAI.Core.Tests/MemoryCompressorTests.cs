@@ -587,4 +587,94 @@ public class MemoryCompressorTests
         Assert.Equal("We met near the castle.\nFacts: they were outnumbered three to one and held their ground.", parsed.Summary);
         Assert.Equal("I am a loyal guardian.", parsed.Self);
     }
+
+    [Fact]
+    public async Task ReflectAsync_RejectsChineseUnchangedMarker()
+    {
+        // In Chinese, "未變" or "沒有變化" are single tokens without spaces.
+        foreach (var marker in new[] { "未變", "沒有變化", "**沒有變化**", "（未變）", "未改變。" })
+        {
+            var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + marker };
+            var memory = MemoryWithTurns(3);
+            var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+            await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+                systemVoiceName: null, self: self);
+
+            Assert.Equal("我是個謹慎的人。", self.Text);
+        }
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsChineseSingleParagraphSelf_WithoutWordSpaces()
+    {
+        // A single continuous Chinese paragraph without any spaces (single token).
+        var chineseSelf = "我已不再是當初那個只顧逃命的膽小鬼，在與他們的歷次血戰中，我學會了握緊手中的劍，並誓死守衛身邊的每一位同伴。";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + chineseSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(chineseSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsChineseMultiParagraphSelf()
+    {
+        var chineseSelf = "我是西比拉，出生於戰火之中。\n\n如今我追隨在隊長身旁，歷經風霜與征戰，早已將這支隊伍視為我的歸宿與榮耀所在。";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + chineseSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(chineseSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsChineseSelfWithMarkdownAndEnglishPunctuation()
+    {
+        var chineseSelf = "**我是西比拉**，一名在帝國邊境游蕩的傭兵. 我不再信任任何領主, 唯有手中的鋼劍與並肩作戰的同伴才是真實的!";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + chineseSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(chineseSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_RejectsShortChineseMarkerBelowThreshold()
+    {
+        // 6 characters (below MinSelfLength = 24)
+        var shortMarker = "完全沒有變化";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + shortMarker };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal("我是個謹慎的人。", self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsKoreanSelf_ThroughWordCountPath()
+    {
+        // Korean uses spaces between words, so it exercises the original word-count path.
+        var koreanSelf = "나는 더 용감해졌고 그들과 함께 싸운다.";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + koreanSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am timid." };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(koreanSelf, self.Text);
+    }
 }
