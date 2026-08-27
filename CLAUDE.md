@@ -372,7 +372,26 @@ TaleWorlds API usage patterns, never copy from it.
 - **Core stays pure.** No `TaleWorlds.*`, no `System.Net.Http`, no game or HTTP dependencies
   in `ImmersiveAI.Core`. That is what keeps it unit-testable. LLM backends and game glue
   live in `ImmersiveAI.Module` behind the `IChatClient` interface.
-- **Memory is TWO layers** (`NpcMemory`, since 2026.08.08): `RecentTurns` (verbatim, sent as real
+- **THE BITES (2026.08.27, Anton's design)** — the deep memory's PLAIN FACTS are now small keyed
+  notes she edits one at a time (`NpcMemory.Bites`, Core `Memory\MemoryBites`), while ONE reserved
+  key stays prose: how things stand between them, which is still `NpcMemory.Summary` and still
+  rewritten whole. Written at compression (a `BITES:` section that is a **DELTA** — `key: note` to
+  write, `-key` to strike; what she does not name keeps standing) and LIVE mid-talk through
+  `keep_note` (Module `Tools\NoteTool`, gated by `EnableMemoryNotes`). Keys are canonicalized so
+  one subject never fragments into four (`CanonicalKey` — lowercased, article-stripped; note that
+  "the war" files under `war`). Caps: 24 notes, 320 chars each, and a full shelf SAYS so rather
+  than refusing silently. **This is not the retired `hold_truth`**: that was a THIRD layer beside
+  the page holding the same material twice; these REPLACE the page's facts, so there is nothing to
+  duplicate. Old saves need no migration — the existing page simply IS the prose from here on, and
+  a one-time nudge in the compression prompt (`NeedsSeeding`) invites her to lift the plain facts
+  out into notes herself. **THE WRITING ROOM GROWS WITH THE BOND** (`StartingMemoryWriteTokens` 300
+  + `MemoryWriteTokensPerTurn` 100 per lifetime exchange, up to `MaxMemoryWriteTokens`, default
+  lowered 2000 → 1500 and deliberately NOT migrated — lowering a ceiling is taste): a model handed
+  room uses it, so a stranger given the full ceiling writes a page about someone they met once.
+  **The floor is what she ALREADY holds** (+25%): the seeded-backstory case is a long page at ZERO
+  richness, and without that floor the update would spend itself erasing her. `LiveSwapChatClient`
+  gained `ConnectionSignature()` so a budget-only rebuild no longer announces the backend.
+- **Memory was TWO layers** (`NpcMemory`, 2026.08.08–2026.08.27): `RecentTurns` (verbatim, sent as real
   user/assistant messages) and `Summary` — one rolling deep memory of everything older, rewritten
   WHOLE at each compression/reflection (`ApplyCompression` just takes it; a reply with no usable
   `SUMMARY:` leaves the old one standing). This is the anti-repetition core. Memory-writing calls
@@ -441,6 +460,14 @@ TaleWorlds API usage patterns, never copy from it.
   itself. And **probe a new tool live before trusting it**: the harness that found both of these
   reads the ToolDefinitions out of the C# sources, rebuilds the sheet from the NPC's own runtime
   files, and runs the real 3-round loop against the real backend.
+  **AND ITS PROSE STAYS ON A DIET (2026.08.27, Anton's token audit):** the tool definitions were 39%
+  of every spoken prompt (~2,800 of ~7,100 tokens, resent every loop round), so all sixteen were cut
+  to working words — every rail kept (the "always look before…" triggers, "words do not wed", "the
+  seal is theirs", the honest blank), every ornament gone. A new tool's description earns each
+  sentence: state what it does, when it fires, and what it never does — nothing else. The same audit
+  folded the situation's battle roll into one line (count + hardest by name), dropped passed-through
+  stops from the road roll, taught the together-line to gather runs of ≥3 like events, and put the
+  per-section token tally at the top of the talk screen's scrollback.
 - **Async LLM calls never touch UI directly.** Background results are queued via
   `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`. Tool resolution
   (`WorldRecall`) reads campaign state the same way: marshaled to the game thread via the
@@ -1528,8 +1555,10 @@ first-class on this game version: `MapEvent.IsNavalMapEvent` (`!Position.IsOnLan
 `ShipCasualties`, `party.Ships` — kind "sea" with its own titles. Casualties come from the per-party
 `DiedInBattle`/`WoundedInBattle`/`RoutedInBattle` rosters (NEVER from roster wounded-states — those
 include pre-battle wounds). The freshest shared battle rides the SITUATION whole
-(`BattleChronicleBlock` → `BattleText.SituationBlock`: older ones as titled roll-lines, the deep
-past folded into a count) and `recall_battle` (`Tools\ChronicleTool`) answers any shared battle by
+(`BattleChronicleBlock` → `BattleText.SituationBlock`: ALL older ones fold into ONE line — the
+count plus the hardest-fought by name with its short tale — since 2026.08.27, Anton's token audit;
+the per-battle roll-lines buried the battle that mattered under look-alike looter-stomps, and the
+ledger holds every record whole for the tool) and `recall_battle` (`Tools\ChronicleTool`) answers any shared battle by
 loose name ("the storming of Varcheg", "ortysia", "last"), scoped to what the asker lived — the tool
 rides only for souls with ≥1 shared battle. Beside it the situation gained THE BODY's honest state
 (`SituationBuilder.BuildBody`/`TheirBody`, Anton's same-day ask): a mending soul knows its strength

@@ -36,51 +36,42 @@ namespace ImmersiveAI.Tools
 
         public static readonly IReadOnlyList<ToolDefinition> Tools = new[]
         {
+            // TELEGRAPHIC ON PURPOSE (2026.08.27, Anton's token audit — twice: the first cut kept
+            // the flowing first person and he asked for far less, "let's move out of those token
+            // burners"). A lookup tool needs three things and nothing else: WHAT it fetches, WHEN
+            // to fire, and the honest blank. The "look, never invent" clause is the one that earns
+            // its words — it is what stops a price or a garrison being made up.
             new ToolDefinition(RecallPerson,
-                "Call to mind what is truly known of a person of the world — who they are, their kin and house, " +
-                "their standing, where word last placed them, and, if they stand before my eyes, what I see " +
-                "of their garb and arms. When a person is dim in my memory I call them to mind rather than " +
-                "invent — or unbidden, at the one before me, to open with something real; where nothing " +
-                "surfaces, I say so.",
-                new[] { new ToolParameter("name", "The person's name, as best I know it.") }),
+                "Look up a person: kin, house, standing, where last seen, and their garb and arms if they " +
+                "stand before me. Look before speaking of anyone I know dimly; never invent. Nothing found — say so.",
+                new[] { new ToolParameter("name", "The person's name.") }),
 
             new ToolDefinition(RecallCompany,
-                "Take stock of my own company — the warband I lead or ride with: how many souls it counts, " +
-                "the kinds of fighters among them, the hale and the wounded, prisoners in my train, the food " +
-                "in the wagons, the men's spirits, their wages, and what the company is presently about. I " +
-                "always look before speaking in numbers of my own men, and unbidden too, to open with " +
-                "something real; where nothing surfaces, I say so."),
+                "Look up my own warband: numbers, kinds of fighters, wounded, prisoners, food, morale, " +
+                "wages, what we are about. Always look before speaking in numbers of my own men."),
 
             new ToolDefinition(RecallPlace,
-                "Call to mind what is known of a town, castle, or village — who holds it, whose realm it lies " +
-                "in, its walls and garrison, and how it fares. When a place is dim in my memory I call it to " +
-                "mind rather than invent, and always before speaking in numbers of its defenses; where " +
-                "nothing surfaces, I say so.",
-                new[] { new ToolParameter("name", "The place's name, as best I know it.") }),
+                "Look up a town, castle or village: who holds it, whose realm, walls and garrison, how it " +
+                "fares. Always look before speaking of its defenses; never invent. Nothing found — say so.",
+                new[] { new ToolParameter("name", "The place's name.") }),
 
             new ToolDefinition(RecallClan,
-                "Call to mind what is known of a clan or noble house — who leads it, whom it serves, its people " +
-                "and its holdings — whenever a house is dim in my memory; where nothing surfaces, I say so.",
-                new[] { new ToolParameter("name", "The clan's name, as best I know it.") }),
+                "Look up a clan: who leads it, whom it serves, its people and holdings. Never invent.",
+                new[] { new ToolParameter("name", "The clan's name.") }),
 
             new ToolDefinition(RecallRealm,
-                "Call to mind what is known of a realm or kingdom — who rules it, its great houses, its lands, " +
-                "and the wars it wages — whenever a realm is dim in my memory; where nothing surfaces, I say so.",
-                new[] { new ToolParameter("name", "The realm's name, as best I know it.") }),
+                "Look up a realm: who rules it, its great houses, lands and wars. Never invent.",
+                new[] { new ToolParameter("name", "The realm's name.") }),
 
             new ToolDefinition(RecallTroop,
-                "Call to mind what is known of a kind of soldier — recruit, warrior, knight, of any people: " +
-                "how seasoned they are, their skill at arms, the gear they carry, and what they may become " +
-                "with training. When soldiers or their worth are spoken of I call each kind to mind in turn " +
-                "before I judge, rather than invent; where nothing surfaces, I say so.",
-                new[] { new ToolParameter("name", "The soldier kind's name, e.g. \"Vlandian Recruit\" or \"Battanian Fian\".") }),
+                "Look up a kind of soldier: seasoning, skill at arms, gear, what training makes of them. " +
+                "Look before judging soldiers or their worth; never invent.",
+                new[] { new ToolParameter("name", "The soldier kind, e.g. \"Vlandian Recruit\".") }),
 
             new ToolDefinition(RecallMarket,
-                "Call to mind the day's trade in the market about me — what goods truly fetch here, this " +
-                "day, in the place where I stand. I always look before quoting a price or speaking of what " +
-                "the market bears; prices shift with the seasons and the wars, and yesterday's figure is " +
-                "a lie by morning. Where nothing surfaces, I say so.",
-                new[] { new ToolParameter("item", "One good to price — grain, tools, wine, a horse. Leave it out to survey the market's staples.", required: false) }),
+                "Look up today's prices where I stand. Always look before quoting any price — yesterday's " +
+                "figure is a lie by morning.",
+                new[] { new ToolParameter("item", "One good — grain, wine, a horse. Leave out to survey the staples.", required: false) }),
         };
 
         /// <summary>

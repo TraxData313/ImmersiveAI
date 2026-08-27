@@ -28,21 +28,18 @@ namespace ImmersiveAI.Tools
         public const string SeekWisdom = "seek_wisdom";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(SeekWisdom,
-            "Search all I have ever read and heard tell of the world's ways — travelers' accounts, " +
-            "scholars' letters, the knowing of those who study such things: ships and fleets, the raising " +
-            "and joining of armies, the keeping of towns and castles, trade, coin, war, craft, and rule. " +
-            "Whenever I am asked how a thing is done, or for counsel and advice on such matters, I look " +
-            "here BEFORE I answer, even when my own wit could half-answer: the looking makes my counsel " +
-            "true, where invention would make it hollow. It reaches even past this world's rim, to the " +
-            "world a visitor may themselves hail from — but only if the one before me speaks openly of " +
-            "such. What I learn, I say in my own words, in the words of my world. Ask plainly.",
+            "Search all I have read and heard of the world's ways — ships, armies, holding towns, trade, " +
+            "coin, war, craft, rule. Asked how a thing is done, or for counsel on such matters, I look " +
+            "BEFORE answering, even when my own wit could half-answer. It reaches past this world's rim " +
+            "too, but only if the one before me speaks openly of such. What I learn I say in my own " +
+            "words, in the words of my world.",
             new[]
             {
                 new ToolParameter("question", "What I wish to know, asked plainly as a question."),
                 new ToolParameter("beyond",
                     "Leave empty when the question is of my own world's ways. Write 'yes' when it reaches " +
-                    "beyond my world — the asker's own world and life, other realms, matters no one of my " +
-                    "world could know.", required: false)
+                    "beyond my world — the asker's own world and life, matters no one of my world could " +
+                    "know.", required: false)
             });
 
         // What the NPC hears when the search fails or finds nothing — honest silence, mirroring

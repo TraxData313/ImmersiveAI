@@ -407,29 +407,43 @@ namespace ImmersiveAI.Core.Battles
             $"'{r.Title}' — {r.DateText}: {(string.IsNullOrWhiteSpace(r.ShortTale) ? ShortTale(r) : r.ShortTale)}";
 
         /// <summary>
-        /// The chronicle as one soul's situation carries it: the roll of battles lived at the player's
-        /// side (titles and short tales, newest last, the oldest folded into a count), and the full
-        /// account of the freshest one — so the last battle is discussable in detail unprompted, and
-        /// the older ones by name. First person, hers.
+        /// The chronicle as one soul's situation carries it: ONE line for everything before the
+        /// last — the count, and the hardest-fought of them by name with its short tale — then the
+        /// full account of the freshest one, so the last battle is discussable in detail unprompted
+        /// and the great one by name. First person, hers.
+        /// <para>
+        /// It was a roll of one line per battle until 2026.08.27 (Anton's token audit): six
+        /// look-alike lines of broken looters were burying the one battle that mattered, and
+        /// <c>recall_battle</c> already holds every record whole — the folded line is what makes
+        /// her reach for it, the same law the beat fade keeps.
+        /// </para>
         /// </summary>
-        public static string SituationBlock(IReadOnlyList<BattleRecord> shared, string playerName, bool mentionRecall, int maxListed = 6)
+        public static string SituationBlock(IReadOnlyList<BattleRecord> shared, string playerName, bool mentionRecall)
         {
             if (shared == null || shared.Count == 0) return string.Empty;
 
             var sb = new StringBuilder();
             sb.AppendLine($"Battles I have lived through at {playerName}'s side, as the chronicle keeps them:");
 
-            int skipped = Math.Max(0, shared.Count - Math.Max(1, maxListed));
-            if (skipped > 0)
-                sb.AppendLine($"- …and before these, {skipped} earlier {(skipped == 1 ? "battle" : "battles")} besides.");
-            for (int i = skipped; i < shared.Count - 1; i++)
-                sb.AppendLine("- " + RollEntry(shared[i]));
-
             var latest = shared[shared.Count - 1];
+            if (shared.Count > 1)
+            {
+                // The hardest = the largest muster we ever stood against; a tie goes to the newer.
+                var older = new List<BattleRecord>();
+                for (int i = 0; i < shared.Count - 1; i++) older.Add(shared[i]);
+                var hardest = older[0];
+                foreach (var r in older)
+                    if ((r.Theirs?.Total ?? 0) >= (hardest.Theirs?.Total ?? 0)) hardest = r;
+
+                sb.AppendLine(older.Count == 1
+                    ? $"- One battle stands in it before this last one: {RollEntry(hardest)}"
+                    : $"- {older.Count} battles stand in it before this last one; the hardest of them was {RollEntry(hardest)}");
+            }
+
             sb.AppendLine($"Of the last of them, the full tale still fresh in my mind:");
             sb.AppendLine(FullAccount(latest));
             if (mentionRecall && shared.Count > 1)
-                sb.AppendLine("Any of the older ones I may call back whole, by its name, when talk turns to it.");
+                sb.AppendLine("Any of the others I may call back whole, by its name, when talk turns to it.");
             return sb.ToString().TrimEnd();
         }
     }

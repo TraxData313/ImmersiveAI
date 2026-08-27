@@ -5,6 +5,19 @@ using System.Text;
 
 namespace ImmersiveAI.Core.Together
 {
+    /// <summary>What sort of thing an entry tells — so a long run of look-alikes can be gathered
+    /// into one honest line instead of ten (Anton, 2026.08.27: the token audit found the line
+    /// retelling every battle the chronicle block had already told, one line each).</summary>
+    public enum TogetherKind
+    {
+        /// <summary>Everything singular — nights, and whatever else earns its own line.</summary>
+        Other = 0,
+        /// <summary>A battle stood in together; the chronicle keeps the whole of it.</summary>
+        Battle = 1,
+        /// <summary>A stop on the shared road; the journal keeps the whole of it.</summary>
+        Stop = 2,
+    }
+
     /// <summary>One thing that has happened since the two of them were last alone, in her own
     /// first person and already dated. Deliberately ONE LINE — this is a list, not a chronicle;
     /// the depth lives in the blocks above it.</summary>
@@ -15,6 +28,8 @@ namespace ImmersiveAI.Core.Together
         public string DateText { get; set; } = string.Empty;
         /// <summary>What happened, in her voice, one line ("we were at the market in Baltakhand").</summary>
         public string Text { get; set; } = string.Empty;
+        /// <summary>What sort of thing this is; Other never gathers.</summary>
+        public TogetherKind Kind { get; set; } = TogetherKind.Other;
     }
 
     /// <summary>
@@ -79,6 +94,7 @@ namespace ImmersiveAI.Core.Together
                 .OrderBy(e => e.GameDay)
                 .ToList();
             if (kept.Count == 0) return string.Empty;
+            kept = Gather(kept);
             if (maxEntries > 0 && kept.Count > maxEntries)
                 kept = kept.Skip(kept.Count - maxEntries).ToList();
 
@@ -86,6 +102,47 @@ namespace ImmersiveAI.Core.Together
             sb.AppendLine(ListHeader);
             foreach (var entry in kept) sb.Append("· ").AppendLine(Line(entry));
             return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>A kind gathers only from this many entries up. THREE, never two — a pair is
+        /// still two events and each keeps its own nuance (the nights' RunLine settled that).</summary>
+        public const int GatherFrom = 3;
+
+        // A kind that filled the list with look-alikes folds into one line carrying the span and
+        // the count — the depth already lives in the chronicle and the journal above, and the
+        // gathered line says where. Gathering runs BEFORE the cap, so a long war no longer pushes
+        // the one night that mattered off the list. Other never gathers.
+        private static List<TogetherEntry> Gather(List<TogetherEntry> entries)
+        {
+            foreach (var kind in new[] { TogetherKind.Battle, TogetherKind.Stop })
+            {
+                var ofKind = entries.Where(e => e.Kind == kind).ToList();
+                if (ofKind.Count < GatherFrom) continue;
+
+                var first = ofKind[0];
+                var last = ofKind[ofKind.Count - 1];
+                var gathered = new TogetherEntry
+                {
+                    GameDay = last.GameDay,
+                    DateText = string.Empty,        // the span lives in the words instead
+                    Kind = kind,
+                    Text = GatheredText(kind, ofKind.Count, ShortDate(first.DateText), ShortDate(last.DateText)),
+                };
+                entries = entries.Where(e => e.Kind != kind).ToList();
+                int at = entries.FindIndex(e => e.GameDay > gathered.GameDay);
+                entries.Insert(at < 0 ? entries.Count : at, gathered);
+            }
+            return entries;
+        }
+
+        private static string GatheredText(TogetherKind kind, int count, string firstDate, string lastDate)
+        {
+            var span = firstDate.Length == 0 || firstDate == lastDate
+                ? (lastDate.Length == 0 ? "in those days" : $"on {lastDate}")
+                : $"from {firstDate} to {lastDate}";
+            return kind == TogetherKind.Battle
+                ? $"{span} we stood in {count} battles together — the chronicle keeps each of them by name"
+                : $"{span} we made {count} stops about the company's business";
         }
 
         /// <summary>One entry, dated. A day with no name of its own simply goes undated rather than

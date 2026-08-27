@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using ImmersiveAI.Core.Llm;
 using ImmersiveAI.Personas;
 using TaleWorlds.CampaignSystem;
@@ -193,12 +194,15 @@ namespace ImmersiveAI
         /// about what the model receives.</summary>
         internal sealed class PromptPreview
         {
-            public PromptPreview(string sheet, List<PreviewTool> tools)
+            public PromptPreview(string sheet, List<PreviewTool> tools, string weights)
             {
-                Sheet = sheet; Tools = tools;
+                Sheet = sheet; Tools = tools; Weights = weights;
             }
             public string Sheet { get; }
             public List<PreviewTool> Tools { get; }
+            /// <summary>The tally of what the next message weighs, piece by piece — the audit the
+            /// scrollback opens with (Anton, 2026.08.27). Empty when it could not be reckoned.</summary>
+            public string Weights { get; }
         }
 
         /// <summary>Builds what the chosen one would be given right now. Null when it cannot be
@@ -254,7 +258,77 @@ namespace ImmersiveAI
                 tools.Add(new PreviewTool(tool.Name, tool.Description, parameters));
             }
 
-            return new PromptPreview(sheet, tools);
+            return new PromptPreview(sheet, tools, BuildPromptWeights(sheet, ctx, tools));
+        }
+
+        /// <summary>The tally the scrollback opens with: what the next message truly weighs, piece
+        /// by piece, reckoned with the same estimator the memory gauge uses so the two never
+        /// disagree (Anton, 2026.08.27 — the token audit, made a fixture). Empty on any stumble;
+        /// the preview stands whole without it.</summary>
+        private static string BuildPromptWeights(string sheet, ChatContext ctx, List<PreviewTool> tools)
+        {
+            try
+            {
+                int sheetTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(sheet);
+                int memoryTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(ctx.Memory?.Summary);
+                int notesTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
+                    Core.Memory.MemoryBites.Render(ctx.Memory?.Bites));
+                int sceneTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(ctx.Scene);
+                int personaTok = Math.Max(0, sheetTok - memoryTok - notesTok - sceneTok);
+                // Only what actually RIDES is weighed: the oldest silent marks stop being sent once
+                // the bookkeeping would hold more than a third of the window (BeatsThatStillRide).
+                var riding = new List<Core.Memory.ConversationTurn>();
+                int settled = 0;
+                if (ctx.Memory != null)
+                {
+                    var carries = Core.Prompts.PromptBuilder.BeatsThatStillRide(ctx.Memory);
+                    for (int i = 0; i < ctx.Memory.RecentTurns.Count; i++)
+                    {
+                        if (carries[i]) riding.Add(ctx.Memory.RecentTurns[i]);
+                        else settled++;
+                    }
+                }
+                int turnsTok = Core.Memory.MemoryTokenEstimator.EstimateRecentTurnsTokens(riding);
+                int turnCount = riding.Count;
+
+                // ~30 tokens per tool is the schema's own scaffolding (name, types, required) that
+                // rides beside the visible words.
+                int toolsTok = 0;
+                foreach (var t in tools)
+                {
+                    toolsTok += 30 + Core.Memory.MemoryTokenEstimator.EstimateTextTokens(t.Description);
+                    foreach (var p in t.Parameters)
+                        toolsTok += Core.Memory.MemoryTokenEstimator.EstimateTextTokens(p);
+                }
+
+                int total = sheetTok + turnsTok + toolsTok;
+                string K(int n) => n >= 10_000 ? (n / 1000) + "k"
+                    : n >= 1_000 ? (n / 1000.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "k"
+                    : n.ToString();
+
+                var sb = new StringBuilder();
+                sb.Append("About ").Append(K(total)).Append(" tokens ride with your next message:");
+                sb.Append("\n   · their mind's sheet — ").Append(K(sheetTok))
+                  .Append("  (how things stand ").Append(K(memoryTok))
+                  .Append(" · notes ").Append(K(notesTok))
+                  .Append(" · this moment about them ").Append(K(sceneTok))
+                  .Append(" · who they are ").Append(K(personaTok)).Append(')');
+                if (ctx.Memory != null && ctx.Memory.Bites.Count > 0)
+                    sb.Append("\n   · they keep ")
+                      .Append(Core.Memory.MemoryBites.CountLabel(ctx.Memory.Bites))
+                      .Append(", each written and rewritten by their own hand");
+                sb.Append("\n   · the hands they may reach for — ").Append(K(toolsTok))
+                  .Append(" across ").Append(tools.Count).Append(" tools");
+                sb.Append("\n   · the words already between you — ").Append(K(turnsTok))
+                  .Append(" in ").Append(turnCount).Append(" remembered turns");
+                if (settled > 0)
+                    sb.Append("\n   · ").Append(settled)
+                      .Append(settled == 1 ? " older mark has settled" : " older marks have settled")
+                      .Append(" — kept in memory and in the chronicles, but no longer carried into every reply");
+                sb.Append("\nEach time they reach for a hand mid-reply, the whole of it is sent again.");
+                return sb.ToString();
+            }
+            catch { return string.Empty; }
         }
 
         /// <summary>The correspondence a folder holds, whether or not its writer still lives — the

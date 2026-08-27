@@ -26,33 +26,30 @@ namespace ImmersiveAI.Tools
         public const string ActReopen = Core.Courtship.CourtshipMisgivings.ActReopen;
         public const string ActRelease = Core.Courtship.CourtshipMisgivings.ActRelease;
 
+        // TIGHT ON PURPOSE (2026.08.27 token audit) — the rails all stand: weigh when marriage
+        // truly enters, "none" counts and must be set down, the list lives (set down / settle with
+        // a word / release / revise / reopen), settle only what deeds truly answered, hand waits
+        // while any stands and no doubt bars when none does, never invent and never pretend away.
         public static readonly ToolDefinition Tool = new ToolDefinition(WeighMisgivings,
-            "Tend what weighs on my own heart about a life wed to the one I speak with — my open " +
-            "questions and worries before marriage, written and kept by my own hand. This is the " +
-            "one life I am given and I would spend it beside them, so I reach for this freely and " +
-            "often: it is no shame but plain wisdom to ask honestly what troubles me before my " +
-            "hand is given, and to let the asking take its time. When marriage or courtship " +
-            "truly enters the talk and I have " +
-            "not yet weighed my heart, I pause and do it honestly: I set my misgivings down in my " +
-            "own words, each its own short line, a few at the very most — or, if my heart is " +
-            "honestly clear, the single word \"none\", for a clear heart must be set down too and " +
-            "not merely felt. THE LIST LIVES WITH ME afterward: a new true doubt born in any " +
-            "later talk I set down when it arises; I lay one to rest, with a word on what answered " +
-            "it, only when the living talks or deeds have truly answered it (never for one warm " +
-            "promise); one that proved empty or no longer truly mine I strike out; I reword one " +
-            "that has changed, and I take a settled one up again if it returns. I raise them " +
-            "openly in our talks and give them room to be answered, knowing that while any of them " +
-            "still stands my hand waits, and when none stands no doubt of mine bars the road. I " +
-            "never invent one to test or to bargain, and I never pretend one away.",
+            "What weighs on my own heart about a life wed to the one I speak with — my open worries " +
+            "before marriage, written and kept by my own hand. When marriage or courtship truly " +
+            "enters the talk and I have not yet weighed my heart, I pause and do it honestly: each " +
+            "misgiving its own short line, a few at the very most — or, if my heart is honestly " +
+            "clear, the single word \"none\", for a clear heart must be set down too. THE LIST LIVES " +
+            "WITH ME: a new true doubt I set down when it arises; I lay one to rest, with a word on " +
+            "what answered it, only when talks or deeds have truly answered it — never for one warm " +
+            "promise; one that proved empty I strike out; I reword one that has changed, and take a " +
+            "settled one up again if it returns. I raise them openly and give them room. While any " +
+            "stands my hand waits; when none stands, no doubt of mine bars the road. I never invent " +
+            "one to test, and never pretend one away.",
             new[]
             {
                 new ToolParameter("action",
-                    "One of these five words exactly, and no other: \"" + ActSetDown + "\" — write " +
-                    "down my misgivings (first weighing, or a new one that truly arose); \"" +
-                    ActSettle + "\" — lay one to rest, truly answered; \"" + ActRelease + "\" — " +
-                    "strike one out that proved empty or is no longer truly mine; \"" + ActRevise +
-                    "\" — reword one that has changed; \"" + ActReopen + "\" — a settled one has " +
-                    "returned to me.",
+                    "One of these five words exactly: \"" + ActSetDown + "\" — write down my " +
+                    "misgivings (first weighing, or a new one); \"" + ActSettle + "\" — lay one to " +
+                    "rest, truly answered; \"" + ActRelease + "\" — strike one out that proved " +
+                    "empty; \"" + ActRevise + "\" — reword one that has changed; \"" + ActReopen +
+                    "\" — a settled one has returned to me.",
                     allowedValues: new[] { ActSetDown, ActSettle, ActRelease, ActRevise, ActReopen }),
                 // NAMED for what they hold, not for their type: with a field called "text" a model
                 // fills it with whatever it has most to say — on gpt-5.6-terra (2026.08.09) that

@@ -43,20 +43,24 @@ namespace ImmersiveAI.Core.Journey
 
         private static string RoadBlock(JourneyLog log)
         {
-            // Only stops worth a word: a named place, or doings on the road. A pass-through with
-            // nothing done still shows — "we called at X" is a real memory — but empty road
-            // buckets are noise.
-            var told = log.Visits
+            // Empty road buckets are noise; a pass-through settlement still counts as the LATEST
+            // stop (it is where the company just was), but earns no line of its own once older —
+            // "we only passed through" told four times was noise wearing a date (Anton's token
+            // audit, 2026.08.27). Only the older stops where something was DONE keep their line.
+            var all = log.Visits
                 .Where(v => v != null && (v.Kind != JourneyVisit.Kinds.Road || v.HasAnyDoings))
                 .ToList();
-            if (told.Count == 0) return string.Empty;
-            if (told.Count > MaxVisitsTold) told = told.Skip(told.Count - MaxVisitsTold).ToList();
+            if (all.Count == 0) return string.Empty;
+
+            var latest = all[all.Count - 1];
+            var older = all.Take(all.Count - 1).Where(v => v.HasAnyDoings).ToList();
+            if (older.Count > MaxVisitsTold - 1) older = older.Skip(older.Count - (MaxVisitsTold - 1)).ToList();
 
             var sb = new StringBuilder();
             sb.AppendLine("The road we have ridden of late, as I saw it myself:");
-            for (int i = 0; i < told.Count - 1; i++)
-                sb.AppendLine("- " + OneLine(told[i]));
-            sb.AppendLine(Detailed(told[told.Count - 1]));
+            foreach (var v in older)
+                sb.AppendLine("- " + OneLine(v));
+            sb.AppendLine(Detailed(latest));
             return sb.ToString().TrimEnd();
         }
 

@@ -167,7 +167,11 @@ namespace ImmersiveAI
             // Memory writing gets its own, roomier output budget: a rolling summary of a long story
             // plus a full list of truths plus a sense of self cannot breathe inside a spoken-reply cap.
             // The budget is read live so a settings change reaches this client too, restart-free.
-            _compressor = new MemoryCompressor(ChatClientFactory.Create(config, () => config.MaxMemoryWriteTokens));
+            // The memory-writing room GROWS with the bond (2026.08.27): a soul who met the player
+            // once gets a note's worth, a lifelong companion the whole ceiling. Set just before
+            // each memory call from that soul's own richness; 0 means "the ceiling", which is what
+            // every other caller of this client wants.
+            _compressor = new MemoryCompressor(ChatClientFactory.Create(config, () => MemoryWriteRoomNow()));
             _storyClient = ChatClientFactory.Create(config, () => config.MaxMemoryWriteTokens);
         }
 
@@ -194,6 +198,9 @@ namespace ImmersiveAI
             if (CanSeekWisdom()) tools.Add(Tools.WebWisdom.Tool);
             bool heartRides = CanMoveHeart();
             if (heartRides) tools.Add(Tools.HeartTool.Tool);
+            // The note-keeping hand: she files a plain fact the moment it is said, rather than
+            // waiting for a compression to rewrite her whole memory around it (2026.08.27).
+            if (CanKeepNotes()) tools.Add(Tools.NoteTool.Tool);
             // The chronicle's hand rides only for a soul with a shared battle to recall — a lean
             // tool list keeps tools used, and "our battles" means nothing to a stranger to war.
             if (CanRecallChronicle(npc)) tools.Add(Tools.ChronicleTool.Tool);
@@ -273,6 +280,9 @@ namespace ImmersiveAI
 
             if (call.Name == Tools.HeartTool.MoveHeart)
                 return Task.FromResult(ResolveHeartShift(call, npc, heart));
+
+            if (call.Name == Tools.NoteTool.KeepNote)
+                return Task.FromResult(ResolveKeepNote(call, npc, liveMemory));
 
             if (call.Name == Tools.BargainTool.StrikeBargain)
                 return Task.FromResult(ResolveBargainLay(call, npc, bargain));
@@ -359,6 +369,37 @@ namespace ImmersiveAI
             if (heart != null) heart.Total += shift;
             MainThreadDispatcher.Enqueue(() => ApplyRelationShift(npc, shift));
             return Tools.HeartTool.Felt;
+        }
+
+        // ------------------------- the note-keeping hand (keep_note) -------------------------
+        //
+        // She files a plain fact under its own word the moment it is said. THE LIVE-INSTANCE
+        // DISCIPLINE (inherited from the retired truth/goal hands, still kept by the courtship
+        // resolvers): mutate the SAME memory object this turn will save, and save at once — write
+        // to a freshly loaded copy and the end-of-turn save clobbers it.
+        private string ResolveKeepNote(Core.Llm.ToolCall call, Hero npc, NpcMemory? liveMemory)
+        {
+            try
+            {
+                var memory = liveMemory ?? LoadMemory(npc);
+                var deed = Tools.NoteTool.ParseDeed(call);
+                var word = Tools.NoteTool.ParseWord(call);
+                var note = Tools.NoteTool.ParseNote(call);
+
+                var answer = Tools.NoteTool.Apply(memory, deed, word, note);
+                SaveMemory(npc, memory);
+
+                if (deed.Length > 0 && word.Length > 0)
+                    NotifyActivity(npc, deed == Tools.NoteTool.ActStrike
+                        ? $"lets a note go… ({Core.Memory.MemoryBites.CanonicalKey(word)})"
+                        : $"sets something down to remember… ({Core.Memory.MemoryBites.CanonicalKey(word)})");
+                return answer;
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("keeping a note", ex);
+                return "Nothing of mine takes it down just now.";
+            }
         }
 
         // ------------------------- the hiring bargain (strike_bargain) -------------------------
@@ -651,6 +692,41 @@ namespace ImmersiveAI
         private bool CanMoveHeart() =>
             _config.EnableRelationshipChanges && _config.RelationshipChangesViaTool && _client is IToolChatClient;
 
+        // The note-keeping hand (keep_note): her deep memory's plain facts, written mid-talk rather
+        // than only at compression (2026.08.27).
+        private bool CanKeepNotes() => _config.EnableMemoryNotes && _client is IToolChatClient;
+
+        // ------------------------- the growing memory-writing room -------------------------
+        //
+        // A model handed room USES it, so a soul who has met the player once would otherwise write
+        // a page about a stranger. The room starts small and is earned by the exchanges truly
+        // shared. Held in a field rather than passed down because the budget lives in the client's
+        // constructor (see LiveSwapChatClient) and the compressor takes an IChatClient, not a
+        // budget. Memory writes for different souls can in principle overlap; the worst that costs
+        // is one call sized by the wrong bond — never a wrong memory, never a crash.
+        private volatile int _memoryWriteRoom;
+
+        private int MemoryWriteRoomNow()
+        {
+            var room = _memoryWriteRoom;
+            return room > 0 ? room : _config.MaxMemoryWriteTokens;
+        }
+
+        /// <summary>Sizes the next memory-writing call to how much story this soul truly shares —
+        /// and never to less than what she is already carrying, or the whole-rewrite would spend
+        /// the update erasing her (the seeded-backstory case: a long page at zero richness).</summary>
+        private void SetMemoryWriteRoomFor(NpcMemory? memory)
+        {
+            try
+            {
+                int held = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(memory?.Summary)
+                         + Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
+                               Core.Memory.MemoryBites.Render(memory?.Bites));
+                _memoryWriteRoom = _config.MemoryWriteTokensFor(memory?.StoryRichness ?? 0, held);
+            }
+            catch { _memoryWriteRoom = 0; }
+        }
+
         // The field-craft (survey_surroundings, weigh_battle) rides the recall channel, but only for
         // a soul who actually stands with a company on the map — a captain, a rider, a caravan hand.
         private bool CanSurveyField(Hero npc)
@@ -681,6 +757,20 @@ namespace ImmersiveAI
         // reply-ready notice. Called from LLM background threads; the message is marshaled to the
         // game thread. Best-effort: a failed notice never touches the turn.
         private static readonly Color ActivityColor = new Color(0.74f, 0.90f, 0.86f, 1f); // soft sea-glass
+
+        /// <summary>The same soft side-notice, for a hand whose resolver returns before the shared
+        /// routing (the personal ones) and still wants the player to see it working.</summary>
+        private void NotifyActivity(Hero npc, string doing)
+        {
+            if (!_config.ShowNpcActivity || string.IsNullOrWhiteSpace(doing)) return;
+            try
+            {
+                var line = (npc?.Name?.ToString() ?? "They") + " " + doing.Trim();
+                MainThreadDispatcher.Enqueue(() =>
+                    InformationManager.DisplayMessage(new InformationMessage(line, ActivityColor)));
+            }
+            catch { /* the notice is a nicety; never let it break a turn */ }
+        }
 
         private void NotifyActivity(Hero npc, Core.Llm.ToolCall call)
         {
@@ -1635,6 +1725,7 @@ namespace ImmersiveAI
 
                 // Always reflect (rewrite the rolling memory whole), even when nothing is old enough to
                 // fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
+                SetMemoryWriteRoomFor(memory);
                 var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self)
                     .ConfigureAwait(false);
 
@@ -1995,6 +2086,7 @@ namespace ImmersiveAI
                     // and the player seeing it — from the outside the game simply looks hung until
                     // the closing notice lands. The player is owed the reason while they wait.
                     NotifyMemoryRefactorBegins(npc);
+                    SetMemoryWriteRoomFor(memory);
                     if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
                     {
                         memory.SummaryAsOf = SituationBuilder.Timestamp();

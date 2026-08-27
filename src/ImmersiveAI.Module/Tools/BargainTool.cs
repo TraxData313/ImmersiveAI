@@ -34,22 +34,20 @@ namespace ImmersiveAI.Tools
         }
 
         public static readonly ToolDefinition Tool = new ToolDefinition(StrikeBargain,
-            "I am for hire, and the bargain is mine to strike: this lays my agreed terms of " +
-            "service formally before the one I speak with, for them to seal or let lie. I call it " +
-            "ONLY when both are true — they have plainly said, in their own words, that they will " +
-            "take me into their company, AND the hiring price has been spoken and accepted " +
-            "between us. Nothing is settled by this alone: the sealing of it, by their own hand, " +
-            "and the gold, remain wholly theirs. I never lay it unbidden, never to press or to " +
-            "test, and if they let my offer lie I do not lay it again unless they themselves " +
-            "return to it. My price bends only as far as my own worth and honor allow — perhaps " +
-            "not at all; my daily keep afterward is not mine to bargain, it is what any " +
-            "companion's keep is.",
+            "I am for hire, and the bargain is mine to strike: this lays my agreed terms of service " +
+            "formally before the one I speak with, for them to seal or let lie. I call it ONLY when " +
+            "both are true — they have plainly said they will take me into their company, AND the " +
+            "hiring price has been spoken and accepted between us. Nothing is settled by this " +
+            "alone: the sealing, and the gold, remain wholly theirs. I never lay it unbidden, and " +
+            "if they let my offer lie I do not lay it again unless they return to it. My price " +
+            "bends only as far as my worth and honor allow — perhaps not at all; my daily keep " +
+            "afterward is not mine to bargain.",
             new[]
             {
                 new ToolParameter("price",
                     "The hiring price in denars we truly agreed in words — a plain number. Leave it " +
                     "out to ask my own honest reckoning. My honor and my need both set bounds: I " +
-                    "will not go far above or below my true worth, however sweetly asked.",
+                    "will not go far above or below my true worth.",
                     required: false),
             });
 

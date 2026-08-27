@@ -1783,6 +1783,7 @@ namespace ImmersiveAI
                                 GameDay = battle.GameDay,
                                 DateText = battle.DateText,
                                 Text = BattleTimelineLine(battle),
+                                Kind = TogetherKind.Battle,      // three or more gather into one span line
                             });
                 }
                 catch { }
@@ -1802,6 +1803,7 @@ namespace ImmersiveAI
                                 GameDay = visit.ArriveDay,
                                 DateText = visit.ArriveText,
                                 Text = text.Trim(),
+                                Kind = TogetherKind.Stop,        // three or more gather into one span line
                             });
                         }
                 }

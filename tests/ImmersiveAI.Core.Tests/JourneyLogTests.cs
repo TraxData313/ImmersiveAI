@@ -97,6 +97,28 @@ public class JourneyLogTests
     }
 
     [Fact]
+    public void Text_OlderPassThroughStopsEarnNoLine_TheLatestStaysWhatever()
+    {
+        // "we only passed through" told four times was noise wearing a date (the 2026.08.27 token
+        // audit) — an older stop keeps its line only when something was DONE there. The latest stop
+        // stays detailed even empty: it is where the company just was.
+        var log = new JourneyLog();
+        var dnin = log.BeginVisit("Dnin", JourneyVisit.Kinds.Village, 100.0, "Spring 3, Year 1084");
+        log.CloseOpenVisit(100.1);
+        var varcheg = log.BeginVisit("Varcheg", JourneyVisit.Kinds.Town, 101.0, "Spring 4, Year 1084");
+        varcheg.SoldValue = 900;
+        log.CloseOpenVisit(101.2);
+        var seordas = log.BeginVisit("Seordas", JourneyVisit.Kinds.Village, 102.0, "Spring 5, Year 1084");
+        log.CloseOpenVisit(102.1);
+
+        var block = JourneyText.SituationBlock(log, 102.5);
+        Assert.DoesNotContain("Dnin", block);                       // older, nothing done
+        Assert.Contains("sold for 900 denars", block);              // older, with doings
+        Assert.Contains("Our latest stop — in the village of Seordas", block);
+        Assert.Contains("We only rested and rode on.", block);
+    }
+
+    [Fact]
     public void Text_TasksCarryDaysAndSettledReasons()
     {
         var log = SampleRoad();

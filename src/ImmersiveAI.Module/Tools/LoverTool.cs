@@ -34,19 +34,19 @@ namespace ImmersiveAI.Tools
         /// rides on <see cref="TrothTool.BlessTally"/> with <c>IsRansom</c> set, because the two are
         /// structurally the same act (a head of house, a figure, a seal) and two tally types
         /// differing by one flag would be ceremony.</summary>
+        // TIGHT ON PURPOSE (2026.08.27 token audit) — the rails all stand: only when openly spoken
+        // and welcomed, only from love past all sense, laying settles nothing, no pressing, and
+        // words alone never make it so.
         public static readonly ToolDefinition Offer = new ToolDefinition(OfferMyself,
             "Offer myself to the one I speak with — not as a wife, but as theirs, with nothing " +
-            "whatever holding it: no vow, no wedding, no house that takes my name, no word said of " +
-            "us before anyone. I know exactly what I am offering and what the world will call me " +
-            "for it. I call this ONLY when it has been openly spoken and welcomed between us in our " +
-            "own words, and only from a love that has gone past all sense — never for a warm hour, " +
-            "never to test them, never to keep them. What I lay settles nothing: the taking of it " +
-            "is wholly theirs, and if they let it lie I do not press and I do not ask again unless " +
-            "they themselves return to it. And no words of ours make me theirs — not a promise " +
-            "breathed between us, not a night we tell each other about. Until I offer by this very " +
-            "hand and they take it by theirs, it has not happened: I do not say that it has, and I " +
-            "do not let the talk drift as though it had. I never speak of steps or rules; my heart " +
-            "simply knows what it is doing.",
+            "holding it: no vow, no wedding, no word said of us before anyone. I know what I am " +
+            "offering and what the world will call me for it. I call this ONLY when it has been " +
+            "openly spoken and welcomed between us in our own words, and only from a love that has " +
+            "gone past all sense — never for a warm hour, never to test, never to keep them. What I " +
+            "lay settles nothing: the taking of it is wholly theirs, and if they let it lie I do " +
+            "not press. And no words of ours make me theirs — until I offer by this very hand and " +
+            "they take it by theirs, it has not happened, and I do not let the talk drift as " +
+            "though it had.",
             new[]
             {
                 new ToolParameter("word",
@@ -56,20 +56,18 @@ namespace ImmersiveAI.Tools
 
         public static readonly ToolDefinition NamePrice = new ToolDefinition(NameHerPrice,
             "Name what it costs the one I speak with to take a woman of my own blood out of my " +
-            "house — she who means to go to them with no wedding in it, and no prospect of one. I " +
-            "cannot forbid a grown woman her road; I can say what her going is worth to the house " +
-            "she is leaving, and the custom allows me that much. I name it ONLY when the matter " +
-            "itself has been openly spoken between us and a figure named and taken in words. " +
-            "Nothing is settled by my naming it — the gold and the choice are theirs alone; if " +
-            "they let it lie I do not press, nor name it again unless they return to it. I never " +
-            "volunteer my lowest. And gold settles what is owed to my house and nothing else " +
-            "besides — I am under no obligation to be pleasant about any of it.",
+            "house — she who means to go to them with no wedding in it. I cannot forbid a grown " +
+            "woman her road; I can say what her going is worth to the house she leaves. I name it " +
+            "ONLY when the matter has been openly spoken between us and a figure named and taken " +
+            "in words. Nothing is settled by my naming it — the gold and the choice are theirs " +
+            "alone; if they let it lie I do not press. I never volunteer my lowest. And gold " +
+            "settles what is owed to my house and nothing else besides.",
             new[]
             {
                 new ToolParameter("price",
                     "The sum in denars we truly agreed in words — a plain number. Leave it out to " +
-                    "ask my own reckoning. The standing of my house sets bounds: I will not go far " +
-                    "above or beneath what her going is worth, however sweetly it is put.",
+                    "ask my own reckoning. My house's standing sets bounds: I will not go far " +
+                    "above or beneath what her going is worth.",
                     required: false),
                 new ToolParameter("word",
                     "One short sentence, in my own voice, of what I make of the whole business.",

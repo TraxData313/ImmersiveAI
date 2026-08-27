@@ -41,7 +41,7 @@ namespace ImmersiveAI.Core.Memory
             var parsed = ParseResponse(response);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary!, turns.Count);
+            memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Bites);
             return true;
         }
 
@@ -73,7 +73,7 @@ namespace ImmersiveAI.Core.Memory
             var parsed = ParseResponse(response);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
-            memory.ApplyCompression(parsed.Summary!, turns.Count);
+            memory.ApplyCompression(parsed.Summary!, turns.Count, parsed.Bites);
 
             // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
             // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
@@ -151,6 +151,8 @@ namespace ImmersiveAI.Core.Memory
                 sb.AppendLine(memory.Summary.Trim());
             }
 
+            AppendCurrentBites(sb, memory);
+
             sb.AppendLine();
             sb.AppendLine("The moments now fading (I fold these into my memory):");
             foreach (var turn in turns)
@@ -204,16 +206,57 @@ namespace ImmersiveAI.Core.Memory
         // 2026.08.08; without that clause the "all I carry of them" framing would erode her past by
         // shape, not by her choice). No length ceiling on purpose; MaxMemoryWriteTokens is the only
         // real bound, and it no longer shares its room with FACTS and GOALS.
+        /// <summary>Her own notes, shown back to her so an edit is an edit and not a guess. Empty
+        /// when she keeps none yet — a soul with no notes is simply invited to begin.</summary>
+        private static void AppendCurrentBites(StringBuilder sb, NpcMemory memory)
+        {
+            var rendered = MemoryBites.Render(memory?.Bites);
+            sb.AppendLine();
+            if (rendered.Length == 0)
+            {
+                // THE ONE-TIME TURNING (2026.08.27). A memory written the old way is one long page
+                // holding everything at once. Nothing is migrated by machine — only she knows which
+                // of it deserves a word of its own — so the first time she gathers her thoughts
+                // after the change she is invited to lift the plain facts out into notes. It rides
+                // a compression that was happening anyway, so it costs nothing, and her page keeps
+                // everything that does not become a note.
+                if (memory != null && MemoryBites.NeedsSeeding(memory))
+                {
+                    sb.AppendLine("I keep no short notes yet, though my memory above holds a great deal at once. "
+                        + "As I settle it now, I lift the plain facts out of it into notes of their own — a name, "
+                        + "a promise, a debt, a wage, a thing owned or owed — each under its own word, so I need "
+                        + "not carry the whole page to remember them. What is not a plain fact stays where it is.");
+                    return;
+                }
+                sb.AppendLine("I keep no short notes of my own yet — I may begin any I wish.");
+                return;
+            }
+            sb.AppendLine("The short notes I keep, each under its own word (these STAND unless I say otherwise):");
+            sb.AppendLine(rendered);
+            if (MemoryBites.IsFull(memory!.Bites))
+                sb.AppendLine(MemoryBites.ShelfFullNote());
+        }
+
         private static void AppendReplyFormat(StringBuilder sb)
         {
             sb.AppendLine();
             sb.AppendLine("I set it down in exactly this shape:");
+            sb.AppendLine("BITES:");
+            sb.AppendLine("<ONLY the notes I am changing, one per line, as 'word: the note'. A word I do not "
+                + "name here keeps exactly what it already says — I do not copy my whole shelf out again. "
+                + "I write a note where a plain fact deserves keeping: a person, a promise, a debt, a wage, "
+                + "a place, a thing owed or owned. Each one short — a line, not a paragraph. To strike one "
+                + "out I write '-word' alone. If nothing needs changing I write nothing here at all.>");
             sb.AppendLine("SUMMARY:");
-            sb.AppendLine("<all I carry of them, in my own first-person voice — who they are to me and how that came to be, "
-                + "and the particular things I would not lose: what was said and promised between us, what was given and done, the names that matter. "
-                + "What I carry of my own road from before also lives here — mine to keep, reshape, or let fade, as I choose.>");
-            sb.AppendLine("I write it whole each time, for what I do not set down here fades from me. "
-                + "I take as much room as the story truly asks — a few paragraphs, and more where there is more to hold.");
+            sb.AppendLine("<HOW THINGS STAND BETWEEN US, in my own first-person voice — who they are to me, how that "
+                + "came to be, and where my heart sits with them now. This is the one place I write freely rather than "
+                + "in notes, so it is where the feeling of it belongs. The plain facts I keep as notes above and do NOT "
+                + "repeat here; ledgers I never hoard — gear, goods and sums live with me as what they MEANT, a kindness, "
+                + "a debt, a trust growing, never as lists of items and prices, for the world's own chronicles keep the "
+                + "numbers. What I carry of my own road from before also lives here — mine to keep, reshape, or let "
+                + "fade, as I choose.>");
+            sb.AppendLine("This part I write whole each time, for what I do not set down here fades from me — my notes above "
+                + "are not so, and stand until I change them. I take the room the story truly asks and no more.");
         }
 
         /// <summary>
@@ -257,6 +300,8 @@ namespace ImmersiveAI.Core.Memory
                 sb.AppendLine("What I already hold in memory (I revise it as I reflect):");
                 sb.AppendLine(memory.Summary.Trim());
             }
+
+            AppendCurrentBites(sb, memory);
 
             if (turnsToFold.Count > 0)
             {
@@ -336,6 +381,7 @@ namespace ImmersiveAI.Core.Memory
 
             var summaryIdx = response.IndexOf("SUMMARY:", StringComparison.OrdinalIgnoreCase);
             var selfIdx = response.IndexOf("SELF:", StringComparison.OrdinalIgnoreCase);
+            var bitesIdx = response.IndexOf("BITES:", StringComparison.OrdinalIgnoreCase);
 
             // The retired sections (FACTS:/GOALS:, 2026.08.08) are no longer asked for, but a model
             // trained on the habit — or an NPC whose replayed memory still shows the old shape — may
@@ -348,13 +394,13 @@ namespace ImmersiveAI.Core.Memory
             if (summaryIdx < 0)
             {
                 // Model ignored the SUMMARY label; treat everything up to the first known section as summary.
-                var end = NextSection(0, response.Length, selfIdx, factsIdx, goalsIdx);
+                var end = NextSection(0, response.Length, selfIdx, bitesIdx, factsIdx, goalsIdx);
                 summary = response.Substring(0, end).Trim();
             }
             else
             {
                 var start = summaryIdx + "SUMMARY:".Length;
-                var end = NextSection(start, response.Length, selfIdx, factsIdx, goalsIdx);
+                var end = NextSection(start, response.Length, selfIdx, bitesIdx, factsIdx, goalsIdx);
                 summary = response.Substring(start, end - start).Trim();
             }
 
@@ -362,13 +408,22 @@ namespace ImmersiveAI.Core.Memory
             if (selfIdx >= 0)
             {
                 var start = selfIdx + "SELF:".Length;
-                var end = NextSection(start, response.Length, factsIdx, goalsIdx);
+                var end = NextSection(start, response.Length, bitesIdx, factsIdx, goalsIdx);
                 var block = response.Substring(start, end - start).Trim();
                 if (block.Length > 0) self = block;
             }
 
+            string? bites = null;
+            if (bitesIdx >= 0)
+            {
+                var start = bitesIdx + "BITES:".Length;
+                var end = NextSection(start, response.Length, summaryIdx, selfIdx, factsIdx, goalsIdx);
+                var block = response.Substring(start, end - start).Trim();
+                if (block.Length > 0) bites = block;
+            }
+
             summary = TrimToLastCompleteSentence(summary);
-            return new CompressionResult(summary.Length == 0 ? null : summary, self);
+            return new CompressionResult(summary.Length == 0 ? null : summary, self, bites);
         }
 
         // Sentence-final punctuation, in the hands a model may actually leave it in — Latin,
@@ -427,18 +482,23 @@ namespace ImmersiveAI.Core.Memory
 
         public sealed class CompressionResult
         {
-            /// <summary>The whole of what she now remembers of this person, rewritten from scratch;
-            /// null when the reply carried nothing usable, in which case the caller keeps the old one.</summary>
+            /// <summary>The prose bite — how things stand between them — rewritten whole; null when
+            /// the reply carried nothing usable, in which case the caller keeps the old one.</summary>
             public string? Summary { get; }
 
             /// <summary>The NPC's rewritten sense of self, if they offered one this reflection; otherwise
             /// null (no SELF section was asked for or returned). "unchanged" is handled by the caller.</summary>
             public string? Self { get; }
 
-            public CompressionResult(string? summary, string? self = null)
+            /// <summary>The raw BITES: block — the note edits she made in the same breath, a DELTA
+            /// (2026.08.27). Null when she changed none, which is the common and correct case.</summary>
+            public string? Bites { get; }
+
+            public CompressionResult(string? summary, string? self = null, string? bites = null)
             {
                 Summary = summary;
                 Self = self;
+                Bites = bites;
             }
         }
     }

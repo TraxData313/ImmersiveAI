@@ -76,4 +76,47 @@ public class TogetherLineTests
         Assert.Equal("Spring 3", TogetherLine.ShortDate("  Spring 3, Year 1085 "));
     }
 
+    private static TogetherEntry Kinded(double day, string date, string text, TogetherKind kind)
+    {
+        var e = Entry(day, date, text);
+        e.Kind = kind;
+        return e;
+    }
+
+    [Fact]
+    public void ThreeOrMoreOfAKind_GatherIntoOneSpanLine_AndTheNightsNeverDo()
+    {
+        // The chronicle and the journal above already keep every battle and stop whole — a list
+        // retelling each one line apiece was the same war told twice (the 2026.08.27 token audit).
+        var block = TogetherLine.Build(new[]
+        {
+            Kinded(101, "Winter 6, Year 1084", "we fought — The Victory near Nevyansk", TogetherKind.Battle),
+            Kinded(102, "Winter 7, Year 1084", "we fought — The Victory near Dnin", TogetherKind.Battle),
+            Entry(102.5, "Winter 7, Year 1084", "he came to me"),
+            Kinded(103, "Winter 8, Year 1084", "we fought — The Victory near Ismilkorg", TogetherKind.Battle),
+            Kinded(104, "Winter 9, Year 1084", "In the town of Varcheg: sold for 1,176 denars.", TogetherKind.Stop),
+        });
+
+        Assert.Contains("from Winter 6 to Winter 8 we stood in 3 battles together — the chronicle keeps each of them by name", block);
+        Assert.DoesNotContain("Nevyansk", block);
+        Assert.DoesNotContain("Dnin", block);
+        // Below the gathering bar, an entry keeps its own line — and Other never gathers.
+        Assert.Contains("Winter 9: In the town of Varcheg", block);
+        Assert.Contains("Winter 7: he came to me", block);
+    }
+
+    [Fact]
+    public void TwoOfAKind_KeepTheirOwnLines()
+    {
+        // A pair is still two events, each with its own nuance — three is the gathering bar,
+        // the same law the nights' run lines keep.
+        var block = TogetherLine.Build(new[]
+        {
+            Kinded(101, "Winter 6, Year 1084", "we fought — The Victory near Nevyansk", TogetherKind.Battle),
+            Kinded(102, "Winter 7, Year 1084", "we fought — The Victory near Dnin", TogetherKind.Battle),
+        });
+        Assert.Contains("Nevyansk", block);
+        Assert.Contains("Dnin", block);
+        Assert.DoesNotContain("we stood in", block);
+    }
 }

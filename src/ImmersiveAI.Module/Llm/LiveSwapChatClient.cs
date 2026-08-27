@@ -23,6 +23,10 @@ namespace ImmersiveAI.Llm
         private IChatClient? _inner;
         private string _signature = string.Empty;
 
+        // The connection as it stood at the last build — so a rebuild caused only by a changed
+        // token budget stays silent (see Inner()).
+        private string _connectionSignature = string.Empty;
+
         internal LiveSwapChatClient(ModConfig config, Func<int?> maxTokensOverride)
         {
             _config = config;
@@ -57,9 +61,15 @@ namespace ImmersiveAI.Llm
                 if (_inner != null && string.Equals(signature, _signature, StringComparison.Ordinal))
                     return _inner;
 
-                bool isSwap = _inner != null;
+                // A rebuild whose CONNECTION is unchanged says nothing: the memory-writing budget
+                // now grows with a bond (2026.08.27), so the shell is rebuilt often and honestly,
+                // but "now speaking with <backend>" is news about the connection alone — announcing
+                // it every compression would be noise the player cannot act on.
+                bool isSwap = _inner != null
+                    && !string.Equals(ConnectionSignature(), _connectionSignature, StringComparison.Ordinal);
                 _inner = ChatClientFactory.Build(_config, _maxTokensOverride());
                 _signature = signature;
+                _connectionSignature = ConnectionSignature();
                 if (isSwap) AnnounceSwap();
                 return _inner;
             }
@@ -67,11 +77,18 @@ namespace ImmersiveAI.Llm
 
         /// <summary>Everything the concrete clients capture in their constructors. When any of it
         /// changes, the next call speaks through a freshly built client.</summary>
-        private string Signature()
+        private string Signature() =>
+            ConnectionSignature() + "|" + (_maxTokensOverride()?.ToString() ?? "")
+            + "|" + _config.MaxTokens.ToString();
+
+        /// <summary>The connection alone — everything a "now speaking with…" notice is actually
+        /// about. Kept apart from the token budgets (2026.08.27) so a purpose-sized budget may move
+        /// freely without telling the player the backend changed when it did not.</summary>
+        private string ConnectionSignature()
         {
             var c = _config;
             return string.Join("",
-                c.Backend, _maxTokensOverride()?.ToString() ?? "", c.MaxTokens.ToString(),
+                c.Backend,
                 c.AnthropicApiKey, c.AnthropicModel,
                 c.OpenAIApiKey, c.OpenAIModel, c.OpenAIBaseUrl,
                 c.OpenRouterApiKey, c.OpenRouterModel,

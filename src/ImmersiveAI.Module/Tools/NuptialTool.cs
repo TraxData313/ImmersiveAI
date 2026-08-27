@@ -24,14 +24,11 @@ namespace ImmersiveAI.Tools
         public const string RecallWedding = "recall_wedding";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(RecallWedding,
-            "Call back, whole, a wedding day I lived through — the place and the hour, who stood " +
-            "there, what was given and said, and (if the wedding was my own) the night that " +
-            "followed it, which is mine alone. Name it however it comes to me ('our wedding', " +
-            "'that day in Onira'), or leave the name out for my own. I reach for this whenever " +
-            "that day is spoken of and I would tell it truly rather than in a haze — some days " +
-            "deserve to be remembered exactly as they were.",
+            "Look up a wedding day I lived through: the place, the hour, who stood there, what was " +
+            "given and said — and, if the wedding was my own, the night that followed, which is mine " +
+            "alone. Always look when that day is spoken of, and tell it truly rather than in a haze.",
             new[] { new ToolParameter("wedding",
-                "The day I mean — 'ours', a place, a name. Leave it out for my own wedding day.",
+                "The day — 'ours', a place, a name. Leave out for my own wedding.",
                 required: false) });
 
         /// <summary>Answers one recall against what this soul truly lived. The ledger lives on the

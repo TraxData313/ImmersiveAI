@@ -132,4 +132,56 @@ public class BeatFadeTests
         // Turning the rule off restores exactly the old behaviour.
         Assert.Equal(10, memory.GetKeepMostRecentForCompression(10, 112, 0, 0, maxBeatShare: 0));
     }
+
+    [Fact]
+    public void TheSameThirdBindsWhatIsACTUALLYSENT_NotOnlyWhatCompressionKeeps()
+    {
+        // Anton's screenshot, 2026.08.27: a thread almost entirely grey. The 2026.08.11 cap bound
+        // only COMPRESSION, so between two compressions the window filled with marks and every one
+        // of them rode verbatim into her next reply. Now the same third binds the render.
+        var memory = new NpcMemory();
+        for (int i = 0; i < 9; i++)
+            memory.AddTurn(new ConversationTurn
+            {
+                PlayerLine = $"Battle is behind us, and I set it down in my mind: near Kiraz {i}.",
+                NpcLine = string.Empty,
+                Speaker = ConversationTurn.InnerSpeaker,
+                GameDay = 100 + i,
+            });
+        for (int i = 0; i < 3; i++)
+            memory.AddTurn(new ConversationTurn
+            {
+                PlayerLine = "Как си днес?", NpcLine = "Добре съм, благодаря.", GameDay = 109 + i,
+            });
+
+        var carries = PromptBuilder.BeatsThatStillRide(memory);
+        int ridingBeats = 0, ridingSpoken = 0;
+        for (int i = 0; i < memory.RecentTurns.Count; i++)
+        {
+            if (!carries[i]) continue;
+            if (NpcMemory.IsBeat(memory.RecentTurns[i])) ridingBeats++;
+            else ridingSpoken++;
+        }
+
+        Assert.True(ridingBeats <= 4, $"{ridingBeats} marks still riding in a window of 12");
+        Assert.Equal(3, ridingSpoken);              // spoken turns are NEVER dropped
+        Assert.True(carries[carries.Length - 1]);   // and the freshest turn always rides
+
+        // What is let go of is the OLDEST — "the oldest happening settles deeper, sooner".
+        Assert.False(carries[0]);
+
+        // The record itself is untouched: every word is still in memory, awaiting the fold.
+        Assert.Equal(12, memory.RecentTurns.Count);
+        Assert.Contains("Kiraz 0", memory.RecentTurns[0].PlayerLine);
+
+        // A window that is mostly talking is left entirely alone.
+        var talkative = new NpcMemory();
+        for (int i = 0; i < 6; i++)
+            talkative.AddTurn(new ConversationTurn { PlayerLine = "Здравей.", NpcLine = "И на теб." });
+        talkative.AddTurn(new ConversationTurn
+        {
+            PlayerLine = "A mark.", NpcLine = string.Empty, Speaker = ConversationTurn.InnerSpeaker,
+        });
+        Assert.All(PromptBuilder.BeatsThatStillRide(talkative), Assert.True);
+    }
 }

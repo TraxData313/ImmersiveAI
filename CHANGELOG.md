@@ -15,6 +15,32 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- Conversations cost about a third less: NPCs carry the same knowledge in far fewer words — old
+  battles fold into one line naming the hardest fight, quiet stops on the road no longer take a
+  line each, and long runs of like events gather into one.
+- What an NPC may reach for mid-reply is now told to them shorter and sharper — same abilities,
+  same rules, half the words.
+- Several gear changes in one day now land in their memory as one moment instead of a stack.
+- NPCs no longer hoard item-by-item inventories in their deep memory — gifts are remembered for
+  what they meant, while the chronicles keep the numbers.
+- Scrolling to the very top of a conversation now opens with the weight of it: how many tokens
+  your next message truly carries, piece by piece.
+- The bookkeeping no longer crowds out the talking: once battle, road and gear marks would fill
+  more than a third of what an NPC carries word-for-word, the oldest of them settle into her
+  deeper memory instead of riding along with every single reply. Nothing is forgotten — the
+  chronicles keep it all, and she can still call any of it back.
+- Marks that have settled are shown dimmed in the thread, so you can always see exactly what she
+  is carrying into her next reply and what she is not.
+- NPCs now keep their deep memory as short notes, each filed under its own word — a name, a
+  promise, a debt, a wage — which they write, rewrite and strike out one at a time, even in the
+  middle of a conversation. How they feel about you stays written out in their own words.
+- Because of that, remembering something no longer means rewriting everything: a fact they set
+  down stands until they change it, so nothing is quietly lost in the retelling any more.
+- Memory-writing room now grows with the bond. Someone you have met once writes a note's worth;
+  a lifelong companion gets the full page. Nobody loses memories they already hold.
+- Existing saves keep everything: the memory an NPC already carries becomes their own words about
+  you, and they lift the plain facts out into notes themselves the next time they reflect.
+
 ## v3.1.3 — 2026.08.21
 
 The voices stop wandering off, and they come home to the one download. Nothing has to be installed

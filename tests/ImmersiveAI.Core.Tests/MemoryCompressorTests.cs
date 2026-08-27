@@ -166,10 +166,17 @@ public class MemoryCompressorTests
 
         var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
 
-        Assert.Contains("I write it whole each time", prompt);
+        // Since 2026.08.27 the warning binds the PROSE half only — the notes are a delta and stand
+        // until she changes them, which is exactly why they are safe from this erosion. Both halves
+        // of that must be said, or she treats her whole memory as rewritten-whole again.
+        Assert.Contains("This part I write whole each time", prompt);
         Assert.Contains("fades from me", prompt);
-        Assert.Contains("the names that matter", prompt);
-        Assert.Contains("as much room as the story truly asks", prompt);
+        Assert.Contains("stand until I change them", prompt);
+        Assert.Contains("the room the story truly asks", prompt);
+        // The invitation to the PARTICULARS moved with them: it is the notes that must name a
+        // person, a promise, a debt. Without it she keeps a shelf of vague impressions.
+        Assert.Contains("a person, a promise, a debt", prompt);
+        Assert.Contains("keeps exactly what it already says", prompt);
         // The deep memory opens seeded with her own backstory (2026.08.08): without this clause the
         // "all I carry of them" framing would erode her past by shape, not by her choice.
         Assert.Contains("my own road", prompt);

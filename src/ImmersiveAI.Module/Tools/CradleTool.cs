@@ -26,14 +26,11 @@ namespace ImmersiveAI.Tools
         public const string RecallBirth = "recall_birth";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(RecallBirth,
-            "Call back, whole, the day a child of ours came into the world — the place and the " +
-            "hour, who stood at the feast, the name and who said it first, and (if the child is " +
-            "my own) the hour of the birth itself, which belongs to its two parents. Name it " +
-            "however it comes to me ('when our son was born', a child's name, a place), or leave " +
-            "the name out for my youngest. I reach for this whenever that day is spoken of and I " +
-            "would tell it truly rather than in a haze.",
+            "Look up the day a child of ours was born: the place, who stood at the feast, the name and " +
+            "who said it first — and, if the child is my own, the hour of the birth itself, which " +
+            "belongs to its two parents. Always look when that day is spoken of, and tell it truly.",
             new[] { new ToolParameter("birth",
-                "The day I mean — a child's name, a place, 'our first'. Leave it out for my youngest.",
+                "The day — a child's name, a place, 'our first'. Leave out for my youngest.",
                 required: false) });
 
         /// <summary>Answers one recall against what this soul truly lived. The ledger lives on the

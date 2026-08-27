@@ -143,11 +143,38 @@ namespace ImmersiveAI
                     // A silent beat, exactly as a battle or a stop is: no LLM call, no answer
                     // invented for her. PlayerEngaged rather than None on purpose — witnessing a
                     // trade is not attention, but being handed a sword is, and it should quiet the
-                    // "you never answer me" damping the same way a meeting does.
-                    AppendRecordedTurn(hero, line, string.Empty, OutreachMark.PlayerEngaged);
+                    // "you never answer me" damping the same way a meeting does. Two visits to the
+                    // saddlebags in one day are one story, not two beats (the 2026.08.27 token
+                    // audit): if her freshest memory is already today's gear beat, this joins it.
+                    if (!TryJoinTodaysGearBeat(hero, line))
+                        AppendRecordedTurn(hero, line, string.Empty, OutreachMark.PlayerEngaged);
                 }
                 catch (Exception ex) { ModLog.Error("setting down a change of gear", ex); }
             }
+        }
+
+        /// <summary>Joins a new gear change onto TODAY'S gear beat when that beat is the very last
+        /// thing she remembers — a battle, a word, anything between them means the new change is
+        /// its own moment again. The mark stays hers from the first beat; only the body grows.</summary>
+        private bool TryJoinTodaysGearBeat(Hero hero, string line)
+        {
+            try
+            {
+                var memory = LoadMemory(hero);
+                var turns = memory.RecentTurns;
+                if (turns.Count == 0) return false;
+                var last = turns[turns.Count - 1];
+                if (!GearText.IsGearBeat(last.PlayerLine)) return false;
+                if (!string.IsNullOrEmpty(last.NpcLine)) return false;
+                if ((int)last.GameDay != (int)CampaignTime.Now.ToDays) return false;
+
+                var tail = line.Substring(GearText.GearBeatMark.Length).Trim();
+                if (tail.Length == 0) return false;
+                last.PlayerLine = last.PlayerLine.TrimEnd() + " And later that day: " + tail;
+                SaveMemory(hero, memory);
+                return true;
+            }
+            catch { return false; }
         }
 
         /// <summary>Their own daily wage — the one yardstick the beat offers beside a great sum, and

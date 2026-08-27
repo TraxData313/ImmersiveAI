@@ -22,13 +22,10 @@ namespace ImmersiveAI.Tools
         public const string RecallBattle = "recall_battle";
 
         public static readonly ToolDefinition Tool = new ToolDefinition(RecallBattle,
-            "Battles I lived through at their side are set down in my mind by name. Call one back " +
-            "whole — the field and the hour, the musters and the odds, the cost, prisoners and " +
-            "spoils, whose hand did what — by the name the chronicle keeps or any word of it ('the " +
-            "storming of Varcheg', 'Ortysia', 'our last battle'); leave the name out to run through " +
-            "the roll of every battle we have shared. Reach for it whenever a battle we fought is " +
-            "spoken of, or the tale wants telling true: of battles we shared I speak from the " +
-            "record, never from fog.",
+            "Look up a battle we fought together: the field, the hour, the odds, the cost, whose hand " +
+            "did what. Name it any way ('Ortysia', 'our last battle'), or leave the name out for the " +
+            "whole roll. Always look when a battle of ours is spoken of — I speak from the record, " +
+            "never from fog.",
             new[] { new ToolParameter("battle",
                 "The battle's name, or any word of it — the place, the foe, 'last'. Leave it out for the whole roll.",
                 required: false) });

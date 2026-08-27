@@ -35,27 +35,21 @@ namespace ImmersiveAI.Tools
         public static readonly IReadOnlyList<ToolDefinition> Tools = new[]
         {
             new ToolDefinition(SurveySurroundings,
-                "From where my company stands I cast my eyes over the country about — every band, caravan, " +
-                "and army moving within sight: whose they are, which way they lie, how strong as well as my " +
-                "eyes can count, friend or foe, what they are about, whether I or they are the swifter, " +
-                "how many of them go wounded, and whether they drag prisoners bound in their train. " +
-                "Also the villages, towns and castles within sight and how they fare — burning under a raid, " +
-                "lying under siege, lately plundered — any den of brigands my company has spotted nearby, " +
-                "and my own pace and what weighs on it. I always look before I speak of who or what is near, " +
-                "of a place that burns or is beset, of hideouts and lairs, of pursuit, of escape, or of the " +
-                "speed of the march: my judgment is only as good as what my eyes have truly seen."),
+                "Look at the country around me: every band and army in sight — whose, which way, how " +
+                "strong, friend or foe, what they are doing, who is swifter — every village, town and " +
+                "castle and how it fares (burning, besieged, plundered), any spotted brigand den, and my " +
+                "own pace. Always look before speaking of who is near, of a place that burns or is beset, " +
+                "of pursuit, escape, or the speed of the march."),
 
             new ToolDefinition(WeighBattle,
-                "I set any foe upon the scales against my own company before a fight is joined: their " +
-                "numbers and kinds of fighters against mine, how many on each side are too hurt to stand in a " +
-                "line, what prisoners they drag with them, and how the day would likely go. Works against " +
-                "a band or army moving in the country, against the garrison of a named town or castle, " +
-                "against a village and whoever is putting it to the torch, or against a spotted den of " +
-                "brigands. I always weigh before I speak of the odds of battle, or counsel battle or retreat.",
+                "Weigh a foe against my own company: numbers and kinds on each side, who is too hurt to " +
+                "stand, how the day would likely go. Works on a band, an army, a town or castle garrison, " +
+                "a village and its raiders, or a den. Always weigh before speaking of the odds, or " +
+                "counselling battle or retreat.",
                 new[] { new ToolParameter("name",
-                    "Who to weigh against: a war party or army by its leader's or its own name, or a town, " +
-                    "castle, village, or brigands' den by name. Leave it out to weigh the nearest hostile " +
-                    "band in sight.", required: false) }),
+                    "Who to weigh: a party or army by name, or a town, castle, village or den. Leave out " +
+                    "for the nearest hostile band in sight.",
+                    required: false) }),
         };
 
         /// <summary>Answers one field-craft call for the asker. Same dispatcher rails as WorldRecall:

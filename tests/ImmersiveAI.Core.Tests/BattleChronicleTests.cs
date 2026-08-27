@@ -182,7 +182,7 @@ public class BattleChronicleTests
     }
 
     [Fact]
-    public void SituationBlock_ListsOldTitlesAndTellsTheLatestWhole()
+    public void SituationBlock_NamesTheOneOlderBattleAndTellsTheLatestWhole()
     {
         var older = Ortysia(); older.Id = "d0100"; older.GameDay = 100; older.Title = "The Skirmish Won near Odrimir";
         older.ShortTale = BattleText.ShortTale(older);
@@ -190,15 +190,18 @@ public class BattleChronicleTests
 
         var block = BattleText.SituationBlock(new[] { older, latest }, "Vulgrim", mentionRecall: true);
         Assert.Contains("Battles I have lived through at Vulgrim's side", block);
-        Assert.Contains("The Skirmish Won near Odrimir", block);
+        Assert.Contains("One battle stands in it before this last one: 'The Skirmish Won near Odrimir'", block);
         Assert.Contains("full tale still fresh", block);
         Assert.Contains("The day was ours.", block);
         Assert.Contains("call back whole, by its name", block);
     }
 
     [Fact]
-    public void SituationBlock_FoldsTheDeepPastIntoACount()
+    public void SituationBlock_FoldsAllOlderBattlesIntoOneLine_NamingTheHardest()
     {
+        // Nine look-alike victories must fold into a count naming the hardest-fought — a roll of
+        // one line per battle buried the one that mattered (the 2026.08.27 token audit), and
+        // recall_battle holds every record whole for the asking.
         var records = new List<BattleRecord>();
         for (int i = 0; i < 10; i++)
         {
@@ -206,10 +209,17 @@ public class BattleChronicleTests
             r.Id = $"d{100 + i:0000}";
             r.GameDay = 100 + i;
             r.Title = $"The Victory near Ortysia {i}";
+            r.ShortTale = BattleText.ShortTale(r);
             records.Add(r);
         }
-        var block = BattleText.SituationBlock(records, "Vulgrim", mentionRecall: false, maxListed: 4);
-        Assert.Contains("6 earlier battles besides", block);
+        records[3].Theirs.Total = 400;               // the one great press among the looter-stomps
+        records[3].Title = "The Great Stand near Ortysia";
+
+        var block = BattleText.SituationBlock(records, "Vulgrim", mentionRecall: false);
+        Assert.Contains("9 battles stand in it before this last one", block);
+        Assert.Contains("the hardest of them was 'The Great Stand near Ortysia'", block);
+        Assert.DoesNotContain("The Victory near Ortysia 1", block);   // no roll of look-alikes
+        Assert.Contains("The Victory near Ortysia 9", block);         // the freshest, told whole
         Assert.DoesNotContain("call back whole", block);
     }
 

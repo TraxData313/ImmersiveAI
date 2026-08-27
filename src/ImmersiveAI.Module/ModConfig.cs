@@ -207,7 +207,70 @@ namespace ImmersiveAI
         /// 2026.08.08, the first playtest after that retirement: at 1500 a rich Bulgarian memory
         /// was severed in mid-word. Text outside ASCII costs roughly 1.6× the tokens English does,
         /// so a budget sized by English prose is far tighter than it looks for most of the world.</summary>
-        public int MaxMemoryWriteTokens { get; set; } = 2000;
+        /// <para>LOWERED 2000 → 1500 on 2026.08.27, when the deep memory's plain facts became keyed
+        /// notes she edits one at a time (<see cref="EnableMemoryNotes"/>): only the prose half is
+        /// rewritten whole now, so it needs far less room. Existing configs are deliberately NOT
+        /// migrated — lowering a ceiling is taste, and taste is never migrated.</para>
+        public int MaxMemoryWriteTokens { get; set; } = 1500;
+
+        /// <summary>
+        /// The room a memory-writing call gets for a soul who barely knows the player (Anton,
+        /// 2026.08.27: "or they just fill it with stuff asap"). A model handed room tends to USE
+        /// it, so a stranger given the full ceiling writes a page about someone they met once. The
+        /// budget starts here and climbs by <see cref="MemoryWriteTokensPerTurn"/> for every
+        /// exchange truly shared, up to <see cref="MaxMemoryWriteTokens"/> — the memory earns its
+        /// size the way the acquaintance does. Set equal to the ceiling to switch the growth off.
+        /// </summary>
+        public int StartingMemoryWriteTokens { get; set; } = 300;
+
+        /// <summary>How much more room each shared exchange buys, up to the ceiling. 0 pins every
+        /// memory write at <see cref="StartingMemoryWriteTokens"/>.</summary>
+        public int MemoryWriteTokensPerTurn { get; set; } = 100;
+
+        /// <summary>
+        /// The room for THIS soul's memory writing, from how much story they truly share
+        /// (<see cref="NpcMemory.TotalTurns"/> — lifetime exchanges, never reduced by compression).
+        /// Never below the spoken budget, never above the ceiling.
+        ///
+        /// <para>
+        /// A MEMORY IS NEVER GIVEN LESS ROOM THAN IT ALREADY FILLS (Anton, 2026.08.27: "don't want
+        /// the folk wives when migrated to the new memory we are testing to lose their memories").
+        /// The climb is for a memory GROWING into its room; handing a soul who already holds a full
+        /// page a stranger's budget would have her rewrite it into a third of itself, and the page
+        /// is rewritten WHOLE — what did not fit would simply be gone. The seeded backstory is the
+        /// sharpest case and the easiest to miss: a soul the player has never spoken to carries a
+        /// long page with a richness of ZERO. So the floor is what she is already carrying, plus a
+        /// little room to say something new.
+        /// </para>
+        /// </summary>
+        /// <param name="richness">Lifetime exchanges shared with the player.</param>
+        /// <param name="currentMemoryTokens">What her deep memory already weighs, in tokens.</param>
+        public int MemoryWriteTokensFor(int richness, int currentMemoryTokens = 0)
+        {
+            var start = StartingMemoryWriteTokens > 0 ? StartingMemoryWriteTokens : MaxMemoryWriteTokens;
+            var step = MemoryWriteTokensPerTurn > 0 ? MemoryWriteTokensPerTurn : 0;
+            long room = start + (long)step * Math.Max(0, richness);
+
+            // The floor: everything she already holds, and a quarter again to grow into.
+            if (currentMemoryTokens > 0)
+            {
+                long floor = currentMemoryTokens + (currentMemoryTokens / 4) + 200;
+                if (room < floor) room = floor;
+            }
+
+            if (room > MaxMemoryWriteTokens) room = MaxMemoryWriteTokens;
+            if (room < MaxTokens) room = MaxTokens;
+            return (int)room;
+        }
+
+        /// <summary>
+        /// THE NOTES (2026.08.27): an NPC's deep memory keeps its plain facts as small keyed notes
+        /// she writes, rewrites and strikes out one at a time — mid-talk through the
+        /// <c>keep_note</c> hand, and at every compression — instead of one page rewritten whole.
+        /// How things stand between them stays prose. Off restores the single rolling page and
+        /// drops the tool. See <see cref="Core.Memory.MemoryBites"/>.
+        /// </summary>
+        public bool EnableMemoryNotes { get; set; } = true;
 
         /// <summary>When true, the NPC opens each conversation by greeting the player and recapping
         /// what it remembers of them and the last exchange. Set false to drop straight into the menu.</summary>
@@ -1360,9 +1423,16 @@ namespace ImmersiveAI
 
             // Memory-writing budget: never below the spoken budget (that would make reflection the
             // narrowest voice she has), never runaway.
-            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 2000;
+            if (MaxMemoryWriteTokens <= 0) MaxMemoryWriteTokens = 1500;
             if (MaxMemoryWriteTokens < MaxTokens) MaxMemoryWriteTokens = MaxTokens;
             if (MaxMemoryWriteTokens > 8000) MaxMemoryWriteTokens = 8000;
+
+            // The growing room: a starting budget above the ceiling is simply the ceiling, and a
+            // step big enough to leap it is harmless (the climb is clamped where it is read).
+            if (StartingMemoryWriteTokens <= 0) StartingMemoryWriteTokens = MaxMemoryWriteTokens;
+            if (StartingMemoryWriteTokens > MaxMemoryWriteTokens) StartingMemoryWriteTokens = MaxMemoryWriteTokens;
+            if (MemoryWriteTokensPerTurn < 0) MemoryWriteTokensPerTurn = 0;
+            if (MemoryWriteTokensPerTurn > MaxMemoryWriteTokens) MemoryWriteTokensPerTurn = MaxMemoryWriteTokens;
 
             if (ConversationHiringHagglePercent < 0) ConversationHiringHagglePercent = 0;
             if (ConversationHiringHagglePercent > 90) ConversationHiringHagglePercent = 90;

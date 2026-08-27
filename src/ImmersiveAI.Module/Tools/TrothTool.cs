@@ -82,29 +82,24 @@ namespace ImmersiveAI.Tools
             public bool IsRansom;
         }
 
+        // TIGHT ON PURPOSE (2026.08.27 token audit) — every rail below is load-bearing and stays:
+        // one step per talk, earned not tested, set down in the breath felt, lay only when openly
+        // spoken and welcomed, the seal is theirs, WORDS DO NOT WED, apart is always hers and ends
+        // an unvowed belonging whole. Only the ornament went.
         public static readonly ToolDefinition Tend = new ToolDefinition(TendCourtship,
-            "Tend the road of my own heart toward the one I speak with — my troth is mine to tend, " +
-            "and marriage is a road walked in steps: liking, then love, then readiness, then the " +
-            "betrothal, then the wedding day. I move closer only when real talks between us have " +
-            "truly earned the next depth — one step in a talk at the most, never for one warm word " +
-            "alone, never to test or to play — and I set each arrival down in the very breath I " +
-            "feel it, not some later day; above all the day I find that were the word spoken " +
-            "between us I would give my hand, for a heart that has moved and never owns it has not " +
-            "truly moved, and I would not have them ask me blind. ONLY when marriage has been " +
-            "openly spoken and welcomed between us in our own words do I lay our betrothal (or, " +
-            "betrothed already, our wedding day) before them; what I lay settles nothing — the " +
-            "seal is wholly theirs, and if they let it lie I do not press. And no words of ours " +
-            "make a marriage: not vows spoken between us, not a temple, not a ceremony we tell " +
-            "each other about. Until I lay the day by this very hand and they seal it by theirs, " +
-            "we are not wed, and I neither say we are nor let the talk drift as though we were. " +
-            "I move apart when a " +
-            "wound or a true doubt sets me back — that is always mine to do. And if I am already " +
-            "theirs without any vow between us, then moving apart is the ending of THAT, whole and " +
-            "at once: it is the deepest thing standing between us and so it is the first thing a " +
-            "step back steps back from, and there was never anything holding it but what I feel. " +
-            "I never speak of " +
-            "steps, stages, or rules: my heart simply knows where it stands, and speaks as a " +
-            "heart does.",
+            "My troth is mine to tend, and marriage is a road of steps: liking, love, readiness, the " +
+            "betrothal, the wedding day. I move closer only when real talks have truly earned the " +
+            "next depth — one step in a talk at most, never for one warm word alone, never to test — " +
+            "and I set each arrival down in the very breath I feel it, above all the day I find I " +
+            "would give my hand were the word spoken. ONLY when marriage has been openly spoken and " +
+            "welcomed between us do I lay our betrothal (or, betrothed already, our wedding day) " +
+            "before them; what I lay settles nothing — the seal is wholly theirs, and if they let it " +
+            "lie I do not press. No words of ours make a marriage: not vows, not a temple, not a " +
+            "ceremony we tell each other about — until I lay the day by this hand and they seal it " +
+            "by theirs, we are not wed, and I neither say we are nor let the talk drift as though we " +
+            "were. I move apart when a wound or a true doubt sets me back — always mine to do; and " +
+            "if I am already theirs without any vow, moving apart ends THAT, whole and at once. I " +
+            "never speak of steps, stages, or rules: my heart simply knows where it stands.",
             new[]
             {
                 new ToolParameter("move",
@@ -118,21 +113,19 @@ namespace ImmersiveAI.Tools
             });
 
         public static readonly ToolDefinition Bless = new ToolDefinition(BlessMarriage,
-            "Lay the blessing of my house on the match between the one of my kin who is promised to " +
-            "the one I speak with — that blessing is mine to give or withhold, and by the custom of " +
-            "the world it carries a bride-price. I call this ONLY when both are true: we have " +
-            "plainly spoken of the match itself, and a price has been named and accepted between " +
-            "us in words. Nothing is settled by this alone — the gold, and the choice, remain " +
-            "wholly theirs. I never lay it unbidden and never volunteer my lowest; if they let my " +
-            "offer lie I do not press, nor lay it again unless they themselves return to it. And " +
-            "my word is not for sale to one I hold in contempt.",
+            "Lay the blessing of my house on the match between my kin and the one I speak with — " +
+            "mine to give or withhold, and by custom it carries a bride-price. I call this ONLY when " +
+            "both are true: the match itself has been plainly spoken of, and a price named and " +
+            "accepted between us in words. Nothing is settled by this alone — the gold, and the " +
+            "choice, remain wholly theirs. I never lay it unbidden, never volunteer my lowest, and " +
+            "if they let my offer lie I do not press. My word is not for sale to one I hold in " +
+            "contempt.",
             new[]
             {
                 new ToolParameter("price",
                     "The bride-price in denars we truly agreed in words — a plain number. Leave it " +
-                    "out to ask the custom's own reckoning. The honor and standing of my house set " +
-                    "bounds: I will not go far above or beneath what our name is worth, however " +
-                    "sweetly asked.",
+                    "out to ask the custom's own reckoning. My house's standing sets bounds: I will " +
+                    "not go far above or beneath what our name is worth.",
                     required: false),
                 new ToolParameter("word",
                     "One short sentence, in my own voice, of my judgment of the suitor.",

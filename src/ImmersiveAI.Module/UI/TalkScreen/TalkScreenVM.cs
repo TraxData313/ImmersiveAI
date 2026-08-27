@@ -44,6 +44,10 @@ namespace ImmersiveAI.UI.TalkScreen
         private static readonly Color PromptSheetColor = new Color(0.62f, 0.66f, 0.72f, 1f);
         private static readonly Color PromptToolColor = new Color(0.56f, 0.72f, 0.70f, 1f);
 
+        // A mark that has settled out of the verbatim window: dimmest of all, because it is the one
+        // thing in the thread the chosen one is NOT being handed again (2026.08.27).
+        private static readonly Color SettledMarkColor = new Color(0.46f, 0.46f, 0.50f, 1f);
+
         private readonly ModConfig _config;
 
         // The line sent but not yet answered, per soul — shown in the thread while the reply is on
@@ -329,10 +333,24 @@ namespace ImmersiveAI.UI.TalkScreen
 
             if (memory != null)
             {
-                foreach (var turn in memory.RecentTurns)
+                // WHAT SHE IS ACTUALLY GIVEN, and nothing more (Anton, 2026.08.27). The oldest
+                // silent marks stop riding into her prompt once the bookkeeping would hold more
+                // than a third of the verbatim window — so drawing them here exactly like the rest
+                // would tell the player she carries something she no longer carries.
+                var carries = Core.Prompts.PromptBuilder.BeatsThatStillRide(memory);
+                for (int at = 0; at < memory.RecentTurns.Count; at++)
                 {
+                    var turn = memory.RecentTurns[at];
                     var stamp = Stamp(turn);
                     DrawLineBefore(turn.GameDay);
+                    if (!carries[at])
+                    {
+                        messages.Add(new ChatMessageVM(string.Empty,
+                            WithStamp(stamp, "⌁ " + OneBreathOf(turn.PlayerLine)
+                                + "  — settled; no longer carried into their next reply."),
+                            isNarration: true, SettledMarkColor));
+                        continue;
+                    }
                     if (turn.IsFromAngel || turn.IsInnerThought)
                     {
                         // Letters wear their letters openly, in their place in the one thread — the
@@ -524,6 +542,13 @@ namespace ImmersiveAI.UI.TalkScreen
                 : ImmersiveChatBehavior.PromptPreviewFor(_selected.Hero, IsAway);
             if (preview == null) return;
 
+            // THE TALLY COMES FIRST OF ALL (Anton, 2026.08.27): what the next message weighs,
+            // piece by piece — the token audit made a fixture, so "why is this soul costly?" is
+            // answered by scrolling up rather than by asking.
+            if (!string.IsNullOrEmpty(preview.Weights))
+                messages.Add(new ChatMessageVM("⚖ The weight of what they carry", preview.Weights,
+                    isNarration: true, PromptFrameColor));
+
             // THE HANDS COME FIRST (Anton, 2026.08.15). They used to sit between the sheet and the
             // conversation, which buried them: the sheet runs to thousands of words, so a reader
             // scrolling up met an unbroken wall of prose and gave up before reaching the tools. At
@@ -623,6 +648,17 @@ namespace ImmersiveAI.UI.TalkScreen
 
         private static string WithStamp(string stamp, string text) =>
             string.IsNullOrEmpty(stamp) ? text : $"[{stamp}]  {text}";
+
+        /// <summary>The first breath of a settled mark — enough to know which happening it was,
+        /// without spending the reader's eye on a thing that no longer rides.</summary>
+        private static string OneBreathOf(string? line)
+        {
+            var text = (line ?? string.Empty).Trim();
+            if (text.Length == 0) return "a mark of that day";
+            int stop = text.IndexOf(". ", StringComparison.Ordinal);
+            if (stop > 0 && stop < 110) return text.Substring(0, stop + 1);
+            return text.Length <= 110 ? text : text.Substring(0, 110).TrimEnd() + "…";
+        }
 
         // A spoken message may carry small acted gestures between *asterisks* (the acting-out
         // grammar — EmoteText): the words draw as the spoken card, each gesture as a soft narration

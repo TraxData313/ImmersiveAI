@@ -1128,3 +1128,42 @@ release ritual warns about.
   those players it never happened.
 
   829 Core tests green, packaged, Steam uploaded ("Uploading done!"). (2026.08.21 12.30.00)
+
+- The token audit and the diet that followed. Anton asked what a conversation with Rhia truly
+  costs (he was reaching for GPT Terra to keep long chats coherent). Measured on her real files
+  against the ledger: ~7,100 tokens a call, billed 2-3x per exchange since every tool round
+  resends everything; the tool definitions alone were 39% of it, and one battle appeared up to
+  four times in one prompt (beat, chronicle block, together-line, summary - and the summary was
+  27% itemized gear ledger). The diet, all shipped at once: all sixteen tool descriptions cut to
+  working words with every rail kept; the battle roll folded to ONE line (count + hardest by
+  name, the ledger keeping the whole for recall_battle); passed-through stops dropped from the
+  road roll; the together-line gathering runs of >=3 like events (TogetherKind, gather-at-three
+  like the nights' RunLine); same-day gear beats joining instead of stacking; a "ledgers I do
+  not hoard" clause in the memory contract; and the scrollback now OPENS with a per-section
+  token tally (BuildPromptWeights) so the cost is a thing the player can see. Expected: a third
+  off every exchange, and lighter instruction load for the smaller models. The shortened tool
+  contracts have NOT yet been through the live-probe harness - watch the first playtests.
+  832 Core tests green. (2026.08.27 13.30.00)
+
+- THE BITES: the deep memory became keyed notes, plus the render-time beat cap. Anton's screenshot
+  of a nearly all-grey thread found the biggest token leak of the audit: every silent beat rides
+  VERBATIM into the prompt, BeatFade only ever thinned wedding/birth accounts, and the 1/3 beat
+  share cap from 2026.08.11 bound only COMPRESSION - so between two compressions the window could
+  be ~90% bookkeeping and nothing checked what was actually sent. PromptBuilder.BeatsThatStillRide
+  applies the same third at render (oldest marks let go first, spoken turns never touched, record
+  untouched), the talk screen draws settled marks dimmed with a "no longer carried" note so the
+  thread never lies about what she gets, and the weight card counts them. LESSON: a cap that runs
+  at one stage of a pipeline says nothing about the other stages.
+  Then his own design: the deep memory's plain facts became small keyed notes (NpcMemory.Bites +
+  Core MemoryBites) she edits one at a time - a BITES: delta at compression, and live mid-talk via
+  the keep_note hand - while ONE reserved key stays prose (how things stand between them, still
+  Summary, still rewritten whole). Not the retired hold_truth: that stood BESIDE the page holding
+  the same material twice; these replace the page's facts. Old saves migrate for free plus a
+  one-time in-prompt nudge to lift the facts out. The memory-writing room now GROWS with the bond
+  (300 + 100 per lifetime exchange, ceiling lowered 2000 -> 1500, not migrated) because a model
+  handed room uses it - FLOORED by what she already holds +25%, which is what stops a seeded
+  backstory (a long page at zero richness) being erased by its own update; Anton caught that risk
+  before it shipped. LiveSwapChatClient gained ConnectionSignature() so a budget-only rebuild no
+  longer announces the backend. Tool descriptions also went telegraphic on his second ask
+  ("recall_person -> Look up a person"), keeping every behavioural rail. 845 Core tests green.
+  keep_note and the shortened contracts still need the live-probe harness. (2026.08.27 16.10.00)

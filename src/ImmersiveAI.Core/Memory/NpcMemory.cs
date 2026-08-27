@@ -21,7 +21,24 @@ namespace ImmersiveAI.Core.Memory
         public string NpcName { get; set; } = string.Empty;
 
         public List<ConversationTurn> RecentTurns { get; set; } = new List<ConversationTurn>();
+
+        /// <summary>The reserved PROSE bite — how things stand between her and the player, in her
+        /// own few sentences (see <see cref="MemoryBites.ProseKey"/>). It was the whole of the deep
+        /// memory until 2026.08.27; the facts live in <see cref="Bites"/> now, and this keeps the
+        /// part that would flatten if it were chopped into notes. Old saves need no migration: an
+        /// existing page simply IS the prose from here on.</summary>
         public string Summary { get; set; } = string.Empty;
+
+        /// <summary>
+        /// THE BITES (2026.08.27): her deep memory of facts as small keyed notes she edits one at a
+        /// time — "ahil" → "he equips me well and listens to my counsel", "my wage" → "34 denars a
+        /// day, agreed at Dunglanys". Written at compression AND live, mid-talk, by the
+        /// <c>keep_note</c> hand. Keys are canonical (see <see cref="MemoryBites.CanonicalKey"/>)
+        /// so one subject never fragments into four.
+        /// <para>NOT the retired <c>KnownFacts</c>: that stood BESIDE the rolling page holding the
+        /// same material twice. These replace the page's facts — see <see cref="MemoryBites"/>.</para>
+        /// </summary>
+        public Dictionary<string, string> Bites { get; set; } = new Dictionary<string, string>();
 
         /// <summary>LEGACY, retired 2026.08.08: the distilled one-line truths an NPC used to hold
         /// beside the summary (the hold_truth tool and the reflection's FACTS section, both gone).
@@ -241,8 +258,10 @@ namespace ImmersiveAI.Core.Memory
         /// </summary>
         public const double DefaultMaxBeatShare = 1.0 / 3.0;
 
-        /// <summary>Whether this turn is a silent mark rather than something either of them said.</summary>
-        private static bool IsBeat(ConversationTurn turn) =>
+        /// <summary>Whether this turn is a silent mark rather than something either of them said.
+        /// PUBLIC because the prompt builder caps the same share at RENDER time and must judge it
+        /// by the very same rule — one question, one answer (2026.08.27).</summary>
+        public static bool IsBeat(ConversationTurn turn) =>
             turn != null && string.IsNullOrWhiteSpace(turn.NpcLine)
             && (turn.IsInnerThought || turn.IsFromAngel);
 
@@ -320,6 +339,19 @@ namespace ImmersiveAI.Core.Memory
 
             Summary = newSummary ?? string.Empty;
             RecentTurns.RemoveRange(0, consumedTurnCount);
+        }
+
+        /// <summary>
+        /// The same, plus the note edits she made in the same breath (2026.08.27). The bites are a
+        /// DELTA — only what she named is touched, and everything she did not mention keeps standing
+        /// exactly as it was written. That is the whole point of them: the prose is still rewritten
+        /// whole, so it still needs the "what I do not set down fades" warning, but a particular
+        /// filed under a key can no longer be lost merely because she forgot to re-copy it.
+        /// </summary>
+        public void ApplyCompression(string newSummary, int consumedTurnCount, string? biteSection)
+        {
+            ApplyCompression(newSummary, consumedTurnCount);
+            MemoryBites.ApplySection(Bites, biteSection);
         }
     }
 }

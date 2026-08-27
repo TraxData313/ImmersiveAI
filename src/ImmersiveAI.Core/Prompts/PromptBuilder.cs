@@ -56,9 +56,11 @@ namespace ImmersiveAI.Core.Prompts
         {
             var pending = new StringBuilder();
             int total = memory.RecentTurns.Count;
+            var carries = BeatsThatStillRide(memory);
             for (int at = 0; at < total; at++)
             {
                 var turn = memory.RecentTurns[at];
+                if (!carries[at]) continue;
                 // A great day thins with distance (see BeatFade): whole while it is fresh, then its
                 // opening, then only the day itself. The record is untouched — this is what the
                 // PROMPT carries — and the recall tools read the ledgers, so she can still tell the
@@ -75,6 +77,47 @@ namespace ImmersiveAI.Core.Prompts
                 messages.Add(ChatMessage.Assistant(turn.NpcLine));
             }
             return pending.ToString();
+        }
+
+        /// <summary>
+        /// THE BOOKKEEPING DOES NOT GET TO HOLD THE PROMPT (2026.08.27, Anton's screenshot: a thread
+        /// almost entirely grey — seventeen remembered turns of which nearly all were battle, road
+        /// and gear marks, and every one of them was riding verbatim into her next reply).
+        ///
+        /// <see cref="NpcMemory.DefaultMaxBeatShare"/> has capped this since 2026.08.11, but only at
+        /// COMPRESSION — so between two compressions the window filled with marks and the cap had
+        /// nothing to say about what was actually SENT. This applies the same third at render time,
+        /// letting go of the OLDEST marks first, exactly as compression does.
+        ///
+        /// NOTHING IS LOST, and that is what makes it safe: the turn keeps every word in
+        /// memories.json and is still folded into her rolling memory at the next compression; the
+        /// happenings are already told by the chronicle, the road journal and the line since they
+        /// were last alone, all of which stand in her sheet above; and the recall tools read the
+        /// LEDGERS. A dropped mark is a thing she still knows — just no longer one she is handed
+        /// twice. Spoken turns are NEVER touched: what she has word for word is the talking.
+        /// </summary>
+        /// <returns>One flag per remembered turn, in order — false where it no longer rides.</returns>
+        public static bool[] BeatsThatStillRide(NpcMemory memory, double maxBeatShare = NpcMemory.DefaultMaxBeatShare)
+        {
+            int total = memory?.RecentTurns.Count ?? 0;
+            var carries = new bool[total];
+            for (int i = 0; i < total; i++) carries[i] = true;
+            if (total == 0 || maxBeatShare <= 0 || maxBeatShare >= 1) return carries;
+
+            int beats = memory!.RecentTurns.Count(NpcMemory.IsBeat);
+            int allowed = Math.Max(1, (int)Math.Floor(total * maxBeatShare));
+            if (beats <= allowed) return carries;
+
+            // Newest first, so what is let go of is the oldest — "the oldest happening settles
+            // deeper, sooner", the same rule the compression cap keeps.
+            int kept = 0;
+            for (int at = total - 1; at >= 0; at--)
+            {
+                if (!NpcMemory.IsBeat(memory.RecentTurns[at])) continue;
+                if (kept < allowed) { kept++; continue; }
+                carries[at] = false;
+            }
+            return carries;
         }
 
         private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice,
@@ -641,6 +684,18 @@ namespace ImmersiveAI.Core.Prompts
                     sb.AppendLine($"What {playerName} is to me{asOf}:");
                 }
                 sb.AppendLine(memory.Summary.Trim());
+            }
+
+            // THE NOTES (2026.08.27) — the plain facts she keeps by key, standing right under how
+            // things stand between them, because they are the particulars OF that. She writes them
+            // one at a time (the keep_note hand, and at every compression); what is not named keeps
+            // standing, which is what makes them cheap to hold and safe from the whole-rewrite.
+            var notes = MemoryBites.Render(memory.Bites);
+            if (notes.Length > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Notes I keep, each under its own word:");
+                sb.AppendLine(notes);
             }
 
             // The courtship road rides beside the deep memory of this person — where the heart
