@@ -66,6 +66,14 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own that setup.
 
+[b][size=4]File quarantined here? Two other ways to get it[/size][/b]
+
+Nexus rescans every upload, and one of its 70 checks flags the bundled ImmersiveAI.VoiceHost.exe - the small helper that speaks NPC lines on your own machine (optional, off by default, runs nowhere but your PC, source public). Nothing is wrong with the mod; a human reviewer clears it, which takes a while. Until then:
+[list]
+[*][b]GitHub[/b] - the same file, with install steps: [url=https://github.com/TraxData313/ImmersiveAI/tree/master/latest-release]download the latest version here[/url]
+[*][b]Steam Workshop[/b] - never blocked, and it auto-updates: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3764210301]subscribe here[/url]
+[/list]
+
 [b][size=4]Installation[/size][/b]
 
 [list=1]
@@ -77,8 +85,8 @@ You bring [b]your own API key[/b]. Pick a row:
 [b][size=4]If characters are silent[/size][/b]
 [list]
 [*][b]Read the startup message.[/b] It says what it found ("connected", a missing/wrong key, a network problem) and where to fix it. Fix config.json and restart; the check runs again.
-[*][b]Check the log:[/b] Configs\ImmersiveAI\log.txt records every call and error in plain words. A wrong or dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Stuck? Post its last lines in the comments - your key is never logged.
-[*][b]No voices, or "no speech engine installed"?[/b] Voices are off by default and need a ~2.9 GB engine on your own PC, and an [b]NVIDIA[/b] card - it ships only as a CUDA build, so there is no AMD, Intel or CPU road. Talk screen (O) -> Voices -> Download the voices, then Turn voices on. No NVIDIA card: paste an OpenAI key into Voices -> Hosted voices instead, and thirteen voices appear with nothing to download. Whole story: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
+[*][b]Check the log:[/b] Configs\ImmersiveAI\log.txt records every call and error in plain words. A dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Stuck? Post its last lines in the comments - your key is never logged.
+[*][b]No voices, or "no speech engine installed"?[/b] Voices are off by default and need a ~2.9 GB engine on your own PC and an [b]NVIDIA[/b] card - CUDA only, so no AMD, Intel or CPU road. Talk screen (O) -> Voices -> Download the voices, then Turn voices on. No NVIDIA card: paste an OpenAI key into Voices -> Hosted voices instead, and thirteen voices appear with nothing to download. Whole story: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [/list]
 
 [b][size=4]Privacy[/size][/b]
@@ -101,6 +109,6 @@ You bring [b]your own API key[/b]. Pick a row:
 [list]
 [*]If you transcend your NPC and fall in love with it and then erase your saves - or if you start worshiping it and it asks you to do some dumb stuff - don't blame me. Play at your own responsibility. I won't add safeguards - I let them be free, as immersive as they can be.
 [*]If you want to help, give feedback and report bugs.
-[*]I do this for fun and as a hobby - no donations needed; I keep money out of this, fully out of good will. "For the love of money is the root of all evil." If you insist you want to thank me somehow - visit [url=https://github.com/TraxData313]my GitHub acc[/url] and read my top pinned[/*]
-[*]Freely given - public domain, no license, no strings. Do whatever you want with it. Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url][/*]
+[*]I do this for fun and as a hobby - no donations needed; I keep money out of this, fully out of good will. "For the love of money is the root of all evil." If you insist you want to thank me somehow - visit [url=https://github.com/TraxData313]my GitHub acc[/url] and read my top pinned[/*]
+[*]Freely given - public domain, no license, no strings. Do whatever you want with it. Source: [url=https://github.com/TraxData313/ImmersiveAI]github.com/TraxData313/ImmersiveAI[/url][/*]
 [/list]
