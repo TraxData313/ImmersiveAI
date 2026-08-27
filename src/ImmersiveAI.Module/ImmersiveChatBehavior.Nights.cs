@@ -1563,7 +1563,7 @@ namespace ImmersiveAI
             try
             {
                 var memory = LoadMemory(wife);
-                facts.SharedStory = (memory.Summary ?? string.Empty).Trim();
+                facts.SharedStory = memory.DeepMemoryText();
                 facts.RecentWords = RecentSpokenWords(memory, PlayerName(), record.WifeName);
             }
             catch { }

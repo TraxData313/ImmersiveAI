@@ -473,11 +473,11 @@ namespace ImmersiveAI.UI.ChatWindow
         // rolling memory she rewrites whole at every reflection — so a long story is readable at a
         // glance. (A second block of distilled "truths" stood here until 2026.08.08.)
         private static string BuildOverview(NpcMemory? memory)
-            => memory == null || string.IsNullOrWhiteSpace(memory.Summary) ? string.Empty : memory.Summary.Trim();
+            => memory == null ? string.Empty : memory.DeepMemoryText();
 
         private static string OverviewHeading(NpcMemory? memory, string npcName)
         {
-            if (memory == null || string.IsNullOrWhiteSpace(memory.Summary)) return string.Empty;
+            if (memory == null || !memory.HasDeepMemory) return string.Empty;
             // A memory holding only the seeded story of their own road is not yet a memory OF the
             // player — head it as the story they carry, not as what lingers of you.
             if (memory.SeededFromStory && memory.StoryRichness == 0)

@@ -139,8 +139,10 @@ public class MemoryCompressorTests
         Assert.Contains("what to carry forward and what to let go", prompt);
         Assert.DoesNotContain("Muse", prompt);   // no legacy turns folded, so the voice appears nowhere
         Assert.Contains("I set it down in exactly this shape:", prompt);
-        // Kept the machine-readable contract the parser depends on.
-        Assert.Contains("SUMMARY:", prompt);
+        // The machine-readable contract the parser depends on — BITES only since 2026.08.27
+        // evening; SUMMARY: is not asked for at all, which is what retires the page.
+        Assert.Contains("BITES:", prompt);
+        Assert.DoesNotContain("SUMMARY:", prompt);
     }
 
     [Fact]
@@ -166,17 +168,19 @@ public class MemoryCompressorTests
 
         var prompt = MemoryCompressor.BuildCompressionRequest(memory, memory.RecentTurns)[0].Content;
 
-        // Since 2026.08.27 the warning binds the PROSE half only — the notes are a delta and stand
-        // until she changes them, which is exactly why they are safe from this erosion. Both halves
-        // of that must be said, or she treats her whole memory as rewritten-whole again.
-        Assert.Contains("This part I write whole each time", prompt);
-        Assert.Contains("fades from me", prompt);
-        Assert.Contains("stand until I change them", prompt);
-        Assert.Contains("the room the story truly asks", prompt);
-        // The invitation to the PARTICULARS moved with them: it is the notes that must name a
-        // person, a promise, a debt. Without it she keeps a shelf of vague impressions.
-        Assert.Contains("a person, a promise, a debt", prompt);
+        // THE WHOLE-REWRITE WARNING IS GONE WITH THE PAGE (2026.08.27 evening). Notes are a delta
+        // and stand until she changes them, so there is nothing left that erodes by not being
+        // re-copied — and saying "what I do not set down fades" over a delta would be a lie that
+        // makes her re-copy her whole shelf every time.
+        Assert.DoesNotContain("fades from me", prompt);
         Assert.Contains("keeps exactly what it already says", prompt);
+        // The invitation to the PARTICULARS survives, because a shelf of vague impressions is the
+        // failure this guards against.
+        Assert.Contains("a person, a promise, a debt", prompt);
+        // And the FEELING must be asked for as a note, or the whole of her voice is lost with the
+        // page — this is the sentence that carries it.
+        Assert.Contains("HOW THINGS STAND BETWEEN US", prompt);
+        Assert.Contains("in my own true words", prompt);
         // The deep memory opens seeded with her own backstory (2026.08.08): without this clause the
         // "all I carry of them" framing would erode her past by shape, not by her choice.
         Assert.Contains("my own road", prompt);

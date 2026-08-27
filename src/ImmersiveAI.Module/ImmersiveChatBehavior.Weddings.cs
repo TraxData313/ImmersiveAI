@@ -291,7 +291,7 @@ namespace ImmersiveAI
             try
             {
                 var memory = LoadMemory(spouse);
-                facts.SharedStory = (memory.Summary ?? string.Empty).Trim();
+                facts.SharedStory = memory.DeepMemoryText();
                 facts.RecentWords = RecentSpokenWords(memory, record.PlayerName, record.SpouseName);
             }
             catch { }

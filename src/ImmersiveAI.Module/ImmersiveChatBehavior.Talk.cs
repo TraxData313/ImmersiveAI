@@ -270,7 +270,8 @@ namespace ImmersiveAI
             try
             {
                 int sheetTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(sheet);
-                int memoryTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(ctx.Memory?.Summary);
+                int memoryTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
+                    ctx.Memory == null ? string.Empty : ctx.Memory.DeepMemoryText());
                 int notesTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(
                     Core.Memory.MemoryBites.Render(ctx.Memory?.Bites));
                 int sceneTok = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(ctx.Scene);

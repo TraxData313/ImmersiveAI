@@ -28,21 +28,26 @@ namespace ImmersiveAI.Core.Memory
     /// </para>
     ///
     /// <para>
-    /// ONE KEY IS RESERVED FOR PROSE (<see cref="ProseKey"/>, Anton's call when asked): how things
-    /// stand between the two of them stays a few sentences of real writing, because that is where
-    /// a soul's voice lives — "there is affection there, or the beginning of it; I know better than
-    /// to name it more firmly before the road has shown what it is" does not survive being chopped
-    /// into "gave me gear, I trust him". Everything else is tight. It is stored in
-    /// <see cref="NpcMemory.Summary"/>, which is also what makes every old save migrate for free:
-    /// an existing page simply becomes the prose bite, and the facts flake off it as she goes.
+    /// THE PAGE IS GONE ENTIRELY (2026.08.27 evening, Anton, after seeing the first real run: "when
+    /// the NPCs rethink remove all, keep only the short key-value pair memory, that is the new
+    /// variant"). A reserved prose key held "how things stand between us" for one afternoon; it was
+    /// retired the same day. THE FEELING IS A NOTE TOO — she writes it in her own words under her
+    /// own word, and the cap is deliberately roomy enough for it (<see cref="MaxBiteChars"/>):
+    /// "there is a tenderness growing between us, tempered by danger and the road; I will not name
+    /// it too quickly" is 110 characters and survives whole. What does NOT survive is a page that
+    /// says the same thing in six paragraphs, which is the point.
+    /// </para>
+    ///
+    /// <para>
+    /// OLD SAVES MIGRATE BY HER OWN HAND, not by machine. <see cref="NpcMemory.Summary"/> still
+    /// holds the old page (and still receives the backstory seed for a soul never spoken with)
+    /// until the first time she gathers her thoughts — that pass invites her to lift ALL of it into
+    /// notes, and <see cref="NpcMemory.ApplyCompression"/> then clears the page for good. Only she
+    /// knows which of it deserved a word.
     /// </para>
     /// </summary>
     public static class MemoryBites
     {
-        /// <summary>The one key whose value is allowed to be prose rather than a note. Its text
-        /// lives in <see cref="NpcMemory.Summary"/>, never in the dictionary.</summary>
-        public const string ProseKey = "how things stand between us";
-
         /// <summary>The most notes a soul keeps. Past this the weakest must go before a new one is
         /// written — a memory that only ever grows is a page again, wearing a different hat.</summary>
         public const int MaxBites = 24;
@@ -84,13 +89,6 @@ namespace ImmersiveAI.Core.Memory
             if (canon.StartsWith("the ", StringComparison.Ordinal)) canon = canon.Substring(4);
             if (canon.Length > MaxKeyChars) canon = canon.Substring(0, MaxKeyChars).TrimEnd();
             return canon;
-        }
-
-        /// <summary>True when this key means the reserved prose bite (however it was spelled).</summary>
-        public static bool IsProseKey(string? key)
-        {
-            var canon = CanonicalKey(key);
-            return canon == CanonicalKey(ProseKey) || canon == "how things stand" || canon == "us";
         }
 
         // ------------------------------ the ops ------------------------------
@@ -192,7 +190,6 @@ namespace ImmersiveAI.Core.Memory
                 if (colon <= 0) continue;
                 var key = Unquote(line.Substring(0, colon));
                 var note = Unquote(line.Substring(colon + 1));
-                if (IsProseKey(key)) continue;                       // the prose rides in SUMMARY:
                 if (Set(bites, key, note).Length > 0) changed++;
             }
             return changed;

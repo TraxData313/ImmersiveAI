@@ -342,16 +342,50 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>
-        /// The same, plus the note edits she made in the same breath (2026.08.27). The bites are a
-        /// DELTA — only what she named is touched, and everything she did not mention keeps standing
-        /// exactly as it was written. That is the whole point of them: the prose is still rewritten
-        /// whole, so it still needs the "what I do not set down fades" warning, but a particular
-        /// filed under a key can no longer be lost merely because she forgot to re-copy it.
+        /// The compression as it works now the page is retired (2026.08.27 evening): the note edits
+        /// are a DELTA — only what she named is touched, everything else keeps standing word for
+        /// word — and <paramref name="newSummary"/> is normally NULL, which means "leave the old
+        /// page alone".
+        ///
+        /// <para>
+        /// AND THE PAGE IS CLEARED THE MOMENT SHE HAS NOTES TO STAND ON. That is the whole migration:
+        /// an old save carries its long page until the first time she gathers her thoughts, that pass
+        /// invites her to lift all of it into notes, and the page then goes. It is deliberately keyed
+        /// on her having WRITTEN something — a pass that produced no notes at all leaves the page
+        /// untouched, so a stumbling backend can never erase a soul's whole memory and leave nothing
+        /// in its place.
+        /// </para>
         /// </summary>
-        public void ApplyCompression(string newSummary, int consumedTurnCount, string? biteSection)
+        /// <summary>
+        /// Everything she durably holds of this person, as readable text — the notes if she keeps
+        /// any, else the old page while it still stands (2026.08.27 evening). ONE place answers it
+        /// so the chroniclers, the stranger test and the views cannot disagree about whether a soul
+        /// with notes and no page remembers anybody.
+        /// </summary>
+        public string DeepMemoryText()
         {
-            ApplyCompression(newSummary, consumedTurnCount);
-            MemoryBites.ApplySection(Bites, biteSection);
+            var notes = MemoryBites.Render(Bites);
+            if (notes.Length > 0) return notes;
+            return (Summary ?? string.Empty).Trim();
+        }
+
+        /// <summary>True when anything durable is held at all, in either shape.</summary>
+        public bool HasDeepMemory =>
+            Bites.Count > 0 || !string.IsNullOrWhiteSpace(Summary);
+
+        public void ApplyCompression(string? newSummary, int consumedTurnCount, string? biteSection)
+        {
+            if (consumedTurnCount < 0 || consumedTurnCount > RecentTurns.Count)
+                throw new ArgumentOutOfRangeException(nameof(consumedTurnCount));
+
+            int written = MemoryBites.ApplySection(Bites, biteSection);
+
+            if (!string.IsNullOrWhiteSpace(newSummary))
+                Summary = newSummary!;                       // an old-shape reply still lands
+            else if (written > 0 || Bites.Count > 0)
+                Summary = string.Empty;                      // the page has become notes; let it go
+
+            RecentTurns.RemoveRange(0, consumedTurnCount);
         }
     }
 }

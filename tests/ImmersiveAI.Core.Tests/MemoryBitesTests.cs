@@ -110,31 +110,66 @@ public class MemoryBitesTests
     }
 
     [Fact]
-    public void TheProseKeyNeverBecomesANote()
+    public void TheFeelingIsANoteToo_AndFitsWholeUnderTheCap()
     {
-        // How things stand between them is the ONE place she writes freely (Anton's call): it is
-        // stored as the summary and must never be duplicated into the shelf.
+        // The reserved prose key lasted one afternoon (2026.08.27 evening, Anton: "keep only the
+        // short key-value pair memory, that is the new variant"). How things stand between them is
+        // now a note like any other — so it must FILE rather than be skipped, and the cap must be
+        // roomy enough that her actual voice survives instead of being clipped to a ledger line.
         var bites = new Dictionary<string, string>();
-        MemoryBites.ApplySection(bites, "how things stand between us: There is affection there, or the beginning of it.");
-        Assert.Empty(bites);
-        Assert.True(MemoryBites.IsProseKey("How Things Stand Between Us"));
-        Assert.False(MemoryBites.IsProseKey("ahil"));
+        var felt = "There is a tenderness growing between us, tempered by danger and the road; "
+                 + "I will not name it too quickly.";
+        MemoryBites.ApplySection(bites, "how things stand between us: " + felt);
+
+        Assert.Single(bites);
+        Assert.Equal(felt, bites["how things stand between us"]);
+        Assert.Equal(felt, MemoryBites.Tidy(felt));      // whole, not clipped
     }
 
     [Fact]
-    public void ApplyCompression_TakesTheProseWhole_AndTheNotesAsEdits()
+    public void ApplyCompression_TakesTheNotesAsEdits_AndLetsTheOldPageGo()
     {
-        var memory = new NpcMemory();
+        var memory = new NpcMemory { Summary = "The long page I used to carry." };
         memory.Bites["ahil"] = "He hired me.";
         memory.Bites["my wage"] = "34 denars a day.";
         memory.AddTurn(new ConversationTurn { PlayerLine = "Здравей.", NpcLine = "И на теб." });
 
-        memory.ApplyCompression("He is my captain, and I have come to trust him.", 1, "ahil: He equips me well.");
+        memory.ApplyCompression(null, 1, "ahil: He equips me well.");
 
-        Assert.Equal("He is my captain, and I have come to trust him.", memory.Summary);
+        // The named note changed, the unnamed one stands word for word, and the page is gone.
         Assert.Equal("He equips me well.", memory.Bites["ahil"]);
         Assert.Equal("34 denars a day.", memory.Bites["my wage"]);
+        Assert.Equal(string.Empty, memory.Summary);
         Assert.Empty(memory.RecentTurns);
+    }
+
+    [Fact]
+    public void ApplyCompression_KeepsThePageWhenSheWroteNothingAtAll()
+    {
+        // A stumbling backend must never be able to erase a soul's whole memory and leave nothing
+        // in its place: clearing the page is keyed on her having notes to stand on.
+        var memory = new NpcMemory { Summary = "Everything I hold of him." };
+        memory.ApplyCompression(null, 0, null);
+        Assert.Equal("Everything I hold of him.", memory.Summary);
+
+        // And an old-shape reply that still carries a page is taken as one rather than thrown away.
+        var legacy = new NpcMemory { Summary = "old" };
+        legacy.ApplyCompression("a page written the old way", 0, null);
+        Assert.Equal("a page written the old way", legacy.Summary);
+    }
+
+    [Fact]
+    public void DeepMemoryText_PrefersTheNotes_AndFallsBackToThePage()
+    {
+        var page = new NpcMemory { Summary = "The old page." };
+        Assert.Equal("The old page.", page.DeepMemoryText());
+        Assert.True(page.HasDeepMemory);
+
+        var noted = new NpcMemory { Summary = "The old page.", Bites = { ["ahil"] = "He hired me." } };
+        Assert.Contains("ahil: He hired me.", noted.DeepMemoryText());
+        Assert.DoesNotContain("The old page.", noted.DeepMemoryText());
+
+        Assert.False(new NpcMemory().HasDeepMemory);
     }
 
     [Fact]
@@ -165,14 +200,16 @@ public class MemoryBitesTests
 
         var prompt = string.Join("\n", MemoryCompressor
             .BuildCompressionRequest(old, old.RecentTurns).Select(m => m.Content));
-        Assert.Contains("lift the plain facts out of it into notes", prompt);
-        Assert.Contains("What is not a plain fact stays where it is", prompt);
+        Assert.Contains("set the whole of it down as notes", prompt);
+        Assert.Contains("let the page go", prompt);
+        // The feeling must cross over with the facts, or the turning costs her her voice.
+        Assert.Contains("how things truly stand between us", prompt);
 
         // Once she keeps notes the invitation is gone and her shelf is simply shown back to her.
         old.Bites["ahil"] = "He hired me at Dunglanys.";
         var second = string.Join("\n", MemoryCompressor
             .BuildCompressionRequest(old, old.RecentTurns).Select(m => m.Content));
-        Assert.DoesNotContain("lift the plain facts out", second);
+        Assert.DoesNotContain("set the whole of it down as notes", second);
         Assert.Contains("these STAND unless I say otherwise", second);
         Assert.Contains("ahil: He hired me at Dunglanys.", second);
     }

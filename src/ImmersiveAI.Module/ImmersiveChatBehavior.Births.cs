@@ -322,7 +322,7 @@ namespace ImmersiveAI
                 if (npcParent != null)
                 {
                     var memory = LoadMemory(npcParent);
-                    facts.SharedStory = (memory.Summary ?? string.Empty).Trim();
+                    facts.SharedStory = memory.DeepMemoryText();
                     facts.RecentWords = RecentSpokenWords(memory, PlayerName(),
                         Safe(() => npcParent.Name?.ToString() ?? string.Empty, string.Empty));
                 }

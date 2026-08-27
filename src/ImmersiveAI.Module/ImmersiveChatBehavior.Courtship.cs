@@ -962,7 +962,7 @@ namespace ImmersiveAI
                             var selfText = PromptFiles.LoadNpcPrompt(NpcPaths.CustomInstructionsFile(npc), npcName);
                             var prompt = CourtshipSeed.BuildPrompt(
                                 npcName, genderWord, playerName,
-                                memory.Summary,
+                                memory.DeepMemoryText(),
                                 selfText,
                                 RecentExcerpt(memory, playerName));
                             var raw = await _client.CompleteAsync(

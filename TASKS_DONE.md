@@ -1167,3 +1167,22 @@ release ritual warns about.
   longer announces the backend. Tool descriptions also went telegraphic on his second ask
   ("recall_person -> Look up a person"), keeping every behavioural rail. 845 Core tests green.
   keep_note and the shortened contracts still need the live-probe harness. (2026.08.27 16.10.00)
+
+- The page retired whole: the deep memory is now only key-value notes. Shipped the bites in the
+  morning with ONE reserved prose key (how things stand between us); Anton played a session,
+  watched Rhia's compression run, and cut it the same evening - "put her feeling in her own words
+  in a few key-value pairs... when the NPCs rethink remove all, keep only the short key-value pair
+  memory, that is the new variant". The run that convinced him: 6,190 chars of page -> 2,207, six
+  good notes, ~15,300 -> ~10,700 tokens an exchange, and her voice intact in the prose half. So
+  the feeling became a note too (320 chars is roomy enough for a real sentence, and the contract
+  asks for that one "in my own true words... not as a ledger entry, for it is the one that is
+  really me"), SUMMARY: left the reply contract entirely, and the whole-rewrite warning went with
+  it - saying "what I do not set down fades" over a delta is a lie that makes her re-copy her
+  shelf every pass. Three rails make the migration safe, each because the obvious version is
+  wrong: ApplyCompression clears the page ONLY when notes actually stand (else a stumbling
+  backend erases a soul and leaves nothing), ParseResponse ignores unlabelled preamble whenever
+  BITES: is present (else "Here are my notes:" is written back as a resurrected page), and the
+  deep memory is now read through NpcMemory.DeepMemoryText()/HasDeepMemory rather than .Summary -
+  five call sites plus HasRememberedHistory, which would otherwise have greeted an old friend
+  with notes and no page as a stranger. The own-road clause was dropped and restored: a test
+  caught it, and it is load-bearing. 847 Core tests green. (2026.08.27 18.20.00)

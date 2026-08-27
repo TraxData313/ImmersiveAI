@@ -459,6 +459,10 @@ namespace ImmersiveAI.Core.Prompts
         public static bool HasRememberedHistory(NpcMemory memory) =>
             memory.RecentTurns.Count > 0
             || memory.TotalTurns > 0
+            // Notes are durable history in their own right (2026.08.27 evening): once the page is
+            // retired a long-known soul may hold nothing BUT notes, and reading her as a stranger
+            // would greet an old friend with "I have not met you before".
+            || memory.Bites.Count > 0
             || (!string.IsNullOrWhiteSpace(memory.Summary) && !memory.SeededFromStory);
 
         /// <summary>The NPC's own awareness of the player coming to them, closing on the greeting
@@ -686,15 +690,28 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(memory.Summary.Trim());
             }
 
-            // THE NOTES (2026.08.27) — the plain facts she keeps by key, standing right under how
-            // things stand between them, because they are the particulars OF that. She writes them
-            // one at a time (the keep_note hand, and at every compression); what is not named keeps
-            // standing, which is what makes them cheap to hold and safe from the whole-rewrite.
+            // THE NOTES (2026.08.27) — and since that evening they are the WHOLE of the deep memory,
+            // the feeling of it included; the page above survives only until she next gathers her
+            // thoughts. She writes them one at a time (the keep_note hand, and at every compression),
+            // and what she does not name keeps standing, which is what makes them cheap to hold and
+            // safe from the whole-rewrite. The heading has to carry the framing the page used to:
+            // with no page above them, a bare "notes" reads as a filing cabinet rather than as
+            // everything this person is to her.
             var notes = MemoryBites.Render(memory.Bites);
             if (notes.Length > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Notes I keep, each under its own word:");
+                if (string.IsNullOrWhiteSpace(memory.Summary))
+                {
+                    var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
+                        ? string.Empty
+                        : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
+                    sb.AppendLine($"All I carry of {playerName}{asOf}, each under its own word:");
+                }
+                else
+                {
+                    sb.AppendLine("Notes I keep, each under its own word:");
+                }
                 sb.AppendLine(notes);
             }
 

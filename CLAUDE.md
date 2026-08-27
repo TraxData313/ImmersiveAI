@@ -372,19 +372,31 @@ TaleWorlds API usage patterns, never copy from it.
 - **Core stays pure.** No `TaleWorlds.*`, no `System.Net.Http`, no game or HTTP dependencies
   in `ImmersiveAI.Core`. That is what keeps it unit-testable. LLM backends and game glue
   live in `ImmersiveAI.Module` behind the `IChatClient` interface.
-- **THE BITES (2026.08.27, Anton's design)** — the deep memory's PLAIN FACTS are now small keyed
-  notes she edits one at a time (`NpcMemory.Bites`, Core `Memory\MemoryBites`), while ONE reserved
-  key stays prose: how things stand between them, which is still `NpcMemory.Summary` and still
-  rewritten whole. Written at compression (a `BITES:` section that is a **DELTA** — `key: note` to
-  write, `-key` to strike; what she does not name keeps standing) and LIVE mid-talk through
-  `keep_note` (Module `Tools\NoteTool`, gated by `EnableMemoryNotes`). Keys are canonicalized so
-  one subject never fragments into four (`CanonicalKey` — lowercased, article-stripped; note that
-  "the war" files under `war`). Caps: 24 notes, 320 chars each, and a full shelf SAYS so rather
-  than refusing silently. **This is not the retired `hold_truth`**: that was a THIRD layer beside
-  the page holding the same material twice; these REPLACE the page's facts, so there is nothing to
-  duplicate. Old saves need no migration — the existing page simply IS the prose from here on, and
-  a one-time nudge in the compression prompt (`NeedsSeeding`) invites her to lift the plain facts
-  out into notes herself. **THE WRITING ROOM GROWS WITH THE BOND** (`StartingMemoryWriteTokens` 300
+- **THE BITES (2026.08.27, Anton's design)** — the deep memory IS small keyed notes she edits one
+  at a time (`NpcMemory.Bites`, Core `Memory\MemoryBites`), and **THE PAGE IS RETIRED WHOLE**.
+  A reserved prose key held "how things stand between us" for one afternoon; the same evening,
+  having seen the first real run, Anton cut it: *"when the NPCs rethink remove all, keep only the
+  short key-value pair memory, that is the new variant"*. **THE FEELING IS A NOTE TOO** — she
+  writes it in her own words under her own word, and `MaxBiteChars` (320) is deliberately roomy
+  enough that a real sentence survives whole. The contract's own wording is what protects the
+  voice: it asks for that note *"in my own true words… as I would say it, not as a ledger entry,
+  for it is the one that is really me"*. Written at compression (a `BITES:` section that is a
+  **DELTA** — `key: note` to write, `-key` to strike; what she does not name keeps standing) and
+  LIVE mid-talk through `keep_note` (Module `Tools\NoteTool`, gated by `EnableMemoryNotes`). Keys
+  are canonicalized so one subject never fragments into four (`CanonicalKey` — lowercased,
+  article-stripped; note that "the war" files under `war`). Caps: 24 notes, 320 chars each, and a
+  full shelf SAYS so rather than refusing silently. **This is not the retired `hold_truth`**: that
+  was a THIRD layer beside the page holding the same material twice; these ARE the memory now.
+  **MIGRATION IS BY HER OWN HAND, and three rails make it safe**: `NpcMemory.Summary` still holds
+  the old page (and still takes the backstory seed) until her next compression, whose `NeedsSeeding`
+  nudge asks her to set the whole of it down as notes; `ApplyCompression` then clears it — but ONLY
+  when notes actually stand, so a stumbling backend can never erase a soul and leave nothing;
+  and `ParseResponse` ignores unlabelled preamble whenever `BITES:` is present, or "Here are my
+  notes:" would be written back as a resurrected page. An old-shape `SUMMARY:` reply still lands.
+  **Read the deep memory through `NpcMemory.DeepMemoryText()`/`HasDeepMemory`, never `.Summary`** —
+  the chroniclers, `HasRememberedHistory` (a soul with notes and no page must not read as a
+  stranger), the courtship seed and both views all go through it.
+  **THE WRITING ROOM GROWS WITH THE BOND** (`StartingMemoryWriteTokens` 300
   + `MemoryWriteTokensPerTurn` 100 per lifetime exchange, up to `MaxMemoryWriteTokens`, default
   lowered 2000 → 1500 and deliberately NOT migrated — lowering a ceiling is taste): a model handed
   room uses it, so a stranger given the full ceiling writes a page about someone they met once.

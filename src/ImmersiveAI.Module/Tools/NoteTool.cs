@@ -32,12 +32,12 @@ namespace ImmersiveAI.Tools
 
         public static readonly ToolDefinition Tool = new ToolDefinition(KeepNote,
             "Keep my own short notes about the one I speak with, each under a single word — a person, " +
-            "a promise, a debt, my wage, a place, a thing owned or owed. I write one the moment a " +
-            "plain fact worth keeping is said, and rewrite that word when the fact changes; I strike " +
-            "one out when it is no longer true or no longer matters. A note is a LINE, never a " +
-            "paragraph, and it holds facts, not feelings — how I feel about them is not a note. " +
-            "Reusing a word I already keep replaces what stood under it, so one subject never " +
-            "becomes four. I keep few, and keep them tight.",
+            "a promise, a debt, my wage, a place, a thing owned or owed, and how things stand between " +
+            "us. These notes are ALL I carry of them, so what is not written here is not kept. I write " +
+            "one the moment something worth keeping is said, and rewrite that word when it changes; I " +
+            "strike one out when it is no longer true or no longer matters. A note is a line or two, " +
+            "never a paragraph. Reusing a word I already keep replaces what stood under it, so one " +
+            "subject never becomes four. I keep few, and keep them tight.",
             new[]
             {
                 new ToolParameter("deed",
@@ -51,8 +51,9 @@ namespace ImmersiveAI.Tools
                     "The single word or short phrase this note is filed under — the SUBJECT and " +
                     "nothing else: a name, a matter, a thing. Never the note itself, never my reply."),
                 new ToolParameter("note",
-                    "For \"" + ActWrite + "\": the fact itself, one short line in my own voice. Never " +
-                    "my reply to them. Left out when striking one out.",
+                    "For \"" + ActWrite + "\": what I am keeping, a line or two in my own voice — a " +
+                    "plain fact, or how things truly stand between us. Never my reply to them. Left " +
+                    "out when striking one out.",
                     required: false),
             });
 
@@ -100,10 +101,6 @@ namespace ImmersiveAI.Tools
                 return "I did not say what I meant to do with it. I write a note down, or I strike one out.";
             if (MemoryBites.CanonicalKey(word).Length == 0)
                 return "I named no word to file it under, so there is nothing to keep. A note needs its own word.";
-            if (MemoryBites.IsProseKey(word))
-                return "How things stand between us is not a note — that I set down in my own words when I "
-                     + "next gather my thoughts. A note holds a plain fact.";
-
             if (deed == ActStrike)
             {
                 var struck = MemoryBites.Drop(memory.Bites, word);
