@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -540,12 +540,20 @@ namespace ImmersiveAI.Core.Prompts
         /// it says — and weighted by the heart: the same touch is a different act from a stranger
         /// and from an old friend. Offered only when
         /// <see cref="NpcPersona.EncourageActingOut"/> is set (the game layer's toggle).</summary>
+        /// <remarks>
+        /// Modification Note (2026.08.19):
+        /// Anton's original rule ("When the one before me writes between asterisks, they did it, not said it")
+        /// was designed for character gestures (wine, smiles), but caused LLMs to pretend in dialogue
+        /// that text-acted payments (such as *hands over 175 denars*) had settled debts, despite no real
+        /// gold being transferred in the game engine. Added a physical boundary to prevent such hallucinations.
+        /// Feel free to refine or adjust this phrasing if a more fitting roleplay solution emerges.
+        /// </remarks>
         public const string ActingOutGuidance =
             "- One mark alone escapes that: what I truly DO rides between single asterisks, apart from " +
             "my words — *I pour the wine and slide the cup across*. That mark is an act's only home, " +
             "and I never tell an act bare among my spoken lines as though it were speech. Sparingly — " +
             "one such act, rarely two. When the one before me writes between asterisks, they did it, " +
-            "not said it.";
+            "not said it — yet physical coin, cargo, and debts cannot be conjured or transferred by text alone.";
 
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
@@ -851,6 +859,15 @@ namespace ImmersiveAI.Core.Prompts
             // sent on every call that carries the tool — not in a wall of sheet prose. The persona's
             // Can* flags still decide which tools are offered at all; only the words moved.
 
+            // Universal physical world invariant: spoken words or gestures alone never transfer physical coin or goods
+            sb.AppendLine("- Material reality of the world: Spoken words and acted descriptions (such as *hands over coin*) are ONLY words and gestures — they NEVER transfer physical denars, items, or cargo. I cannot receive coin, goods, or settle ended tasks through dialogue or text actions alone. If a traveler acts out or claims in text to pay me, hand over denars, or deliver cargo outside of an actual game transaction or system notice, my hands remain empty; I must treat such claims as unfulfilled words, not real coin.");
+
+            // Offered only when the quest bridge tool rides along
+            if (persona.CanBridgeQuests)
+            {
+                sb.AppendLine("- Lay vs. Seal invariant for tasks: Calling offer_quest or report_quest only LAYS the proposal or verification on the table (Uncommitted State); nothing is begun or settled in the world by the tool call alone. When explaining, introducing, or proposing an unundertaken task/trouble to the traveler, I MUST call offer_quest in that very turn. When the traveler reports progress, mentions delivering what was requested, or discusses resolving an ongoing task, I MUST call report_quest in that turn and speak ONLY of inspecting, checking, or examining what is brought (e.g. 'Let me inspect what you brought'). Until their choice is confirmed in the world, nothing has changed hands (no troops, cargo, or denars have transferred) — I strictly do not narrate receiving what was requested or handing over payment/rewards in the same breath I call report_quest.");
+            }
+
             // The storyteller's gentle guidance on tone and spirit — offered as freedom, never a leash.
             if (!string.IsNullOrWhiteSpace(persona.RoleplayGuidance))
                 sb.AppendLine(persona.RoleplayGuidance.Trim());
@@ -910,3 +927,4 @@ namespace ImmersiveAI.Core.Prompts
         }
     }
 }
+
