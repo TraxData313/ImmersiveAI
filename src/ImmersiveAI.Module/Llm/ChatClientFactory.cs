@@ -46,6 +46,12 @@ namespace ImmersiveAI.Llm
                 return new OpenAIChatClient(config.DeepSeekApiKey, config.DeepSeekModel, maxTokens,
                     ModConfig.DeepSeekEndpoint, "DeepSeek", dialect: OpenAiDialect.DeepSeek);
 
+            // ClaudeCode: the subscription road — the NPCs speak through the player's own installed
+            // Claude Code, so a claude.ai plan carries them with no API key. The output budget is
+            // the CLI's to manage, so maxTokens deliberately does not ride along.
+            if (config != null && config.Backend == "ClaudeCode")
+                return new ClaudeCodeChatClient(config.ClaudeCodeModel, config.ClaudeCodePath);
+
             // Local: the same client speaking to a server on the player's own machine (LM Studio,
             // Ollama, llama.cpp). Keyless is normal there; errors name "Local AI" so a dead server
             // never sends anyone checking a cloud account.

@@ -71,7 +71,9 @@ namespace ImmersiveAI
                 // cannot be switched off, and even the tiny ping can chew half a minute of silent
                 // thought (30s expired live on 2026.08.02 and misread a healthy backend as a dead
                 // internet connection).
-                var pingSeconds = isLocal ? 180 : config?.Backend == "Gemini" ? 90 : 30;
+                // Claude Code sits with Gemini: a whole process starts per call, and a first run
+                // after an update can dawdle before the model even hears the ping.
+                var pingSeconds = isLocal ? 180 : config?.Backend == "Gemini" || config?.Backend == "ClaudeCode" ? 90 : 30;
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(pingSeconds)))
                 {
                     await client.CompleteAsync(messages, cts.Token).ConfigureAwait(false);
@@ -116,6 +118,12 @@ namespace ImmersiveAI
             }
 
             var msg = ex.Message ?? string.Empty;
+
+            // The Claude Code client writes its own actionable sentences (not installed / not
+            // signed in / stopped after N seconds) — hand them on whole rather than letting the
+            // API-key branches below blame a key this backend never uses.
+            if (config?.Backend == "ClaudeCode" && Mentions(msg, "Claude Code"))
+                return msg + (msg.EndsWith(".") ? "" : ".") + " Then restart the game.";
 
             // A model that spent its whole token budget before it could speak (reasoning is sent
             // OFF everywhere since 2026.07.13, so seeing this means MaxTokens is set very low).
@@ -181,6 +189,12 @@ namespace ImmersiveAI
                 case "DeepSeek":
                     apiKey = config.DeepSeekApiKey; model = config.DeepSeekModel;
                     return "DeepSeek";
+                case "ClaudeCode":
+                    // Keyless by design — the login lives in Claude Code itself. The placeholder
+                    // keeps the "no key at all" branch from misfiring; a real auth problem surfaces
+                    // through the ping with the client's own actionable words.
+                    apiKey = "(your Claude plan)"; model = config.ClaudeCodeModel;
+                    return "Claude Code";
                 case "Local":
                     apiKey = config.LocalApiKey; model = config.LocalModel;
                     return "your local AI server (" + HostOf(config.LocalEndpoint) + ")";

@@ -86,10 +86,19 @@ namespace ImmersiveAI.Tools
         // one step per talk, earned not tested, set down in the breath felt, lay only when openly
         // spoken and welcomed, the seal is theirs, WORDS DO NOT WED, apart is always hers and ends
         // an unvowed belonging whole. Only the ornament went.
+        // THE FIRST RUNGS ARE RECORDS, NOT PROPOSALS (2026.08.28, Anton's playtest — Rhia at 178
+        // warm turns with the road still at None): every word here was marriage-flavoured, so a
+        // model playing someone shy read reaching for the tool at all as courting, too forward for
+        // "liking" — and the road never STARTED, which also meant no rose line, no bond-line stage,
+        // nothing for the player to see. The "no proposal… set down freely" sentence unsticks
+        // exactly that first reach; everything from readiness on keeps its full weight.
         public static readonly ToolDefinition Tend = new ToolDefinition(TendCourtship,
             "My troth is mine to tend, and marriage is a road of steps: liking, love, readiness, the " +
-            "betrothal, the wedding day. I move closer only when real talks have truly earned the " +
-            "next depth — one step in a talk at most, never for one warm word alone, never to test — " +
+            "betrothal, the wedding day. The first arrivals — liking, then love — are no proposal " +
+            "and speak of no marriage: they are my heart's own record, and I set them down freely " +
+            "the day they are true, without waiting to be sure of more. I move closer only when real " +
+            "talks have truly earned the next depth — one step in a talk at most, never for one warm " +
+            "word alone, never to test — " +
             "and I set each arrival down in the very breath I feel it, above all the day I find I " +
             "would give my hand were the word spoken. ONLY when marriage has been openly spoken and " +
             "welcomed between us do I lay our betrothal (or, betrothed already, our wedding day) " +

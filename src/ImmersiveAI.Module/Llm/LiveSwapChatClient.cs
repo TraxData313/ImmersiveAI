@@ -94,6 +94,7 @@ namespace ImmersiveAI.Llm
                 c.OpenRouterApiKey, c.OpenRouterModel,
                 c.GeminiApiKey, c.GeminiModel,
                 c.DeepSeekApiKey, c.DeepSeekModel,
+                c.ClaudeCodeModel, c.ClaudeCodePath,
                 c.LocalEndpoint, c.LocalModel, c.LocalApiKey);
         }
 
@@ -118,6 +119,7 @@ namespace ImmersiveAI.Llm
                 case "OpenRouter": return _config.OpenRouterModel;
                 case "Gemini": return _config.GeminiModel;
                 case "DeepSeek": return _config.DeepSeekModel;
+                case "ClaudeCode": return _config.ClaudeCodeModel + " (your Claude plan)";
                 case "Local": return string.IsNullOrWhiteSpace(_config.LocalModel) ? "the loaded local model" : _config.LocalModel;
                 default: return _config.AnthropicModel;
             }

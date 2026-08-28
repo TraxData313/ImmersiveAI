@@ -98,12 +98,15 @@ namespace ImmersiveAI
 
         // ------------------------------ recording ------------------------------
 
-        /// <summary>Called by the chat clients with the usage the API reported for one call.</summary>
-        public static void RecordCall(string model, int tokensIn, int tokensOut)
+        /// <summary>Called by the chat clients with the usage the API reported for one call.
+        /// <paramref name="exactCostUsd"/> is for a backend that measures its own money (Claude
+        /// Code reports the run's true figure) — when given it outranks the price-table guess.</summary>
+        public static void RecordCall(string model, int tokensIn, int tokensOut, double? exactCostUsd = null)
         {
             try
             {
                 bool known = TryPrice(model, tokensIn, tokensOut, out var cost);
+                if (exactCostUsd.HasValue) { known = true; cost = exactCostUsd.Value; }
 
                 lock (Gate)
                 {
@@ -204,6 +207,15 @@ namespace ImmersiveAI
                 var price = scope.CostKnown ? $", ~${scope.CostUsd.ToString("0.000", CultureInfo.InvariantCulture)}" : "";
                 var line = $"✒ {who}{scope.Kind}: {scope.TokensIn:n0} → {scope.TokensOut:n0} tokens, {calls}{price}";
 
+                // On the subscription road the honest currency is the plan itself, so the same
+                // notice carries how much of its windows the day has spent — "5h at 9%, weekly
+                // at 1%" (Anton's own shape, 2026.08.28).
+                if (_config?.Backend == "ClaudeCode")
+                {
+                    var plan = PlanGauge.Label();
+                    if (plan != null) line += " · " + plan;
+                }
+
                 ModLog.Info(line);
 
                 if (!scope.Quiet && _config?.ShowCostNotices == true)
@@ -218,9 +230,11 @@ namespace ImmersiveAI
             lock (Gate)
             {
                 RollDate();
+                var plan = _config?.Backend == "ClaudeCode" ? PlanGauge.Label() : null;
                 return $"This session: {_sessionCalls} calls, {_sessionIn:n0} → {_sessionOut:n0} tokens, ~${_sessionCost.ToString("0.00", CultureInfo.InvariantCulture)}. " +
                        $"Today (all sessions): {_today.Requests} calls, ~${_today.CostUsd.ToString("0.00", CultureInfo.InvariantCulture)}" +
-                       (_config != null && _config.MaxDailyRequests > 0 ? $" of a {_config.MaxDailyRequests}-call cap." : ".");
+                       (_config != null && _config.MaxDailyRequests > 0 ? $" of a {_config.MaxDailyRequests}-call cap." : ".") +
+                       (plan != null ? $" Plan: {plan}." : "");
             }
         }
 

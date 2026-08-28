@@ -13,6 +13,7 @@ as you scroll — **read only as far as you need.**
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best play, denars no object** | OpenRouter + `openai/gpt-5.6-terra` (or `anthropic/claude-sonnet-5`) | openrouter.ai |
+| **A Claude plan you already pay for** | ClaudeCode — your claude.ai Pro/Max, through the Claude Code app, no key | — |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
 
 **Not sure? Take the first row.** It's what the mod is built and tested against, and since
@@ -54,6 +55,7 @@ Every option has exactly one thing worth knowing before you commit.
 | **Gemini** | **Google trains on free-tier traffic** (their own pricing page says so; paying moves the same key to the paid tier, where they say they don't). **And it's slow** — Gemini's thinking cannot be switched off, so every reply carries silent thought before the words: live in the chat window (hotkey `O`), because the face-to-face panel handles the long wait poorly. Its *paid* rates are worse than luna's, so only use it free. |
 | **DeepSeek** | Prices **double during Beijing peak hours** (09:00–12:00 and 14:00–18:00 UTC+8 — European evenings fall in the cheap window). Servers are in China. |
 | **Anthropic** | Works fine, just less tested here. Pricier per word than the rest. |
+| **ClaudeCode** | Needs the [Claude Code](https://claude.com/code) app installed and signed in to a **claude.ai Pro/Max plan** — then the NPCs ride your subscription with **no API key at all**. Replies spend your plan's 5-hour/weekly windows (the cost notice shows the gauge: "5h at 9%, weekly at 1%"), and each one starts a short background run of the app, so it's a touch slower than a direct API call. |
 | **Local** | It's a project, not a setting. [See below.](#local-models-tinkerers-only) |
 
 ### Is the free Gemini tier actually good enough?

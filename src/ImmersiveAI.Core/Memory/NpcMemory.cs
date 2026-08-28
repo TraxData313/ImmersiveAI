@@ -396,6 +396,25 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>
+        /// Undresses recorded spoken lines that took a raw structured-output envelope in whole —
+        /// the 2026.08.28 Claude Code find: a wrapped answer failed strict parsing, and
+        /// <c>{"reply": "…"}</c> walked into the thread and the memory wearing its braces. Runs at
+        /// load beside <see cref="HealLegacyNotes"/>: idempotent (an unwrapped line no longer
+        /// matches), touches only lines that ARE envelopes, and keeps only the speech — tool calls
+        /// recorded inside one are dead history and must never re-fire.
+        /// </summary>
+        public void HealEnvelopeLines()
+        {
+            if (RecentTurns == null) return;
+            foreach (var turn in RecentTurns)
+            {
+                if (turn == null || string.IsNullOrEmpty(turn.NpcLine)) continue;
+                if (Llm.ClaudeCliShape.TryUnwrapSpokenEnvelope(turn.NpcLine, out var reply))
+                    turn.NpcLine = reply;
+            }
+        }
+
+        /// <summary>
         /// Drops the turns that were folded away and takes the rewritten deep memory as the whole of
         /// what she now remembers. It is written anew at every compression — she is shown all of it
         /// and asked to set it down whole — so what she did not carry forward is gone, which is what

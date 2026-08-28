@@ -10,9 +10,16 @@
     /// </summary>
     internal static class McmChoiceLists
     {
-        // Gemini and DeepSeek joined on 2026.08.02 and are APPENDED, not slotted in beside the other
-        // cloud services — an old store file's "3" must keep meaning Local.
-        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek" };
+        // Gemini and DeepSeek joined on 2026.08.02, ClaudeCode (the subscription road) on
+        // 2026.08.28 — all APPENDED, not slotted in beside the other cloud services: an old store
+        // file's "3" must keep meaning Local.
+        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek", "ClaudeCode" };
+
+        /// <summary>The models the Claude Code road offers by name. Whatever the player's plan
+        /// carries works — these are the ones worth listing; anything else goes in the custom
+        /// field. Fable thinks always and spends the plan's windows fastest.</summary>
+        public static readonly string[] ClaudeCodeModels =
+            { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5", "claude-fable-5" };
 
         /// <summary>Every free-tier Gemini, newest first. The Pro models are paid-only since April
         /// 2026 and deliberately absent: the whole point of this backend is the free road.

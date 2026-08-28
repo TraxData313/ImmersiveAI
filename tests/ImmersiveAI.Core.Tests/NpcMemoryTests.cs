@@ -197,6 +197,37 @@ public class NpcMemoryTests
         Assert.Equal(0, memory.UnansweredOutreachCount);
     }
 
+    // ------------------------- the envelope that walked in whole -------------------------
+
+    [Fact]
+    public void HealEnvelopeLines_UndressesARecordedRawAnswer_AndLeavesHonestLinesAlone()
+    {
+        // 2026.08.28, Rhia again: a wrapped Claude Code answer failed strict parsing and the raw
+        // {"reply": ...} envelope was recorded as her spoken line. The heal keeps only the speech —
+        // the tool calls inside are dead history and must never re-fire.
+        var rhia = new NpcMemory { NpcId = "CharacterObject_1884" };
+        rhia.RecentTurns.Add(new ConversationTurn
+        {
+            PlayerLine = "Go up, and soak.",
+            NpcLine = "<StructuredOutput>\n{\"reply\": \"Tonight I will only be glad.\", " +
+                "\"tool_calls\": [{\"name\": \"move_heart\", \"arguments\": {\"shift\": \"3\"}}]}\n</StructuredOutput>",
+        });
+        rhia.RecentTurns.Add(new ConversationTurn
+        {
+            PlayerLine = "And the ledger?",
+            NpcLine = "It reads {\"grain\": 12} — the clerk writes strangely.",
+        });
+
+        rhia.HealEnvelopeLines();
+
+        Assert.Equal("Tonight I will only be glad.", rhia.RecentTurns[0].NpcLine);
+        Assert.Contains("the clerk writes strangely", rhia.RecentTurns[1].NpcLine);
+
+        // Idempotent: a healed line no longer matches.
+        rhia.HealEnvelopeLines();
+        Assert.Equal("Tonight I will only be glad.", rhia.RecentTurns[0].NpcLine);
+    }
+
     // ------------------------- the one-day notes experiment -------------------------
 
     [Fact]

@@ -31,7 +31,7 @@ namespace ImmersiveAI.Mcm
         // takes hold on the very next reply — no restart.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
-            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. Anthropic works but is less tested. Local runs on YOUR machine - tinkerers only, unsupported.")]
+            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. ClaudeCode speaks through your installed Claude Code app - a claude.ai Pro/Max plan, NO key. Anthropic works but is less tested. Local runs on YOUR machine - tinkerers only, unsupported.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 2);
 
@@ -124,6 +124,16 @@ namespace ImmersiveAI.Mcm
             HintText = "Empty = the real OpenAI. For another OpenAI-compatible CLOUD service (NanoGPT…), paste its base URL ending in /v1, put its key in the OpenAI key field, and type its model id in the custom OpenAI model field above. For OpenRouter or a local server, pick those backends instead.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string OpenAIBaseUrl { get; set; } = string.Empty;
+
+        [SettingPropertyDropdown("Claude Code model", Order = 20, RequireRestart = false,
+            HintText = "When the backend is ClaudeCode: which Claude answers, billed to your claude.ai plan's own 5-hour/weekly windows rather than to a key. haiku-4-5 is fast and light on the windows; sonnet-5 the step-up; opus-5 the strong one; fable-5 always thinks, so it is slow and spends the windows fastest. The cost notice shows the plan gauge after each exchange.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> ClaudeCodeModel { get; set; } = new Dropdown<string>(McmChoiceLists.ClaudeCodeModels, 0);
+
+        [SettingPropertyText("Claude Code model (type any id)", Order = 21, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: any model name Claude Code itself accepts (an alias like 'sonnet' or a full id). Empty = the dropdown chooses.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string ClaudeCodeModelCustom { get; set; } = string.Empty;
 
         [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 19, RequireRestart = false,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance. On Gemini this is raised to at least 1500 behind the scenes, because its thinking is charged against the same ceiling and would otherwise leave nothing to say.")]

@@ -208,6 +208,7 @@ namespace ImmersiveAI.Mcm
             if (s.OpenRouterModel == null) { s.OpenRouterModel = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0); repaired = true; }
             if (s.GeminiModel == null) { s.GeminiModel = new Dropdown<string>(McmChoiceLists.GeminiModels, 0); repaired = true; }
             if (s.DeepSeekModel == null) { s.DeepSeekModel = new Dropdown<string>(McmChoiceLists.DeepSeekModels, 0); repaired = true; }
+            if (s.ClaudeCodeModel == null) { s.ClaudeCodeModel = new Dropdown<string>(McmChoiceLists.ClaudeCodeModels, 0); repaired = true; }
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
             if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
@@ -241,6 +242,7 @@ namespace ImmersiveAI.Mcm
                 s.OpenRouterApiKey, ChosenModel(s.OpenRouterModel, s.OpenRouterModelCustom),
                 s.GeminiApiKey, ChosenModel(s.GeminiModel, s.GeminiModelCustom),
                 s.DeepSeekApiKey, SelectedOf(s.DeepSeekModel),
+                ChosenModel(s.ClaudeCodeModel, s.ClaudeCodeModelCustom),
                 s.OpenAIBaseUrl, s.LocalEndpoint, s.LocalModel, s.LocalContextWindow, s.MaxTokens,
                 s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
@@ -275,6 +277,7 @@ namespace ImmersiveAI.Mcm
                 c.OpenRouterApiKey, c.OpenRouterModel,
                 c.GeminiApiKey, c.GeminiModel,
                 c.DeepSeekApiKey, c.DeepSeekModel,
+                c.ClaudeCodeModel,
                 c.OpenAIBaseUrl, c.LocalEndpoint, c.LocalModel, c.LocalContextWindow, c.MaxTokens,
                 c.EnableChatWindow, c.ChatWindowHotkey, c.LetterWindowHotkey,
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
@@ -318,6 +321,7 @@ namespace ImmersiveAI.Mcm
             // DeepSeek has no custom-id field (their catalog is two models); an id the list does not
             // carry simply leaves the dropdown where it stands rather than being wedged in.
             Select(s.DeepSeekModel, c.DeepSeekModel);
+            s.ClaudeCodeModelCustom = SelectOrCustom(s.ClaudeCodeModel, c.ClaudeCodeModel);
             // The endpoint shows blank while it is the real OpenAI — the field is for the exception.
             s.OpenAIBaseUrl = string.Equals(c.OpenAIBaseUrl, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
@@ -421,6 +425,7 @@ namespace ImmersiveAI.Mcm
             c.GeminiModel = ChosenModel(s.GeminiModel, s.GeminiModelCustom) ?? c.GeminiModel;
             c.DeepSeekApiKey = s.DeepSeekApiKey ?? string.Empty;
             c.DeepSeekModel = SelectedOf(s.DeepSeekModel) ?? c.DeepSeekModel;
+            c.ClaudeCodeModel = ChosenModel(s.ClaudeCodeModel, s.ClaudeCodeModelCustom) ?? c.ClaudeCodeModel;
             // Blank means the real OpenAI; Normalize (run by the caller) completes a pasted /v1 base.
             c.OpenAIBaseUrl = string.IsNullOrWhiteSpace(s.OpenAIBaseUrl)
                 ? ModConfig.DefaultOpenAIEndpoint
@@ -673,6 +678,8 @@ namespace ImmersiveAI.Mcm
                 // reads as "absent" and falls through to the dropdown index.
                 AdoptModel(store, "DeepSeekModel", "DeepSeekModelCustom", McmChoiceLists.DeepSeekModels,
                     live.DeepSeekModel, defaults.DeepSeekModel, v => live.DeepSeekModel = v, "DeepSeek model", adopted);
+                AdoptModel(store, "ClaudeCodeModel", "ClaudeCodeModelCustom", McmChoiceLists.ClaudeCodeModels,
+                    live.ClaudeCodeModel, defaults.ClaudeCodeModel, v => live.ClaudeCodeModel = v, "Claude Code model", adopted);
 
                 var storeEndpoint = TextOf(store, "OpenAIBaseUrl");
                 if (!string.IsNullOrWhiteSpace(storeEndpoint) &&
@@ -733,6 +740,7 @@ namespace ImmersiveAI.Mcm
                 case "Gemini": return !string.IsNullOrWhiteSpace(c.GeminiApiKey);
                 case "DeepSeek": return !string.IsNullOrWhiteSpace(c.DeepSeekApiKey);
                 case "Local": return true;
+                case "ClaudeCode": return true;
                 default: return !string.IsNullOrWhiteSpace(c.AnthropicApiKey);
             }
         }

@@ -2353,7 +2353,7 @@ namespace ImmersiveAI
             // without its callback firing), a single mishap must never silence the whole feature forever.
             // A local backend's two LLM calls can honestly outlast the cloud window — breathe wider there
             // so a slow reply is never mistaken for a lost one (which would double-fire the offer).
-            if (_initiationInFlight && (DateTime.UtcNow - _initiationInFlightSince) > TimeSpan.FromMinutes(_config.IsLocalBackend ? 12 : 3))
+            if (_initiationInFlight && (DateTime.UtcNow - _initiationInFlightSince) > TimeSpan.FromMinutes(_config.IsPatientBackend ? 12 : 3))
                 _initiationInFlight = false;
 
             // Let parked offers whose moment has passed lapse (their notice removes itself too).

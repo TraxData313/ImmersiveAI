@@ -25,7 +25,8 @@ If one of these searches brought you here — yes, this is that mod:
 - **voiced NPCs** — hear them speak, in voices of their own people: clone your own or use hosted ones
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
 - **never knowing what to say?** one key and your own hero drafts your next line for you
-- **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — or, for tinkerers only, a
+- **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — a **claude.ai Pro/Max plan**
+  through your installed Claude Code app (no API key) — or, for tinkerers only, a
   **local model (LM Studio / Ollama)** at your own risk
 
 

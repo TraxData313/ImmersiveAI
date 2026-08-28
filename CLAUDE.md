@@ -214,7 +214,10 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   ImmersiveChatBehavior.Letters.cs  partial: every letter flow (NPC writes, player writes, arrivals)
   ImmersiveChatBehavior.Thoughts.cs partial: "Think" (Shift+Enter) — the PLAYER's own next line, thought
                           out on the NPC's own sheet (plain call, nothing recorded) + the intents file
-  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
+  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use),
+                          ClaudeCodeChatClient (the subscription road — headless claude.exe per call,
+                          tools via Core ClaudeCliShape's structured output; PlanGauge.cs beside it
+                          reads the plan's 5h/weekly percentages), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   Tools/FieldCraft.cs     the field-craft (2026.07.12): survey_surroundings + weigh_battle — the country
                           about and the scales of battle, only for souls with a party on the map
@@ -434,6 +437,31 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
+- **THE SUBSCRIPTION ROAD (2026.08.28, Anton's ask — his living-abby room proved it):** `Backend:
+  "ClaudeCode"` speaks through the player's INSTALLED Claude Code, headless (`claude -p`), so a
+  claude.ai Pro/Max plan carries the NPCs with no API key. Core `Llm\ClaudeCliShape.cs` is the pure
+  shape (unit-tested): the CLI is one-shot, so the multi-turn list FLATTENS into a first-person
+  script (a single user message passes VERBATIM — memory writing keeps its exact words), and tools
+  ride `--json-schema` structured output ("reply" + typed "tool_calls", AllowedValues as real schema
+  enums). TWO PROBED LAWS: the hands must be NAMED in the sheet — schema descriptions alone left the
+  model answering around its tools (live, first harness run); and stream-json INPUT is a live
+  session, not history replay, which is why flattening is the road. Module `ClaudeCodeChatClient`
+  runs the process (system prompt in a FILE — Windows' 32,767-char line, living-abby's WinError 206
+  lesson; stdin written as raw UTF-8 bytes, net472 has no StandardInputEncoding; stdout drained
+  async so a full pipe can't deadlock; 300s kill). The CLI measures its own run — `RecordCall` takes
+  its exact tokens AND cost figure. `PlanGauge` (Module) shows what the plan spent — "5h at 9%,
+  weekly at 1%" on every ✒ notice + the odds view — read from the same account endpoint Claude
+  Code's own footer uses, via the token in `~\.claude\.credentials.json`: sent to api.anthropic.com
+  and NOWHERE else, never logged, never near a prompt (the living-abby limits.py contract, Anton's
+  standing yes). `--safe-mode --tools "" --strict-mcp-config --disable-slash-commands
+  --no-session-persistence` keep the CLI's own workshop shut; NEVER add `--bare` (it disables OAuth —
+  the very login this road rides). **THINKING IS OFF HERE TOO, by `MAX_THINKING_TOKENS=0` in the
+  process env** — the CLI has no flag for it and `--effort`'s floor is "low", which is NOT off:
+  measured on opus with the mod's own flags (2026.08.28, Anton's "it takes its time") baseline was
+  222 thinking tokens / 6.2s, `--effort low` 14 / 3.3s, the env var 0 / 3.4s. Tools and the
+  structured answer are unharmed with it off (opus reached recall_company and weighed move_heart in
+  one breath) — verified before shipping, because this road's tool use rides the same answer. Watchdogs treat it
+  like Local (`IsPatientBackend`).
 - **Gemini and DeepSeek are first-class backends since 2026.08.02** (asked for on Steam — "weird to
   offer only Claude and OpenAI while Gemini allows free usage"). Both are OpenAI-compatible and ride
   `OpenAIChatClient` through a new `OpenAiDialect` enum whose ONLY job is how each provider is told to
@@ -569,6 +597,10 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"Local"),
   model, `MaxTokens`, memory limits,
+  `ClaudeCodeModel` + `ClaudeCodePath` (2026.08.28 — `Backend: "ClaudeCode"`, the subscription
+  road: NPCs speak through the player's installed Claude Code app on their claude.ai Pro/Max plan,
+  keyless; model dropdown haiku-4-5 (default) / sonnet-5 / opus-5 / fable-5 + custom; path blank =
+  find claude.exe on PATH then the Claude apps' folders; cost notices carry the plan gauge),
   `GeminiApiKey` + `GeminiModel` (2026.08.02 — `Backend: "Gemini"`, the FREE road: the same
   OpenAIChatClient pointed at `ModConfig.GeminiEndpoint` (Google's OpenAI-compat door) with
   `OpenAiDialect.Gemini`; default `gemini-3.6-flash` — deliberately not a Lite, the tools need the

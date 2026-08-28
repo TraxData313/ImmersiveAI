@@ -56,6 +56,7 @@ namespace ImmersiveAI.Core.Memory
             // it all in Bites with an empty page. Folding it back at LOAD rather than at save means
             // a soul is whole the moment she is read, however she is reached.
             memory.HealLegacyNotes();
+            memory.HealEnvelopeLines();
             return memory;
         }
 

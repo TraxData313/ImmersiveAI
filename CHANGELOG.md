@@ -15,6 +15,19 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- Fixed: on the Claude Code backend an NPC's reply could occasionally arrive wearing its raw
+  machinery — braces, quotes and 
+ marks in the chat. Such replies now parse cleanly, and any
+  already recorded in a memory heal themselves the next time that soul is loaded.
+- The road to marriage now truly begins on its own: NPCs set down "I like them" and "I love them"
+  freely as their heart finds them, instead of treating the first step as a proposal. You see each
+  arrival as a warm rose line in the log, and the stage under their name in the chat window.
+- New backend "ClaudeCode": the NPCs can speak through your installed Claude Code app on a
+  claude.ai Pro/Max plan — no API key anywhere. Pick the Claude that answers in the mod options.
+- NPCs on the Claude Code backend no longer think silently before speaking — replies come back
+  noticeably sooner and spend less of your plan, Opus most of all.
+- On that road the cost notice also shows your plan's own gauge after each exchange — "5h at 9%,
+  weekly at 1%" — read from your account the same way Claude Code's own footer reads it.
 - "Since we were last alone" now waits for real words: opening someone's thread and closing
   it again no longer counts as having talked it out.
 - Conversations cost about a third less: NPCs carry the same knowledge in far fewer words — old

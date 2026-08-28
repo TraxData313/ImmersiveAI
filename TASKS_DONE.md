@@ -1212,3 +1212,27 @@ release ritual warns about.
   STRIPS them before anything is sent and a test asserts every built message is clean; the
   scrollback reads the same builder through BuildMarkedSheet so the preview can never drift; the
   situation file on disk renders them as --- Name ---. 838 Core tests green. (2026.08.27 21.10.00)
+
+- **The subscription road — Backend "ClaudeCode"** (Anton's ask, straight from living-abby's
+  proven pattern): the NPCs speak through the player's own installed Claude Code, headless, so a
+  claude.ai Pro/Max plan carries them with no API key. Core ClaudeCliShape (unit-tested) flattens
+  the multi-turn list into a first-person script (a lone user message passes verbatim), renders
+  the tools as a named hands list in the sheet + a typed --json-schema with real enums, and parses
+  the stream envelope (result, exact tokens, the CLI's own cost figure, rate windows). Module
+  ClaudeCodeChatClient runs the process (system prompt in a file, UTF-8 bytes down stdin, async
+  drains, 300s kill); PlanGauge reads the plan's true percentages from the account endpoint the
+  CLI's own footer uses (token from ~\.claude\.credentials.json, sent nowhere else, never logged)
+  and the ✒ notice + odds view now say "5h at 9%, weekly at 1%" on this road. MCM: appended
+  Backend + model dropdown/custom, full bridge wiring. Live-proved through Core's real code on
+  haiku: recall reached round 1, Bulgarian reply + move_heart weighed round 2. 857 Core tests
+  green. (2026.08.28 13.05.00)
+
+- **The envelope undressed + the road unstuck** (same evening, Anton playtesting live): fable
+  through the CLI wrapped its structured answer in <StructuredOutput> tags — strict parse failed
+  and the raw {"reply"} walked into Rhia's thread and memory (one move_heart +3 swallowed).
+  ClaudeCliShape now strips known wrappers (tags, fences, trailing chatter) before parsing, and
+  NpcMemory.HealEnvelopeLines (run from LoadFrom beside HealLegacyNotes) undresses lines already
+  recorded — speech kept, dead tool calls dropped. Beside it the courtship road learned to START:
+  tend_courtship's all-marriage prose read as "reaching = proposing", so 178 warm turns left Rhia
+  at stage None; one sentence marks liking/love as records set down freely, not proposals. 866
+  Core tests green. (2026.08.28 13.40.00)

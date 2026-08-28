@@ -23,10 +23,24 @@ namespace ImmersiveAI
         /// see <see cref="GeminiApiKey"/>); "DeepSeek" the cheapest paid road (see
         /// <see cref="DeepSeekApiKey"/>); Anthropic works and is untested at length; "Local" is
         /// tinkerers' territory, unsupported by design.</summary>
-        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Gemini", "DeepSeek", "Anthropic" or "Local"
+        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Gemini", "DeepSeek", "Anthropic", "ClaudeCode" or "Local"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-haiku-4-5";
+
+        /// <summary>The subscription road (2026.08.28, Anton's ask): set <c>Backend</c> to
+        /// "ClaudeCode" and the NPCs speak through the player's own INSTALLED Claude Code — the
+        /// claude.ai Pro/Max plan carries them, no API key anywhere. Needs Claude Code installed
+        /// (claude.com/code) and signed in once; each reply is a short headless run of it. The cost
+        /// notices then show the plan's own gauge ("5h at 9%, weekly at 1%") beside the measured
+        /// figure, because the plan's windows are the real currency there. Replies ride the plan's
+        /// 5-hour and weekly limits — an evening of talk fits a Pro plan easily; thinking models
+        /// (fable) spend the windows faster.</summary>
+        public string ClaudeCodeModel { get; set; } = "claude-haiku-4-5";
+
+        /// <summary>Where claude.exe lives, only when the finder cannot see it on its own (PATH,
+        /// then the Claude apps' own folders). Blank = find it.</summary>
+        public string ClaudeCodePath { get; set; } = "";
 
         /// <summary>OpenRouter as a first-class backend (2026.07.16, asked for on Nexus): one key at
         /// openrouter.ai reaches both GPT and Claude models (and hundreds more) through their
@@ -136,6 +150,12 @@ namespace ImmersiveAI
         /// honestly take minutes, so timeouts and watchdogs must breathe wider.</summary>
         [JsonIgnore]
         public bool IsLocalBackend => Backend == "Local";
+
+        /// <summary>Backends where a slow reply is normal rather than lost — the local machine, and
+        /// the Claude Code road (a whole process per call, and a thinking model may sit long). The
+        /// self-heal watchdogs breathe wider on these so patience is never misread as a hang.</summary>
+        [JsonIgnore]
+        public bool IsPatientBackend => IsLocalBackend || Backend == "ClaudeCode";
 
         // NOTE (2026.07.13): reasoning/thinking is switched OFF for good on every model — the
         // clients send OpenAI reasoning_effort "none" and Anthropic thinking "disabled" themselves.
@@ -1296,6 +1316,12 @@ namespace ImmersiveAI
             DeepSeekApiKey = (DeepSeekApiKey ?? string.Empty).Trim();
             DeepSeekModel = (DeepSeekModel ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(DeepSeekModel)) DeepSeekModel = new ModConfig().DeepSeekModel;
+
+            // Claude Code: a blank model falls back to the light default; the path is only ever an
+            // override, so blank simply stays blank and the finder does its work.
+            ClaudeCodeModel = (ClaudeCodeModel ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(ClaudeCodeModel)) ClaudeCodeModel = new ModConfig().ClaudeCodeModel;
+            ClaudeCodePath = (ClaudeCodePath ?? string.Empty).Trim();
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;
