@@ -1785,7 +1785,16 @@ night elsewhere as though it had been had out. WHAT MOVES IT IS TIME ALONE and n
 talk that has ENDED, a night together, the wedding night — never a battle, a market, or hearing
 where he slept. A RUNNING TALK MUST NOT MOVE IT (the sheet is rebuilt every reply, so her own first
 answer would erase the thing she was raising): the talk side reads `NpcMemory.LastTalkEndedDay`,
-stamped at `ConversationEnded` and at chat-window teardown, with an 8-hour grace as the fallback.
+stamped at `ConversationEnded` and at window teardown, with an 8-hour grace as the fallback.
+AND A TALK WITH NO WORDS IN IT IS NOT A TALK (2026.08.28, Anton — the line kept vanishing on his
+wife and nobody else): every caller of `NoteTalkEnded` knows only that a screen CLOSED, and the
+hearth is auto-selected whenever the screen opens, so a stamp set on the selected soul at teardown
+wiped HER line on every glance at anyone. The bar therefore lives in `NoteTalkEnded` itself — it
+moves the stamp only when `HasSpokenSince` finds real words after the last mark — never in the
+three callers, where one of them would always be missed. What counts as words is the shared
+`ConversationTurn.IsSpokenExchange` (not an inner beat, not a letter, not the retired narrator),
+read by the stamp AND by `LastAloneDay`'s grace fallback so the two can never disagree. A reply
+still in flight at close is late, not lost: its turn lands after, and the grace takes it.
 It disappears by itself when nothing stands after it — no flags. The nights roll stops AT the line
 so nothing is told twice. It is ONE divider and the list, nothing else — cut down three times on
 purpose (the opening mark is redundant beside the turns' own `[place, time]` stamps and the entries'
