@@ -15,6 +15,9 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- An NPC now weighs her heart once per exchange, not once per round of thinking. Replies that
+  reached into the world could move the same feeling two or three times over in a single message
+  ("+3, +1, +1"); the first honest measure now stands, and the reply costs a round less.
 - Fixed: on the Claude Code backend an NPC's reply could occasionally arrive wearing its raw
   machinery — braces, quotes and 
  marks in the chat. Such replies now parse cleanly, and any

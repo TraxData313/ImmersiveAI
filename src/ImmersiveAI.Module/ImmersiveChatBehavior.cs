@@ -353,6 +353,17 @@ namespace ImmersiveAI
         private string ResolveHeartShift(Core.Llm.ToolCall call, Hero npc, Tools.HeartTool.Tally? heart)
         {
             var parsed = Tools.HeartTool.ParseShift(call);
+
+            // ONE WEIGHING PER EXCHANGE (2026.08.28, Anton's playtest: "+3, +1, +1" on one message,
+            // three real shifts applied). A reply that reaches for recalls is built over several
+            // rounds, and from the inside each round looks like a reply — so the tool's "every
+            // reply, without exception" was obeyed once per ROUND. The guard belongs here rather
+            // than in the prose: prose asks, a resolver decides, and no wording can be trusted to
+            // hold across every backend and round count. The FIRST readable measure stands (the
+            // bargain's "already laid" mold); later ones are answered honestly so she stops
+            // reaching, which also spends a round fewer.
+            if (heart != null && heart.Weighed) return Tools.HeartTool.AlreadyWeighed;
+
             // A readable number — even an honest 0 — means the heart was truly weighed this turn,
             // so the fallback feeling question stays quiet. An unreadable call does not count.
             if (parsed.HasValue && heart != null) heart.Weighed = true;

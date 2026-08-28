@@ -56,6 +56,18 @@ namespace ImmersiveAI.Tools
         public const string Held =
             "I look within, and my heart holds where it stood. I speak on.";
 
+        /// <summary>
+        /// What a SECOND weighing in the same exchange is answered with (2026.08.28, Anton's
+        /// playtest: "+3, +1, +1" in one message). "Every reply" means the one answer she gives
+        /// the person in front of her — but a reply reaching for recalls is built over several
+        /// rounds, and each round looks like a reply from the inside, so a dutiful soul weighed
+        /// again every round and each shift was applied for real. The measure of an exchange is
+        /// taken ONCE; the rounds after are the same breath, not new ones.
+        /// </summary>
+        public const string AlreadyWeighed =
+            "I have already weighed my heart in this exchange, and what I set down stands — this is " +
+            "the same breath, not a new one. I do not weigh it twice. I speak on.";
+
         /// <summary>The shift the NPC chose, clamped to -100..100, or null when none can be read.
         /// Lenient like the feeling call's parser: a bare number, "+2", or a number wrapped in a
         /// word or two all count.</summary>
