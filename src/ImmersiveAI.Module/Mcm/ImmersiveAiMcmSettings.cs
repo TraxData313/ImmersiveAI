@@ -135,6 +135,12 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string ClaudeCodeModelCustom { get; set; } = string.Empty;
 
+        [SettingPropertyDropdown("How long they speak", Order = 18, RequireRestart = false,
+            HintText = "Brief = one to three sentences, the way people actually talk. Conversational = the default. Full = let a real feeling take the room it needs. Shorter is also noticeably FASTER, because most of the wait for a reply is the words being written one after another.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> ReplyLength { get; set; } =
+            new Dropdown<string>(McmChoiceLists.ReplyLengths, 1);
+
         [SettingPropertyInteger("Reply length (max tokens)", 100, 2000, "0", Order = 19, RequireRestart = false,
             HintText = "Roughly how long an NPC's spoken reply may run. Higher means longer answers but slower, pricier calls. 400 is a good balance. On Gemini this is raised to at least 1500 behind the scenes, because its thinking is charged against the same ceiling and would otherwise leave nothing to say.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]

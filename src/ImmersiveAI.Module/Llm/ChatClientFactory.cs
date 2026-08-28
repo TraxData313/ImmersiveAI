@@ -50,7 +50,7 @@ namespace ImmersiveAI.Llm
             // Claude Code, so a claude.ai plan carries them with no API key. The output budget is
             // the CLI's to manage, so maxTokens deliberately does not ride along.
             if (config != null && config.Backend == "ClaudeCode")
-                return new ClaudeCodeChatClient(config.ClaudeCodeModel, config.ClaudeCodePath);
+                return new ClaudeCodeChatClient(config.ClaudeCodeModel, config.ClaudeCodePath, maxTokens);
 
             // Local: the same client speaking to a server on the player's own machine (LM Studio,
             // Ollama, llama.cpp). Keyless is normal there; errors name "Local AI" so a dead server

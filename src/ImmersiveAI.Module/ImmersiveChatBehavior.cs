@@ -4047,6 +4047,7 @@ namespace ImmersiveAI
             }
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;
+            persona.ReplyLength = ReplyLengthOf(_config);
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).
@@ -4059,6 +4060,17 @@ namespace ImmersiveAI
             var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
 
             return new ChatContext(memory, persona, scene, playerName);
+        }
+
+        /// <summary>The player's "how long they speak" dial, as Core spells it.</summary>
+        private static Core.Prompts.PromptBuilder.ReplyLength ReplyLengthOf(ModConfig config)
+        {
+            switch (config?.ReplyLength)
+            {
+                case "Brief": return Core.Prompts.PromptBuilder.ReplyLength.Brief;
+                case "Full": return Core.Prompts.PromptBuilder.ReplyLength.Full;
+                default: return Core.Prompts.PromptBuilder.ReplyLength.Conversational;
+            }
         }
 
         // ============================ the director's spark ============================

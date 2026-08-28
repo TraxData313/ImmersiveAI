@@ -132,6 +132,34 @@ namespace ImmersiveAI.Core.Tests
             Assert.Contains("Yngvald", result.ToolCalls[0].ArgumentsJson);
         }
 
+        // The CLI takes no max-tokens flag, so the budget can only be said. Measured 2026.08.28:
+        // uncapped, sonnet wrote 793 tokens in 22.6s for ONE round of a reply that takes several.
+        [Fact]
+        public void TheReplyBudgetIsSpokenIntoTheSheet()
+        {
+            var msgs = new[] { ChatMessage.System("I am Rhia."), ChatMessage.User("Well?") };
+
+            var withBudget = ClaudeCliShape.BuildSystem(msgs, null, false, maxTokens: 1200);
+            Assert.Contains("I am Rhia.", withBudget);
+            Assert.Contains("about 720 words", withBudget);
+            Assert.Contains("WALL", withBudget);   // never read as a target
+
+            // Zero means the caller stated no budget — nothing is invented.
+            var none = ClaudeCliShape.BuildSystem(msgs, null, false, maxTokens: 0);
+            Assert.DoesNotContain("words", none);
+            Assert.Equal("I am Rhia.", none);
+        }
+
+        [Fact]
+        public void TheBudgetRidesBesideTheHandsToo()
+        {
+            var msgs = new[] { ChatMessage.System("I am Rhia.") };
+            var tools = new[] { new ToolDefinition("recall_company", "My own warband.") };
+            var sheet = ClaudeCliShape.BuildSystem(msgs, tools, allowToolUse: true, maxTokens: 400);
+            Assert.Contains("recall_company", sheet);
+            Assert.Contains("about 240 words", sheet);
+        }
+
         [Fact]
         public void MalformedAnswerIsStillAnAnswer()
         {

@@ -700,4 +700,35 @@ public class PromptBuilderTests
         Assert.Contains("What Vulgrim is to me", after);
         Assert.DoesNotContain("The road of my life so far", after);
     }
+
+    // 2026.08.28: length COMPOUNDED — her own long replies sit in the transcript and become the
+    // register for the next one. The dial is the player's taste; the anti-drift line is the bug fix
+    // and must ride at every setting, Full included.
+    [Theory]
+    [InlineData(PromptBuilder.ReplyLength.Brief)]
+    [InlineData(PromptBuilder.ReplyLength.Conversational)]
+    [InlineData(PromptBuilder.ReplyLength.Full)]
+    public void EverySettingCarriesTheAntiDriftRule(PromptBuilder.ReplyLength length)
+    {
+        var persona = Persona();
+        persona.ReplyLength = length;
+        var sheet = new PromptBuilder()
+            .Build(persona, new NpcMemory { NpcId = "r" }, "", "Vulgrim", "hello")[0].Content;
+        Assert.Contains("no measure of how long I speak now", sheet);
+    }
+
+    [Fact]
+    public void TheDialChangesHowLongTheySpeak()
+    {
+        string Sheet(PromptBuilder.ReplyLength l)
+        {
+            var p2 = Persona();
+            p2.ReplyLength = l;
+            return new PromptBuilder().Build(p2, new NpcMemory { NpcId = "r" }, "", "Vulgrim", "hi")[0].Content;
+        }
+
+        Assert.Contains("ONE to THREE sentences", Sheet(PromptBuilder.ReplyLength.Brief));
+        Assert.Contains("a sentence or three", Sheet(PromptBuilder.ReplyLength.Conversational));
+        Assert.Contains("as fully as the moment deserves", Sheet(PromptBuilder.ReplyLength.Full));
+    }
 }

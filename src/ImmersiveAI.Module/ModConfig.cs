@@ -162,6 +162,16 @@ namespace ImmersiveAI
         // Silent thinking spent the reply's token budget and the NPC answered with "...". The old
         // OpenAIReasoningEffort key in existing config.json files is simply ignored on load.
 
+        /// <summary>
+        /// How long the NPCs speak: "Brief" (one to three sentences — talk, not paragraphs),
+        /// "Conversational" (the default, and how the mod has always spoken) or "Full" (let a
+        /// feeling take the room it needs). Asked for 2026.08.28 after a warm Claude model answered
+        /// a quiet question with eight paragraphs: the brevity rule was always in the sheet, and a
+        /// rich enough moment simply out-wrote it. Shorter also means FASTER — most of a reply's
+        /// wait is the words being written, one after another.
+        /// </summary>
+        public string ReplyLength { get; set; } = "Conversational";
+
         public int MaxTokens { get; set; } = 400;
 
         /// <summary>Developer mode. When false (the default, for players), the developer levers stay
@@ -1297,6 +1307,10 @@ namespace ImmersiveAI
             // check asks for it kindly when blank); the context window must stay a sane size.
             LocalModel = (LocalModel ?? string.Empty).Trim();
             LocalApiKey = (LocalApiKey ?? string.Empty).Trim();
+            ReplyLength = (ReplyLength ?? string.Empty).Trim();
+            if (ReplyLength != "Brief" && ReplyLength != "Conversational" && ReplyLength != "Full")
+                ReplyLength = "Conversational";
+
             if (LocalContextWindow <= 0) LocalContextWindow = 16384;
             if (LocalContextWindow < 2048) LocalContextWindow = 2048;
             if (LocalContextWindow > 2000000) LocalContextWindow = 2000000;

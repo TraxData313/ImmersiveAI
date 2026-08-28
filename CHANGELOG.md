@@ -15,6 +15,14 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- Replies no longer grow and grow. An NPC's own long answers were sitting in the conversation as
+  the example for the next one, so length crept up all evening without anyone choosing it — now
+  each turn is sized by the moment, not by the last reply. Nobody is stopped from speaking fully.
+- New setting, "How long they speak": Brief (one to three sentences), Conversational (the
+  default) or Full. Shorter is also noticeably faster, since most of the wait is the writing.
+- Your reply-length setting now reaches the Claude Code backend, which was ignoring it entirely —
+  NPCs there wrote to whatever length they liked, and a long answer is a slow one. Lower MaxTokens
+  if you want quicker replies.
 - An NPC now weighs her heart once per exchange, not once per round of thinking. Replies that
   reached into the world could move the same feeling two or three times over in a single message
   ("+3, +1, +1"); the first honest measure now stands, and the reply costs a round less.

@@ -26,12 +26,21 @@ namespace ImmersiveAI.Core.Llm
         public static string BuildSystem(
             IReadOnlyList<ChatMessage> messages,
             IReadOnlyList<ToolDefinition>? tools,
-            bool allowToolUse)
+            bool allowToolUse,
+            int maxTokens = 0)
         {
             var system = string.Join("\n\n", messages.Where(m => m.Role == ChatRole.System).Select(m => m.Content));
-            if (tools == null || tools.Count == 0) return system;
+            var length = LengthLine(maxTokens);
+
+            if (tools == null || tools.Count == 0)
+                return length.Length == 0 ? system : (system.Length == 0 ? length : system + "\n\n" + length);
 
             var sb = new StringBuilder(system);
+            if (length.Length > 0)
+            {
+                if (sb.Length > 0) sb.Append("\n\n");
+                sb.Append(length);
+            }
             if (sb.Length > 0) sb.Append("\n\n");
             if (allowToolUse)
             {
@@ -59,6 +68,35 @@ namespace ImmersiveAI.Core.Llm
                 sb.Append("How I answer now: in my own spoken words, in \"reply\", reaching for nothing more.");
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// The output budget, said in her own voice — because on this road it can be said and
+        /// nothing more. THE CLI HAS NO max-tokens FLAG (2026.08.28): every other backend sends
+        /// MaxTokens as a hard ceiling, so until now the setting silently did nothing here and a
+        /// reply ran to whatever length it liked. Measured on sonnet with a real 13.7k sheet, that
+        /// was 793 output tokens in 22.6s for ONE round — and a reply is several rounds, which is
+        /// the whole of "she takes a minute to answer".
+        /// <para>Guidance is a weaker thing than a ceiling and is admitted as such (the standing
+        /// rule is that rails live in code, not prose). The honest alternative — cutting her off
+        /// at the cap — is worse: a severed sentence is the one outcome this mod works hardest to
+        /// avoid. So it asks, in her own manner, and the length she keeps is hers.</para>
+        /// <para>It is phrased as a WALL rather than a target on purpose (2026.08.28, same day):
+        /// the first cut said "past about 720 words I am overrunning", which a warm model read as
+        /// leave to write 700 — the opposite of the intent, and it drowned the brevity rule that
+        /// had been doing the real work. Length is decided by PromptBuilder.BrevityFor; this only
+        /// says where the room ends.</para>
+        /// </summary>
+        internal static string LengthLine(int maxTokens)
+        {
+            if (maxTokens <= 0) return string.Empty;
+            // ~3 English words a token, and roughly a third of that in a language like Bulgarian
+            // (non-ASCII costs ~1.6x) — so the figure is deliberately given as a soft ceiling in
+            // words rather than a promise about sentences.
+            var words = Math.Max(30, maxTokens * 3 / 5);
+            return "The outermost bound of my speech is about " + words + " words — that is a WALL, "
+                 + "never a target, and almost every honest answer stops far short of it. How long I "
+                 + "actually speak is settled above, by how I speak.";
         }
 
         private static string ParameterSketch(ToolParameter p)

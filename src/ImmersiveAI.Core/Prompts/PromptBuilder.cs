@@ -514,10 +514,78 @@ namespace ImmersiveAI.Core.Prompts
             "I remember or believe stands against them, these stand:";
 
         /// <summary>The brevity rule: short words keep the living back-and-forth of talk instead of
-        /// long, static monologues.</summary>
+        /// long, static monologues. This is the "Conversational" setting — the default, and what
+        /// the rule has always said.</summary>
         public const string BrevityGuidance =
             "- I speak as talk truly flows between two people — a sentence or three, then I let them " +
             "answer. Only a tale asked of me runs longer.";
+
+        /// <summary>
+        /// How long a soul speaks, as the player sets it (2026.08.28, Anton: "is she writing a
+        /// book? that is a poem… keeping a conversation, not a text bombing"). The rule above was
+        /// always there and a warm model simply out-wrote it: a rich sheet, a romantic moment and
+        /// an invitation to feel will beat one polite line about length every time. So the line
+        /// gets teeth at the strict end and honesty at the generous one, and the player chooses.
+        /// <para>Brief is deliberately blunt and concrete — a count of sentences a model can
+        /// actually hold itself to — because vaguer wording is exactly what failed.</para>
+        /// </summary>
+        public enum ReplyLength
+        {
+            /// <summary>Talk, and little else: the setting for someone tired of paragraphs.</summary>
+            Brief = 0,
+            /// <summary>The long-standing default.</summary>
+            Conversational = 1,
+            /// <summary>Let them run — the letters-and-poetry end.</summary>
+            Full = 2,
+        }
+
+        /// <summary>
+        /// THE RATCHET (2026.08.28, Anton's own diagnosis — "she just keeps picking up speed and
+        /// goes longer and longer"). Nothing forbade length, so it COMPOUNDED: every reply she
+        /// gives lands in the verbatim turns, and the next call reads her own eight paragraphs as
+        /// the register of this conversation. A model matches the register it is shown, so each
+        /// answer sets the floor for the one after it and the talk inflates without anyone
+        /// choosing it.
+        /// <para>This is deliberately NOT a limit — the ask was explicitly "I don't want to forbid
+        /// them to talk if they want". It breaks the mirror instead: last turn's size is simply
+        /// not evidence about this turn's. A long answer is still hers whenever the moment truly
+        /// earns one; it just stops being self-justifying.</para>
+        /// <para>Rides at EVERY setting, Full included — the drift is the bug, the length is not.</para>
+        /// <para>It leads with WHY rather than with a rule (2026.08.28, Anton's refinement: "I don't
+        /// want to hard limit them, just to let her know that this is too much for that game"). The
+        /// reason has to be one she can hold from inside her own world — never the medium named
+        /// aloud — so it is the plainest true one: speech is heard once, into the air, by someone
+        /// waiting their turn. A soul who understands that governs herself, which is the only kind
+        /// of governing available here anyway.</para>
+        /// </summary>
+        public const string NoLengthDriftGuidance =
+            "- What I say is SPOKEN, into the air, to someone standing in front of me — not set on a " +
+            "page they may read twice at their leisure. Past a certain size a thing said aloud stops " +
+            "being heard at all: they are waiting to answer me, and I am talking over the answer. So " +
+            "how long I spoke last is no measure of how long I speak now — a full answer once does " +
+            "not ask a fuller one after it. Each turn finds its own size from what the moment holds, " +
+            "and most moments are small. I let a talk breathe in and out: long only where it is truly " +
+            "earned, and short again straight after.";
+
+        public static string BrevityFor(ReplyLength length)
+        {
+            switch (length)
+            {
+                case ReplyLength.Brief:
+                    return "- I speak the way people actually talk: ONE to THREE sentences, then I " +
+                           "stop and let them answer. I do not make speeches, I do not answer a " +
+                           "question three ways over, and I never send a paragraph where a line " +
+                           "will do. If more wants saying, I let the next turn carry it — the talk " +
+                           "is between us, not a page I hand them. Only a tale expressly asked of " +
+                           "me runs longer.";
+                case ReplyLength.Full:
+                    return "- I speak as fully as the moment deserves, and I let a real feeling take " +
+                           "the room it needs — though I still stop where the thought ends, and " +
+                           "leave them something to answer.";
+                default:
+                    return BrevityGuidance;
+            }
+        }
 
         /// <summary>The tone rule: a light savor of the old world, for atmosphere, never laid on thick.</summary>
         public const string OldWorldToneGuidance =
@@ -838,7 +906,8 @@ namespace ImmersiveAI.Core.Prompts
             sb.AppendLine();
             sb.AppendLine(Section(Sections.HowTheySpeak));
             sb.AppendLine("How I speak:");
-            sb.AppendLine(BrevityGuidance);
+            sb.AppendLine(BrevityFor(persona.ReplyLength));
+            sb.AppendLine(NoLengthDriftGuidance);
             sb.AppendLine(OldWorldToneGuidance);
             sb.AppendLine(PlainSpeechGuidance);
             // Immediately after the plain-speech rule, because it IS that rule's one exception.

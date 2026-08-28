@@ -31,10 +31,15 @@ namespace ImmersiveAI.Llm
         private readonly string _model;
         private readonly string _configuredPath;
 
-        public ClaudeCodeChatClient(string model, string configuredPath)
+        /// <summary>The reply budget. The CLI takes no max-tokens flag, so this reaches the model
+        /// as guidance in her own sheet rather than as a ceiling — see ClaudeCliShape.LengthLine.</summary>
+        private readonly int _maxTokens;
+
+        public ClaudeCodeChatClient(string model, string configuredPath, int maxTokens = 0)
         {
             _model = string.IsNullOrWhiteSpace(model) ? "claude-haiku-4-5" : model.Trim();
             _configuredPath = (configuredPath ?? "").Trim();
+            _maxTokens = maxTokens;
         }
 
         public async Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
@@ -72,7 +77,7 @@ namespace ImmersiveAI.Llm
                     + "installed Claude Code app (claude.ai Pro/Max plan) — install it from claude.com/code, sign in "
                     + "once by running it, and the NPCs can speak. Or set ClaudeCodePath in " + ModConfig.ConfigFilePath);
 
-            var system = ClaudeCliShape.BuildSystem(messages, tools, allowToolUse);
+            var system = ClaudeCliShape.BuildSystem(messages, tools, allowToolUse, _maxTokens);
             var prompt = ClaudeCliShape.BuildTranscript(messages);
             var withSchema = tools != null && tools.Count > 0;
 

@@ -93,6 +93,9 @@
         /// <summary>Keys offered for the panic stop. Backspace first, and it is the default: nothing
         /// in the game wants it during play, and it can be hit blind while something is screeching.
         /// Append-only, like every other list here.</summary>
+        /// <summary>How long the NPCs speak. Index 1 is the default. Append-only, like the rest.</summary>
+        public static readonly string[] ReplyLengths = { "Brief", "Conversational", "Full" };
+
         public static readonly string[] PanicKeys =
             { "Backspace", "Delete", "End", "Home", "Insert", "F8", "F9", "F10", "F11", "F12" };
 

@@ -78,6 +78,10 @@ namespace ImmersiveAI.Core.Prompts
         /// narration; kept sparing by the guidance itself. Set from the game layer's EnableActingOut.</summary>
         public bool EncourageActingOut { get; set; }
 
+        /// <summary>How long they speak — the player's own dial (2026.08.28). Defaults to the
+        /// long-standing Conversational, so nothing changes for anyone who never touches it.</summary>
+        public PromptBuilder.ReplyLength ReplyLength { get; set; } = PromptBuilder.ReplyLength.Conversational;
+
         /// <summary>True when this NPC rides with a company on the map and may cast their eyes over
         /// the country and weigh a battle (the field-craft tools ride along — see the game layer's
         /// FieldCraft: survey_surroundings and weigh_battle). Adds a whisper to look before judging
