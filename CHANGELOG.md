@@ -15,6 +15,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- An NPC's sense of who they are grows again as their memories settle: companions and lords quietly
+  reflect on what your shared story has made of them, and write it down in their own words.
 - "Since we were last alone" now waits for real words: opening someone's thread and closing
   it again no longer counts as having talked it out.
 - Conversations cost about a third less: NPCs carry the same knowledge in far fewer words — old

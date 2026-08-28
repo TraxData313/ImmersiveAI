@@ -677,4 +677,107 @@ public class MemoryCompressorTests
 
         Assert.Equal(koreanSelf, self.Text);
     }
+
+    [Fact]
+    public async Task CompressAsync_WithoutSelf_DoesNotAskForSelf()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(5);
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: null);
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.DoesNotContain("SELF:", prompt);
+        Assert.DoesNotContain("who have I become", prompt);
+    }
+
+    [Fact]
+    public async Task CompressAsync_WithSelf_AsksForSelfBesideTheSummary()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nI am a brave warrior now." };
+        var memory = MemoryWithTurns(5);
+        var self = new NpcSelf { Text = "I am a timid merchant." };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.Contains("SUMMARY:", prompt);
+        Assert.Contains("SELF:", prompt);
+        Assert.Contains("I am a timid merchant.", prompt);
+        Assert.Equal("I am a brave warrior now.", self.Text);
+    }
+
+    [Fact]
+    public async Task CompressAsync_FirstEverSelf_InvitesWithoutOfferingUnchanged()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(5);
+        var self = new NpcSelf { Text = "" };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.Contains("not yet put into words", prompt);
+        Assert.DoesNotContain("whatever tongue the rest is in: unchanged", prompt);
+    }
+
+    [Fact]
+    public async Task CompressAsync_LeavesSelfUnchanged_OnUnchangedKeyword()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(5);
+        var self = new NpcSelf { Text = "I am a wanderer from the west." };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        Assert.Equal("I am a wanderer from the west.", self.Text);
+    }
+
+    [Fact]
+    public async Task CompressAsync_SelfWithoutSummary_TakesTheSelfAndKeepsEveryTurn()
+    {
+        var client = new FakeChatClient
+        {
+            Response = "SELF:\nI have grown bolder through these battles."
+        };
+        var memory = MemoryWithTurns(6);
+        var self = new NpcSelf { Text = "I was once fearful." };
+
+        var compressed = await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        Assert.False(compressed);
+        Assert.Equal("I have grown bolder through these battles.", self.Text);
+        Assert.Equal(6, memory.RecentTurns.Count);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_SelfWithoutSummary_TakesTheSelfAndKeepsEveryTurn()
+    {
+        var client = new FakeChatClient
+        {
+            Response = "SELF:\nI have grown bolder through these battles."
+        };
+        var memory = MemoryWithTurns(6);
+        var self = new NpcSelf { Text = "I was once fearful." };
+
+        var reflected = await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        Assert.False(reflected);
+        Assert.Equal("I have grown bolder through these battles.", self.Text);
+        Assert.Equal(6, memory.RecentTurns.Count);
+    }
+
+    [Fact]
+    public async Task CompressAsync_TongueRuleRidesAfterTheSelfSlot()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(6);
+        var self = new NpcSelf { Text = "I am an archer." };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 3, systemVoiceName: null, self: self);
+        var prompt = client.LastRequest![0].Content;
+
+        Assert.True(prompt.LastIndexOf("THE TONGUE", StringComparison.Ordinal)
+                    > prompt.LastIndexOf("SELF:", StringComparison.Ordinal));
+    }
 }
