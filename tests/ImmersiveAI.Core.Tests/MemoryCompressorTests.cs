@@ -780,4 +780,36 @@ public class MemoryCompressorTests
         Assert.True(prompt.LastIndexOf("THE TONGUE", StringComparison.Ordinal)
                     > prompt.LastIndexOf("SELF:", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void ParseResponse_LowercaseSelfInProse_IsNotReadAsALabel()
+    {
+        // A standalone "self:" clears the word-boundary guard that rejects "herself:", and the reply
+        // contract primes the word by asking her, in the same breath, to say who she has become. Read
+        // as a label it cut the page in half and saved "colder than the man I met." as her whole self.
+        var response = "SUMMARY:\nHe showed me a different self: colder than the man I met.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("He showed me a different self: colder than the man I met.", parsed.Summary);
+        Assert.Null(parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_LowercaseSelfInProse_DoesNotOutrankTheRealSelfLabel()
+    {
+        var response = "SUMMARY:\nI have become a harder self: one that does not flinch.\nSELF:\nI am steadier than I was.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("I have become a harder self: one that does not flinch.", parsed.Summary);
+        Assert.Equal("I am steadier than I was.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_LowercaseSummaryInProse_DoesNotBoundTheSelf()
+    {
+        var response = "SELF:\nI keep my word. In summary: I am my father's daughter.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("I keep my word. In summary: I am my father's daughter.", parsed.Self);
+    }
 }

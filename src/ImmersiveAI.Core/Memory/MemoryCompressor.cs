@@ -422,11 +422,22 @@ namespace ImmersiveAI.Core.Memory
             return new CompressionResult(summary.Length == 0 ? null : summary, self);
         }
 
-        // Matches a live section label (SUMMARY: or SELF:) only when it is not part of a larger ASCII
-        // word (rejecting "herself:", "myself:" or "itself:"). Chinese characters before a label (e.g.
-        // "自己SELF:") are accepted. Fullwidth colons (e.g. "SELF：", "SUMMARY：") written by CJK models
-        // are recognized as equivalent to ASCII colons. If rejected, it continues searching so a summary
-        // containing "she told herself:" does not prevent a real SELF: section later from being found.
+        // Matches a live section label (SUMMARY:, SELF: or BITES:) only when it is not part of a larger
+        // ASCII word (rejecting "herself:", "myself:" or "itself:"). Chinese characters before a label
+        // (e.g. "自己SELF:") are accepted. Fullwidth colons (e.g. "SELF：", "SUMMARY：") written by CJK
+        // models are recognized as equivalent to ASCII colons. If rejected, it continues searching so a
+        // summary containing "she told herself:" does not prevent a real SELF: section later from being
+        // found.
+        //
+        // THE MATCH IS CASE-SENSITIVE, which is the other half of that word-boundary guard. The letter
+        // test rejects "herself:" but not a standalone "self:", and ordinary prose does write one:
+        // "I have become a harder self: one that does not flinch." SELF: is the label exposed to this,
+        // because it is asked for LAST: SUMMARY: is asked for first, so the search reaches the real
+        // label before any prose can imitate it, while SELF: sits behind a whole page of her own words,
+        // in which the contract has just invited her to describe who she is. Every label is written in
+        // capitals, so requiring capitals separates the label from the word, and the failure it can
+        // cause is the cheap one: a model that answers "Self:" loses that round's section instead of
+        // corrupting one, and what already stands is kept until the next pass writes it again.
         private static int FindSectionLabel(string response, string label)
         {
             var fullwidthLabel = label.EndsWith(":")
@@ -436,9 +447,9 @@ namespace ImmersiveAI.Core.Memory
             var idx = 0;
             while (true)
             {
-                var idxAscii = response.IndexOf(label, idx, StringComparison.OrdinalIgnoreCase);
+                var idxAscii = response.IndexOf(label, idx, StringComparison.Ordinal);
                 var idxFull = fullwidthLabel != null
-                    ? response.IndexOf(fullwidthLabel, idx, StringComparison.OrdinalIgnoreCase)
+                    ? response.IndexOf(fullwidthLabel, idx, StringComparison.Ordinal)
                     : -1;
 
                 int candidate;
