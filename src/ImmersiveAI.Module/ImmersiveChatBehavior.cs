@@ -671,14 +671,16 @@ namespace ImmersiveAI
             return room > 0 ? room : _config.MaxMemoryWriteTokens;
         }
 
-        /// <summary>Sizes the next memory-writing call to how much story this soul truly shares —
-        /// and never to less than what she is already carrying, or the whole-rewrite would spend
-        /// the update erasing her (the seeded-backstory case: a long page at zero richness).</summary>
-        private void SetMemoryWriteRoomFor(NpcMemory? memory)
+        // The self rides in the same reply now, so it counts toward what this call must produce.
+        // Without it a soul with two lifetime exchanges gets 400 output tokens for a whole page AND a
+        // self paragraph — 150 to 225 tokens of it in Chinese — and SELF: is last in the contract, so
+        // the truncation lands there and a mid-sentence fragment is written in as her identity.
+        private void SetMemoryWriteRoomFor(NpcMemory? memory, string? selfText = null)
         {
             try
             {
-                int held = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(memory?.Summary);
+                int held = Core.Memory.MemoryTokenEstimator.EstimateTextTokens(memory?.Summary)
+                         + Core.Memory.MemoryTokenEstimator.EstimateTextTokens(selfText);
                 _memoryWriteRoom = _config.MemoryWriteTokensFor(memory?.StoryRichness ?? 0, held);
             }
             catch { _memoryWriteRoom = 0; }
@@ -883,9 +885,11 @@ namespace ImmersiveAI
         }
 
         // The NPC's own sense of self lives in a plain-prose file of its own (separate from memories.json,
-        // which is memory *of another* and is branching toward per-person files). Best-effort: a missing
-        // or unreadable file just means they have not yet put themselves into words.
-        private static string LoadSelf(Hero npc)
+        // which is memory *of another* and is branching toward per-person files). The two failures are NOT
+        // the same and must not be merged: a missing file returns empty — they have not yet put themselves
+        // into words, and are invited to — while an unreadable one returns null, which means "hand no self
+        // to the compressor at all", so a self we could not read is never overwritten by one written blind.
+        private static string? LoadSelf(Hero npc)
         {
             try
             {
@@ -896,7 +900,7 @@ namespace ImmersiveAI
                 // were a real self: treat it as "not yet written" so the NPC is invited to author afresh.
                 return MemoryCompressor.IsUnchangedMarker(text) ? string.Empty : text;
             }
-            catch { return string.Empty; }
+            catch { return null; }
         }
 
         private static void SaveSelf(Hero npc, string text)
@@ -1677,16 +1681,17 @@ namespace ImmersiveAI
                     keepRecentDays: 0,
                     _config.MinRecentMemoryTokensAfterCompression);
 
-                // Reflection is also the moment the NPC looks inward and may revise who they feel
-                // themselves to be. We hand in their current self and let them rewrite it (or leave it).
-                var self = new NpcSelf { Text = LoadSelf(npc) };
-                var selfBefore = self.Text;
+                var loadedSelf = LoadSelf(npc);
+                var self = loadedSelf != null ? new NpcSelf { Text = loadedSelf } : null;
+                var selfBefore = self?.Text;
 
-                // Always reflect (rewrite the rolling memory whole), even when nothing is old enough to
-                // fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
-                SetMemoryWriteRoomFor(memory);
+                SetMemoryWriteRoomFor(memory, self?.Text);
                 var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self)
                     .ConfigureAwait(false);
+
+                // Saved whether or not the page landed — see the automatic path for why.
+                var selfChanged = self != null && !string.Equals(self.Text?.Trim() ?? string.Empty, selfBefore?.Trim() ?? string.Empty);
+                if (selfChanged) SaveSelf(npc, self!.Text);
 
                 string outcome;
                 if (didReflect)
@@ -1694,12 +1699,15 @@ namespace ImmersiveAI
                     memory.SummaryAsOf = SituationBuilder.Timestamp();
                     SaveMemory(npc, memory);
 
-                    var selfChanged = !string.Equals(self.Text?.Trim() ?? string.Empty, selfBefore?.Trim() ?? string.Empty);
-                    if (selfChanged) SaveSelf(npc, self.Text);
-
                     outcome = selfChanged
                         ? "(I have turned it all over in my mind, set what matters into memory, and come to see myself a little more clearly.)"
                         : "(I have turned it all over in my mind, and set what matters into memory.)";
+                }
+                else if (selfChanged)
+                {
+                    // The page did not land, but she did put herself into words. Telling the player
+                    // there was nothing to reflect upon would be a plain lie about what just happened.
+                    outcome = "(Nothing of them has settled differently in me — but I see myself a little more clearly than I did.)";
                 }
                 else
                 {
@@ -2045,8 +2053,21 @@ namespace ImmersiveAI
                     // and the player seeing it — from the outside the game simply looks hung until
                     // the closing notice lands. The player is owed the reason while they wait.
                     NotifyMemoryRefactorBegins(npc);
-                    SetMemoryWriteRoomFor(memory);
-                    if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
+                    // A read failure hands in no self at all rather than an empty one, so a self we
+                    // could not read is never overwritten by one written as though there were none.
+                    var loadedSelf = LoadSelf(npc);
+                    var self = loadedSelf != null ? new NpcSelf { Text = loadedSelf } : null;
+                    var selfBefore = self?.Text;
+                    SetMemoryWriteRoomFor(memory, self?.Text);
+                    var compressed = await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName, self).ConfigureAwait(false);
+
+                    // Saved outside the fold, on its own account. A reply may carry a new self and a
+                    // stumbled page — that self was still written by a paid call, and it is the one
+                    // thing on this path that trying again later cannot recover.
+                    var selfChanged = self != null && !string.Equals(self.Text?.Trim() ?? string.Empty, selfBefore?.Trim() ?? string.Empty);
+                    if (selfChanged) SaveSelf(npc, self!.Text);
+
+                    if (compressed)
                     {
                         memory.SummaryAsOf = SituationBuilder.Timestamp();
                         NotifyMemoryRefactor(npc);
@@ -3980,7 +4001,7 @@ namespace ImmersiveAI
                 NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
             // The NPC's own evolving self-concept (authored by them during reflection — it begins
             // unwritten; their backstory seeds the deep memory instead, see SeedMemoryFromStory).
-            persona.SelfConcept = LoadSelf(npc);
+            persona.SelfConcept = LoadSelf(npc) ?? string.Empty;
             // The player-configurable atmosphere line and roleplay guidance (tokens resolved here), and the
             // NPC's kin and house — all folded into the prompt so the world's feel and their family carry.
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);

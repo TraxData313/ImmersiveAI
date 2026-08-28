@@ -515,4 +515,301 @@ public class MemoryCompressorTests
 
         Assert.Equal("Станах смела.", self.Text);
     }
+
+    [Fact]
+    public void ParseResponse_IgnoresHerselfInsideSummarySentence()
+    {
+        var response = "SUMMARY:\nShe reminded herself: never trust a stranger on the road.\nSELF:\nI walk alone.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("She reminded herself: never trust a stranger on the road.", parsed.Summary);
+        Assert.Equal("I walk alone.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_FindsSelfMidLineAfterFullStop()
+    {
+        var response = "SUMMARY:\nWe met on the road. SELF:\nI am bold.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("We met on the road.", parsed.Summary);
+        Assert.Equal("I am bold.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_FindsSectionLabelDirectlyAfterChineseWord()
+    {
+        var response = "SUMMARY:\n我們在戰場上並肩作戰自己SELF:\n我已不再膽怯。";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("我們在戰場上並肩作戰自己", parsed.Summary);
+        Assert.Equal("我已不再膽怯。", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_FindsSectionLabelWithFullwidthColon()
+    {
+        var response = "SUMMARY：\n我們在戰場上並肩作戰。\nSELF：\n我是一名忠誠的戰士。";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("我們在戰場上並肩作戰。", parsed.Summary);
+        Assert.Equal("我是一名忠誠的戰士。", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_SelfWithMidSentenceGoals_PreservesWholeSelf()
+    {
+        var response = "SUMMARY:\nWe fought together.\nSELF:\nI am a scout who has seen the worst of people. My goals: to go home before I am too old to know the road.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("I am a scout who has seen the worst of people. My goals: to go home before I am too old to know the road.", parsed.Self);
+        Assert.Equal("We fought together.", parsed.Summary);
+    }
+
+    [Fact]
+    public void ParseResponse_SelfWithLineStartingGoalsFollowedByProse_PreservesWholeSelf()
+    {
+        var response = "SUMMARY:\nWe fought together.\nSELF:\nI am a scout who has seen the worst of people.\nGoals: to go home before I am too old to know the road.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("I am a scout who has seen the worst of people.\nGoals: to go home before I am too old to know the road.", parsed.Self);
+        Assert.Equal("We fought together.", parsed.Summary);
+    }
+
+    [Fact]
+    public void ParseResponse_SummaryWithMidSentenceGoals_PreservesWholeSummary()
+    {
+        var response = "SUMMARY:\nWe met near the castle. My goals: to protect our lands and avenge our fallen comrades.\nSELF:\nI am a loyal guardian.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("We met near the castle. My goals: to protect our lands and avenge our fallen comrades.", parsed.Summary);
+        Assert.Equal("I am a loyal guardian.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_SummaryWithLineStartingFactsFollowedByProse_PreservesWholeSummary()
+    {
+        var response = "SUMMARY:\nWe met near the castle.\nFacts: they were outnumbered three to one and held their ground.\nSELF:\nI am a loyal guardian.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+        Assert.Equal("We met near the castle.\nFacts: they were outnumbered three to one and held their ground.", parsed.Summary);
+        Assert.Equal("I am a loyal guardian.", parsed.Self);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_RejectsChineseUnchangedMarker()
+    {
+        // In Chinese, "未變" or "沒有變化" are single tokens without spaces.
+        foreach (var marker in new[] { "未變", "沒有變化", "**沒有變化**", "（未變）", "未改變。" })
+        {
+            var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + marker };
+            var memory = MemoryWithTurns(3);
+            var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+            await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+                systemVoiceName: null, self: self);
+
+            Assert.Equal("我是個謹慎的人。", self.Text);
+        }
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsChineseSingleParagraphSelf_WithoutWordSpaces()
+    {
+        // A single continuous Chinese paragraph without any spaces (single token).
+        var chineseSelf = "我已不再是當初那個只顧逃命的膽小鬼，在與他們的歷次血戰中，我學會了握緊手中的劍，並誓死守衛身邊的每一位同伴。";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + chineseSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(chineseSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsChineseMultiParagraphSelf()
+    {
+        var chineseSelf = "我是西比拉，出生於戰火之中。\n\n如今我追隨在隊長身旁，歷經風霜與征戰，早已將這支隊伍視為我的歸宿與榮耀所在。";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + chineseSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(chineseSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsChineseSelfWithMarkdownAndEnglishPunctuation()
+    {
+        var chineseSelf = "**我是西比拉**，一名在帝國邊境游蕩的傭兵. 我不再信任任何領主, 唯有手中的鋼劍與並肩作戰的同伴才是真實的!";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + chineseSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(chineseSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_RejectsShortChineseMarkerBelowThreshold()
+    {
+        // 6 characters (below MinSelfLength = 24)
+        var shortMarker = "完全沒有變化";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + shortMarker };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "我是個謹慎的人。" };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal("我是個謹慎的人。", self.Text);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_AcceptsKoreanSelf_ThroughWordCountPath()
+    {
+        // Korean uses spaces between words, so it exercises the original word-count path.
+        var koreanSelf = "나는 더 용감해졌고 그들과 함께 싸운다.";
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\n" + koreanSelf };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am timid." };
+
+        await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 5,
+            systemVoiceName: null, self: self);
+
+        Assert.Equal(koreanSelf, self.Text);
+    }
+
+    [Fact]
+    public async Task CompressAsync_WithoutSelf_DoesNotAskForSelf()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(5);
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: null);
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.DoesNotContain("SELF:", prompt);
+        Assert.DoesNotContain("who have I become", prompt);
+    }
+
+    [Fact]
+    public async Task CompressAsync_WithSelf_AsksForSelfBesideTheSummary()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nI am a brave warrior now." };
+        var memory = MemoryWithTurns(5);
+        var self = new NpcSelf { Text = "I am a timid merchant." };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.Contains("SUMMARY:", prompt);
+        Assert.Contains("SELF:", prompt);
+        Assert.Contains("I am a timid merchant.", prompt);
+        Assert.Equal("I am a brave warrior now.", self.Text);
+    }
+
+    [Fact]
+    public async Task CompressAsync_FirstEverSelf_InvitesWithoutOfferingUnchanged()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok" };
+        var memory = MemoryWithTurns(5);
+        var self = new NpcSelf { Text = "" };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        var prompt = client.LastRequest![0].Content;
+        Assert.Contains("not yet put into words", prompt);
+        Assert.DoesNotContain("whatever tongue the rest is in: unchanged", prompt);
+    }
+
+    [Fact]
+    public async Task CompressAsync_LeavesSelfUnchanged_OnUnchangedKeyword()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(5);
+        var self = new NpcSelf { Text = "I am a wanderer from the west." };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        Assert.Equal("I am a wanderer from the west.", self.Text);
+    }
+
+    [Fact]
+    public async Task CompressAsync_SelfWithoutSummary_TakesTheSelfAndKeepsEveryTurn()
+    {
+        var client = new FakeChatClient
+        {
+            Response = "SELF:\nI have grown bolder through these battles."
+        };
+        var memory = MemoryWithTurns(6);
+        var self = new NpcSelf { Text = "I was once fearful." };
+
+        var compressed = await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        Assert.False(compressed);
+        Assert.Equal("I have grown bolder through these battles.", self.Text);
+        Assert.Equal(6, memory.RecentTurns.Count);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_SelfWithoutSummary_TakesTheSelfAndKeepsEveryTurn()
+    {
+        var client = new FakeChatClient
+        {
+            Response = "SELF:\nI have grown bolder through these battles."
+        };
+        var memory = MemoryWithTurns(6);
+        var self = new NpcSelf { Text = "I was once fearful." };
+
+        var reflected = await new MemoryCompressor(client).ReflectAsync(memory, keepMostRecent: 2, systemVoiceName: null, self: self);
+
+        Assert.False(reflected);
+        Assert.Equal("I have grown bolder through these battles.", self.Text);
+        Assert.Equal(6, memory.RecentTurns.Count);
+    }
+
+    [Fact]
+    public async Task CompressAsync_TongueRuleRidesAfterTheSelfSlot()
+    {
+        var client = new FakeChatClient { Response = "SUMMARY:\nok\nSELF:\nunchanged" };
+        var memory = MemoryWithTurns(6);
+        var self = new NpcSelf { Text = "I am an archer." };
+
+        await new MemoryCompressor(client).CompressAsync(memory, keepMostRecent: 3, systemVoiceName: null, self: self);
+        var prompt = client.LastRequest![0].Content;
+
+        Assert.True(prompt.LastIndexOf("THE TONGUE", StringComparison.Ordinal)
+                    > prompt.LastIndexOf("SELF:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ParseResponse_LowercaseSelfInProse_IsNotReadAsALabel()
+    {
+        // A standalone "self:" clears the word-boundary guard that rejects "herself:", and the reply
+        // contract primes the word by asking her, in the same breath, to say who she has become. Read
+        // as a label it cut the page in half and saved "colder than the man I met." as her whole self.
+        var response = "SUMMARY:\nHe showed me a different self: colder than the man I met.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("He showed me a different self: colder than the man I met.", parsed.Summary);
+        Assert.Null(parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_LowercaseSelfInProse_DoesNotOutrankTheRealSelfLabel()
+    {
+        var response = "SUMMARY:\nI have become a harder self: one that does not flinch.\nSELF:\nI am steadier than I was.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("I have become a harder self: one that does not flinch.", parsed.Summary);
+        Assert.Equal("I am steadier than I was.", parsed.Self);
+    }
+
+    [Fact]
+    public void ParseResponse_LowercaseSummaryInProse_DoesNotBoundTheSelf()
+    {
+        var response = "SELF:\nI keep my word. In summary: I am my father's daughter.";
+        var parsed = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("I keep my word. In summary: I am my father's daughter.", parsed.Self);
+    }
 }

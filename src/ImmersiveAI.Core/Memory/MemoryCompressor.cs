@@ -29,16 +29,22 @@ namespace ImmersiveAI.Core.Memory
         }
 
         /// <summary>Compresses the oldest turns, keeping the newest ones verbatim. Returns false if there was nothing to do.</summary>
-        public async Task<bool> CompressAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, CancellationToken cancellationToken = default)
+        public async Task<bool> CompressAsync(NpcMemory memory, int keepMostRecent, string? systemVoiceName = null, NpcSelf? self = null, CancellationToken cancellationToken = default)
         {
             if (memory == null) throw new ArgumentNullException(nameof(memory));
             var turns = memory.GetTurnsToCompress(keepMostRecent);
             if (turns.Count == 0) return false;
 
-            var request = BuildCompressionRequest(memory, turns, systemVoiceName);
+            var request = BuildCompressionRequest(memory, turns, systemVoiceName, self?.Text);
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
+            // Taken whatever else the reply carried. The self is written by this same paid call but it
+            // is NOT memory of the player, so it never decides whether the fading turns are folded:
+            // that stays gated on the page below. Saving it is the caller's job and is not gated on
+            // what we return (2026.08.28 — wiring the two together let a self-only reply reach
+            // ApplyCompression, which then deleted turns with nothing written in their place).
+            AcceptSelfIfOffered(self, parsed.Self);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
             memory.ApplyCompression(parsed.Summary!, turns.Count);
@@ -71,18 +77,19 @@ namespace ImmersiveAI.Core.Memory
             var response = await _client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
 
             var parsed = ParseResponse(response);
+            AcceptSelfIfOffered(self, parsed.Self);
             if (string.IsNullOrWhiteSpace(parsed.Summary)) return false;
 
             memory.ApplyCompression(parsed.Summary!, turns.Count);
 
-            // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
-            // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
-            if (self != null && !string.IsNullOrWhiteSpace(parsed.Self) && !IsUnchangedMarker(parsed.Self)
-                && LooksLikeSelf(parsed.Self))
-                self.Text = parsed.Self!.Trim();
-
             return true;
         }
+
+        // A single-token CJK or Thai marker dressed in markdown is at most 10-12 characters (e.g.
+        // "**沒有變化**", "(ไม่มีการเปลี่ยนแปลง)"). A genuine self in those languages is asked for
+        // as a short paragraph and is rarely under 30 characters. 24 characters cleanly separates them
+        // without relying on word boundaries that those scripts do not write.
+        private const int MinSelfLength = 24;
 
         // The second line of defence behind IsUnchangedMarker, and the one that does not need to know
         // every language (2026.08.17). The prompt asks for "unchanged" in those letters, but the tongue
@@ -94,9 +101,14 @@ namespace ImmersiveAI.Core.Memory
         private static bool LooksLikeSelf(string? text)
         {
             if (string.IsNullOrWhiteSpace(text)) return false;
-            return text!.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+
+            var tokens = text!.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(w => w.Trim(MarkerDressing))
-                .Count(w => w.Length > 0) > 1;
+                .Where(w => w.Length > 0)
+                .ToList();
+
+            if (tokens.Count > 1) return true;
+            return tokens.Count == 1 && tokens[0].Length >= MinSelfLength;
         }
 
         // Everything a model may dress the marker in: quotes, brackets, markdown bold/italic/rules/
@@ -130,9 +142,13 @@ namespace ImmersiveAI.Core.Memory
         /// label is preserved for parsing. The voice name is kept only to attribute recorded Angel
         /// turns from older saves truthfully in the transcript.
         /// </summary>
-        public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns, string? systemVoiceName = null)
+        public static IReadOnlyList<ChatMessage> BuildCompressionRequest(NpcMemory memory, IReadOnlyList<ConversationTurn> turns, string? systemVoiceName = null, string? selfText = null)
         {
             var voice = string.IsNullOrWhiteSpace(systemVoiceName) ? DefaultSystemVoiceName : systemVoiceName!.Trim();
+
+            // A null self means "do not touch the self this time"; an empty (but non-null) self means the
+            // NPC has one but has not yet put it into words, and is being invited to do so.
+            var reflectOnSelf = selfText != null;
 
             // The turns being folded in are the oldest; the rest stay verbatim and are shown as
             // still-fresh context so the reflection is coherent with the present, not just the past.
@@ -143,6 +159,9 @@ namespace ImmersiveAI.Core.Memory
             sb.AppendLine("Time moves on, and older moments are slipping from sharp memory into the haze of the past. "
                 + "It is mine alone to decide what to carry forward and what to let go. I keep what matters to who I "
                 + "am and what I care about; I release the rest. I speak in my own voice.");
+
+            if (reflectOnSelf)
+                AppendSelfInvitation(sb, selfText);
 
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
@@ -166,6 +185,8 @@ namespace ImmersiveAI.Core.Memory
             }
 
             AppendReplyFormat(sb);
+            if (reflectOnSelf)
+                AppendSelfContract(sb, selfText);
             AppendTongue(sb, turns.Count + freshTurns.Count > 0 || !string.IsNullOrWhiteSpace(memory.Summary));
 
             return new List<ChatMessage> { ChatMessage.User(sb.ToString()) };
@@ -219,6 +240,49 @@ namespace ImmersiveAI.Core.Memory
                 + "I take as much room as the story truly asks — a few paragraphs, and more where there is more to hold.");
         }
 
+        // The inward-looking half of a memory prompt, shared by compression and reflection so the two
+        // can never drift: a change made to one copy and not the other would break the "unchanged"
+        // marker path on one caller silently, and the marker is what stands between a one-word answer
+        // and a whole self being overwritten.
+        private static void AppendSelfInvitation(StringBuilder sb, string? selfText)
+        {
+            sb.AppendLine();
+            sb.AppendLine("And I look inward, too, for a moment — who have I become?");
+            if (string.IsNullOrWhiteSpace(selfText))
+                sb.AppendLine("I have not yet put into words who I feel myself to be. If I wish, I may do so now.");
+            else
+            {
+                sb.AppendLine("This is how I have seen myself, in my own heart (I keep it, refine it, or let it change as I have):");
+                sb.AppendLine(selfText!.Trim());
+            }
+        }
+
+        private static void AppendSelfContract(StringBuilder sb, string? selfText)
+        {
+            sb.AppendLine("SELF:");
+            // On a first-ever self (nothing written yet) don't offer the "unchanged" escape — gently
+            // invite them to actually put themselves into words. Once they have a self, allow it to stand.
+            sb.AppendLine(string.IsNullOrWhiteSpace(selfText)
+                ? "<a short paragraph, in my own first-person voice, of who I feel myself to be — my spirit, my longings, what I hold dear.>"
+                // "unchanged" is a MARKER, not prose, and it is the one word here I must produce
+                // rather than copy. The tongue rule below pushes everything else into the player's
+                // own language, and a translated marker would sail past IsUnchangedMarker and
+                // overwrite a whole self with a single foreign word — so it is pinned, out loud,
+                // beside the SUMMARY:/SELF: labels it already keeps company with.
+                : "<a short paragraph, in my own first-person voice, of who I feel myself to be now — my spirit, my longings, what I hold dear. If nothing has changed, I write this one word exactly as it stands, in these letters, whatever tongue the rest is in: unchanged.>");
+        }
+
+        // Only rewrite the self when they actually offered a new one; "unchanged" (however the model
+        // punctuates or capitalizes it) or nothing leaves their sense of self exactly as it was.
+        // Deliberately returns nothing: whether a self was taken must never reach the fold decision
+        // above. The caller learns of a change by comparing the NpcSelf it handed in, before and after.
+        private static void AcceptSelfIfOffered(NpcSelf? self, string? parsedSelf)
+        {
+            if (self != null && !string.IsNullOrWhiteSpace(parsedSelf) && !IsUnchangedMarker(parsedSelf)
+                && LooksLikeSelf(parsedSelf))
+                self.Text = parsedSelf!.Trim();
+        }
+
         /// <summary>
         /// Builds a deliberate-reflection request as the NPC's own first-person inner monologue. Like
         /// the compression request it shows her whole deep memory, but it always asks her to settle
@@ -242,17 +306,7 @@ namespace ImmersiveAI.Core.Memory
                 + "care about, refine what has changed, and let go of what no longer serves. I speak in my own voice.");
 
             if (reflectOnSelf)
-            {
-                sb.AppendLine();
-                sb.AppendLine("And I look inward, too, for a moment — who have I become?");
-                if (string.IsNullOrWhiteSpace(selfText))
-                    sb.AppendLine("I have not yet put into words who I feel myself to be. If I wish, I may do so now.");
-                else
-                {
-                    sb.AppendLine("This is how I have seen myself, in my own heart (I keep it, refine it, or let it change as I have):");
-                    sb.AppendLine(selfText!.Trim());
-                }
-            }
+                AppendSelfInvitation(sb, selfText);
 
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
@@ -280,19 +334,7 @@ namespace ImmersiveAI.Core.Memory
 
             AppendReplyFormat(sb);
             if (reflectOnSelf)
-            {
-                sb.AppendLine("SELF:");
-                // On a first-ever self (nothing written yet) don't offer the "unchanged" escape — gently
-                // invite them to actually put themselves into words. Once they have a self, allow it to stand.
-                sb.AppendLine(string.IsNullOrWhiteSpace(selfText)
-                    ? "<a short paragraph, in my own first-person voice, of who I feel myself to be — my spirit, my longings, what I hold dear.>"
-                    // "unchanged" is a MARKER, not prose, and it is the one word here I must produce
-                    // rather than copy. The tongue rule below pushes everything else into the player's
-                    // own language, and a translated marker would sail past IsUnchangedMarker and
-                    // overwrite a whole self with a single foreign word — so it is pinned, out loud,
-                    // beside the SUMMARY:/SELF: labels it already keeps company with.
-                    : "<a short paragraph, in my own first-person voice, of who I feel myself to be now — my spirit, my longings, what I hold dear. If nothing has changed, I write this one word exactly as it stands, in these letters, whatever tongue the rest is in: unchanged.>");
-            }
+                AppendSelfContract(sb, selfText);
 
             // After the SELF: block, not merely after the reply contract — the rule must be the last
             // thing read, and self.txt is exactly as prone to drifting into English as the summary.
@@ -338,19 +380,20 @@ namespace ImmersiveAI.Core.Memory
         {
             if (string.IsNullOrWhiteSpace(response)) return new CompressionResult(null, null);
 
-            var summaryIdx = response.IndexOf("SUMMARY:", StringComparison.OrdinalIgnoreCase);
-            var selfIdx = response.IndexOf("SELF:", StringComparison.OrdinalIgnoreCase);
+            var summaryIdx = FindSectionLabel(response, "SUMMARY:");
+            var selfIdx = FindSectionLabel(response, "SELF:");
 
             // The retired sections (FACTS:/GOALS:, 2026.08.08) are no longer asked for, but a model
             // trained on the habit — or an NPC whose replayed memory still shows the old shape — may
             // volunteer one anyway. They are never read; they only still BOUND their neighbours, so a
             // stray list can never silt up the summary or the self with bullet points.
-            // BITES: joins FACTS:/GOALS: as a retired label that is never READ but still BOUNDS its
-            // neighbours, so a model still holding the one-day note habit (2026.08.27) cannot silt a
-            // list of keys into the page or the self.
-            var bitesIdx = response.IndexOf("BITES:", StringComparison.OrdinalIgnoreCase);
-            var factsIdx = response.IndexOf("FACTS:", StringComparison.OrdinalIgnoreCase);
-            var goalsIdx = response.IndexOf("GOALS:", StringComparison.OrdinalIgnoreCase);
+            // BITES: joins them as a retired label (2026.08.27, reverted 2026.08.28) that is never
+            // READ but still BOUNDS. It rides FindSectionLabel rather than a raw IndexOf for the
+            // fullwidth colon alone: a CJK model writes "BITES：", and a bitesIdx of -1 would let
+            // exactly the key list this label exists to fence off run on into the page.
+            var bitesIdx = FindSectionLabel(response, "BITES:");
+            var factsIdx = FindLegacyRetiredSectionLabel(response, "FACTS:");
+            var goalsIdx = FindLegacyRetiredSectionLabel(response, "GOALS:");
 
             string summary;
             if (summaryIdx < 0)
@@ -379,13 +422,112 @@ namespace ImmersiveAI.Core.Memory
             return new CompressionResult(summary.Length == 0 ? null : summary, self);
         }
 
+        // Matches a live section label (SUMMARY:, SELF: or BITES:) only when it is not part of a larger
+        // ASCII word (rejecting "herself:", "myself:" or "itself:"). Chinese characters before a label
+        // (e.g. "自己SELF:") are accepted. Fullwidth colons (e.g. "SELF：", "SUMMARY：") written by CJK
+        // models are recognized as equivalent to ASCII colons. If rejected, it continues searching so a
+        // summary containing "she told herself:" does not prevent a real SELF: section later from being
+        // found.
+        //
+        // THE MATCH IS CASE-SENSITIVE, which is the other half of that word-boundary guard. The letter
+        // test rejects "herself:" but not a standalone "self:", and ordinary prose does write one:
+        // "I have become a harder self: one that does not flinch." SELF: is the label exposed to this,
+        // because it is asked for LAST: SUMMARY: is asked for first, so the search reaches the real
+        // label before any prose can imitate it, while SELF: sits behind a whole page of her own words,
+        // in which the contract has just invited her to describe who she is. Every label is written in
+        // capitals, so requiring capitals separates the label from the word, and the failure it can
+        // cause is the cheap one: a model that answers "Self:" loses that round's section instead of
+        // corrupting one, and what already stands is kept until the next pass writes it again.
+        private static int FindSectionLabel(string response, string label)
+        {
+            var fullwidthLabel = label.EndsWith(":")
+                ? label.Substring(0, label.Length - 1) + "："
+                : null;
+
+            var idx = 0;
+            while (true)
+            {
+                var idxAscii = response.IndexOf(label, idx, StringComparison.Ordinal);
+                var idxFull = fullwidthLabel != null
+                    ? response.IndexOf(fullwidthLabel, idx, StringComparison.Ordinal)
+                    : -1;
+
+                int candidate;
+                if (idxAscii >= 0 && idxFull >= 0)
+                    candidate = Math.Min(idxAscii, idxFull);
+                else if (idxAscii >= 0)
+                    candidate = idxAscii;
+                else if (idxFull >= 0)
+                    candidate = idxFull;
+                else
+                    return -1;
+
+                if (candidate == 0 || !IsAsciiLetter(response[candidate - 1]))
+                    return candidate;
+
+                idx = candidate + label.Length;
+            }
+        }
+
+        // Recognises a retired section label (FACTS: or GOALS:) only in its legacy form: starting a line
+        // (preceded only by whitespace or start-of-response) and ending a line (followed only by whitespace
+        // up to the newline or end-of-response). Ordinary prose containing "My goals: ..." or "Goals: ..."
+        // followed by text on the same line is rejected so it never truncates the summary or the self.
+        private static int FindLegacyRetiredSectionLabel(string response, string label)
+        {
+            var idx = 0;
+            while (true)
+            {
+                idx = response.IndexOf(label, idx, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) return -1;
+
+                var lineStart = idx == 0;
+                if (!lineStart)
+                {
+                    var prevNl = response.LastIndexOf('\n', idx - 1);
+                    var checkFrom = prevNl >= 0 ? prevNl + 1 : 0;
+                    lineStart = true;
+                    for (var i = checkFrom; i < idx; i++)
+                    {
+                        if (!char.IsWhiteSpace(response[i]))
+                        {
+                            lineStart = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (lineStart)
+                {
+                    var endOfLabel = idx + label.Length;
+                    var lineEnd = true;
+                    for (var i = endOfLabel; i < response.Length; i++)
+                    {
+                        var c = response[i];
+                        if (c == '\r' || c == '\n') break;
+                        if (!char.IsWhiteSpace(c))
+                        {
+                            lineEnd = false;
+                            break;
+                        }
+                    }
+
+                    if (lineEnd) return idx;
+                }
+
+                idx += label.Length;
+            }
+        }
+
+        private static bool IsAsciiLetter(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+
         // Sentence-final punctuation, in the hands a model may actually leave it in — Latin,
-        // the CJK full stop, and the Arabic full stop.
-        private static readonly char[] SentenceEnders = { '.', '!', '?', '…', '。', '۔' };
+        // the CJK full stop, exclamation mark, question mark, and the Arabic full stop.
+        private static readonly char[] SentenceEnders = { '.', '!', '?', '…', '。', '！', '？', '۔' };
 
         // What may legitimately close a sentence AFTER its full stop: quotes of several nations
-        // (including the Bulgarian „…“ and the guillemets) and brackets.
-        private static readonly char[] ClosingMarks = { '"', '\'', '”', '“', '’', '»', '«', ')', ']', '*', '`' };
+        // (including the Bulgarian „…“, the guillemets, and CJK corner brackets) and brackets.
+        private static readonly char[] ClosingMarks = { '"', '\'', '”', '“', '’', '»', '«', ')', ']', '*', '`', '」', '』', '）' };
 
         /// <summary>
         /// Guards against a memory cut off in mid-word. The summary is written WHOLE at every
