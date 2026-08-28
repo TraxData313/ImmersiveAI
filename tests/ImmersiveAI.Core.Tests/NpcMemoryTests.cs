@@ -253,4 +253,33 @@ public class NpcMemoryTests
         plain.HealLegacyNotes();
         Assert.Equal("Nothing to heal.", plain.Summary);
     }
+
+    // A talk with no words in it is not a talk (2026.08.28). This is the test both the line's
+    // anchor and the parted-stamp ask, so what counts as "we spoke" is settled in one place.
+    [Fact]
+    public void IsSpokenExchange_CountsOnlyWordsThatTrulyPassed()
+    {
+        Assert.True(Turn("Well?", "Well enough.").IsSpokenExchange);
+
+        // A silent beat their own mind set down: a meeting note, a letter, a night's title.
+        Assert.False(new ConversationTurn
+        {
+            Speaker = ConversationTurn.InnerSpeaker,
+            PlayerLine = "We met and spoke face to face",
+        }.IsSpokenExchange);
+
+        // The retired narrator's turns are still in old saves, and were never a talk either.
+        Assert.False(new ConversationTurn
+        {
+            Speaker = ConversationTurn.AngelSpeaker,
+            PlayerLine = "He comes to you again",
+            NpcLine = "Then I will hear him.",
+        }.IsSpokenExchange);
+
+        // Nothing said at all — opening a thread and closing it again.
+        Assert.False(new ConversationTurn { GameDay = 3 }.IsSpokenExchange);
+
+        // One side alone is still words that passed: a line sent whose answer never came.
+        Assert.True(new ConversationTurn { PlayerLine = "Are you there?" }.IsSpokenExchange);
+    }
 }

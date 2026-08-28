@@ -15,6 +15,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- "Since we were last alone" now waits for real words: opening someone's thread and closing
+  it again no longer counts as having talked it out.
 - Conversations cost about a third less: NPCs carry the same knowledge in far fewer words — old
   battles fold into one line naming the hardest fight, quiet stops on the road no longer take a
   line each, and long runs of like events gather into one.

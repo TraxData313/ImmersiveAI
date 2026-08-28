@@ -33,6 +33,15 @@ namespace ImmersiveAI.Core.Memory
         /// <summary>Convenience: true when the incoming line was the NPC's own inner thought.</summary>
         public bool IsInnerThought => string.Equals(Speaker, InnerSpeaker, StringComparison.OrdinalIgnoreCase);
 
+        /// <summary>True when words truly passed between the two of them — the player spoke, or they
+        /// answered — and it was neither an inner reckoning nor the retired narrator. This is the test
+        /// for "we talked", as against a beat their own mind set down (a meeting note, a letter, a night's
+        /// title): opening a window on someone and closing it again is not a conversation, and must not
+        /// count as one (Anton, 2026.08.28). Shared by the line's anchor and by the parted-stamp, which
+        /// must agree — a bar taught in one of them and not the other is undone by the other.</summary>
+        public bool IsSpokenExchange => !IsInnerThought && !IsFromAngel
+            && (!string.IsNullOrWhiteSpace(PlayerLine) || !string.IsNullOrWhiteSpace(NpcLine));
+
         /// <summary>Campaign day the exchange happened on (game time, not real time). Drives compression.</summary>
         public double GameDay { get; set; }
 

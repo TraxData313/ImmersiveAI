@@ -1696,8 +1696,7 @@ namespace ImmersiveAI
                 for (int i = memory.RecentTurns.Count - 1; i >= 0; i--)
                 {
                     var turn = memory.RecentTurns[i];
-                    if (turn == null || turn.IsInnerThought || turn.IsFromAngel) continue;
-                    if (string.IsNullOrWhiteSpace(turn.PlayerLine) && string.IsNullOrWhiteSpace(turn.NpcLine)) continue;
+                    if (turn == null || !turn.IsSpokenExchange) continue;
                     if (turn.GameDay > settled) continue;           // a sitting that may still be going on
                     if (turn.GameDay > day) day = turn.GameDay;
                     break;
@@ -1723,7 +1722,16 @@ namespace ImmersiveAI
         }
 
         /// <summary>Marks a talk as ended, so from now on what was in it counts as said. Called when
-        /// a face-to-face conversation closes and when the chat window lets a thread go.</summary>
+        /// a face-to-face conversation closes and when a window lets a thread go.
+        ///
+        /// A TALK WITH NO WORDS IN IT IS NOT A TALK (2026.08.28, Anton: opening her thread and closing
+        /// it again wiped the line as though they had had it all out). Every caller knows only that a
+        /// screen closed, so the bar lives in this one place rather than in each of them: the stamp
+        /// moves only when something was truly SAID since the last time it moved. Otherwise the line
+        /// stands exactly where it stood, and she can still raise it the next time he sits down.
+        ///
+        /// A reply still in flight when the window closes is not lost, only late — its turn lands
+        /// afterwards and the grace fallback in <see cref="LastAloneDay"/> takes it from there.</summary>
         internal void NoteTalkEnded(Hero npc)
         {
             try
@@ -1732,10 +1740,27 @@ namespace ImmersiveAI
                 var memory = LoadMemory(npc);
                 double now = CampaignTime.Now.ToDays;
                 if (memory.LastTalkEndedDay >= now) return;
+                if (!HasSpokenSince(memory, memory.LastTalkEndedDay)) return;
                 memory.LastTalkEndedDay = now;
                 SaveMemory(npc, memory);
             }
             catch { /* the stamp is a nicety; the grace fallback still moves the line */ }
+        }
+
+        /// <summary>Whether words truly passed between them after <paramref name="since"/>. Strictly
+        /// after: the talk screen holds the world still, so two sittings can share one campaign instant,
+        /// and a turn standing ON the mark was already counted by the mark.</summary>
+        private static bool HasSpokenSince(NpcMemory memory, double since)
+        {
+            if (memory == null) return false;
+            for (int i = memory.RecentTurns.Count - 1; i >= 0; i--)
+            {
+                var turn = memory.RecentTurns[i];
+                if (turn == null) continue;
+                if (turn.GameDay <= since) break;                   // kept in order; everything older still
+                if (turn.IsSpokenExchange) return true;
+            }
+            return false;
         }
 
         internal static void NoteTalkEndedWith(Hero npc)
