@@ -321,9 +321,9 @@ namespace ImmersiveAI.Mcm
         public int CourtshipCharmSlack { get; set; } = 2;
 
         [SettingPropertyInteger("Days of betrothal before the wedding", 0, 30, "0", Order = 17, RequireRestart = false,
-            HintText = "How many in-game days a betrothal must season before the wedding day can be reached for. 0 = you may wed the very day of the promise.")]
+            HintText = "How many in-game days a betrothal must season before the wedding day can be reached for. 0 (the default) = you may wed the very day of the promise. Raise it only if you want the waiting to be part of the story.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
-        public int MinBetrothalDays { get; set; } = 3;
+        public int MinBetrothalDays { get; set; } = 0;
 
         // ── The nights ──────────────────────────────────────────────────────────────
         // Conception stops being a coin the world flips behind your back and becomes a thing you do,

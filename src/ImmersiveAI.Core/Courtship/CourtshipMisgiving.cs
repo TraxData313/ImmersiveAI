@@ -165,10 +165,7 @@ namespace ImmersiveAI.Core.Courtship
             if (list == null || IsNone(text)) return 0;
             if (max < 1) max = 1;
 
-            var pieces = text!.Split('\n')
-                .SelectMany(line => line.Contains(';') ? line.Split(';') : new[] { line })
-                .Select(p => LineDressing.Replace(p.TrimEnd('\r'), string.Empty).Trim().Trim('"', '“', '”'))
-                .Where(p => p.Length > 0);
+            var pieces = Pieces(text);
 
             int added = 0;
             foreach (var piece in pieces)
@@ -200,10 +197,39 @@ namespace ImmersiveAI.Core.Courtship
         /// into a long held line.
         /// </summary>
         private static bool Restates(List<CourtshipMisgiving> list, string piece) =>
-            Text.LooseMatch.Restates(
-                (list ?? new List<CourtshipMisgiving>())
-                    .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)).Select(m => m.Text),
-                piece);
+            Text.LooseMatch.Restates(Held(list), piece);
+
+        private static IEnumerable<string> Held(List<CourtshipMisgiving>? list) =>
+            (list ?? new List<CourtshipMisgiving>())
+                .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)).Select(m => m.Text);
+
+        /// <summary>One misgiving per line, a semicolon-run honored too, dressed bullets and stray
+        /// quotes shed. Shared by <see cref="SetDown"/> and <see cref="FindRestated"/> so what is
+        /// refused is judged on exactly the pieces that were offered.</summary>
+        private static IEnumerable<string> Pieces(string? text) =>
+            (text ?? string.Empty).Split('\n')
+                .SelectMany(line => line.Contains(';') ? line.Split(';') : new[] { line })
+                .Select(p => LineDressing.Replace(p.TrimEnd('\r'), string.Empty).Trim().Trim('"', '“', '”'))
+                .Where(p => p.Length > 0);
+
+        /// <summary>
+        /// The misgiving she already holds that a rejected <see cref="SetDown"/> merely said again —
+        /// null when nothing was refused for that reason. It exists to be READ BACK TO HER: a hand
+        /// that answers "you carry that already" without saying which line it means leaves her no
+        /// way to tell a swallowed new doubt from a recital of an old one, and the containment rule
+        /// is lenient enough (see <see cref="Text.LooseMatch.Restated"/>) that she must have that way.
+        /// </summary>
+        public static CourtshipMisgiving? FindRestated(List<CourtshipMisgiving>? list, string? text)
+        {
+            if (list == null || IsNone(text)) return null;
+            foreach (var piece in Pieces(text))
+            {
+                var hit = Text.LooseMatch.Restated(Held(list), piece);
+                if (hit != null)
+                    return list.FirstOrDefault(m => m != null && m.Text == hit);
+            }
+            return null;
+        }
 
         /// <summary>
         /// Whether the two hands came in swapped — the misgiving written into her light word, and

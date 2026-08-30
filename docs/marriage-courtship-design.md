@@ -40,8 +40,16 @@ with the save for free, exactly like every other memory.
 **She moves herself** along it via one native tool, `tend_courtship` (the `move_heart`
 family): `move: "closer"` steps forward one stage when the rails allow; `move: "apart"` steps
 back freely (a wound can break a troth — always her right; only Wed has no back-step).
-Forward steps are rate-limited to one per game day, so no one sprints the road in a single
-warm evening.
+
+**The road keeps no calendar** (2026.08.30). Forward steps were once rate-limited to one per
+game day — "no one sprints the road in a single warm evening" — and it played as the opposite
+of what it was for: Anton asked, she answered *"aye, with all my heart"*, and the log told him
+her heart needed a night to settle. A refusal a player can neither see coming nor talk to is a
+cold shower from the rules rather than from her. The whole road may now be walked in one
+evening where her heart truly stands there; everything that still refuses is hers — her regard,
+her station, her own written misgivings. `MinBetrothalDays` is the last of the calendar and it
+now defaults to **0**: the wedding may be laid the day of the promise, unless a player asks for
+the waiting.
 
 **The rails bind the hand, not the heart.** Warmth and Devotion are free feelings gated only
 by her real regard (relation ≥ 0 / ≥ 20) — a princess may come to love a commoner. But the

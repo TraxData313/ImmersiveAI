@@ -11,7 +11,6 @@ public class CourtshipTests
     private static CourtshipRoad.StepFacts Facts(
         CourtshipStage stage,
         int relation = 100,
-        double daysSinceStep = double.PositiveInfinity,
         int playerTier = 6,
         int herTier = 1,
         int slack = 2,
@@ -22,7 +21,6 @@ public class CourtshipTests
         {
             Stage = stage,
             Relation = relation,
-            DaysSinceForwardStep = daysSinceStep,
             PlayerClanTier = playerTier,
             HerStationTier = herTier,
             CharmSlack = slack,
@@ -45,14 +43,20 @@ public class CourtshipTests
     }
 
     [Fact]
-    public void NoOneSprintsTheRoadInOneEvening()
+    public void TheRoadKeepsNoCalendar()
     {
-        // A forward step taken this very day blocks the next until a day has passed —
-        // but the first step (None → Warmth) is free.
-        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.None, daysSinceStep: 0)));
-        Assert.Equal(CourtshipRoad.StepVerdict.TooSoon, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Warmth, daysSinceStep: 0.4)));
-        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Warmth, daysSinceStep: 1.0)));
-        Assert.Equal(CourtshipRoad.StepVerdict.TooSoon, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion, daysSinceStep: 0.9)));
+        // 2026.08.30: forward steps used to come one per game day. Anton asked, she said "aye, with
+        // all my heart" — and the log answered that her heart needed a night to settle. The whole
+        // road can now be walked in one evening if her heart truly stands there; what refuses is
+        // only ever hers.
+        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.None)));
+        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Warmth)));
+        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion)));
+        Assert.Equal(CourtshipRoad.StepVerdict.Allowed, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Ready)));
+
+        // …and the heart still rules: the same instant, one step short of the regard it asks.
+        Assert.Equal(CourtshipRoad.StepVerdict.HeartNotThere, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion, relation: 39)));
+        Assert.Equal(CourtshipRoad.StepVerdict.MisgivingsRemain, CourtshipRoad.JudgeForward(Facts(CourtshipStage.Devotion, openMisgivings: 1)));
     }
 
     [Fact]
@@ -629,5 +633,62 @@ public class CourtshipTests
         Assert.Equal(1, CourtshipMisgivings.SetDown(list,
             "Страх ме е, че децата ни ще носят срама на майка си."));
         Assert.Equal(2, CourtshipMisgivings.OpenCount(list));
+    }
+
+    [Fact]
+    public void SetDown_CatchesTheTwinThatOnlyTradedAWord()
+    {
+        // Both pairs are Rhia the Healer's, verbatim from her memories.json (2026.08.30). One word
+        // inserted, one word traded, and the old character-containment test called them strangers.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "I do not know if he will let himself be loved." },
+            new CourtshipMisgiving { Text = "I am no lord's daughter, and I fear he will one day want a wife who is." },
+        };
+
+        Assert.Equal(0, CourtshipMisgivings.SetDown(list, "I do not know if he will truly let himself be loved."));
+        Assert.Equal(0, CourtshipMisgivings.SetDown(list, "I fear he will one day want a wife who is noble-born."));
+        Assert.Equal(2, CourtshipMisgivings.TotalCount(list));
+
+        // The leniency stops well short of a different fear wearing the same opening.
+        Assert.Equal(1, CourtshipMisgivings.SetDown(list, "I do not know if he will let me go."));
+        Assert.Equal(3, CourtshipMisgivings.OpenCount(list));
+    }
+
+    [Fact]
+    public void ATwinLaidToRestNoLongerOrphansTheOneSheFirstWrote()
+    {
+        // THE BUG, whole (Rhia, 2026.08.30): the twin was born, she answered the twin, and her first
+        // wording stood open forever — a road walled shut by a doubt she had already answered, and
+        // no way out, because "none" is refused while anything stands. Now there is no twin to
+        // answer: her words land on the one line she truly holds.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "I do not know if he will let himself be loved." },
+        };
+        CourtshipMisgivings.SetDown(list, "I do not know if he will truly let himself be loved.");
+
+        Assert.NotNull(CourtshipMisgivings.Settle(list,
+            "I do not know if he will truly let himself be loved.",
+            "He has begun to speak of opening his heart in happiness, not only in fear."));
+        Assert.Equal(0, CourtshipMisgivings.OpenCount(list));
+    }
+
+    [Fact]
+    public void ARefusedTwinCanBeNamedBackToHer()
+    {
+        // The other half of a lenient test: she must be able to see WHICH of her lines swallowed
+        // hers, or a doubt truly new is lost in silence.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "I do not know if he will let himself be loved." },
+        };
+
+        var already = CourtshipMisgivings.FindRestated(list, "I do not know if he will truly let himself be loved.");
+        Assert.NotNull(already);
+        Assert.Equal("I do not know if he will let himself be loved.", already!.Text);
+
+        Assert.Null(CourtshipMisgivings.FindRestated(list, "I do not know if he will let me go."));
+        Assert.Null(CourtshipMisgivings.FindRestated(list, "none"));
     }
 }

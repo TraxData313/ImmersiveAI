@@ -175,8 +175,6 @@ namespace ImmersiveAI.Core.Courtship
             {
                 case CourtshipRoad.StepVerdict.NoRoadFurther:
                     return "We are wed already; this road has no further step, and none back. What we build now, we build within it.";
-                case CourtshipRoad.StepVerdict.TooSoon:
-                    return "My heart moved this way only a breath ago; a true step wants a day to settle before the next. I let what is growing grow, and say nothing of steps.";
                 case CourtshipRoad.StepVerdict.HeartNotThere:
                     return "In honesty, my heart is not there yet — warmth of words is not depth of heart, and I will not pretend a depth I do not feel. I stay true to where I truly stand, and let time and real talks do their work.";
                 case CourtshipRoad.StepVerdict.StationTooFar:
@@ -204,7 +202,6 @@ namespace ImmersiveAI.Core.Courtship
             switch (verdict)
             {
                 case CourtshipRoad.StepVerdict.NoRoadFurther: return "the road has no further step";
-                case CourtshipRoad.StepVerdict.TooSoon: return "their heart moved only today, and a step needs a day to settle";
                 case CourtshipRoad.StepVerdict.HeartNotThere: return "their regard for you has not reached that depth yet";
                 case CourtshipRoad.StepVerdict.StationTooFar: return "your house stands too far beneath their station";
                 case CourtshipRoad.StepVerdict.MisgivingsUnweighed: return "they have not yet weighed their own misgivings";

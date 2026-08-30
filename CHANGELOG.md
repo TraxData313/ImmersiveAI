@@ -15,6 +15,16 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- Courtship no longer waits on the calendar. A heart that has come all the way to you can be asked
+  the same evening and say yes — no more being told a step needs a day to settle after they have
+  already answered. What still refuses is only ever theirs: their regard, their station, their own
+  written misgivings. Betrothals may now also become weddings the day of the promise (the waiting
+  is still there in the settings for anyone who wants it, but it is off unless you ask).
+- A misgiving reworded is no longer written down twice. Adding a single word — "I do not know if he
+  will *truly* let himself be loved" beside "…if he will let himself be loved" — used to create a
+  second copy, and answering one left its twin standing forever with no way to reach it, quietly
+  blocking the road to marriage. Near-copies are now recognised, and when one is refused they say
+  which of their own worries it landed on, so a truly different doubt can still be set down.
 - Replies no longer grow and grow. An NPC's own long answers were sitting in the conversation as
   the example for the next one, so length crept up all evening without anyone choosing it — now
   each turn is sized by the moment, not by the last reply. Nobody is stopped from speaking fully.

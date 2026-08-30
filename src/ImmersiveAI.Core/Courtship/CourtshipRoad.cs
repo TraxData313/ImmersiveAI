@@ -41,9 +41,14 @@ namespace ImmersiveAI.Core.Courtship
         public const int DevotionRelationFloor = 20;
         /// <summary>Readiness to wed asks a deep one.</summary>
         public const int ReadyRelationFloor = 40;
-        /// <summary>Forward steps come at most one per game day — no one sprints the whole road in
-        /// a single warm evening, however sweet the words.</summary>
-        public const double DaysBetweenForwardSteps = 1.0;
+
+        // THE CALENDAR IS GONE (2026.08.30, Anton: "please remove those days!!! if she is 5/5 ready
+        // just be able to propose and for her to accept"). Forward steps used to come at most one
+        // per game day — "no one sprints the whole road in a single warm evening" — and it read as
+        // exactly what he called it: a cold shower, and one that came from a rule rather than from
+        // her. He had asked, she had answered "aye, with all my heart", and the log said her heart
+        // needed a night to settle. Every rail that remains is HERS: her regard, her station, her
+        // own written misgivings. Those can be spoken to and won. A calendar cannot.
 
         /// <summary>Why a forward step (or a laid seal) is or is not allowed. Codes, not words —
         /// the phrasing the NPC reads lives in <see cref="CourtshipText.ForwardRefusal"/>.</summary>
@@ -52,8 +57,6 @@ namespace ImmersiveAI.Core.Courtship
             Allowed,
             /// <summary>Already wed — the road has no further step.</summary>
             NoRoadFurther,
-            /// <summary>The last forward step was taken less than a day ago.</summary>
-            TooSoon,
             /// <summary>Her own regard has not yet reached the step's depth.</summary>
             HeartNotThere,
             /// <summary>The suitor's house stands too far beneath her station.</summary>
@@ -73,8 +76,6 @@ namespace ImmersiveAI.Core.Courtship
             public CourtshipStage Stage;
             /// <summary>Her live regard for the player (−100..100).</summary>
             public int Relation;
-            /// <summary>Days since her last FORWARD step; PositiveInfinity when she never stepped.</summary>
-            public double DaysSinceForwardStep = double.PositiveInfinity;
             public int PlayerClanTier;
             /// <summary>Her station rendered as a required-tier rung (see <see cref="StationTier"/>).</summary>
             public int HerStationTier = 1;
@@ -93,12 +94,13 @@ namespace ImmersiveAI.Core.Courtship
 
         /// <summary>
         /// Judges the next forward step from <paramref name="f"/>.Stage. Steps to Warmth and
-        /// Devotion are hers alone (regard + the one-step-a-day rail); the step to Ready adds the
+        /// Devotion are hers alone (her regard, and nothing else); the step to Ready adds the
         /// station gate and her own misgivings (weighed at least once, none left standing); laying
-        /// the BETROTHAL (from Ready) re-runs Ready's gates with no day rail (the proposal's moment
-        /// belongs to the two of them); laying the WEDDING (from Betrothed) asks the troth to have
-        /// seasoned and re-runs the station gate — her misgivings are deliberately NOT re-checked
-        /// there: the promise was proven when it was given.
+        /// the BETROTHAL (from Ready) re-runs Ready's gates, so a heart standing ready may be asked
+        /// and may say yes in the same breath; laying the WEDDING (from Betrothed) re-runs the
+        /// station gate and asks the troth to have seasoned WHERE THE PLAYER ASKED FOR SEASONING —
+        /// MinBetrothalDays is 0 out of the box and the rail then never fires. Her misgivings are
+        /// deliberately not re-checked there: the promise was proven when it was given.
         /// </summary>
         public static StepVerdict JudgeForward(StepFacts f)
         {
@@ -114,11 +116,9 @@ namespace ImmersiveAI.Core.Courtship
                     return f.Relation >= WarmthRelationFloor ? StepVerdict.Allowed : StepVerdict.HeartNotThere;
 
                 case CourtshipStage.Devotion:
-                    if (f.DaysSinceForwardStep < DaysBetweenForwardSteps) return StepVerdict.TooSoon;
                     return f.Relation >= DevotionRelationFloor ? StepVerdict.Allowed : StepVerdict.HeartNotThere;
 
                 case CourtshipStage.Ready:
-                    if (f.DaysSinceForwardStep < DaysBetweenForwardSteps) return StepVerdict.TooSoon;
                     if (f.Relation < ReadyRelationFloor) return StepVerdict.HeartNotThere;
                     if (!gate(f.CharmSlack)) return StepVerdict.StationTooFar;
                     if (!f.MisgivingsWeighed) return StepVerdict.MisgivingsUnweighed;

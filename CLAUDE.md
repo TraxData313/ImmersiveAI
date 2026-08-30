@@ -795,7 +795,7 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   `MarriageDowryHagglePercent` + `CourtshipCharmSlack` + `MinBetrothalDays` (2026.08.08 — MARRIAGE
   BY COURTSHIP, the bargain mold applied to the biggest bond: an NPC walks her OWN persisted road
   (Core `CourtshipStage` in `NpcMemory` → snapshots rewind it) via `tend_courtship`
-  (`Tools\TrothTool`), railed by Core `CourtshipRoad` — relation floors, one step/day, the STATION
+  (`Tools\TrothTool`), railed by Core `CourtshipRoad` — relation floors, the STATION
   GATE (her station tier minus the charm slack, binding only from Ready — the heart is free, the
   HAND has rails) — and her OWN MISGIVINGS (2026.08.08, replacing the matchmaker's checkable-ask
   DSL the day after it shipped — Anton: the auto-judged gold/skill/trait stoppers read as "robotic
@@ -828,6 +828,28 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   description, and the full one appended to EVERY refused forward reach — the moment she is told
   "not yet" is the moment the pretending starts. The fix was never to loosen the misgivings: the
   road behaved, and the gap was that a refusal was a private word between the mod and the model.
+  **THE ROAD KEEPS NO CALENDAR** (2026.08.30, Anton: "please remove those days!!! if she is 5/5
+  ready just be able to propose and for her to accept... a cold shower not from her but from rules
+  I didn't even knew existed"): the one-step-a-day rail is DELETED whole — const, `StepVerdict.TooSoon`,
+  `StepFacts.DaysSinceForwardStep` and both her words for it — after he proposed, she said "aye,
+  with all my heart", and the log answered that her heart needed a night to settle. `MinBetrothalDays`
+  now defaults to **0** (the knob stays for anyone who wants the waiting; his own MCM store held the
+  old 3 and had to be reset by hand — a default alone never reaches a player who already has the
+  setting). Every rail left is HERS and can be talked to. `CourtshipStepDay` still lives, purely as
+  chronicle for the wedding's account — no longer a gate.
+  **A TWIN MISGIVING WALLS THE ROAD SHUT** (2026.08.30, Rhia the Healer, live): the restatement test
+  in `Text\LooseMatch` was character containment only, so "I do not know if he will **truly** let
+  himself be loved." was born as a second copy of "I do not know if he will let himself be loved."
+  (and "I fear he will one day want a wife who is **noble-born**." of "I am no lord's daughter, and
+  I fear he will one day want a wife who is."). She then laid the TWIN to rest and the first wording
+  stood open forever — unanswerable, because she no longer had the words she first wrote it in, and
+  a clear heart here is earned, never declared ("none" is refused while anything stands, rightly).
+  `LooseMatch.Restated` now adds WORD-LEVEL containment (`RestatementContainment` 0.9 of the shorter
+  line's stems, floor `RestatementFloorWords` 4) — still far tighter than `Best`'s 0.34 overlap, so
+  "I do not know if he will let me go" remains a different fear. The razor moved because the two
+  failures are not symmetric: a swallowed doubt is SOFT (`CourtshipMisgivings.FindRestated` names
+  the held line back to her, so she may set it down again saying how it differs) and an orphaned
+  twin is a WALL. The doors (`Doors\DoorReasons`) share the test and the fix.
   Souls
   with real history are SEEDED once from their lived story (Core `CourtshipSeed`, capped at
   Betrothed). Betrothal + wedding lay only; popups seal; both re-run everything

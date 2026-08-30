@@ -75,6 +75,24 @@ public class DoorTests
     }
 
     [Fact]
+    public void ARewordedWoundIsTheSameWound_ButASharedRegisterIsNot()
+    {
+        // The doors share the restatement test with the misgivings, and it grew a word-level rule
+        // on 2026.08.30 (a twin nobody could tell apart walls a road shut — see LooseMatch). This
+        // states, for the doors' own sake, both halves of what that rule must do.
+        var reasons = Fresh();
+        DoorReasons.SetDown(reasons, "You went to her the night I lost the child", "", 10, out _);
+
+        // The same wound, said again in slightly other words, is not a second wound.
+        Assert.False(DoorReasons.SetDown(reasons, "You went to her on the night I lost our child", "", 10, out var same));
+        Assert.Contains("already stands", same);
+
+        // A different wound that merely opens the same way still stands on its own.
+        Assert.True(DoorReasons.SetDown(reasons, "You went to her the morning I buried my father", "", 10, out _));
+        Assert.Equal(2, DoorReasons.OpenCount(reasons));
+    }
+
+    [Fact]
     public void TheCapBoundsWhatStandsOpen_NeverWhatSheMayFeel()
     {
         var reasons = Fresh();

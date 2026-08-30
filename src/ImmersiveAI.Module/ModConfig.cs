@@ -841,10 +841,13 @@ namespace ImmersiveAI
         /// daughter whose station asks 6. Clamped to [0,4] in <see cref="Normalize"/>.</summary>
         public int CourtshipCharmSlack { get; set; } = 2;
 
-        /// <summary>How many game days a betrothal must season before the wedding can be laid —
-        /// a promise is not a same-breath formality. 0 = may wed the very day of the promise.
+        /// <summary>How many game days a betrothal must season before the wedding can be laid.
+        /// 0 (the default since 2026.08.30) = wed the very day of the promise. It stood at 3 and
+        /// Anton met it as a wall after she had already said yes — "a cold shower not from her but
+        /// from rules I didn't even know existed". The road's calendar is gone; this is all that is
+        /// left of it, and it now waits to be ASKED FOR rather than assumed.
         /// Clamped to [0,30] in <see cref="Normalize"/>.</summary>
-        public int MinBetrothalDays { get; set; } = 3;
+        public int MinBetrothalDays { get; set; } = 0;
 
         /// <summary>
         /// Reverting a bad turn: when on, each save quietly photographs this campaign's whole memory folder

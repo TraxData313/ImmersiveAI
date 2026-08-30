@@ -355,7 +355,6 @@ namespace ImmersiveAI
             {
                 Stage = memory.CourtshipStage,
                 Relation = GetStanding(npc),
-                DaysSinceForwardStep = memory.CourtshipStepDay < 0 ? double.PositiveInfinity : now - memory.CourtshipStepDay,
                 PlayerClanTier = Clan.PlayerClan?.Tier ?? 0,
                 HerStationTier = StationTierOf(npc),
                 CharmSlack = _config.CourtshipCharmSlack,
@@ -644,9 +643,21 @@ namespace ImmersiveAI
                         {
                             int added = CourtshipMisgivings.SetDown(list, text);
                             if (added == 0)
-                                return Open() >= Core.Courtship.CourtshipMisgivings.MaxMisgivings
-                                    ? "I already carry as many open as a heart can honestly hold at once — before I set down another, I first lay one to rest or strike out one that proved empty."
-                                    : "Nothing new was set down — what I named, I carry already.";
+                            {
+                                if (Open() >= Core.Courtship.CourtshipMisgivings.MaxMisgivings)
+                                    return "I already carry as many open as a heart can honestly hold at once — before I set down another, I first lay one to rest or strike out one that proved empty.";
+                                // NAMING the line hers landed on (2026.08.30). The kinship test that
+                                // catches a reworded twin has to be lenient — a twin she cannot then
+                                // tell apart walls the road shut — so she is owed the other half of
+                                // it: which of her own lines swallowed this one, and the room to say
+                                // it is truly a different thing.
+                                var already = CourtshipMisgivings.FindRestated(list, text);
+                                if (already == null)
+                                    return "Nothing new was set down — what I named, I carry already.";
+                                var where = already.Settled ? "and that one I have already laid to rest" : "and that one still stands in me";
+                                return $"Nothing new was set down: I carry that already, in my own earlier words — “{already.Text}” ({where}). " +
+                                    "If what weighs on me now is truly a different thing, I set it down again in words that say plainly how it differs from that one.";
+                            }
                             memory.MisgivingsWeighed = true;
                             SaveMemory(npc, memory);
                             if (!quiet) NotifyMisgivings(npc,
@@ -1573,7 +1584,7 @@ namespace ImmersiveAI
                 if (memory.CourtshipStage < CourtshipStage.Betrothed)
                 {
                     memory.CourtshipStage = memory.CourtshipStage + 1;
-                    memory.CourtshipStepDay = now - CourtshipRoad.DaysBetweenForwardSteps - 1;
+                    memory.CourtshipStepDay = now;
                     if (memory.CourtshipStage == CourtshipStage.Betrothed)
                         memory.BetrothedGameDay = now - Math.Max(0, _config.MinBetrothalDays) - 1;
                     memory.CourtshipSeeded = true;
@@ -1583,7 +1594,7 @@ namespace ImmersiveAI
                         $"[test] {npc.Name}'s road now stands at {CourtshipRoad.StageName(memory.CourtshipStage)}"
                         + (memory.CourtshipStage == CourtshipStage.Betrothed
                             ? " — the troth is already seasoned; speak of the wedding day and she may lay it."
-                            : " — misgivings cleared, the day's rail lifted."), ActivityColor));
+                            : " — misgivings cleared."), ActivityColor));
                 }
                 else if (memory.CourtshipStage == CourtshipStage.Betrothed)
                 {
