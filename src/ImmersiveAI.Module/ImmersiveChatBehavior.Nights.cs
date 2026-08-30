@@ -127,16 +127,102 @@ namespace ImmersiveAI
         }
 
         /// <summary>Which of the two could carry a child. Null when neither can, and the night is
-        /// then simply a night — which is the honest answer, not an error.</summary>
+        /// then simply a night — which is the honest answer, not an error.
+        ///
+        /// A CHILD NEEDS ONE OF EACH, and that test is the whole of it (2026.08.30, Pip0XnXx on
+        /// Steam). The old shape asked only "is anybody here a woman?" and answered with the first
+        /// one it found — so a woman player with a woman lover was handed a conception fathered by
+        /// herself, and the game builds a male newborn out of the father's own CharacterObject.
+        /// Same-sex is not modelled here (see the design record); the honest answer for two women
+        /// or two men is that the night was a night.</summary>
         private static Hero? MotherOf(Hero partner)
         {
             try
             {
                 var player = Hero.MainHero;
-                if (partner != null && partner.IsFemale) return partner;
-                if (player != null && player.IsFemale) return player;
+                if (partner == null || player == null) return null;
+                if (partner.IsFemale == player.IsFemale) return null;
+                return partner.IsFemale ? partner : player;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>And whose child it is: for a man, his own; for a woman, the man who lay with
+        /// her. Vanilla holds the father for thirty-six days and then reads him at the delivery,
+        /// so naming him wrongly here is not felt until a month later — and naming him NOT AT ALL
+        /// is a hard crash (<c>HeroCreator.DeliverOffSpring</c> touches <c>father.CharacterObject</c>
+        /// before anything else).</summary>
+        private static Hero? FatherOf(Hero mother, Hero partner)
+        {
+            try
+            {
+                var player = Hero.MainHero;
+                if (mother == null || player == null) return null;
+                var father = mother == player ? partner : player;
+                if (father == null || father == mother || father.IsFemale) return null;
+                return father;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// THE RESCUE'S QUESTION (2026.08.30): this woman is delivering TODAY and her pregnancy
+        /// names no father, which the game cannot survive. Who should it have been?
+        ///
+        /// Answered only where it can be answered honestly — a father invented here would be
+        /// permanent lineage in her children's blood. Null means we stand aside and the game does
+        /// whatever it would have done without us.
+        /// </summary>
+        internal static Hero? FatherForLostChild(Hero mother)
+        {
+            try
+            {
+                var self = Current;
+                var player = Hero.MainHero;
+                if (mother == null || player == null) return null;
+
+                // Whoever the world already believes she is with — the plainest answer there is.
+                var spouse = Safe(() => mother.Spouse, null);
+                if (spouse != null && spouse != mother && !spouse.IsFemale) return spouse;
+
+                if (mother == player)
+                {
+                    if (!player.IsFemale || self == null) return null;
+
+                    // Her own bed, in her own ledger: the night that took, else the last night at all.
+                    var record = self._nightLedger?.Nights
+                            .Where(n => n != null && n.Conceived)
+                            .OrderByDescending(n => n.GameDay).FirstOrDefault()
+                        ?? self._nightLedger?.Nights
+                            .Where(n => n != null && n.Kind == NightKind.Together)
+                            .OrderByDescending(n => n.GameDay).FirstOrDefault();
+                    var man = record == null ? null : FindHeroAnywhere(record.WifeId);
+                    if (man != null && !man.IsFemale) return man;
+
+                    // Or, failing every record: the one man she is bound to at all. One, or none —
+                    // a guess between two would be exactly the invention this refuses to make.
+                    var men = WomenOfTheHearth().Where(h => h != null && !h.IsFemale).ToList();
+                    return men.Count == 1 ? men[0] : null;
+                }
+
+                // One of his own women, and he is the man of the house.
+                if (!player.IsFemale
+                    && (Safe(() => FamilyBuilder.AreWed(player, mother), false) || IsLoverOfPlayer(mother)))
+                    return player;
+
                 return null;
             }
+            catch { return null; }
+        }
+
+        // Alive or dead: a father may have fallen in the thirty-six days between the night and the
+        // birth, and the child still needs him named.
+        private static Hero? FindHeroAnywhere(string stringId)
+        {
+            if (string.IsNullOrEmpty(stringId)) return null;
+            var found = FindAliveHero(stringId);
+            if (found != null) return found;
+            try { return Hero.DeadOrDisabledHeroes?.FirstOrDefault(h => h != null && h.StringId == stringId); }
             catch { return null; }
         }
 
@@ -1072,14 +1158,26 @@ namespace ImmersiveAI
                         record.Revealed = true; SaveNightLedger(); continue;
                     }
 
+                    // Who fathered it — and if that cannot be answered, NOTHING is applied. A
+                    // fatherless pregnancy does not fail here; it fails thirty-six days later,
+                    // inside the game's own delivery, as a hard crash that repeats on every load
+                    // (Steam, 2026.08.30). A child we cannot name a father for is a child we do
+                    // not begin.
+                    var father = FatherOf(mother, wife);
+                    if (father == null)
+                    {
+                        ModLog.Warn($"the nights: no father could be named for {record.WifeName}'s night, so no child is begun.");
+                        record.Revealed = true; SaveNightLedger(); continue;
+                    }
+
                     // vanilla's own door: its announcement, its due date — and, either way, the
                     // father snatched out of mother.Spouse at that very instant.
-                    if (Safe(() => FamilyBuilder.AreWed(Hero.MainHero, wife), false))
+                    if (mother != Hero.MainHero && Safe(() => FamilyBuilder.AreWed(Hero.MainHero, wife), false))
                     {
                         EnsureFatherSlot(mother);
                         MakePregnantAction.Apply(mother);
                     }
-                    else BorrowTheFatherSlot(mother, () => MakePregnantAction.Apply(mother));
+                    else BorrowTheFatherSlot(mother, father, () => MakePregnantAction.Apply(mother));
 
                     // Only now is it truly done. An exception on the line above leaves the mark
                     // down and the record waiting, so the next hour tries again.
@@ -1135,17 +1233,20 @@ namespace ImmersiveAI
         /// must go back — leaving it would quietly marry her to him in the world's eyes, which is
         /// precisely the thing this whole road exists not to do.
         /// </summary>
-        private static void BorrowTheFatherSlot(Hero mother, Action act)
+        private static void BorrowTheFatherSlot(Hero mother, Hero father, Action act)
         {
             Hero? previous = null;
             bool borrowed = false;
             try
             {
-                var player = Hero.MainHero;
-                if (mother != null && player != null && mother != player && mother.Spouse != player)
+                // A WOMAN PLAYER BORROWS TOO, and that is the half this was missing: she is her own
+                // mother here, her lover is the father, and her spouse slot is empty (or holds a
+                // husband who is not the father of this child). The old guard read mother != player
+                // and simply let her conceive fatherless.
+                if (mother != null && father != null && mother != father && mother.Spouse != father)
                 {
                     previous = mother.Spouse;
-                    mother.Spouse = player;
+                    mother.Spouse = father;
                     borrowed = true;
                 }
                 act();

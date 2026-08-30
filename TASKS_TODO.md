@@ -1,4 +1,16 @@
-﻿WHERE THINGS STAND (2026.08.17 — **v3.1.0 IS SHIPPED, both stores**)
+﻿WHERE THINGS STAND (2026.08.30 — **v3.2.0 IS ON STEAM; NEXUS STILL TO UPLOAD**)
+
+  ** LEFT FOR ANTON — THE NEXUS HALF OF v3.2.0
+      Steam is done (uploaded 2026.08.30, item 3764210301). Nexus mod 12119 → Manage → Files:
+        - Update existing file, tick Archive existing, and SET THE DISPLAY NAME BACK to
+          `ImmersiveAI V3.2.0` (picking the old file silently overwrites it).
+        - Paste the 255-char block from CHANGELOG.md's v3.2.0 section into BOTH the file
+          Description and Add changelog.
+        - Set the MOD version to 3.2.0 on the General step — that is the field Vortex reads.
+        - COME BACK AN HOUR LATER for the virus scan. v3.0.0 was quarantined for a day.
+        - The zip: dist\ImmersiveAI_v3.2.0.zip
+      The Steam description needs no repaste — the page describes the mod, not the build.
+
 
   ** NEXT PLAYTEST — DID THE VOICES STOP DERAILING? (2026.08.17)
       Anton heard Sibylla hold one wordless note for ~30 s mid-reply. Three things shipped for it:

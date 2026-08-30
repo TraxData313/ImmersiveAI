@@ -1236,3 +1236,30 @@ release ritual warns about.
   tend_courtship's all-marriage prose read as "reaching = proposing", so 178 warm turns left Rhia
   at stage None; one sentence marks liking/love as records set down freely, not proposals. 866
   Core tests green. (2026.08.28 13.40.00)
+
+- **The fatherless child — a crash that ended campaigns** (Steam, Pip0XnXx: a woman player, an
+  unmarried companion, "consistently crashes while nearing labor"). Decompile-confirmed and it is
+  ours: vanilla's Pregnancy captures the father out of mother.Spouse at conception and reads him
+  back thirty-six days later, where DeliverOffSpring touches father.CharacterObject.Race on its
+  first line and the offspring's body properties read hero.Father.BodyProperties — a null there is
+  a hard crash on the due date that repeats on every load, because the due date does not move.
+  BorrowTheFatherSlot guarded on mother != player, so a WOMAN player conceiving by a lover borrowed
+  nothing and her spouse slot was empty. Three fixes: the borrow now takes the father by name (she
+  borrows her lover into her own slot); FatherOf names him and a conception with no nameable father
+  is never begun at all; and MotherOf now asks the real question — a child needs ONE OF EACH — where
+  it used to answer "the first woman I can see" and handed two women a child fathered by one of
+  them. Plus THE THIRD HARMONY TOUCH, purely to un-brick saves already carrying one: a prefix on
+  HeroCreator.DeliverOffSpring that acts only when the father is ALREADY null, asks the nights who
+  it should have been (her spouse → the ledger's own conceiving night → the one man she is bound
+  to → nobody), and stands aside when there is no honest answer, because an invented father is
+  permanent lineage. 876 Core tests green. (2026.08.30 00.00.00)
+
+- **v3.2.0 shipped to the Workshop** (2026.08.30). Version bumped, the three change-note tiers
+  written at once (Nexus 237/255, Steam ChangeNotes grouped under five headlines, CHANGELOG
+  regrouped from 23 flat pills into Your own Claude plan / Lighter conversations / Seeing what
+  they are given / The road to marriage / Fixed). Packaged clean, the packaged DLL verified to
+  carry the lost-father rescue before uploading; uploader answered "Uploading done!". Store
+  pages deliberately untouched — they describe the mod, not the build. Nexus is Anton's half
+  and is spelled out in TASKS_TODO. Also fixed a changelog pill that meant to show a literal
+  
+ and had written a real line break. (2026.08.30 22.05.00)

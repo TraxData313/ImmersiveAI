@@ -1794,7 +1794,21 @@ stands behind the model call; `MakePregnantAction` **fathers the child on whatev
 `mother.Spouse` at that instant** → `EnsureFatherSlot` sets it first, or a second wife's child is
 fathered by null and crashes at the delivery 36 days later; and vanilla **announces the pregnancy AT
 conception** → the "she comes to know" delay (`ConceptionRevealDelayDays`, 7) is achieved by
-deferring `Apply` itself, so the birth moves with it. **THE COIN BUYS THE LENGTH AND THE SHAPE OF THE
+deferring `Apply` itself, so the birth moves with it. **AND THE FOURTH TRAP, WHICH COST A
+PLAYER A CAMPAIGN (2026.08.30, Steam):** that same father-at-that-instant rule kills a WOMAN
+player too — `BorrowTheFatherSlot` guarded on `mother != player`, so she conceived by an unmarried
+lover with an empty spouse slot, and `HeroCreator.DeliverOffSpring` touches `father.CharacterObject`
+on its first line (the body properties then read `hero.Father.BodyProperties`). A null there is a
+hard crash ON THE DUE DATE that repeats on every load, because the due date does not move. The
+borrow now takes the father BY NAME (she borrows her lover into her own slot), `FatherOf` names him
+and a conception with no nameable father is never begun, and `MotherOf` asks the real question — a
+child needs ONE OF EACH — where it used to answer "the first woman I can see" and gave two women a
+child fathered by one of them (odd, but never a crash: a female father only lends body properties).
+Beside them THE THIRD HARMONY TOUCH, purely to un-brick saves that already carry one: a prefix on
+`DeliverOffSpring` acting ONLY when the father is already null, asking
+`ImmersiveChatBehavior.FatherForLostChild` (her spouse → the night ledger's own conceiving night →
+the one man she is bound to → nobody) and standing aside with no honest answer, because an invented
+father is permanent lineage. **THE COIN BUYS THE LENGTH AND THE SHAPE OF THE
 WRITING TOO (2026.08.10, Anton's ask):** `NightGifts.Tier` carries `MinSentences`/`MaxSentences` — 3-4
 at ten denars, 5-6 at a hundred, 6-7 at three, 7-8 at a thousand, the ceiling deliberately under the
 wedding night's twelve — and `BuildStoryPrompt` now asks for the account in TWO NAMED HALVES: the

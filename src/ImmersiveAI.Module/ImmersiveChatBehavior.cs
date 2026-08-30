@@ -1135,6 +1135,10 @@ namespace ImmersiveAI
             // hook says so, and only while the feature is truly awake.
             Nights.PregnancyPatch.IsOursToDecide = NightsOwnConceptionFor;
 
+            // And the rescue beside it: a pregnancy in an older save may already have lost its
+            // father, and the delivery would crash on the day rather than tell anybody why.
+            Nights.PregnancyPatch.FatherForLostChild = FatherForLostChild;
+
             // Menus exist and are initialized by now (vanilla behaviors ran first), so the courier
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
             AddLetterMenus(starter);

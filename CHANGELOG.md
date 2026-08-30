@@ -15,6 +15,73 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v3.2.0 — 2026.08.30
+
+The NPCs can speak on your own claude.ai plan now, with no API key anywhere — and whichever
+backend you use, an exchange carries about a third fewer words than it did.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* New backend: your installed Claude Code, no API key
+* Conversations cost about a third less
+* Choose how long NPCs speak: Brief, Conversational, Full
+* Courtship starts and finishes on its own
+* Fixed a crash on the day a child was due
+```
+
+### Your own Claude plan
+
+- New backend "ClaudeCode": the NPCs can speak through your installed Claude Code app on a
+  claude.ai Pro/Max plan — no API key anywhere. Pick the Claude that answers in the mod options.
+- NPCs on the Claude Code backend no longer think silently before speaking — replies come back
+  noticeably sooner and spend less of your plan, Opus most of all.
+- On that road the cost notice also shows your plan's own gauge after each exchange — "5h at 9%,
+  weekly at 1%" — read from your account the same way Claude Code's own footer reads it.
+- Your reply-length setting now reaches the Claude Code backend, which was ignoring it entirely —
+  NPCs there wrote to whatever length they liked, and a long answer is a slow one. Lower MaxTokens
+  if you want quicker replies.
+
+### Lighter, cheaper conversations
+
+- Conversations cost about a third less: NPCs carry the same knowledge in far fewer words — old
+  battles fold into one line naming the hardest fight, quiet stops on the road no longer take a
+  line each, and long runs of like events gather into one.
+- What an NPC may reach for mid-reply is now told to them shorter and sharper — same abilities,
+  same rules, half the words.
+- Replies no longer grow and grow. An NPC's own long answers were sitting in the conversation as
+  the example for the next one, so length crept up all evening without anyone choosing it — now
+  each turn is sized by the moment, not by the last reply. Nobody is stopped from speaking fully.
+- New setting, "How long they speak": Brief (one to three sentences), Conversational (the
+  default) or Full. Shorter is also noticeably faster, since most of the wait is the writing.
+- An NPC now weighs her heart once per exchange, not once per round of thinking. Replies that
+  reached into the world could move the same feeling two or three times over in a single message
+  ("+3, +1, +1"); the first honest measure now stands, and the reply costs a round less.
+- Several gear changes in one day now land in their memory as one moment instead of a stack.
+- NPCs no longer hoard item-by-item inventories in their deep memory — gifts are remembered for
+  what they meant, while the chronicles keep the numbers.
+- The bookkeeping no longer crowds out the talking: once battle, road and gear marks would fill
+  more than a third of what an NPC carries word-for-word, the oldest of them settle into her
+  deeper memory instead of riding along with every single reply. Nothing is forgotten — the
+  chronicles keep it all, and she can still call any of it back.
+- Memory-writing room now grows with the bond. Someone you have met once writes a short memory;
+  a lifelong companion gets the full page. Nobody loses memories they already hold.
+
+### Seeing what they are given
+
+- Scrolling to the very top of a conversation now opens with the weight of it: how many tokens
+  your next message truly carries, piece by piece.
+- Scrolling up through what an NPC is about to be given now shows it in named, coloured
+  sections — who they are, what you are to them, news of the world, the battles you shared, the
+  moment you are in — so you can find what you are looking for at a glance.
+- The conversation you see is now exactly what the NPC is given — once an old mark settles out of
+  their memory it leaves the thread too, and the tally at the top tells you how many have gone.
+
+### The road to marriage
+
+- The road to marriage now truly begins on its own: NPCs set down "I like them" and "I love them"
+  freely as their heart finds them, instead of treating the first step as a proposal. You see each
+  arrival as a warm rose line in the log, and the stage under their name in the chat window.
 - Courtship no longer waits on the calendar. A heart that has come all the way to you can be asked
   the same evening and say yes — no more being told a step needs a day to settle after they have
   already answered. What still refuses is only ever theirs: their regard, their station, their own
@@ -25,53 +92,20 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
   second copy, and answering one left its twin standing forever with no way to reach it, quietly
   blocking the road to marriage. Near-copies are now recognised, and when one is refused they say
   which of their own worries it landed on, so a truly different doubt can still be set down.
-- Replies no longer grow and grow. An NPC's own long answers were sitting in the conversation as
-  the example for the next one, so length crept up all evening without anyone choosing it — now
-  each turn is sized by the moment, not by the last reply. Nobody is stopped from speaking fully.
-- New setting, "How long they speak": Brief (one to three sentences), Conversational (the
-  default) or Full. Shorter is also noticeably faster, since most of the wait is the writing.
-- Your reply-length setting now reaches the Claude Code backend, which was ignoring it entirely —
-  NPCs there wrote to whatever length they liked, and a long answer is a slow one. Lower MaxTokens
-  if you want quicker replies.
-- An NPC now weighs her heart once per exchange, not once per round of thinking. Replies that
-  reached into the world could move the same feeling two or three times over in a single message
-  ("+3, +1, +1"); the first honest measure now stands, and the reply costs a round less.
+
+### Fixed
+
+- Fixed a crash on the day a child was due. If you played a woman and took a lover without marrying
+  him, the child was begun with no father recorded, and the game crashed every time that day came
+  round — the same save failing again on every load. The father is now named properly, and an
+  older save already carrying such a child is repaired at the birth instead of crashing.
+- Two women, or two men, no longer conceive a child between them. The nights are still theirs; only
+  the cradle was wrong.
 - Fixed: on the Claude Code backend an NPC's reply could occasionally arrive wearing its raw
-  machinery — braces, quotes and 
- marks in the chat. Such replies now parse cleanly, and any
+  machinery — braces, quotes and stray line-break marks in the chat. Such replies now parse cleanly, and any
   already recorded in a memory heal themselves the next time that soul is loaded.
-- The road to marriage now truly begins on its own: NPCs set down "I like them" and "I love them"
-  freely as their heart finds them, instead of treating the first step as a proposal. You see each
-  arrival as a warm rose line in the log, and the stage under their name in the chat window.
-- New backend "ClaudeCode": the NPCs can speak through your installed Claude Code app on a
-  claude.ai Pro/Max plan — no API key anywhere. Pick the Claude that answers in the mod options.
-- NPCs on the Claude Code backend no longer think silently before speaking — replies come back
-  noticeably sooner and spend less of your plan, Opus most of all.
-- On that road the cost notice also shows your plan's own gauge after each exchange — "5h at 9%,
-  weekly at 1%" — read from your account the same way Claude Code's own footer reads it.
 - "Since we were last alone" now waits for real words: opening someone's thread and closing
   it again no longer counts as having talked it out.
-- Conversations cost about a third less: NPCs carry the same knowledge in far fewer words — old
-  battles fold into one line naming the hardest fight, quiet stops on the road no longer take a
-  line each, and long runs of like events gather into one.
-- What an NPC may reach for mid-reply is now told to them shorter and sharper — same abilities,
-  same rules, half the words.
-- Several gear changes in one day now land in their memory as one moment instead of a stack.
-- NPCs no longer hoard item-by-item inventories in their deep memory — gifts are remembered for
-  what they meant, while the chronicles keep the numbers.
-- Scrolling to the very top of a conversation now opens with the weight of it: how many tokens
-  your next message truly carries, piece by piece.
-- The bookkeeping no longer crowds out the talking: once battle, road and gear marks would fill
-  more than a third of what an NPC carries word-for-word, the oldest of them settle into her
-  deeper memory instead of riding along with every single reply. Nothing is forgotten — the
-  chronicles keep it all, and she can still call any of it back.
-- The conversation you see is now exactly what the NPC is given — once an old mark settles out of
-  their memory it leaves the thread too, and the tally at the top tells you how many have gone.
-- Memory-writing room now grows with the bond. Someone you have met once writes a short memory;
-  a lifelong companion gets the full page. Nobody loses memories they already hold.
-- Scrolling up through what an NPC is about to be given now shows it in named, coloured
-  sections — who they are, what you are to them, news of the world, the battles you shared, the
-  moment you are in — so you can find what you are looking for at a glance.
 
 ## v3.1.3 — 2026.08.21
 
