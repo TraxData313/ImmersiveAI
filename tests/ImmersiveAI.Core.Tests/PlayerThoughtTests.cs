@@ -262,21 +262,24 @@ namespace ImmersiveAI.Core.Tests
                 Assert.Equal(original[i].Name, back[i].Name);
                 Assert.Equal(original[i].Text, back[i].Text);
             }
-            Assert.Equal(new[] { "starter", "romantic", "ender" }, original.Select(i => i.Name));
+            // "propose" joined them on 2026.08.31: the marriage road is walked by HER inside a talk, so
+            // the player's only move is to say it — and nothing anywhere told him that.
+            Assert.Equal(new[] { "starter", "romantic", "ender", "propose" }, original.Select(i => i.Name));
         }
 
         [Fact]
         public void Upsert_rewrites_by_name_and_Remove_strikes_out()
         {
+            int shipped = ConversationPresets.Defaults.Count;
             var list = ConversationPresets.Upsert(ConversationPresets.Defaults, "Romantic", "warmer words");
-            Assert.Equal(3, list.Count);                            // same name, case aside: rewritten
+            Assert.Equal(shipped, list.Count);                      // same name, case aside: rewritten
             Assert.Equal("warmer words", list.Single(i => i.Name == "Romantic").Text);
 
             list = ConversationPresets.Upsert(list, "blunt", "I want to say it plainly.");
-            Assert.Equal(4, list.Count);
+            Assert.Equal(shipped + 1, list.Count);
 
             list = ConversationPresets.Remove(list, " BLUNT ");
-            Assert.Equal(3, list.Count);
+            Assert.Equal(shipped, list.Count);
             Assert.DoesNotContain(list, i => i.Name == "blunt");
         }
 

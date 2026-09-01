@@ -73,7 +73,8 @@ namespace ImmersiveAI.Core.Prompts
         public static bool IsGreatAccount(string? line) =>
             !string.IsNullOrWhiteSpace(line)
             && (WeddingText.IsDayBeat(line) || WeddingText.IsNightBeat(line)
-                || BirthText.IsHourBeat(line) || BirthText.IsFeastBeat(line));
+                || BirthText.IsHourBeat(line) || BirthText.IsFeastBeat(line)
+                || Courtship.BetrothalText.IsAccountBeat(line));
 
         // Both chronicles already know how to cut their own beats apart; this only has to work out
         // WHICH mark was used, so the faded middle form can keep it.
@@ -93,6 +94,13 @@ namespace ImmersiveAI.Core.Prompts
                 frame = bFrame;
                 account = bAccount;
                 mark = BirthText.IsHourBeat(line) ? BirthText.HourAccountMark : BirthText.FeastAccountMark;
+                return true;
+            }
+            if (Courtship.BetrothalText.TrySplitBeat(line, out var tFrame, out var tAccount))
+            {
+                frame = tFrame;
+                account = tAccount;
+                mark = Courtship.BetrothalText.AccountMark;
                 return true;
             }
             return false;

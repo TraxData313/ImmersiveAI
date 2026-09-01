@@ -57,6 +57,7 @@ namespace ImmersiveAI.Core.Memory
             // a soul is whole the moment she is read, however she is reached.
             memory.HealLegacyNotes();
             memory.HealEnvelopeLines();
+            memory.HealTwinMisgivings();
             return memory;
         }
 

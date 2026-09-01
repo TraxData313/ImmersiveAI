@@ -37,6 +37,29 @@ namespace ImmersiveAI.UI.TalkScreen
         // The wedding accounts wear the courtship road's own rose; a child's day a warmer, older gold.
         private static readonly Color WeddingHeaderColor = new Color(0.93f, 0.62f, 0.72f, 1f);
         private static readonly Color CradleHeaderColor = new Color(0.96f, 0.84f, 0.48f, 1f);
+        /// <summary>The marriage road's own beats — her steps, her promise, the day.</summary>
+        private static readonly Color RoadHeaderColor = new Color(0.90f, 0.68f, 0.74f, 1f);
+
+        /// <summary>
+        /// Anton's colour language, kept word for word where the road's weather is finally visible:
+        /// rose when a heart clears or moves forward, frost blue when something freezes or is
+        /// refused, and red for the one movement that is a wound — a promise taken back.
+        /// </summary>
+        private static Color RoadNoteColor(string? kind)
+        {
+            switch (kind)
+            {
+                case Core.Courtship.RoadNotes.KindFroze:
+                case Core.Courtship.RoadNotes.KindRefused:
+                    return new Color(0.62f, 0.78f, 0.92f, 1f);
+                case Core.Courtship.RoadNotes.KindBroken:
+                    return new Color(0.88f, 0.48f, 0.48f, 1f);
+                case Core.Courtship.RoadNotes.KindSealed:
+                    return new Color(0.55f, 0.86f, 0.60f, 1f);
+                default:
+                    return new Color(0.93f, 0.62f, 0.72f, 1f);
+            }
+        }
 
         // The scrollback above the conversation — what the chosen one is about to be given. Cooler
         // and dimmer than anything anyone actually said, so the eye knows at once it has scrolled
@@ -395,6 +418,35 @@ namespace ImmersiveAI.UI.TalkScreen
                 // does not receive is a second thing to read and reason about. The weight card at
                 // the top of the scrollback still counts them, which is where a "where did my
                 // battle go?" belongs — as a fact about the prompt, not as a ghost inside it.
+                // THE ROAD'S OWN WEATHER, IN THE THREAD (2026.08.31). Every one of these lines was
+                // already being shown — to the map's message log, which this screen completely
+                // covers. So the player sat inside the one place the whole courtship happens and
+                // watched none of it. They are placed by the lifetime turn count they were written
+                // at, not by the day: this screen holds the world still, so a whole conversation
+                // shares one day and the day could never order them.
+                var roadNotes = ImmersiveChatBehavior.RoadNotesFor(npc)
+                    .Where(n => n != null && !string.IsNullOrWhiteSpace(n.Text))
+                    .OrderBy(n => n.AfterTurn).ToList();
+                int noteAt = 0;
+                int firstLifetime = Math.Max(0, memory.TotalTurns - memory.RecentTurns.Count);
+
+                // BEFORE the turn, not after it — and the exclusive bound is the whole reason.
+                // A note is stamped with the turn count as it stood when the movement happened,
+                // which is DURING the exchange being rendered and therefore one less than that
+                // exchange's own index. Drawn at the head of the NEXT turn, it lands exactly where
+                // it belongs: under the words that caused it. Doing it here rather than after the
+                // cards also survives the dozen `continue` paths above, any one of which would
+                // otherwise swallow a note and pile it onto some later turn.
+                void DrawNotesBefore(int lifetimeTurn)
+                {
+                    while (noteAt < roadNotes.Count && roadNotes[noteAt].AfterTurn < lifetimeTurn)
+                    {
+                        var note = roadNotes[noteAt++];
+                        messages.Add(new ChatMessageVM(string.Empty, "❥ " + note.Text,
+                            isNarration: true, RoadNoteColor(note.Kind)));
+                    }
+                }
+
                 var carries = Core.Prompts.PromptBuilder.BeatsThatStillRide(memory);
                 for (int at = 0; at < memory.RecentTurns.Count; at++)
                 {
@@ -402,6 +454,7 @@ namespace ImmersiveAI.UI.TalkScreen
                     var turn = memory.RecentTurns[at];
                     var stamp = Stamp(turn);
                     DrawLineBefore(turn.GameDay);
+                    DrawNotesBefore(firstLifetime + at);
                     if (turn.IsFromAngel || turn.IsInnerThought)
                     {
                         // Letters wear their letters openly, in their place in the one thread — the
@@ -478,6 +531,19 @@ namespace ImmersiveAI.UI.TalkScreen
                             continue;
                         }
 
+                        // The day they were promised — the proposal's own written account
+                        // (2026.08.31), drawn like the wedding's: soft frame, the account a block.
+                        if (Core.Courtship.BetrothalText.TrySplitBeat(turn.PlayerLine, out var trothFrame, out var trothAccount))
+                        {
+                            if (!string.IsNullOrWhiteSpace(trothFrame))
+                                messages.Add(new ChatMessageVM(string.Empty, WithStamp(stamp, "❦ " + trothFrame),
+                                    isNarration: true, Colors.White));
+                            if (!string.IsNullOrWhiteSpace(trothAccount))
+                                messages.Add(Voiced(new ChatMessageVM("❦ The day you were promised",
+                                    trothAccount, isNarration: false, RoadHeaderColor), false, trothAccount));
+                            continue;
+                        }
+
                         // A child's day wears the cradle's own card — the hour in the mother's voice,
                         // the feast the hall carries. A father's plain mark and a grief mark carry no
                         // account and stay soft narration, which is exactly what they are.
@@ -499,6 +565,17 @@ namespace ImmersiveAI.UI.TalkScreen
                                 messages.Add(new ChatMessageVM(string.Empty,
                                     WithStamp(stamp, "❧ " + turn.PlayerLine), isNarration: true, Colors.White));
                             }
+                            continue;
+                        }
+
+                        // A movement of the marriage road — her step, her promise, the day itself.
+                        // Marked and coloured rather than left as one more anonymous inner thought,
+                        // because these are the beats a player scrolls back looking for.
+                        if (Core.Courtship.CourtshipText.IsRoadBeat(turn.PlayerLine))
+                        {
+                            messages.Add(Voiced(new ChatMessageVM(string.Empty,
+                                WithStamp(stamp, "❥ " + turn.PlayerLine),
+                                isNarration: true, RoadHeaderColor), false, turn.PlayerLine));
                             continue;
                         }
 
@@ -538,6 +615,7 @@ namespace ImmersiveAI.UI.TalkScreen
                     if (!string.IsNullOrWhiteSpace(turn.NpcLine))
                         AddSpoken(messages, npcName, turn.NpcLine, NpcHeaderColor);
                 }
+                DrawNotesBefore(int.MaxValue);
             }
 
             // A line already sent but not yet answered is not a recorded turn yet — show it, and her
@@ -867,6 +945,19 @@ namespace ImmersiveAI.UI.TalkScreen
 
             BondStatsText = _selected?.Hero == null ? string.Empty : ImmersiveChatBehavior.BondStatsLabel(_selected.Hero);
 
+            // THE ROAD, DRAWN AS A PATH, RIGHT UNDER THE NAME (2026.08.31, Anton: "are we betrothed,
+            // are we to marry? … maybe say it plainly on the between us tab and make it change as
+            // soon as she changes her stage"). It lives here as well as inside the page because the
+            // page is behind a button, and a state you must open something to learn is a state most
+            // players never learn: he played a whole courtship without knowing there WAS a path.
+            var guide = _selected?.Hero == null ? null : ImmersiveChatBehavior.RoadGuideFor(_selected.Hero);
+            var rail = new MBBindingList<RoadNodeVM>();
+            if (guide != null)
+                for (int i = 0; i < guide.Rail.Count; i++)
+                    rail.Add(new RoadNodeVM(guide.Rail[i], i == guide.Rail.Count - 1));
+            RoadRail = rail;
+            WhatNowText = guide?.WhatNow ?? string.Empty;
+
             // One little button under the name, carrying whatever this bond's own page is right now:
             // her misgivings while the road is walked, her kin's blessing to be sought, the days of
             // preparation counting down, then the wedding day itself, kept forever.
@@ -1157,6 +1248,46 @@ namespace ImmersiveAI.UI.TalkScreen
         }
 
         public void ExecutePromptCancel() => IsPromptEditShown = false;
+
+        // ------------------------------ the road, under the name ------------------------------
+
+        private MBBindingList<RoadNodeVM> _roadRail = new MBBindingList<RoadNodeVM>();
+        private string _whatNowText = string.Empty;
+
+        /// <summary>The rungs of the marriage road, one chip each, the current one lit.</summary>
+        [DataSourceProperty]
+        public MBBindingList<RoadNodeVM> RoadRail
+        {
+            get => _roadRail;
+            set
+            {
+                _roadRail = value ?? new MBBindingList<RoadNodeVM>();
+                OnPropertyChangedWithValue(_roadRail, "RoadRail");
+                OnPropertyChanged("HasRoadRail");
+                OnGreyBlockChanged();
+            }
+        }
+
+        [DataSourceProperty] public bool HasRoadRail => _roadRail.Count > 0;
+
+        /// <summary>One plain sentence saying what the PLAYER is to do next — the line the whole
+        /// road was missing. See CourtshipText.WhatNow for why it may name numbers when nothing
+        /// else in that class may.</summary>
+        [DataSourceProperty]
+        public string WhatNowText
+        {
+            get => _whatNowText;
+            set
+            {
+                if (value == _whatNowText) return;
+                _whatNowText = value ?? string.Empty;
+                OnPropertyChangedWithValue(_whatNowText, "WhatNowText");
+                OnPropertyChanged("HasWhatNow");
+                OnGreyBlockChanged();
+            }
+        }
+
+        [DataSourceProperty] public bool HasWhatNow => !string.IsNullOrWhiteSpace(_whatNowText);
 
         // ------------------------------ the road page ------------------------------
 
@@ -1698,7 +1829,9 @@ namespace ImmersiveAI.UI.TalkScreen
                 return;
             }
             if (npc == null) return;
-            if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Wedding)
+            if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Propose)
+                ImmersiveChatBehavior.OpenProposalDoorFor(npc);
+            else if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Wedding)
                 ImmersiveChatBehavior.OpenWeddingDoorFor(npc);
             else if (page.Kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay)
                 ImmersiveChatBehavior.ShowWeddingViewFor(npc);
@@ -1941,7 +2074,8 @@ namespace ImmersiveAI.UI.TalkScreen
         [DataSourceProperty]
         public float MessagesTopMargin =>
             GreyBlockTop + GreyLineHeight * (WrappedLines(_reachText) + WrappedLines(_bondStatsText)
-                                             + WrappedLines(_memoryLoadText)) + 12f;
+                                             + WrappedLines(_memoryLoadText)
+                                             + (HasRoadRail ? 1 : 0) + WrappedLines(_whatNowText)) + 12f;
 
         private void OnGreyBlockChanged()
         {
@@ -2105,7 +2239,14 @@ namespace ImmersiveAI.UI.TalkScreen
         public string ModeButtonText => _hearthMode ? "Talk" : "The hearth";
 
         /// <summary>Shown only when there IS a hearth — an unmarried player has no page to open,
-        /// and a button that leads to an empty list is a promise the game does not keep.</summary>
+        /// and a button that leads to an empty list is a promise the game does not keep.
+        ///
+        /// <para>It stood open and empty for one evening (2026.08.31) on the reasoning that a door
+        /// appearing only once you no longer need telling teaches nobody anything. Anton played it
+        /// and changed his mind the same night — "return it locked while I have no wife yet" — so
+        /// the roster is the gate again. Kept as a note rather than a silent revert: the argument
+        /// for showing it is real, and it lost to the thing that actually matters, which is that a
+        /// button promising a room with nothing in it reads as the mod being broken.</para></summary>
         [DataSourceProperty]
         public bool HasHearth
         {
@@ -2376,7 +2517,7 @@ namespace ImmersiveAI.UI.TalkScreen
         public string PresetSaveText => "Save";
 
         [DataSourceProperty]
-        public string PresetRestoreText => "Restore the first three";
+        public string PresetRestoreText => "Restore the shipped ones";
 
         [DataSourceProperty]
         public string PresetEditName

@@ -1263,3 +1263,175 @@ release ritual warns about.
   and is spelled out in TASKS_TODO. Also fixed a changelog pill that meant to show a literal
   
  and had written a real line break. (2026.08.30 22.05.00)
+
+- **Her misgivings stopped circling, and the twins already written were folded** (2026.08.31,
+  Anton's playtest of Rhia the Healer: "she is bugged with her fears, first they are duplicates...
+  she has been circling around them, I wanted that to be a small note where she could write them
+  and talk about them but this becomes irritating"). TWO FAULTS, and only the second was in the
+  code we last touched. (1) THE TWINS ALREADY IN THE SAVE. Teaching LooseMatch.Restated word-level
+  containment the day before stopped NEW twins being born; it could not reach the two pairs Rhia
+  already held — "I do not know if he will let himself be loved." beside "...will TRULY let
+  himself be loved.", and "I am no lord's daughter, and I fear he will one day want a wife who
+  is." beside "I fear he will one day want a wife who is noble-born." She had answered one of each
+  pair, so 2 of 6 stood open forever, unreachable in her own words, and her road was walled shut
+  with nothing in her hand able to open it. Core CourtshipMisgivings.HealTwins folds them: the
+  EARLIER wording survives (that is the line she has lived with) and the ANSWER survives from
+  whichever copy carried it, so a standing twin of a settled one comes to rest under the settled
+  one's own word. Hooked as NpcMemory.HealTwinMisgivings, called from JsonMemoryStore.LoadFrom
+  beside the other heals — idempotent, so it may run at every load. (2) THE CIRCLING WAS
+  PROMPTED. RoadSection's closing line told her outright: "so I bring them into our talks myself,
+  and give each its honest hearing", and the tool's own description said "I raise them openly and
+  give them room." She was doing exactly as told. Both now say the opposite half of the same
+  freedom: she speaks of one when the talk itself comes near it, then lets it lie — no circling
+  back hour after hour, no making her worries the toll on every warm word. The sheet also SPLITS
+  standing from settled, and heads the settled ones "I have already answered and set behind me...
+  I do not take them up again", because half of the circling was over doubts she had already put
+  down. Nothing about the gate moved: while one truly stands, her hand still waits. 879 Core tests
+  green. (2026.08.31 00.00.00)
+
+- **The talk screen's dev levers scroll** (2026.08.31, same report: "the dev options overflow out
+  of the box and the ones outside can't be clicked"). Eleven levers at 50px in a 440-tall box, so
+  the last four sat outside it and took no clicks. The box grew to 660 AND the list now rides a
+  ScrollablePanel (the presets menu's proven pattern — buttons inside a scroller click fine), so a
+  twelfth lever, or a shorter screen, can never put one out of reach again. (2026.08.31 00.00.00)
+
+- **The marriage road, shown to the player at last** (2026.08.31, Anton after the misgivings fix:
+  "ok, it worked, but is kind of idk what is happening, are we betrothed are we to marry? The game
+  just doesn't guide the player … instead of the funnest part it becomes the biggest irritation").
+  Read the whole road end to end first and wrote it out for him; four faults, and the first was not
+  the one either of us expected.
+  (1) **THE NARRATION WAS REAL AND INVISIBLE.** Every movement already announced itself — steps,
+  refusals, misgivings set down and laid to rest, all in the rose/frost-blue colour language — via
+  InformationManager.DisplayMessage, which writes to the MAP's message log. The talk screen is a
+  full-screen layer at order 4500 over the map. So the one place the whole courtship happens is the
+  one place none of it could be read: a month of careful narration played into a covered speaker.
+  Fixed with Core `RoadNote`/`RoadNotes` — a display-only record on NpcMemory, written by teeing the
+  three existing notice helpers (so log and thread can never say different things), drawn as
+  coloured ❥ cards in the thread, placed by the LIFETIME turn count rather than the day (the screen
+  holds the world still, so a whole conversation shares one day). Deliberately NOT beats: a beat is
+  a memory and is read back to her forever, which for a refusal means re-arguing "the world said no"
+  every exchange. Guarded by a test asserting no built prompt ever carries one.
+  (2) **NO PATH WAS EVER DRAWN** — one internal word ("warmth") inside a grey debug string. Core
+  `CourtshipRail` renders the five stages as a path with one rung lit, in the player's words
+  (Warmth · Love · Ready · Betrothed · Married), and the two rungs of the WORLD (her kin's word, the
+  seasoning days) appear only where they truly apply — a wanderer has no house to ask and
+  MinBetrothalDays 0 owes no days, and a greyed step for either would invent an obstacle. Anton had
+  invented exactly that one unaided ("I think I now have to wait a few days"). Drawn under the name
+  in the talk screen (RoadNodeVM chips) AND at the top of the Between-us page, so it reaches the
+  classic windows too. When a world rung is what stands in the way, IT takes the light, never the
+  promise behind it.
+  (3) **NOTHING SAID WHAT TO DO** — and the answer was in hand the whole time: `JudgeForward` returns
+  the exact reason the next step cannot happen, and we only ever asked it at the instant SHE reached
+  for something. `CourtshipText.WhatNow` asks it on demand. It is the one line in that class allowed
+  to name numbers (the numberless rule is about what an NPC reads; the player already sees her regard
+  on the same panel), and it always names a VERB — because the thing no player can guess is that
+  every step up to the promise is HERS, taken inside a conversation, with no propose button until the
+  betrothal is already sealed.
+  (4) **THE PLAYER HAD NO MOVE.** A fourth shipped conversation preset, "propose", puts the words in
+  his own mouth in his own voice; she still answers as herself. Reaching an EXISTING player needed
+  `PromptFiles.TopUpShippedPresets` — the voice shelf's two rules, for the same reason: never write
+  over what they have, and never offer twice, so striking one out MEANS something (an `# offered:`
+  stamp records what was offered, not what is present). Button relabelled "Restore the shipped ones".
+  Also: the road and her misgivings left the grey bond line (the rail says both better) and the
+  reach-out odds went behind DevMode; the Between-us button gains a ✦ when an act waits behind it,
+  rather than renaming itself — naming the act would make a doorway pretend to be a verb, and the
+  frozen label was why "you may wed them today" arrived with no signal at all. 887 Core tests green.
+  (2026.08.31 00.00.00)
+
+
+
+## The proposal is the player's own event: ask for her hand, name the gift, and the day is written
+
+The Rhia post-mortem's second half (Anton, 2026.08.31: "when the misgivings are clear and she has no
+more barriers to become my godenica i want there to be a button, visible button for the player to pop
+the question, chose denars add a message to steer the event and a good narrator... and she wont have
+the option to deny, she is at this point ready... written so that I and she can recall it like the
+wedding" — plus, mid-planning: "simple infos, no poetry to waste words... or it becomes a TEXT BOMB").
+  (1) **THE BUTTON.** The moment nothing would refuse — stage Devotion or Ready with JudgeForward
+  Allowed (his call, asked and chosen: the asking IS the word being spoken, so her own step to
+  readiness rides inside the question; Devotion->Ready and Ready->Betrothed run identical gates, so
+  one Allowed honestly covers the collapse), no world block, no troth elsewhere, co-located — the
+  Between-us page becomes the ProposePage, its action "Ask for their hand", the existing actionLabel
+  machinery lighting the button's own sunburst. ProposalDoorOpen is ONE judgment shared by the page
+  and the seal.
+  (2) **THE FLOW** is the wedding-scale mold: a gift MultiSelection (BetrothalGifts — words alone 0 /
+  silver band 100 / gold ring 1k / jewel 10k / heirloom 100k; the coin buys the THING and the LENGTH
+  of the telling, 5-6 up to 9-10 sentences, deliberately under the wedding night's 12; no renown), then
+  a TextInquiry for his steering line wearing the night-wish's two rails (intent never wording, and it
+  never writes her), whose affirm SEALS. She is never asked: every rail that could say no has already
+  passed, so the yes is a fact of the world, which is exactly what he asked for. OnProposalSealed
+  re-runs every rule, burns the gold on the ring itself, jumps to Betrothed, tees a KindSealed road
+  note, and hands the captured record to the chronicler.
+  (3) **THE CHRONICLE** (ImmersiveChatBehavior.Betrothals.cs) is the wedding machinery whole: capture
+  synchronously at the seal, save account-less, ONE story call on _storyClient, content-aware
+  IsUnwritten + hourly retry x3, the parked-beat discipline reused via WriteWeddingBeat. Core
+  Courtship\BetrothalRecord/-Ledger/-Text: _betrothals\ + betrothals.txt inside the campaign folder
+  (snapshot-rewind free), the prompt in Scripture's own betrothal register (Rebekah's "I will go",
+  Jacob's seven years) carrying THE YES-LAW in as many words — a hedge or a "not yet" did not happen —
+  and the tongue rule last. Her lay door stays open and now writes the same record (AskedByPlayer
+  false, her word as material): every betrothal is a written day, whichever door sealed it.
+  (4) **IT READS BACK EVERYWHERE**: her beat carries the account whole (AccountMark frozen forever,
+  faded by BeatFade beside the wedding marks), the thread draws a rose card, a keepsake popup lays the
+  day before the player when written, Blessing/Preparations pages' action becomes "The day you were
+  promised", recall_wedding answers it (extended, never a new tool — the token diet; privacy is code:
+  only the two of the record), and the wedding chronicler receives the proposal account as material —
+  the vows remember how the question was asked.
+  (5) **THE REVIEW'S THREE GAPS CLOSED**: every seal/decline/blocked-seal now tees into RoadNotes
+  (KindSealed existed, was coloured, and was never written — the biggest moments were missing from the
+  thread); the PRE-ROAD state is visible (RoadGuideFor includeUnbegun: a warm opposite-sex soul shows
+  the path unlit + how a road begins, an unmarriageable one shows the honest wall instead of silence
+  forever; the under-name rail stays stage>None); ConfigVersion V6 clears a MinBetrothalDays still at
+  the exact old default 3 -> 0 (nobody chose it — the wound-not-taste rule).
+  (6) **THE TEXT DIET**, per his mid-planning rule: every courtship page and hint cut to plain info —
+  WhatNow one short line pointing at the button (and naming both clan tiers when the station gate is
+  the wall), Blessing/Preparations/Wedding pages halved, the poetry left to the written accounts
+  alone. 894 Core tests green (BetrothalTests: ladder, yes-law, marks, fade, ledger, privacy).
+  (2026.08.31 18.44.26)
+
+
+## The courtship playtest: doubts that bred, a readiness nobody could reach, and a button that was a caption
+
+Anton's first live run of the proposal ("this thing is still a mess man!"). Six faults, and the
+first three change how the whole road behaves.
+  (1) **THE DOUBTS BELONG TO LOVE AND AFTER.** His save held a soul at plain WARMTH already carrying
+  five misgivings — a wall built across a road that had not begun. His model, and now the code's:
+  warmth is her own weather; at LOVE the doubts appear; cleared, they carry her to READY.
+  MisgivingHandFor refuses the hand below Devotion and RoadSection's weighing invitation starts
+  there. Older lists are still shown and still hers to answer; only the writing of new ones stops.
+  (2) **READY IS COMPUTED, NOT FELT.** PromoteToReadyIfClear steps Devotion->Ready the instant her
+  last doubt falls (from NothingStandsNow, so every clearing path promotes) and at the next talk for
+  saves already standing there (from EnsureCourtshipReadyAsync). The road's own definition of
+  readiness is "no questions remain" — leaving that to a model to remember to declare was leaving a
+  computed fact to a mood, which is precisely where "ok i wanna but lets not rush" came from. It
+  runs the FULL JudgeForward, so her regard and the station gate still bind.
+  (3) **THE TWIN MISGIVING, KILLED AT THE SOURCE.** He answered her last standing doubt and she
+  wrote it again in new words. No matcher could have folded those two — they are semantic twins
+  sharing barely a word ("I am in his pay ... cherished and being kept" beside "cherished as my
+  captain's paid healer rather than chosen freely") — and any rule loose enough to try would swallow
+  real doubts wholesale. So the fix is structural, in two rails. MisgivingTool.For builds the hand
+  PER SOUL with her own lines as the schema's AllowedValues on a new `which` parameter: the
+  2026.08.09 enum law applied where it was always needed most, because a paraphrase that MISSES
+  reads to the model as "not written down yet" and the next breath writes it again. And Core
+  CourtshipMisgivings.MayWriteNew refuses any new set_down while one still stands — the first
+  weighing writes the whole list at once and is never refused, and the list lives again the moment
+  they are answered. Both rails are stated in her own sheet too: a rail she cannot read is one she
+  argues with.
+  (4) **THE BUTTON WAS A CAPTION.** The road action ("Ask for their hand", "Choose the wedding day",
+  "See the day itself") used Popup.Confirm.Button — the only use of that brush in the whole prefab,
+  and it draws no frame here, so the mod's most important act rendered as grey text in a corner.
+  Popup.Done.Button is the affirmative brush Send and Seal already use.
+  (5) **THE PROMISE DAY WAS ONE STAGE OUT OF REACH.** It had a door only on the two pages that wait
+  for something (the kin's word, the seasoning days), so a companion bride needing neither went
+  straight from the asking to the wedding page and the day could never be read again. It lives in
+  the "Between us" page BODY now, at every stage from the promise onward, the wedding included.
+  (6) Anton's own gift wording (band of silver 100 / silver ring with a small jewel 1 000 / gold
+  ring with a fine jewel 10 000 / heirloom 100 000; with words alone kept free so a poor player is
+  never paywalled out of the centerpiece); the player's steering line is never printed under the
+  finished day (it did its work upstream — printed after, it reads as the stage direction behind a
+  scene you have just watched). The hearth button was opened onto an empty room for one evening and
+  shut again the same night at his word ("return it locked while I have no wife yet"): a door
+  promising a room with nothing in it reads as the mod being broken, and that outweighs the real
+  argument on the other side, which is that a door appearing only once you no longer need telling
+  teaches nobody anything. Noted rather than silently reverted, so the case does not get re-made.
+  895 Core tests green.
+  (2026.08.31 19.23.49)

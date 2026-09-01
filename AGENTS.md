@@ -206,6 +206,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   accounts — the public day (beat into the spouse and every witness, recallable by `recall_wedding`)
   and the night, which belongs to the couple alone and is never handed to a witness in memory or by
   tool. Toggle: `EnableWeddingChronicle`.
+- `NPCs\campaign_<id>\_betrothals\` — the betrothal chronicle (Core `BetrothalLedger`, 2026.08.31):
+  one JSON per betrothal of the player's plus a readable `betrothals.txt` — the proposal written as
+  its own day (the gift, the player's steering line, who asked, one account). Private to the two of
+  the record; answered through the extended `recall_wedding`. Writing rides `EnableWeddingChronicle`.
 - `NPCs\campaign_<id>\_births\` — the birth chronicle (Core `BirthLedger`): one JSON per child born
   to the player plus a readable `births.txt`. Each holds the day's facts, the children, the
   witnesses and TWO written accounts — THE HOUR (the mother's own first person; it reaches HER

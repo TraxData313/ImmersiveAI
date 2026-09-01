@@ -798,7 +798,9 @@ namespace ImmersiveAI.UI.ChatWindow
                 return;
             }
             if (npc == null) return;
-            if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Wedding)
+            if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Propose)
+                ImmersiveChatBehavior.OpenProposalDoorFor(npc);
+            else if (page.Kind == ImmersiveChatBehavior.RoadPageKind.Wedding)
                 ImmersiveChatBehavior.OpenWeddingDoorFor(npc);
             else if (page.Kind == ImmersiveChatBehavior.RoadPageKind.WeddingDay)
                 ImmersiveChatBehavior.ShowWeddingViewFor(npc);
@@ -1295,7 +1297,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public string PresetSaveText => "Save";
 
         [DataSourceProperty]
-        public string PresetRestoreText => "Restore the first three";
+        public string PresetRestoreText => "Restore the shipped ones";
 
         [DataSourceProperty]
         public string PresetEditName

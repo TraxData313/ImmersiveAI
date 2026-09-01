@@ -214,6 +214,38 @@
                       <Children>
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Text="@ReachText" IsVisible="@HasReach" />
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@BondStatsText" IsVisible="@HasBondStats" />
+
+                        <!-- THE MARRIAGE ROAD AS A PATH (2026.08.31, Anton: "maybe at the top have
+                             the stages ... indicating where we are in this path and what the path is
+                             at all"). One chip per rung, the one we stand on lit and bracketed, and
+                             the two rungs of the world (her kin's word, the seasoning days) drawn
+                             only where they truly apply to this pair. It sits under the name rather
+                             than only inside the page because a state you must open a button to
+                             learn is a state most players never learn. -->
+                        <!-- TWO WIDGETS, NOT ONE, and this is the same Gauntlet rule that left the
+                             hearth page blank twice (2026.08.16): a widget declaring a DataSource
+                             resolves EVERY binding on itself against that new source, its own
+                             IsVisible included — so the flag has to live on the outer widget, in the
+                             screen's own scope, and the source on the inner one. -->
+                        <Widget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" MarginTop="4" IsVisible="@HasRoadRail">
+                          <Children>
+                        <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" DataSource="{RoadRail}" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <ItemTemplate>
+                            <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" StackLayout.LayoutMethod="HorizontalLeftToRight">
+                              <Children>
+                                <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="@TextColor" Brush.TextHorizontalAlignment="Left" Text="@Text" />
+                                <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="@TailColor" Brush.TextHorizontalAlignment="Left" Text="@Tail" />
+                              </Children>
+                            </ListPanel>
+                          </ItemTemplate>
+                        </ListPanel>
+                          </Children>
+                        </Widget>
+
+                        <!-- And the one line the whole road was missing: what the PLAYER does now.
+                             Every step up to the promise is HERS, taken inside a conversation, and
+                             nothing anywhere said so - so this line always names a verb. -->
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="3" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#D8CBA8FF" Brush.TextHorizontalAlignment="Left" Text="@WhatNowText" IsVisible="@HasWhatNow" />
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#7C8A86FF" Brush.TextHorizontalAlignment="Left" Text="@MemoryLoadText" IsVisible="@HasMemoryLoad" />
                       </Children>
                     </ListPanel>
@@ -581,10 +613,16 @@
                     </ScrollbarWidget>
                   </Children>
                 </Widget>
-                <!-- The one act the page offers, when it offers one — the giving of a name. It sits
-                     INSIDE the page rather than on the door, so the player reads what they are
-                     about to do before they do it, and so the door itself never morphs again. -->
-                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="330" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="16" MarginLeft="20" Brush="Popup.Confirm.Button" Command.Click="ExecuteRoadAction" IsVisible="@HasRoadAction">
+                <!-- The one act the page offers, when it offers one — asking for a hand, choosing a
+                     wedding day, giving a child your name. It sits INSIDE the page rather than on
+                     the door, so the player reads what they are about to do before they do it.
+                     THE BRUSH IS "Popup.Done.Button" AND MUST STAY A REAL ONE (2026.08.31, Anton:
+                     "the propose and wed buttons dont look like buttons but as some text"). It was
+                     Popup.Confirm.Button — the only use of that brush anywhere in this prefab, and
+                     it draws no frame here, so the mod's single most important act rendered as a
+                     caption in the corner. Popup.Done.Button is the affirmative brush the Send and
+                     Seal buttons already use, and it is proven to draw. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="330" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="16" MarginLeft="20" Brush="Popup.Done.Button" Command.Click="ExecuteRoadAction" IsVisible="@HasRoadAction">
                   <Children>
                     <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@RoadActionText" />
                   </Children>
@@ -747,14 +785,24 @@
         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" IsVisible="@IsDevShown">
           <Children>
             <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#000000FF" AlphaFactor="0.75" />
-            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="760" SuggestedHeight="440" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="760" SuggestedHeight="660" HorizontalAlignment="Center" VerticalAlignment="Center">
               <Children>
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Sprite="BlankWhiteSquare_9" Color="#0B0906FF" AlphaFactor="0.99" />
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="14" MarginLeft="20" MarginRight="20" Brush="Popup.Title.Text" Brush.FontSize="18" Brush.TextHorizontalAlignment="Left" Text="@DevTitleText" />
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="52" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@DevHintText" />
 
-                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="120" MarginLeft="20" MarginRight="20" StackLayout.LayoutMethod="VerticalTopToBottom">
+                <!-- SCROLLED, not merely made taller (2026.08.31): the levers outgrew the box, and
+                     the ones past its edge could not be clicked at all. A fixed box on a screen of
+                     unknown height will always meet that again — so the list rides a scroller and
+                     the box is only sized to hold most of it. -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="120" MarginBottom="72" MarginLeft="20" MarginRight="20">
                   <Children>
+                    <ScrollablePanel Id="DevScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="DevClip" InnerPanel="DevClip\DevList" VerticalScrollbar="..\DevScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
+                      <Children>
+                        <Widget Id="DevClip" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipContents="true">
+                          <Children>
+                            <ListPanel Id="DevList" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="14" StackLayout.LayoutMethod="VerticalTopToBottom">
+                              <Children>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="42" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevRevealMind">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Reveal their whole prompt (and save it)" />
@@ -805,8 +853,20 @@
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Test — make a sound" />
                       </Children>
                     </ButtonWidget>
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </Widget>
+                      </Children>
+                    </ScrollablePanel>
+                    <ScrollbarWidget Id="DevScrollbar" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="8" HorizontalAlignment="Right" VerticalAlignment="Center" AlignmentAxis="Vertical" Handle="DevScrollbarHandle" MinValue="0" MaxValue="100">
+                      <Children>
+                        <BrushWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="2" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Bed" />
+                        <BrushWidget Id="DevScrollbarHandle" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="6" SuggestedHeight="50" HorizontalAlignment="Center" Brush="Encyclopedia.Scrollbar.Flat.Handle" />
+                      </Children>
+                    </ScrollbarWidget>
                   </Children>
-                </ListPanel>
+                </Widget>
 
                 <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="16" MarginRight="20" Brush="Popup.Cancel.Button" Command.Click="ExecuteBack">
                   <Children>

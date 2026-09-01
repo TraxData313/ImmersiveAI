@@ -296,6 +296,9 @@ namespace ImmersiveAI
             }
             catch { }
             try { facts.RoadPhrase = RoadPhrase(record); } catch { }
+            // The promise day feeds the wedding day (2026.08.31): the chronicler of the vows may
+            // draw on how the question itself was asked, written when it happened.
+            try { facts.PromiseDayText = WrittenBetrothalOf(spouse)?.Account ?? string.Empty; } catch { }
             try
             {
                 if (!string.IsNullOrWhiteSpace(record.BlessedBy))
@@ -793,17 +796,19 @@ namespace ImmersiveAI
         // ------------------------------ what the rest of the mod reads ------------------------------
 
         /// <summary>The wedding's hand rides only for a soul who truly stood at one of the player's
-        /// weddings — their own, or one they witnessed (a lean tool list keeps tools used).</summary>
+        /// weddings — their own, or one they witnessed — or who carries a written betrothal of
+        /// their own (2026.08.31: the promise day answers through the same hand; a lean tool list
+        /// keeps tools used).</summary>
         private bool CanRecallWedding(Hero npc)
         {
             try
             {
-                return _config.EnableWeddingChronicle
-                    && _weddingLedger != null
-                    && npc != null
-                    // A day with no account written is nothing to recall — the tool must not ride
-                    // in every reply only to answer with a bare header (review find, 2026.08.09).
-                    && _weddingLedger.SharedWith(npc.StringId).Any(r => !IsUnwritten(r));
+                if (!_config.EnableWeddingChronicle || npc == null) return false;
+                // A day with no account written is nothing to recall — the tool must not ride
+                // in every reply only to answer with a bare header (review find, 2026.08.09).
+                if (_weddingLedger != null
+                    && _weddingLedger.SharedWith(npc.StringId).Any(r => !IsUnwritten(r))) return true;
+                return WrittenBetrothalOf(npc) != null;
             }
             catch { return false; }
         }

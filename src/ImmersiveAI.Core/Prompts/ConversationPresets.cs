@@ -55,6 +55,13 @@ namespace ImmersiveAI.Core.Prompts
                 "I want to say something romantic to them, something that draws us closer."),
             new ConversationPreset("ender",
                 "I want to find a courteous way to say that we should bring this talk to a close."),
+            // THE ONE VERB NOBODY CAN GUESS (2026.08.31). Every step of the marriage road up to the
+            // promise is taken by HER, inside a conversation — there is no propose button until the
+            // betrothal is already sealed, and a player trained by vanilla waits forever for one.
+            // This is not a shortcut past her: it puts the words in the player's own mouth, in his
+            // own voice, and she answers as herself. Teaching the verb was the whole point.
+            new ConversationPreset("propose",
+                "I want to speak of marriage plainly — to ask them, in my own words, to share this life with me as my wife or husband."),
         };
 
         /// <summary>Reads the presets file. Comment lines (#, //) and blanks are skipped; every other

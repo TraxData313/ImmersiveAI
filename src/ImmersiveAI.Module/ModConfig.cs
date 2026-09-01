@@ -1292,6 +1292,18 @@ namespace ImmersiveAI
                 ConfigVersion = 5;
             }
 
+            // V6 (2026.08.31): the betrothal wait's default fell 3 → 0 on 2026.08.30 ("if she is
+            // 5/5 ready just be able to propose") — but a default alone never reaches a player who
+            // already has the setting, and nobody CHOSE the old 3: it shipped. An invisible rule
+            // that stalls a proposal for days is a wound, not taste, so it migrates like the prices
+            // and the memory budget did — only where it still holds the exact old default. Anyone
+            // who set their own waiting keeps it, and the knob itself stays for anyone who wants it.
+            if (ConfigVersion < 6)
+            {
+                if (MinBetrothalDays == 3) MinBetrothalDays = 0;
+                ConfigVersion = 6;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The spark mode knows exactly three spellings; anything else (typos, old hand edits)

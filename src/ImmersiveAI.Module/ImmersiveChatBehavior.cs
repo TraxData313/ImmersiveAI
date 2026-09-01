@@ -212,7 +212,13 @@ namespace ImmersiveAI
             // trunk, and the letter-answer flow — a promise or a price can be agreed in writing too).
             // The misgivings' hand rides wherever the troth's does: her own written doubts about the
             // marriage, tended by her alone (the retired matchmaker's checkable asks, unrobotted).
-            if (troth != null && troth.TrothRides) { tools.Add(Tools.TrothTool.Tend); tools.Add(Tools.MisgivingTool.Tool); }
+            if (troth != null && troth.TrothRides)
+            {
+                tools.Add(Tools.TrothTool.Tend);
+                // Shaped for this soul, and absent below LOVE — see MisgivingHandFor.
+                var weighing = MisgivingHandFor(npc);
+                if (weighing != null) tools.Add(weighing);
+            }
             // The lover's fork rides the SAME tally and its own narrow gate: only where her heart has
             // already walked the shared trunk and gone deeper than any marriage gate asks. The two
             // branches can ride together — a woman may be courted toward a wedding and reach for
@@ -304,7 +310,7 @@ namespace ImmersiveAI
             if (call.Name == Tools.ChronicleTool.RecallBattle)
                 return Tools.ChronicleTool.ResolveAsync(call, npc, () => _battleLedger);
             if (call.Name == Tools.NuptialTool.RecallWedding)
-                return Tools.NuptialTool.ResolveAsync(call, npc, () => _weddingLedger);
+                return Tools.NuptialTool.ResolveAsync(call, npc, () => _weddingLedger, () => _betrothalLedger);
             if (call.Name == Tools.CradleTool.RecallBirth)
                 return Tools.CradleTool.ResolveAsync(call, npc, () => _birthLedger);
             return Tools.WorldRecall.ResolveAsync(call, npc);
@@ -1128,6 +1134,7 @@ namespace ImmersiveAI
             LoadBattleLedger();
             LoadJourneyLog();
             LoadWeddingLedger();
+            LoadBetrothalLedger();
             LoadBirthLedger();
             LoadNightLedger();
 
@@ -2130,24 +2137,18 @@ namespace ImmersiveAI
                     ? $"spoke {richness} time{(richness == 1 ? "" : "s")}"
                     : "no words shared yet");
                 if (daysSince >= 0) sb.Append($" · last {daysSince:0.#}d ago");
-                // The heart's road, worn openly (Anton's ask, 2026.08.08): both windows show where
-                // the courtship stands — the betrothal in its own proud word.
+                // THE ROAD LEFT THIS LINE ON 2026.08.31. It used to say "heart's road: warmth ·
+                // misgivings 2/6" here — one internal word for a five-stage path, wedged between a
+                // turn count and a percentage, which is how Anton came to be betrothed-or-not with
+                // no idea which. The whole road is drawn as a path under the name now (the rail),
+                // with one plain line under it saying what to do next. The betrothal and the
+                // marriage keep their place here, because those two are facts about the BOND rather
+                // than positions on a road, and they are what a glance down the list wants.
                 if (self._config.EnableConversationMarriage && known != null && known.CourtshipStage > 0)
                 {
                     var stage = (Core.Courtship.CourtshipStage)known.CourtshipStage;
                     if (stage == Core.Courtship.CourtshipStage.Betrothed) sb.Append(" · betrothed to you");
                     else if (stage == Core.Courtship.CourtshipStage.Wed) sb.Append(" · wed to you");
-                    else sb.Append($" · heart's road: {Core.Courtship.CourtshipRoad.StageName(stage)}");
-                    // Her own written misgivings, counted openly (Anton's ask, 2026.08.08): what
-                    // still stands of what she set down — or the clear heart she declared herself.
-                    if (stage < Core.Courtship.CourtshipStage.Wed)
-                    {
-                        if (known.MisgivingsTotal > 0)
-                            sb.Append($" · misgivings {known.MisgivingsOpen}/{known.MisgivingsTotal}"
-                                + (known.MisgivingsOpen == 0 ? " (all at rest)" : string.Empty));
-                        else if (known.MisgivingsWeighed)
-                            sb.Append(" · no misgivings");
-                    }
                 }
                 // And the road's other branch, worn just as openly (2026.08.15). A bond the player
                 // cannot see is worse than a rail he cannot see: this one changed a life, and the
@@ -2167,6 +2168,12 @@ namespace ImmersiveAI
                     sb.Append(" · resting after reaching out");
 
                 var cfg = self._config;
+                // THE ODDS ARE THE DEVELOPER'S ARITHMETIC (2026.08.31). "pull 150% — ~4.69%/hour
+                // they seek you out" is the single most useful line in the mod when tuning the
+                // reach-out scorer and pure noise to everyone else, and it sat in the middle of the
+                // one line a player reads to learn where he stands. The odds view still shows it to
+                // anyone who asks for it.
+                if (!cfg.DevMode) return sb.ToString();
                 if (here && cfg.EnableNpcInitiatedChats)
                 {
                     // The night factor rides along so the number is the truth of THIS hour.
@@ -2316,6 +2323,10 @@ namespace ImmersiveAI
             // A wedding day saved but never written (a refused or timed-out call at the very hour
             // of the vow) gets a few more honest attempts — the record keeps every fact of it.
             try { RetryUnwrittenWeddings(); }
+            catch { /* the chronicle must never take down the hour */ }
+
+            // And a betrothal saved at the seal whose account never arrived — same honest chances.
+            try { RetryUnwrittenBetrothals(); }
             catch { /* the chronicle must never take down the hour */ }
 
             // And any wedding beat parked while its soul was mid-exchange, if their own turn never

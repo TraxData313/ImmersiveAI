@@ -255,6 +255,9 @@ namespace ImmersiveAI.Core.Weddings
             /// <summary>The road of the courtship in a sentence ("her heart turned some forty days
             /// ago; they were betrothed eleven days before this").</summary>
             public string RoadPhrase = string.Empty;
+            /// <summary>The written account of the day they were promised, when one exists
+            /// (2026.08.31) — the wedding day remembers how the question was asked.</summary>
+            public string PromiseDayText = string.Empty;
             /// <summary>The head of the house who blessed it and what was paid, in a phrase.</summary>
             public string BlessingPhrase = string.Empty;
             /// <summary>How great a wedding was bought, in the chronicler's own register — see
@@ -429,6 +432,8 @@ namespace ImmersiveAI.Core.Weddings
 
             if (!string.IsNullOrWhiteSpace(facts.RoadPhrase))
                 sb.AppendLine($"- The road that brought them here: {facts.RoadPhrase.Trim().TrimEnd('.')}.");
+            if (!string.IsNullOrWhiteSpace(facts.PromiseDayText))
+                sb.AppendLine($"- The day they were promised, as it was set down then (facts to draw on, never wording to lift): \"{Squeeze(facts.PromiseDayText, 700)}\"");
             if (!string.IsNullOrWhiteSpace(facts.BlessingPhrase))
                 sb.AppendLine($"- The kin's blessing: {facts.BlessingPhrase.Trim().TrimEnd('.')}.");
 

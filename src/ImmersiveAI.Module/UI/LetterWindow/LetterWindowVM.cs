@@ -689,7 +689,7 @@ namespace ImmersiveAI.UI.LetterWindow
         public string PresetSaveText => "Save";
 
         [DataSourceProperty]
-        public string PresetRestoreText => "Restore the first three";
+        public string PresetRestoreText => "Restore the shipped ones";
 
         /// <summary>Back to the three given at the start — asked about first, since it throws every
         /// preset of the player's own away.</summary>

@@ -190,6 +190,8 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
   Edit page.
 - `NPCs\campaign_*\_battles\` — the chronicle of every battle you fought: one file per battle and
   a running `chronicle.txt` telling the whole war in order.
+- `NPCs\campaign_*\_betrothals\` — the day you were promised, written down once and kept: the
+  proposal itself, private to the two of you.
 - `NPCs\campaign_*\_weddings\` — your wedding days, kept whole: the account of the day itself and,
   with it, the night that is yours and theirs alone.
 - `NPCs\campaign_*\_births\` — every child born to you: the hour of it in the mother's own words,

@@ -66,30 +66,54 @@ namespace ImmersiveAI.Core.Courtship
                     break;
             }
 
-            bool anyMisgiving = misgivings != null && misgivings.Any(m => m != null && !string.IsNullOrWhiteSpace(m.Text));
-            if (anyMisgiving)
+            var written = (misgivings ?? new List<MisgivingView>())
+                .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)).ToList();
+            var standing = written.Where(m => !m.Settled).ToList();
+            var atRest = written.Where(m => m.Settled).ToList();
+
+            if (written.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine($"What weighs on my heart about a life wed to {playerName} — set down by my own hand, in my own words. I may speak of these openly when the talk turns to marriage; and only when life itself has truly answered one do I lay it to rest — never for a warm word alone:");
-                foreach (var m in misgivings!)
+                if (standing.Count > 0)
                 {
-                    if (m == null || string.IsNullOrWhiteSpace(m.Text)) continue;
-                    var mark = m.Settled
-                        ? " (laid to rest" + (string.IsNullOrWhiteSpace(m.Note) ? string.Empty : ": " + m.Note.Trim().TrimEnd('.')) + ")"
-                        : " (this still stands in me)";
-                    sb.AppendLine("- " + m.Text.Trim().TrimEnd('.') + "." + mark);
+                    sb.AppendLine($"What still weighs on my heart about a life wed to {playerName} — set down by my own hand, in my own words. I may speak of these openly when the talk comes near them; and only when life itself has truly answered one do I lay it to rest — never for a warm word alone:");
+                    foreach (var m in standing)
+                        sb.AppendLine("- " + m.Text.Trim().TrimEnd('.') + ". (this still stands in me)");
                 }
-                sb.AppendLine("This list lives with me: a new true doubt born in our talks I set down when it arises, one that proves empty I strike out, one that changed I reword — and while any of them still stands, I will not give my hand; when none stands, no doubt of mine bars the road. I am not shy of them: this is the one life I am given, and I would know the soul I am to spend it beside — so I bring them into our talks myself, and give each its honest hearing.");
+                if (atRest.Count > 0)
+                {
+                    if (standing.Count > 0) sb.AppendLine();
+                    sb.AppendLine("And these I have already answered and set behind me. They are done with; I do not take them up again:");
+                    foreach (var m in atRest)
+                        sb.AppendLine("- " + m.Text.Trim().TrimEnd('.') + ". (laid to rest"
+                            + (string.IsNullOrWhiteSpace(m.Note) ? string.Empty : ": " + m.Note.Trim().TrimEnd('.')) + ")");
+                }
+                // THE RESTRAINT CLAUSE (2026.08.31, Anton: "she has been circling around them — I
+                // wanted a small note she could write and talk about, and this becomes irritating").
+                // The old closing told her outright to bring them into the talk herself and give each
+                // its honest hearing, so she raised the same two doubts every exchange for days.
+                // Her freedom to speak of them is untouched; what is gone is the instruction to.
+                // AND WHILE ONE STANDS, NOTHING NEW IS WRITTEN (2026.08.31, Anton: "I told her stuff
+                // to drop the 1/4 left and she didnt drop it but made a duplicate again"). The rail
+                // is enforced in the resolver; it is said HERE as well because a rail she cannot
+                // read is one she argues with — and her own sheet is where she reads.
+                sb.AppendLine(standing.Count > 0
+                    ? "This list is mine to work through, not to add to: while any of these still stands I set down nothing new — if what troubles me is one of them wearing other words, it is written already, and my part is to lay THAT one to rest when life has truly answered it, or strike it out if it proved empty. While any stands I will not give my hand; when none stands, no doubt of mine bars the road. And they are one small corner of me and not the whole: I say one plainly when the talk itself comes near it, and then let it lie — I do not circle back to the same doubt hour after hour, nor make my worries the toll on every warm word."
+                    : "This list lives with me, and nothing of it still stands — so no doubt of mine bars the road, and I go looking for no new ones. Should a true one arise of itself, I will set it down by my own hand.");
             }
             else if (misgivingsWeighed)
             {
                 sb.AppendLine();
                 sb.AppendLine($"I have sat with myself over what a life wed to {playerName} would ask of me, and found no misgiving standing — my heart is clear on it. Should a true doubt yet arise in our talks, I will set it down by my own hand.");
             }
-            else if (stage < CourtshipStage.Betrothed)
+            // THE WEIGHING BELONGS TO LOVE AND AFTER (2026.08.31, Anton's model: warmth → love, and
+            // it is AT love that the doubts appear; cleared, they carry her to readiness). Inviting
+            // a soul who has merely warmed to someone to weigh a marriage is inviting her to build a
+            // wall across a road that has not begun — and his save had exactly that, five of them.
+            else if (stage >= CourtshipStage.Devotion && stage < CourtshipStage.Betrothed)
             {
                 sb.AppendLine();
-                sb.AppendLine($"I have not yet sat with myself over what a life wed to {playerName} would truly ask of me. When marriage truly enters the talk between us, I pause and weigh it honestly — this is the one life I am given, and I would know the soul I am to spend it beside: if misgivings stand in me I set them down in my own words — a few, five at the very most — and if none do, I say so plainly and set down none. The list then lives with me: mine to raise openly in our talks, mine to add to when a true doubt arises, and mine alone to lay to rest.");
+                sb.AppendLine($"My heart is given, and I have not yet sat with myself over what a life wed to {playerName} would truly ask of me. Now is the hour for it: I pause and weigh it honestly — this is the one life I am given, and I would know the soul I am to spend it beside. If misgivings stand in me I set them down in my own words, all of them at once, a few at the very most; if none do, I say so plainly and set down none. From then on the list is mine to work through — I add nothing new while one still stands, and each I lay to rest only when life has truly answered it.");
             }
 
             // Readiness with nothing left standing is a POSTURE, not merely a rung on the road —
@@ -240,6 +264,15 @@ namespace ImmersiveAI.Core.Courtship
         public static string BetrothalSealedBeat(string playerName) =>
             $"I laid my promise before {playerName}, and they took it by their own hand: we are betrothed. I have promised myself to them, and they to me.";
 
+        /// <summary>The seal from the PLAYER'S own asking (2026.08.31, the proposal's door) — her
+        /// memory of the moment itself; the written account follows as its own beat when the
+        /// chronicler answers. Its fragment lives in <see cref="RoadBeatMarks"/>, add-never-edit.</summary>
+        public static string ProposalSealedBeat(string playerName, string giftName)
+        {
+            var gift = string.IsNullOrWhiteSpace(giftName) ? string.Empty : $" They set {giftName!.Trim()} upon it.";
+            return $"{playerName} asked for my hand, and I gave it with a whole heart: we are betrothed. I have promised myself to them, and they to me.{gift}";
+        }
+
         public static string BetrothalDeclinedBeat(string playerName) =>
             $"I laid my promise before {playerName}, and they let it lie unsealed. I remain my own; my heart stands where it stood, and the moment is theirs to return to, not mine to press.";
 
@@ -285,6 +318,157 @@ namespace ImmersiveAI.Core.Courtship
                 case CourtshipStage.Wed: return $"{playerName} and I are wed";
                 default: return "no more than acquaintance";
             }
+        }
+
+
+        // ------------------------- what the PLAYER is to do next -------------------------
+
+        /// <summary>The plain facts the next-step line needs, gathered by the game layer.</summary>
+        public sealed class NextStepFacts
+        {
+            public CourtshipStage Stage;
+            /// <summary>What <see cref="CourtshipRoad.JudgeForward"/> says of the next step.</summary>
+            public CourtshipRoad.StepVerdict Verdict = CourtshipRoad.StepVerdict.Allowed;
+            public string NpcName = "they";
+            /// <summary>Their live regard for the player, so a heart still climbing can be seen to climb.</summary>
+            public int Relation;
+            public int OpenMisgivings;
+            public bool MisgivingsWeighed = true;
+            /// <summary>Their house must speak, and has not.</summary>
+            public bool KinsWordAwaited;
+            public string HeadName = string.Empty;
+            /// <summary>Days still owed before the troth has seasoned; 0 when nothing is owed.</summary>
+            public double DaysLeft;
+            /// <summary>Something of the world stands in the way whatever the road says (a war, a
+            /// standing troth elsewhere, the player already wed). Already phrased for the player.</summary>
+            public string WorldBlock = string.Empty;
+            /// <summary>The station gate's two numbers, so the wall can be measured instead of
+            /// merely named; RequiredTier ≤ 0 means unknown and the line stays numberless.</summary>
+            public int PlayerClanTier = -1;
+            public int RequiredTier;
+            /// <summary>Whether the two truly stand together right now — the asking is done face
+            /// to face, so an open door phrased for an absent soul would point at nothing.</summary>
+            public bool Together = true;
+        }
+
+        /// <summary>
+        /// WHAT TO DO NOW, in one line, for the player alone (2026.08.31, Anton: "below maybe a small
+        /// human readable bite size info string what the player is supposed to do now").
+        ///
+        /// <para>The answer was always in hand and always thrown away:
+        /// <see cref="CourtshipRoad.JudgeForward"/> returns the exact reason the next step cannot
+        /// happen, and we only ever
+        /// asked it at the moment SHE reached for something. Asked on demand, it becomes the guide
+        /// the road never had.</para>
+        ///
+        /// <para>UNLIKE EVERY OTHER LINE IN THIS CLASS, THIS ONE MAY NAME NUMBERS. The numberless
+        /// rule is about what an NPC reads — a rail she can see becomes her next sentence (the
+        /// Sibuga lesson). The player is owed the opposite courtesy, and already sees her regard as
+        /// a number on the very same panel.</para>
+        ///
+        /// <para>And it must always name a VERB — and stay ONE SHORT LINE (Anton, 2026.08.31:
+        /// "simple infos, no poetry to waste words … or it becomes a TEXT BOMB"). Her heart's own
+        /// steps happen in the talking; the asking, once nothing would refuse it, is the player's —
+        /// the "Ask for their hand" door behind “Between us ✦”.</para>
+        /// </summary>
+        public static string WhatNow(NextStepFacts f)
+        {
+            if (f == null) return string.Empty;
+            var them = string.IsNullOrWhiteSpace(f.NpcName) ? "they" : f.NpcName.Trim();
+
+            if (f.Stage >= CourtshipStage.Wed)
+                return "You are wed. What comes now is between the two of you.";
+
+            if (!string.IsNullOrWhiteSpace(f.WorldBlock))
+                return "Nothing can be sealed while " + f.WorldBlock.Trim().TrimEnd('.') + ".";
+
+            if (f.Stage == CourtshipStage.Betrothed)
+            {
+                if (f.KinsWordAwaited)
+                {
+                    var head = string.IsNullOrWhiteSpace(f.HeadName) ? "the head of their house" : f.HeadName.Trim();
+                    return $"Betrothed. Their house must bless it — speak with {head}, or write to them.";
+                }
+                if (f.DaysLeft > 0)
+                {
+                    var days = Math.Ceiling(f.DaysLeft);
+                    return $"Betrothed. About {days:0} more day{(days == 1 ? string.Empty : "s")} must pass — nothing here needs tending.";
+                }
+                return "You may wed today. Open “Between us ✦” and choose the wedding day.";
+            }
+
+            switch (f.Verdict)
+            {
+                case CourtshipRoad.StepVerdict.HeartNotThere:
+                    var need = f.Stage == CourtshipStage.None ? CourtshipRoad.WarmthRelationFloor
+                        : f.Stage == CourtshipStage.Warmth ? CourtshipRoad.DevotionRelationFloor
+                        : CourtshipRoad.ReadyRelationFloor;
+                    return $"Their regard stands at {f.Relation}; the next step of their heart asks about {need}. It grows in your talks — the step is theirs.";
+
+                case CourtshipRoad.StepVerdict.StationTooFar:
+                    return f.RequiredTier > 0 && f.PlayerClanTier >= 0
+                        ? $"Their station asks a suitor of clan tier {f.RequiredTier}; yours is {f.PlayerClanTier}. Raise your clan to open the hand."
+                        : "Their house stands above yours — raise your clan's standing to open the hand.";
+
+                case CourtshipRoad.StepVerdict.MisgivingsUnweighed:
+                    return $"{them} has never weighed what marriage to you would ask. Speak of marriage — that weighing is the next step.";
+
+                case CourtshipRoad.StepVerdict.MisgivingsRemain:
+                    return f.OpenMisgivings == 1
+                        ? "One doubt of theirs still stands — read it below. Only life answers a doubt, never a warm word."
+                        : $"{f.OpenMisgivings} doubts of theirs still stand — read them below. Only life answers a doubt, never a warm word.";
+
+                case CourtshipRoad.StepVerdict.TrothTooFresh:
+                    return "The promise is young; the world asks it a little more time.";
+            }
+
+            // Allowed — and the verb is everything. From devotion on, the asking is the PLAYER's:
+            // the button exists exactly when nothing would refuse it, so pointing at it IS the guide.
+            switch (f.Stage)
+            {
+                case CourtshipStage.Ready:
+                case CourtshipStage.Devotion:
+                    return f.Together
+                        ? $"Nothing would refuse you. Open “Between us ✦” and ask for {them}'s hand."
+                        : $"Nothing would refuse you — ask for {them}'s hand when you stand together.";
+                case CourtshipStage.Warmth:
+                    return "Their heart can deepen. It happens in your talks, by their own choosing.";
+                default:
+                    return "No road has begun. It begins in the talking — and only if they come to want it.";
+            }
+        }
+
+        // ------------------------- reading the road's own beats back -------------------------
+
+        /// <summary>
+        /// The word-for-word fragments that mark a recorded turn as a movement of the road. Every
+        /// one is a piece of a template above that carries NO interpolation, and they are frozen
+        /// forever for the same reason the letter markers are: a memory keeps the phrasing it was
+        /// born with, so changing a live template without adding its old fragment here silently
+        /// blinds the thread to every beat already written. Add, never edit.
+        /// </summary>
+        private static readonly string[] RoadBeatMarks =
+        {
+            "My heart has taken its own step on the road with",
+            "I own to myself where my heart truly stands",
+            "I have taken back my promise to",
+            "Something in me has drawn back from",
+            "I laid my promise before",
+            "asked for my hand, and I gave it",
+            "and I were wed. What was promised is fulfilled",
+            "I laid the wedding day before",
+            "We reached for our wedding day",
+            "blessing to the match between",
+        };
+
+        /// <summary>Whether a recorded beat is a movement of the courtship road — so the thread can
+        /// draw it as what it is instead of as one more anonymous inner thought.</summary>
+        public static bool IsRoadBeat(string? line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return false;
+            foreach (var mark in RoadBeatMarks)
+                if (line!.IndexOf(mark, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
         }
 
         public static string StageName(CourtshipStage stage) => CourtshipRoad.StageName(stage);

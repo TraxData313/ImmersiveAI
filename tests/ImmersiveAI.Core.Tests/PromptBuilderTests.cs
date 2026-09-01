@@ -731,4 +731,25 @@ public class PromptBuilderTests
         Assert.Contains("a sentence or three", Sheet(PromptBuilder.ReplyLength.Conversational));
         Assert.Contains("as fully as the moment deserves", Sheet(PromptBuilder.ReplyLength.Full));
     }
+
+    [Fact]
+    public void Build_NeverCarriesThePlayersOwnRoadRecord()
+    {
+        // THE GUARD (2026.08.31). The road's movements are written down for the PLAYER — the talk
+        // screen covers the map's message log, so the only place he could ever read them is the
+        // thread. They are deliberately not beats: a beat is a memory, and a memory is read back to
+        // her forever, which for a refusal would mean re-arguing "the world said no" every exchange
+        // of her life. So the two records are kept apart, and this asserts they stay apart.
+        var memory = new NpcMemory { Summary = "We have ridden together a long while." };
+        memory.AddTurn(new ConversationTurn { PlayerLine = "Hail", NpcLine = "Hail." });
+        memory.RoadNotes.Add(new Core.Courtship.RoadNote
+        {
+            Kind = Core.Courtship.RoadNotes.KindRefused,
+            Text = "ZZQXWARDENSENTINEL — a reach the world turned back.",
+        });
+
+        var messages = new PromptBuilder().Build(Persona(), memory, "In the tavern.", "Vulgrim", "Well?");
+
+        Assert.All(messages, m => Assert.DoesNotContain("ZZQXWARDENSENTINEL", m.Content));
+    }
 }

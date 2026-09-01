@@ -182,6 +182,12 @@ namespace ImmersiveAI
         /// loaded from before the wedding un-writes it along with the memories of it.</summary>
         public static string WeddingsFolder => Path.Combine(CampaignRoot, Core.Weddings.WeddingLedger.FolderName);
 
+        /// <summary>The campaign's book of betrothals (see Core's BetrothalLedger): one JSON per
+        /// betrothal of the player's — the written account of the asking, private to the two of
+        /// them — plus a readable betrothals.txt. Same campaign scoping, so a save loaded from
+        /// before the promise un-asks the question along with the memories of it.</summary>
+        public static string BetrothalsFolder => Path.Combine(CampaignRoot, Core.Courtship.BetrothalLedger.FolderName);
+
         /// <summary>The campaign's book of children (see Core's BirthLedger): one JSON per child born
         /// to the player — the hour of it, written in the mother's own voice and belonging to the two
         /// parents, and the feast that welcomed it, which everyone who stood there carries — plus a
@@ -427,6 +433,10 @@ A _journey.json in the campaign folder is the road journal: the last few stops (
 called, how long, what was traded, men hired or left in garrisons, captives sold) and the
 tasks you carry with their outcomes. The people riding WITH you see it and can talk about
 it. It stays deliberately small; delete it to start the road afresh.
+
+A _betrothals folder in the campaign folder keeps the day you were promised — the proposal
+itself, written down once and kept whole, with a readable betrothals.txt beside it. It is
+private to the two of you: only you and your betrothed can call it back.
 
 A _weddings folder in the campaign folder keeps your own wedding days, one file each, and a
 readable weddings.txt beside them. Each is written in two parts: THE DAY, which the one you

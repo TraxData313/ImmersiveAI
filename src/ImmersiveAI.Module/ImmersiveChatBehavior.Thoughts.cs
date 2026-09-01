@@ -82,7 +82,7 @@ namespace ImmersiveAI
                     "began with — starter, romantic, ender — stand alone in their place. Nothing of your " +
                     "own is kept anywhere: this cannot be taken back.",
                     true, true,
-                    "Restore the first three", "Keep mine",
+                    "Restore the shipped ones", "Keep mine",
                     new Action(() =>
                     {
                         try { PromptFiles.SaveConversationPresets(ConversationPresets.Defaults); }

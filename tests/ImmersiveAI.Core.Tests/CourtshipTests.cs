@@ -277,6 +277,32 @@ public class CourtshipTests
         Assert.Contains("STAGE:", prompt);
     }
 
+    [Fact]
+    public void MayWriteNew_LetsTheFirstWeighingThrough_ThenRefusesWhileOneStands()
+    {
+        var list = new List<CourtshipMisgiving>();
+
+        // The first weighing writes the whole list at once and is never refused.
+        Assert.True(CourtshipMisgivings.MayWriteNew(list, alreadyWeighed: false));
+        CourtshipMisgivings.SetDown(list,
+            "I am no lord's daughter, and I fear he will one day want a wife who is\n"
+            + "He is my captain and I am in his pay");
+        Assert.Equal(2, CourtshipMisgivings.OpenCount(list));
+
+        // Afterwards nothing new is written on top of what already stands — the pile that made
+        // his courtship a bug is stopped at the source, not chased with a fuzzier matcher.
+        Assert.False(CourtshipMisgivings.MayWriteNew(list, alreadyWeighed: true));
+
+        // A semantic twin of a standing doubt shares barely a word with it, which is exactly why
+        // no matching rule could ever have caught this one — and why the rail above is the fix.
+        Assert.Null(CourtshipMisgivings.FindRestated(list,
+            "I fear I may be cherished as my captain's paid healer rather than chosen freely as his equal"));
+
+        // Answer them and the list lives again.
+        foreach (var m in list) { m.Settled = true; m.SettledNote = "life answered it"; }
+        Assert.True(CourtshipMisgivings.MayWriteNew(list, alreadyWeighed: true));
+    }
+
     // ------------------------- the words she reads -------------------------
 
     [Fact]
@@ -294,19 +320,26 @@ public class CourtshipTests
         Assert.Contains("speak of these openly", section);
         Assert.Contains("this still stands in me", section);
         Assert.Contains("laid to rest: His word held", section);
-        // The list is a living thing, and she knows what settling it opens.
-        Assert.Contains("This list lives with me", section);
+        // WHILE ONE STANDS, NOTHING NEW IS WRITTEN (2026.08.31): the rail the resolver enforces is
+        // said in her own sheet too, or she goes on arguing with a rule she cannot read.
+        Assert.Contains("set down nothing new", section);
         Assert.Contains("no doubt of mine bars the road", section);
         // The old ledger's voice is gone for good.
         Assert.DoesNotContain("never recite them as a list", section);
     }
 
     [Fact]
-    public void RoadSection_InvitesTheWeighing_UntilSheHasDoneIt()
+    public void RoadSection_InvitesTheWeighing_AtLove_AndNotBefore()
     {
-        var unweighed = CourtshipText.RoadSection("Mizam", CourtshipStage.Warmth, null, false, false, false, "");
+        // THE DOUBTS BELONG TO LOVE AND AFTER (2026.08.31, Anton's model). At plain warmth nobody
+        // has spoken of a marriage, and inviting her to weigh one builds a wall across a road that
+        // has not begun — which is exactly what his save carried.
+        var warmth = CourtshipText.RoadSection("Mizam", CourtshipStage.Warmth, null, false, false, false, "");
+        Assert.DoesNotContain("sat with myself", warmth);
+
+        var unweighed = CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, null, false, false, false, "");
         Assert.Contains("I have not yet sat with myself", unweighed);
-        Assert.Contains("five at the very most", unweighed);
+        Assert.Contains("Now is the hour for it", unweighed);
         Assert.Contains("set down none", unweighed);
 
         var clear = CourtshipText.RoadSection("Mizam", CourtshipStage.Ready, null, true, false, false, "");
@@ -690,5 +723,255 @@ public class CourtshipTests
 
         Assert.Null(CourtshipMisgivings.FindRestated(list, "I do not know if he will let me go."));
         Assert.Null(CourtshipMisgivings.FindRestated(list, "none"));
+    }
+
+    [Fact]
+    public void HealTwins_FoldsATwinAlreadyWrittenIntoTheLineSheFirstWrote()
+    {
+        // Rhia the Healer's own list, as her save carried it on 2026.08.31 — both pairs born before
+        // the razor learned word-level containment, each pair half-answered, so two doubts she had
+        // already put to rest stood open forever and her road was walled shut with nothing in her
+        // own hand able to reach them.
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving
+            {
+                Text = "I am no lord's daughter, and I fear he will one day want a wife who is.",
+                Settled = true,
+                SettledNote = "He has plainly said he would choose me over rank or any noble daughter.",
+            },
+            new CourtshipMisgiving { Text = "I do not know if he will let himself be loved." },
+            new CourtshipMisgiving { Text = "I fear he will one day want a wife who is noble-born." },
+            new CourtshipMisgiving
+            {
+                Text = "I do not know if he will truly let himself be loved.",
+                Settled = true,
+                SettledNote = "He has begun to speak of opening his heart in happiness, not only in fear.",
+            },
+        };
+
+        Assert.Equal(2, CourtshipMisgivings.HealTwins(list));
+        Assert.Equal(2, CourtshipMisgivings.TotalCount(list));
+        Assert.Equal(0, CourtshipMisgivings.OpenCount(list));
+
+        // The EARLIER wording survives — that is the line she has lived with — and it comes to rest
+        // under the answer whichever copy carried it.
+        var loved = list.Single(m => m.Text == "I do not know if he will let himself be loved.");
+        Assert.True(loved.Settled);
+        Assert.Contains("opening his heart", loved.SettledNote);
+        Assert.Contains("no lord's daughter", list.Single(m => m.Settled && m != loved).Text);
+    }
+
+    [Fact]
+    public void HealTwins_LeavesADifferentDoubtAndRunsOnlyOnce()
+    {
+        var list = new List<CourtshipMisgiving>
+        {
+            new CourtshipMisgiving { Text = "I do not know if he will let himself be loved." },
+            new CourtshipMisgiving { Text = "I do not know if he will let me go." },
+        };
+
+        // A fear that shares four fifths of its words is still a wholly different fear.
+        Assert.Equal(0, CourtshipMisgivings.HealTwins(list));
+        Assert.Equal(2, CourtshipMisgivings.OpenCount(list));
+
+        list.Add(new CourtshipMisgiving { Text = "I do not know if he will truly let himself be loved." });
+        Assert.Equal(1, CourtshipMisgivings.HealTwins(list));
+        // Idempotent: it runs at every load, and a healed list must fold nothing on the next pass.
+        Assert.Equal(0, CourtshipMisgivings.HealTwins(list));
+        Assert.Equal(2, CourtshipMisgivings.TotalCount(list));
+    }
+
+    [Fact]
+    public void RoadSection_KeepsHerFreeToSpeak_ButNeverTellsHerToRaiseThem()
+    {
+        // 2026.08.31, Anton: she circled the same two doubts every exchange for days. The old
+        // closing line told her to — "so I bring them into our talks myself, and give each its
+        // honest hearing". Her freedom to speak of them stands; the instruction to is gone.
+        var misgivings = new[]
+        {
+            new CourtshipText.MisgivingView { Text = "I fear the road would own him more than I would" },
+            new CourtshipText.MisgivingView { Text = "His purse is lighter than his promises", Settled = true, Note = "His word held" },
+        };
+        var section = CourtshipText.RoadSection("Mizam", CourtshipStage.Devotion, misgivings, true, false, false, "");
+
+        Assert.Contains("speak of these openly", section);
+        Assert.Contains("I do not circle back to the same doubt", section);
+        Assert.DoesNotContain("I bring them into our talks myself", section);
+        // The answered ones are marked closed where she reads them, not merely listed beside the
+        // living ones — half of the circling was over doubts she had already put down.
+        Assert.Contains("I do not take them up again", section);
+    }
+
+    // ------------------------- the road, shown to the player -------------------------
+
+    [Fact]
+    public void Rail_DrawsTheWholePathWithExactlyOneRungLit()
+    {
+        var rail = CourtshipRail.Build(CourtshipStage.Devotion);
+
+        Assert.Equal(new[] { "Warmth", "Love", "Ready", "Betrothed", "Married" },
+            rail.Select(n => n.Name).ToArray());
+        Assert.Single(rail.Where(n => n.Current));
+        Assert.Equal("Love", rail.Single(n => n.Current).Name);
+        // Behind us and ahead of us, both readable at a glance — that is the whole point of a path.
+        Assert.True(rail.Single(n => n.Name == "Warmth").Done);
+        Assert.False(rail.Single(n => n.Name == "Ready").Done);
+    }
+
+    [Fact]
+    public void Rail_DrawsTheWorldsOwnRungsOnlyWhereTheyApply()
+    {
+        // A wanderer has no house to ask, and MinBetrothalDays at 0 means no days are owed. Drawing
+        // either as a greyed future step would invent an obstacle — which is exactly the mistake a
+        // player makes unaided: Anton believed he had days to wait, and had none.
+        var plain = CourtshipRail.Build(CourtshipStage.Betrothed);
+        Assert.DoesNotContain(plain, n => n.Name == CourtshipRail.KinsWord);
+        Assert.DoesNotContain(plain, n => n.Name == CourtshipRail.TheDays);
+        Assert.Equal("Betrothed", plain.Single(n => n.Current).Name);
+
+        // And where they DO apply, the rung that actually stands in the way takes the light — the
+        // path must never say "you are here: betrothed" while the thing to do is elsewhere.
+        var withKin = CourtshipRail.Build(CourtshipStage.Betrothed, kinsWordRung: true, kinsWordGiven: false,
+            seasonRung: true, seasonDone: false);
+        Assert.Equal(CourtshipRail.KinsWord, withKin.Single(n => n.Current).Name);
+
+        var kinGiven = CourtshipRail.Build(CourtshipStage.Betrothed, kinsWordRung: true, kinsWordGiven: true,
+            seasonRung: true, seasonDone: false);
+        Assert.Equal(CourtshipRail.TheDays, kinGiven.Single(n => n.Current).Name);
+        Assert.True(kinGiven.Single(n => n.Name == CourtshipRail.KinsWord).Done);
+    }
+
+    [Fact]
+    public void Rail_AtEveryStage_LightsExactlyOneRung()
+    {
+        foreach (var stage in new[] { CourtshipStage.None, CourtshipStage.Warmth, CourtshipStage.Devotion,
+                                      CourtshipStage.Ready, CourtshipStage.Betrothed, CourtshipStage.Wed })
+        {
+            var rail = CourtshipRail.Build(stage, kinsWordRung: true, seasonRung: true);
+            Assert.Single(rail.Where(n => n.Current));
+            Assert.Contains("[", CourtshipRail.OneLine(rail));
+        }
+        // Nothing is behind you before the road has begun.
+        Assert.DoesNotContain(CourtshipRail.Build(CourtshipStage.None), n => n.Done);
+    }
+
+    [Fact]
+    public void WhatNow_AlwaysNamesAVerb_AndPointsAtTheAskingDoor()
+    {
+        // THE ASKING IS THE PLAYER'S NOW (2026.08.31): the moment nothing would refuse — at love
+        // as at readiness, since the question itself carries her last step — the line points at
+        // the one visible door, and phrases an absent soul honestly.
+        foreach (var stage in new[] { CourtshipStage.Ready, CourtshipStage.Devotion })
+        {
+            var open = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+            {
+                Stage = stage, NpcName = "Rhia",
+                Verdict = CourtshipRoad.StepVerdict.Allowed,
+            });
+            Assert.Contains("ask for Rhia's hand", open);
+            Assert.Contains("Between us", open);
+
+            var away = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+            {
+                Stage = stage, NpcName = "Rhia",
+                Verdict = CourtshipRoad.StepVerdict.Allowed,
+                Together = false,
+            });
+            Assert.Contains("when you stand together", away);
+        }
+
+        // And before any road at all, the line every new player was owed and never had.
+        var unbegun = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.None, NpcName = "Rhia",
+            Verdict = CourtshipRoad.StepVerdict.Allowed,
+        });
+        Assert.Contains("No road has begun", unbegun);
+    }
+
+    [Fact]
+    public void WhatNow_NamesTheRealBlocker_AndMayQuoteNumbersBecauseThePlayerReadsIt()
+    {
+        var doubts = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.Devotion, NpcName = "Rhia", OpenMisgivings = 2,
+            Verdict = CourtshipRoad.StepVerdict.MisgivingsRemain,
+        });
+        Assert.Contains("2 doubts", doubts);
+
+        var heart = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.Warmth, NpcName = "Rhia", Relation = 12,
+            Verdict = CourtshipRoad.StepVerdict.HeartNotThere,
+        });
+        // Numbers are refused to HER and owed to HIM — he already sees her regard on the same panel.
+        Assert.Contains("12", heart);
+        Assert.Contains(CourtshipRoad.DevotionRelationFloor.ToString(), heart);
+
+        // The rungs of the world after the promise, each with its own plain instruction.
+        var kin = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.Betrothed, NpcName = "Rhia",
+            KinsWordAwaited = true, HeadName = "Lucon",
+        });
+        Assert.Contains("Lucon", kin);
+
+        var days = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.Betrothed, NpcName = "Rhia", DaysLeft = 2.4,
+        });
+        Assert.Contains("3 more days", days);
+
+        var wed = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.Betrothed, NpcName = "Rhia",
+        });
+        Assert.Contains("choose the wedding day", wed);
+
+        // The station gate names both tiers when it has them — a wall you can measure is a wall
+        // you can climb; without the numbers it stays plainly named.
+        var station = CourtshipText.WhatNow(new CourtshipText.NextStepFacts
+        {
+            Stage = CourtshipStage.Devotion, NpcName = "Rhia",
+            Verdict = CourtshipRoad.StepVerdict.StationTooFar,
+            PlayerClanTier = 2, RequiredTier = 4,
+        });
+        Assert.Contains("tier 4", station);
+        Assert.Contains("yours is 2", station);
+    }
+
+    [Fact]
+    public void IsRoadBeat_KnowsEveryOneOfItsOwnTemplates()
+    {
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.StepBeat("Mizam", CourtshipStage.Ready, "at last")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.StepBackBeat("Mizam", CourtshipStage.Betrothed, CourtshipStage.Ready, "")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.StepBackBeat("Mizam", CourtshipStage.Ready, CourtshipStage.Devotion, "")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.BetrothalSealedBeat("Mizam")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.ProposalSealedBeat("Mizam", "a ring of gold")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.ProposalSealedBeat("Mizam", null)));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.BetrothalDeclinedBeat("Mizam")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.WeddingSealedBeat("Mizam")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.WeddingDeclinedBeat("Mizam")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.SeededBeat("Mizam", CourtshipStage.Warmth, "")));
+        Assert.True(CourtshipText.IsRoadBeat(CourtshipText.BlessingNewsBeat("Mizam", "Lucon")));
+
+        Assert.False(CourtshipText.IsRoadBeat("We met and spoke face to face for the first time."));
+        Assert.False(CourtshipText.IsRoadBeat(null));
+    }
+
+    [Fact]
+    public void RoadNotes_KeepTheLastOfThem_AndRecordNoBlanks()
+    {
+        var notes = new List<RoadNote>();
+        for (int i = 0; i < RoadNotes.MaxKept + 5; i++)
+            RoadNotes.Add(notes, RoadNotes.KindMoved, "movement " + i, i, i);
+
+        Assert.Equal(RoadNotes.MaxKept, notes.Count);
+        Assert.Equal("movement " + (RoadNotes.MaxKept + 4), notes.Last().Text);
+
+        RoadNotes.Add(notes, RoadNotes.KindMoved, "   ", 1, 1);
+        RoadNotes.Add(notes, RoadNotes.KindMoved, null, 1, 1);
+        Assert.Equal(RoadNotes.MaxKept, notes.Count);
     }
 }

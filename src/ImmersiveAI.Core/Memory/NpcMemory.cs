@@ -121,6 +121,15 @@ namespace ImmersiveAI.Core.Memory
         /// field is simply ignored on load, so an old file begins with an unweighed heart.</summary>
         public List<CourtshipMisgiving> CourtshipMisgivings { get; set; } = new List<CourtshipMisgiving>();
 
+        /// <summary>
+        /// THE PLAYER'S OWN RECORD of every movement of the road with this soul — and HERS OF
+        /// NOTHING. It is written by the game layer, read by the windows, and touched by no prompt
+        /// builder anywhere; a test asserts a built prompt never carries one. See
+        /// <see cref="Courtship.RoadNote"/> for why the player's record is kept apart from her
+        /// memory rather than folded into it as beats.
+        /// </summary>
+        public List<Courtship.RoadNote> RoadNotes { get; set; } = new List<Courtship.RoadNote>();
+
         /// <summary>True once she has truly sat with the question of what might weigh on her about
         /// this marriage — set by her first set_down, INCLUDING the honest "none". Readiness and the
         /// betrothal ask this of her; a heart that never looked cannot say no questions remain.</summary>
@@ -394,6 +403,17 @@ namespace ImmersiveAI.Core.Memory
             Summary = sb.ToString().TrimEnd();
             Bites.Clear();
         }
+
+        /// <summary>
+        /// Folds twin misgivings a save already carries into one line each — see
+        /// <see cref="ImmersiveAI.Core.Courtship.CourtshipMisgivings.HealTwins"/>. Teaching the
+        /// razor (2026.08.30) only stopped NEW twins; a list written before it could still hold a
+        /// doubt she had answered under one wording and could no longer reach under the other, and
+        /// that is a road walled shut with nothing in her own hand to open it. Runs at load beside
+        /// the other heals, and is idempotent — a healed list folds nothing on the next pass.
+        /// </summary>
+        public void HealTwinMisgivings() =>
+            ImmersiveAI.Core.Courtship.CourtshipMisgivings.HealTwins(CourtshipMisgivings);
 
         /// <summary>
         /// Undresses recorded spoken lines that took a raw structured-output envelope in whole —

@@ -279,3 +279,33 @@ scratchpad; the essentials:*
   involving the player. TidingsBuilder calls exactly that API — per-entry guard added, since
   both our mirroring and plain vanilla courtship put such entries in the log.
 - `Hero.CanMarry()` includes the `CanHeroMarryEvent` veto (quests can refuse) — respected.
+
+
+## v4 (2026.08.31) - the proposal becomes the player's own event
+
+The Rhia campaign proved the last stretch of the road was still model-shaped: the player at
+Ready had no move but talking, and a shy model answered "let's not rush" over a heart the rails
+already judged willing. Anton's redesign, quoted: "when the misgivings are clear and she has no
+more barriers... i want there to be a button, visible button for the player to pop the question,
+chose denars add a message to steer the event and a good narrator... and she wont have the option
+to deny, she is at this point ready... written so that I and she can recall it like the wedding."
+
+- **The button** appears the moment nothing would refuse: stage Devotion or Ready with
+  JudgeForward == Allowed, no world block, no standing troth elsewhere, together. Devotion counts
+  because the asking IS the word being spoken - her step to readiness rides inside the question,
+  and the two steps run identical gates (his explicit choice when asked).
+- **She cannot refuse by construction.** Her agency is spent where it belongs - her regard, her
+  station, her own written misgivings - all passed before the door exists. The seal is code; the
+  chronicler is handed the yes as a fact (THE YES-LAW in the prompt: a hedge or a "not yet" did
+  not happen).
+- **The gift ladder** (0 / 100 / 1k / 10k / 100k) buys the thing itself and the length of the
+  telling, never renown - a proposal is between two souls. His steering line rides the
+  night-wish's two rails: intent never wording, and it never writes her.
+- **One record for both doors**: her own laid promise seals through the old popup and writes the
+  same BetrothalRecord (AskedByPlayer=false, her word as material). _betrothals\ + betrothals.txt,
+  snapshot-rewound with the campaign; recall through the extended recall_wedding (privacy is code:
+  only the two of the record); the wedding chronicler receives the proposal account as material.
+- **The same evening**: every seal/decline/blocked-seal tees into the thread's road record
+  (KindSealed was never written before), the pre-road state became visible (how a road begins, or
+  the honest wall for an unmarriageable soul), V6 clears a stranded MinBetrothalDays=3, and every
+  courtship page went on the text diet - one-line guidance, the poetry only in the accounts.

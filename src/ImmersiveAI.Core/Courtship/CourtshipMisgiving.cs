@@ -141,6 +141,25 @@ namespace ImmersiveAI.Core.Courtship
         public static int TotalCount(IEnumerable<CourtshipMisgiving>? list) =>
             list?.Count(m => m != null && !string.IsNullOrWhiteSpace(m.Text)) ?? 0;
 
+        /// <summary>
+        /// Whether a NEW misgiving may be written down at all right now (2026.08.31, Anton: "I told
+        /// her stuff to drop the 1/4 left and she didnt drop it but made a duplicate again").
+        ///
+        /// <para>The first weighing writes the whole list at once and is never refused. Afterwards
+        /// nothing new is added while anything already written still stands — and the reason is not
+        /// tidiness. Naming a held doubt back is always a PARAPHRASE, and a paraphrase that misses
+        /// reads to the model as "not written down yet", so the very next breath writes it again:
+        /// the list grows by exactly the doubts the player is working to answer. The two Rhia
+        /// carried were semantic twins with barely a word in common — no containment rule at any
+        /// threshold folds those, and one loose enough to try would swallow real doubts wholesale.
+        /// So the pile is stopped at the source instead.</para>
+        ///
+        /// <para>The list still LIVES: a genuinely new doubt is written the moment the standing ones
+        /// are answered, and a settled one may always be taken up again.</para>
+        /// </summary>
+        public static bool MayWriteNew(IEnumerable<CourtshipMisgiving>? list, bool alreadyWeighed) =>
+            !alreadyWeighed || OpenCount(list) == 0;
+
         /// <summary>Whether a set_down text is the honest "I hold none" answer.</summary>
         public static bool IsNone(string? text)
         {
@@ -229,6 +248,53 @@ namespace ImmersiveAI.Core.Courtship
                     return list.FirstOrDefault(m => m != null && m.Text == hit);
             }
             return null;
+        }
+
+        /// <summary>
+        /// Folds the twins a list ALREADY carries into one line each — the heal for every list
+        /// written before <see cref="Text.LooseMatch.Restated"/> learned word-level containment
+        /// (2026.08.30). The rule then only caught character containment, so one word inserted bred
+        /// a second copy of a doubt; she would answer one copy and the other stood open forever,
+        /// unanswerable, because she no longer had the words she first wrote it in. Teaching the
+        /// razor only stops NEW twins — Rhia the Healer was still walled shut by two she already
+        /// held (2026.08.31), and nothing in her own hand could reach them.
+        ///
+        /// <para>What survives a fold: the EARLIER wording, because that is the line she has lived
+        /// with and the one her memory says back — and the ANSWER from whichever copy carries it,
+        /// because an answer given is a thing that happened and must never be undone by tidying.
+        /// So a standing twin of a settled one comes to rest under the settled one's own word, which
+        /// is exactly the wall coming down.</para>
+        ///
+        /// <para>Idempotent, and safe to run at every load: a healed list holds no twins, so a
+        /// second pass folds nothing. Returns how many were folded away.</para>
+        /// </summary>
+        public static int HealTwins(List<CourtshipMisgiving>? list)
+        {
+            if (list == null || list.Count < 2) return 0;
+
+            var kept = new List<CourtshipMisgiving>();
+            int folded = 0;
+            foreach (var one in list.ToList())
+            {
+                if (one == null || string.IsNullOrWhiteSpace(one.Text)) continue;
+
+                var twinText = Text.LooseMatch.Restated(kept.Select(k => k.Text), one.Text);
+                var twin = twinText == null ? null : kept.FirstOrDefault(k => k.Text == twinText);
+                if (twin == null) { kept.Add(one); continue; }
+
+                if (one.Settled && !twin.Settled)
+                {
+                    twin.Settled = true;
+                    twin.SettledNote = one.SettledNote;
+                }
+                else if (one.Settled && string.IsNullOrWhiteSpace(twin.SettledNote))
+                {
+                    twin.SettledNote = one.SettledNote;
+                }
+                list.Remove(one);
+                folded++;
+            }
+            return folded;
         }
 
         /// <summary>

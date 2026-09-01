@@ -170,10 +170,77 @@ $@"# Immersive AI - Custom instructions for {npcName}
                         PresetsTemplate + ConversationPresets.Format(ConversationPresets.Defaults));
                 // An emptied file stays empty on purpose: the defaults are a starting gift, not a
                 // floor — a player who strikes them all out meant to.
-                return ConversationPresets.Parse(File.ReadAllText(ConversationPresetsPath));
+                var raw = File.ReadAllText(ConversationPresetsPath);
+                return TopUpShippedPresets(raw, ConversationPresets.Parse(raw));
             }
             catch { return ConversationPresets.Defaults.ToList(); }
         }
+
+        /// <summary>The comment line that remembers which shipped presets this file has already been
+        /// OFFERED — written when one is offered, never when it is kept.</summary>
+        private const string OfferedStamp = "# offered:";
+
+        /// <summary>
+        /// A preset added in a later version has to reach a player who already has the file, and has
+        /// to reach them ONCE (2026.08.31, when "propose" was added: without this, the one preset
+        /// that teaches the marriage road's only player-side verb would have appeared for new
+        /// installs alone — which is everyone except the people already stuck).
+        ///
+        /// <para>The two rules are the voice shelf's, and they are the same two rules because it is
+        /// the same problem: a preset already in the file is never written over, and one already
+        /// offered is never offered again. Striking one out has to MEAN something, which is why the
+        /// stamp records what was OFFERED rather than what is present — that difference is the
+        /// whole of it. Everything standing in the file when the stamp is first written counts as
+        /// offered, so nothing a player has already deleted comes back from the dead.</para>
+        /// </summary>
+        private static List<ConversationPreset> TopUpShippedPresets(string raw, List<ConversationPreset> mine)
+        {
+            try
+            {
+                var offered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                bool stamped = false;
+                foreach (var line in (raw ?? string.Empty).Split(NewlineChars))
+                {
+                    var t = line.TrimStart();
+                    if (!t.StartsWith(OfferedStamp, StringComparison.OrdinalIgnoreCase)) continue;
+                    stamped = true;
+                    foreach (var name in t.Substring(OfferedStamp.Length).Split(','))
+                        if (!string.IsNullOrWhiteSpace(name)) offered.Add(name.Trim());
+                }
+                foreach (var p in mine) offered.Add(p.Name);
+
+                var added = new List<ConversationPreset>();
+                foreach (var shipped in ConversationPresets.Defaults)
+                    if (offered.Add(shipped.Name)) added.Add(shipped);
+                if (added.Count == 0 && stamped) return mine;
+
+                mine.AddRange(added);
+                var comments = new List<string>();
+                foreach (var line in (raw ?? string.Empty).Split(NewlineChars))
+                {
+                    var kept = line.TrimEnd(Carriage);
+                    var t = kept.TrimStart();
+                    if (!(t.StartsWith("#") || t.StartsWith("//"))) continue;
+                    if (t.StartsWith(OfferedStamp, StringComparison.OrdinalIgnoreCase)) continue;
+                    comments.Add(kept);
+                }
+                comments.Add(OfferedStamp + " " + string.Join(", ",
+                    offered.OrderBy(n => n, StringComparer.OrdinalIgnoreCase)));
+
+                var sb = new System.Text.StringBuilder();
+                foreach (var c in comments) sb.AppendLine(c);
+                sb.AppendLine();
+                var text = ConversationPresets.Format(mine).Trim();
+                if (text.Length > 0) sb.AppendLine(text);
+                File.WriteAllText(ConversationPresetsPath, sb.ToString());
+                return mine;
+            }
+            catch { return mine; }
+        }
+
+        // Spelled by code point so no escape has to survive a round trip through a patch.
+        private static readonly char[] NewlineChars = { (char)10, (char)13 };
+        private const char Carriage = (char)13;
 
         /// <summary>Writes the presets back (the in-game menu's add / rewrite / strike-out), keeping
         /// the file's own comment lines at the top.</summary>
