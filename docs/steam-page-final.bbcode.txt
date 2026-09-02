@@ -6,7 +6,7 @@ If one of these searches brought you here — yes, this is that mod:
 [*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], or a local model
 [*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
-[*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted and married in conversation[/b], companions included
+[*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted, proposed to and wed[/b] in conversation, companions included
 [*][b]voiced NPCs[/b] — hear them speak, in voices of their own people: clone your own or use hosted ones
 [*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
 [/list]
@@ -14,24 +14,24 @@ If one of these searches brought you here — yes, this is that mod:
 [h1]The NPCs are alive:[/h1]
 [list]
 [*]Distinct manners of speech, no repetition — leave a letter unanswered and they hear the silence.
-[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words.
-[*]Every soul begins as somebody: at your first meeting a private starting truth is written for them, grown from their real story.
+[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite themselves.
+[*]Every soul begins as somebody: a private starting truth written for them at your first meeting, grown from their real story.
 [*]They see the moment — time, place, who stands near, what lately happened in the world — and carry moods of their own.
-[*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won — the last in detail, older ones by name.
-[*]Your companions witness the everyday road too — the towns, the trade, the men you hired, the tasks and how each ended.
+[*][b]They remember your battles[/b] — who downed whom, who bled, what was won, the last in detail — [b]and the everyday road[/b]: the towns, the trade, the men you hired, how each task ended.
 [*]They are free: told who they are and what the world is, never forced into anything. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
 
 [h1]Court them. Wed them. Hire them.[/h1]
 [list]
-[*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road, moved by their judgment of your talks, not by a menu.
+[*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road, moved by their judgment of your talks, not a menu.
 [*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words; only they decide when life has answered one.
-[*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing — and her family's blessing costs a bride-price.
-[*][b]Companion brides and grooms[/b] — vanilla forbids them; here you may wed the wanderer at your side, and she keeps her place and duties.
+[*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing, and her family's blessing costs a bride-price.
+[*][b]Companion brides and grooms[/b] — vanilla forbids them; here you may wed the wanderer at your side, keeping her place and duties.
 [*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself — they open high and never volunteer their floor.
+[*][b]Ask for their hand.[/b] When nothing in them would refuse, the button appears: choose what you set on it — words alone, a ring, an heirloom — add a line of your own, and the day is written down for you both.
 [*]Nothing is sealed by words alone — every bargain, betrothal and wedding takes your confirming click, and the wedding is the real game marriage.
-[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her month decides what may come of it — a child begun on a night you chose, not by a hidden roll. Bring wine or a jewel and the night is written down and named — and your other wives may hear of it.
+[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her month decides what may come of it — a child begun on a night you chose, not a hidden roll. Bring wine or a jewel and the night is written down and named, and your other wives may hear of it.
 [*][b]And after[/b] — every child written down and owned before the world (or not), lovers, doors shut with her written reasons, wives keeping count of your nights.
 [/list]
 
@@ -42,8 +42,8 @@ Ask anyone anything about the game — they quietly search the web mid-reply and
 [h1]Your ways to reach them:[/h1]
 [list]
 [*]Face to face — they greet you as you approach.
-[*][b]One talk screen[/b] (hotkey [b]O[/b]) — everyone you know in one list — near, far or gone — the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
-[*][b]Hear them[/b] — a play mark beside every line, and a Voices page to cast anyone. Off by default; one button installs it — NVIDIA card, or a key for hosted voices: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
+[*][b]One talk screen[/b] (hotkey [b]O[/b]): everyone you know in one list — near, far or gone — the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
+[*][b]Hear them[/b] — a play mark beside every line, and a Voices page to cast anyone. Off by default; one button installs it (NVIDIA card, or a key for hosted voices): [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [*]Edit a character's prompt, or the world's, [b]without leaving the game[/b].
 [*][b]Think[/b] (Shift+Enter) — stuck for words? Your own hero drafts your next line from all you two have said. Keep it, change it, or bin it.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)
@@ -63,13 +63,13 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [b]Not sure?[/b] Prices side by side, each provider's catch, the local setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
-[b]Setup, five minutes:[/b] get your key, start the game once, paste it where the mod tells you, restart. It tests the connection at campaign load and says plainly whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the FAQ[/b].
+[b]Setup, five minutes:[/b] get your key, start the game once, paste it where the mod tells you, restart. It tests the connection at load and says whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the FAQ[/b].
 
 [h1]Privacy[/h1]
 [list]
 [*]Your conversations go to the AI provider [b]you[/b] configure, under [b]your[/b] key and their terms — nowhere else. Notably, Google's [b]free[/b] tier trains on what it receives. (Local: nothing leaves your machine.)
 [*]With web search on (default), look-ups go to DuckDuckGo — turn it off to keep everything with your provider.
-[*][b]No telemetry whatsoever.[/b] Memories are plain files on your own disk, yours to read, edit, or delete.
+[*][b]No telemetry whatsoever.[/b] Everything — prompts, memories, battles, letters — is plain text on your own disk, yours to read, edit or delete.
 [*][b]AI content disclosure:[/b] all character dialogue is generated at play time by the AI model you configure.
 [/list]
 
@@ -78,7 +78,6 @@ You bring [b]your own API key[/b]. Pick a row:
 [*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional.
 [*]Safe to remove mid-campaign — saves load fine without it, and memories live outside them, so reinstall later and everyone still remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod — fully original source.
-[*]Everything under Configs\ImmersiveAI\ is plain text: prompts, memories, battles, letters.
 [/list]
 
 [h1]Final thoughts[/h1]

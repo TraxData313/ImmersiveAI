@@ -20,8 +20,8 @@ If one of these searches brought you here — yes, this is that mod:
 - **AI dialogue** in Bannerlord — talk to any NPC through the AI you choose
 - NPCs with **real long-term memory** — they remember you across conversations and campaigns' worth of talks
 - NPCs that **approach you** and **write you letters** on their own
-- an **AI wife or companion** that roleplays and never forgets your story — **courted and married
-  in conversation**, companions included
+- an **AI wife or companion** that roleplays and never forgets your story — **courted, proposed to
+  and wed in conversation**, companions included
 - **voiced NPCs** — hear them speak, in voices of their own people: clone your own or use hosted ones
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
 - **never knowing what to say?** one key and your own hero drafts your next line for you
@@ -68,6 +68,13 @@ If one of these searches brought you here — yes, this is that mod:
 - **Hiring by handshake.** Agree service and price with an unhired wanderer in the talk itself. They
   open at their worth, concede only what your words have earned, and never volunteer their lowest
   price — quoting the game's own real numbers, not invented ones.
+- **Ask for their hand.** The moment nothing in them would refuse you — their regard deep enough,
+  their station passed, their own written doubts all laid to rest — the "Between us" page offers
+  **Ask for their hand**. Choose what you set on it (words alone, a band of silver, a ring, an
+  heirloom fit for a queen), add one line of your own to shape the moment, and the answer is yes:
+  every rail that could have refused you passed before the door existed. The day is then written
+  down like a wedding — a keepsake to read, a card in the thread, and a day you can both recall
+  ever after.
 - **Nothing is sealed by words alone.** Every bargain, betrothal and wedding takes your confirming
   click, and the wedding is the real game marriage — cutscene, clan, children and all. Offers can
   even ride letters and be sealed when the courier arrives.

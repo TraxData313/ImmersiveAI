@@ -15,36 +15,61 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-- A doubt she wrote twice in near-identical words no longer stands unanswerable — the copies fold
-  into one line, in campaigns that already carry them too.
-- Someone being courted keeps her worries without circling back to them every single exchange.
+## v3.3.0 — 2026.09.02
+
+The asking becomes yours: a real proposal with a ring and a written day, and a marriage road you
+can finally see.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Ask for their hand: a proposal, a ring, a written day
+* The marriage road drawn under their name, and your next move
+* Its every step, doubt and refusal now shows in the talk itself
+* Doubts stop breeding, and "Ready" now comes on its own
+```
+
+### Ask for their hand
+
+- THE PROPOSAL IS YOURS TO MAKE: the moment nothing in them would refuse, "Between us ✦" offers
+  "Ask for their hand" — choose the gift, add a line of your own, and the answer is yes.
+- The day you were promised is written down like a wedding: a keepsake to read, a card in the
+  thread, and a day both of you can recall ever after.
+- The day you were promised is kept on the "Between us" page from the promise onward — the wedding
+  day included, so it is never one stage out of reach.
+- A new "propose" conversation preset, because asking is the one move the game never told you was yours.
+
+### The road, made visible
+
 - The road to marriage is drawn as a path under their name — Warmth, Love, Ready, Betrothed,
   Married — with the rung you stand on lit, and the rungs your own game does not use left out.
 - Under it, one plain line saying what YOU do next: whose move it is, what is standing in the way,
   and — when nothing is — that it is time to ask them.
 - Every movement of that road now shows in the conversation itself, where the talking happens: her
   steps, her doubts written and laid to rest, and every reach the world turned back.
-- A new "propose" conversation preset, because asking is the one move the game never told you was yours.
-- The grey line under a name reads plainly again; the reach-out odds moved behind developer mode.
-- THE PROPOSAL IS YOURS TO MAKE: the moment nothing in them would refuse you, "Between us ✦" offers
-  "Ask for their hand" — choose the gift, add a line of your own, and the answer is yes.
-- The day you were promised is written down like a wedding: a keepsake to read, a card in the
-  thread, and a day both of you can recall ever after.
 - Sealed moments — the betrothal, the blessing, the wedding, and every one the world turned back —
   now land in the conversation thread too, not only in the map log.
 - Courting someone the world will never wed (a married soul, a townsperson of station) now says so
   plainly on their page, instead of letting you court into silence forever.
-- The old three-day wait between betrothal and wedding is cleared from older installs that never
-  chose it; set it back in the options if you liked the waiting.
 - The courtship pages say the same things in half the words.
+- The page's own button looks like a button again (asking, wedding, and the day itself).
+- The grey line under a name reads plainly again; the reach-out odds moved behind developer mode.
+
+### Their doubts
+
+- A doubt she wrote twice in near-identical words no longer stands unanswerable — the copies fold
+  into one line, in campaigns that already carry them too.
 - Doubts stop breeding: while one of theirs still stands, they write no new ones — they answer what
   they already wrote, and they now pick it from their own list instead of retyping it from memory.
+- Someone being courted keeps her worries without circling back to them every single exchange.
 - Marriage doubts belong to love: someone who has only warmed to you no longer writes down what a
   wedding would ask of them.
 - "Ready" arrives by itself the moment their last doubt is laid to rest — no step left to wait on.
-- The page's own button looks like a button again (asking, wedding, and the day itself).
-- The day you were promised is kept on the "Between us" page from the promise onward — the wedding
-  day included, so it is never one stage out of reach.
+
+### Changed
+
+- The old three-day wait between betrothal and wedding is cleared from older installs that never
+  chose it; set it back in the options if you liked the waiting.
 
 ## v3.2.0 — 2026.08.30
 

@@ -7,7 +7,7 @@ If one of these searches brought you here - yes, this is that mod:
 [*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through the AI you choose, including a [b]free[/b] Gemini key
 [*]NPCs with [b]real long-term memory[/b] - they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
-[*]an [b]AI wife or companion[/b] that roleplays and never forgets your story - [b]courted and married in conversation[/b], companions included
+[*]an [b]AI wife or companion[/b] that roleplays and never forgets your story - [b]courted, proposed to and wed[/b] in conversation, companions included
 [*][b]voiced NPCs[/b] - hear them speak, in voices of their own people: clone your own or use hosted ones
 [*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
 [*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
@@ -15,25 +15,25 @@ If one of these searches brought you here - yes, this is that mod:
 
 [b]The NPCs are alive:[/b]
 [list]
-[*]Distinct voices, no repetition - and when you leave a letter unanswered, they hear the silence and hold their peace.
-[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite in their own words - the names, promises and debts between you - beside their own sense of self and opinion of you.
-[*]Every soul begins as somebody: at your first meeting a private starting truth is written for them - an old wound, an odd habit, a vanity - grown from their real story.
-[*]They see the moment - time, place, who stands near, what lately happened in the world - and they carry moods and weather of their own.
-[*][b]They remember your battles.[/b] Everyone who fought at your side keeps the day: who downed whom, who bled, what was won - the last in detail, older ones by name.
-[*]Your companions witness the everyday road too - the towns, the trade, the men you hired, the tasks and how each ended - and they know their own wounds, and see yours.
+[*]Distinct voices, no repetition - leave a letter unanswered and they hear the silence, and hold their peace.
+[*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite themselves - the names, promises and debts between you - beside their own sense of self.
+[*]Every soul begins as somebody: a private starting truth written for them at your first meeting - an old wound, an odd habit, a vanity - grown from their real story.
+[*]They see the moment - time, place, who stands near, what lately happened in the world - and carry moods of their own.
+[*][b]They remember your battles[/b] - who downed whom, who bled, what was won, the last in detail - [b]and the everyday road[/b]: the towns, the trade, the men you hired, how each task ended. They know their own wounds, and see yours.
 [*]They are free: told who they are and what their world is, never forced. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first - you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
 
 [b][size=4]Court them. Wed them. Hire them.[/size][/b]
 [list]
-[*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road, moved by their own judgment of your talks, not by a menu.
+[*][b]Marriage by courtship.[/b] Win a heart in conversation and it walks its own road, moved by their own judgment of your talks, not a menu.
 [*][b]They write their own misgivings:[/b] what truly worries them about a life together, in their own words; their readiness waits until nothing they wrote still stands.
 [*]Station guards the hand, not the heart: a great house's daughter may love anyone, but her hand asks a suitor of standing - and her family's blessing costs a bride-price, haggled in talk or letter.
-[*][b]Companion brides and grooms[/b] - vanilla forbids them; here you may wed the wanderer at your side, and she keeps her place and duties.
+[*][b]Companion brides and grooms[/b] - vanilla forbids them; here you may wed the wanderer at your side, keeping her place and duties.
 [*][b]Hiring by handshake:[/b] agree service and price with a wanderer in the talk itself - they open high and never volunteer their floor.
+[*][b]Ask for their hand.[/b] When nothing in them would refuse, the button is there: choose what you set on it - words alone, a ring, an heirloom - add a line of your own, and the day is written down for you both.
 [*]Nothing is sealed by words alone - every bargain, betrothal and wedding takes your confirming click, and the wedding is the real game marriage.
-[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her month decides what may come of it - a child begun on a night you chose, not by a hidden roll. Bring wine or a jewel and the night is written down and named - and your other wives may hear of it.
+[*][b]Then the nights are yours.[/b] Each evening you choose where you sleep, and her month decides what may come of it - a child begun on a night you chose, not a hidden roll. Bring wine or a jewel and the night is written down and named, and your other wives may hear of it.
 [*][b]And after[/b] - every child written down and owned before the world (or not), lovers won past what marriage asks, doors shut against you with her reasons in her own words, wives keeping count of your nights.
 [/list]
 

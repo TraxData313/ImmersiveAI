@@ -1,16 +1,39 @@
-﻿WHERE THINGS STAND (2026.08.30 — **v3.2.0 IS ON STEAM; NEXUS STILL TO UPLOAD**)
+﻿WHERE THINGS STAND (2026.09.02 — **v3.3.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
 
-  ** LEFT FOR ANTON — THE NEXUS HALF OF v3.2.0
-      Steam is done (uploaded 2026.08.30, item 3764210301). Nexus mod 12119 → Manage → Files:
-        - Update existing file, tick Archive existing, and SET THE DISPLAY NAME BACK to
-          `ImmersiveAI V3.2.0` (picking the old file silently overwrites it).
-        - Paste the 255-char block from CHANGELOG.md's v3.2.0 section into BOTH the file
-          Description and Add changelog.
-        - Set the MOD version to 3.2.0 on the General step — that is the field Vortex reads.
-        - COME BACK AN HOUR LATER for the virus scan. v3.0.0 was quarantined for a day.
-        - The zip: dist\ImmersiveAI_v3.2.0.zip
-      The Steam description needs no repaste — the page describes the mod, not the build.
+  ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.3.0 (five minutes, and only you can do it)
+      Steam is done (uploaded 2026.09.02, "Uploading done!", item 3764210301). On Nexus the MOD
+      VERSION is already set to V3.3.0 and saved — that is the field Vortex reads, and it had been
+      stranded at V3.1.3 while the file said V3.2.0, so Vortex users were never told v3.2.0 existed.
+      What is left is the FILE, which could not go up from here: the browser's upload bridge caps at
+      10 MB, the zip is 14.2 MB, and the Nexus public API has no upload endpoint. So:
 
+      Mod 12119 -> Manage -> Files -> the "Update" button on the ImmersiveAI V3.2.0 row.
+        - The zip: dist\ImmersiveAI_v3.3.0.zip
+        - Tick ARCHIVE EXISTING FILE, then SET THE DISPLAY NAME BACK to `ImmersiveAI V3.3.0` —
+          picking the old file silently overwrites the name with the old one's.
+        - Paste this into BOTH the file Description and Add changelog (240 of the 255 cap):
+              * Ask for their hand: a proposal, a ring, a written day
+              * The marriage road drawn under their name, and your next move
+              * Its every step, doubt and refusal now shows in the talk itself
+              * Doubts stop breeding, and "Ready" now comes on its own
+        - The file's own Version field: V3.3.0.
+      The Steam description needs no repaste for the build — but BOTH store pages changed this time
+      (the proposal is now in the "Looking for...?" list): docs\steam-page-final.bbcode.txt (7850 of
+      8000 bytes) and docs\nexus-page.bbcode.txt are ready to paste whenever you feel like it.
+
+  ** THE QUARANTINE — THE THING THAT ACTUALLY MATTERS (2026.09.02)
+      **v3.2.0 has been sitting quarantined on Nexus since 30 August**: uploaded, red-crossed, ONE
+      download, undownloadable by anybody, for three days. That is the fourth release in a row
+      (v3.0.0, v3.1.0, v3.1.1, v3.2.0) and v3.3.0 will land the same way — you said to upload it
+      anyway and write to them yourself, which is right, because the one road package.ps1's own
+      comment admits was NEVER TRIED is asking support.
+      What to send support@nexusmods.com: the file is quarantined for containing
+      VoiceHost\ImmersiveAI.VoiceHost.exe, a text-to-speech helper process we build ourselves; the
+      full source is at github.com/TraxData313/ImmersiveAI (src/ImmersiveAI.VoiceHost) and it builds
+      with `dotnet publish`. That is exactly what their notice asks for.
+      IF THEY SAY NO, the fallback is known and was already tried once: split the host into a second
+      optional file. It was reverted 2026.08.21 because half the players never found the second file
+      (Fritz3593) — so if it comes back it needs a line in the main file's own description.
 
   ** NEXT PLAYTEST — DID THE VOICES STOP DERAILING? (2026.08.17)
       Anton heard Sibylla hold one wordless note for ~30 s mid-reply. Three things shipped for it:

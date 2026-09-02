@@ -1435,3 +1435,30 @@ first three change how the whole road behaves.
   teaches nobody anything. Noted rather than silently reverted, so the case does not get re-made.
   895 Core tests green.
   (2026.08.31 19.23.49)
+
+- **v3.3.0 SHIPPED TO STEAM — "the asking becomes yours"** (the release dance, run end to end).
+  Version bumped, the [Unreleased] section's 18 pills swept for ghosts (all eighteen verified
+  against real code — nothing announced a retired feature) and regrouped under four headers, and
+  the three change-note tiers written at once: the Nexus block at 240 of its 255 characters, the
+  Workshop ChangeNotes (XML round-tripped through a parser afterwards to prove `<Tasks>` is still
+  the root and the `&quot;` escaping held), and the CHANGELOG section itself.
+  THE STORE PAGES were paid for rather than grown: the proposal went into the "Looking for…?"
+  search-bait list on all three descriptions ("courted, proposed to and wed"), plus a bullet in
+  the courtship section — and every byte of it was bought back by cuts in the same file. Steam
+  landed at 7850 of 8000 UTF-8 bytes, exactly the 150 spare the runbook asks for; the cuts were
+  words, never facts, and one of them was a genuine duplication (the "plain text on your own disk"
+  fact stood in both Privacy and Compatibility). Nexus paid 63 of the 116 it gained.
+  Packaged v3.3.0 (14,171,363 bytes; the voice-shipping guard passed, 93 voices) and verified the
+  built DLL was newer than every source file before uploading. Steam: **"Uploading done!"** (the
+  exit-82 press-any-key crash is the documented normal ending).
+  NEXUS IS HALF DONE, and the half that is missing is a tooling limit, not a decision: the MOD
+  version field — the one Vortex compares, and the one that had silently sat at V3.1.3 while the
+  file said V3.2.0 — is now V3.3.0 and saved. The FILE itself could not be uploaded from here: the
+  browser bridge caps a file upload at 10 MB and the zip is 14.2 MB, a native file picker cannot be
+  driven, and the Nexus public API has no upload endpoint. So the drag-and-drop is Anton's.
+  ALSO FOUND, and worth more than the release: **v3.2.0 has been sitting QUARANTINED on Nexus since
+  30 August** — uploaded, red-crossed, one download, undownloadable by anybody. That is the third
+  time (v3.0.0, v3.1.0, v3.1.1) and it is the .exe rule again. Anton's call on seeing it: upload
+  anyway, he writes to support himself — which is the one road package.ps1's own comment says was
+  never actually tried.
+  (2026.09.02 16.05.00)
