@@ -280,6 +280,33 @@ public class MemoryCompressorTests
         Assert.Equal("I am wearier than I was, but I still hope.", result.Self);
     }
 
+    [Theory]
+    [InlineData("SELF:\nI keep my word.\nSUMMARY:\nI promised to return tomorrow.", "I keep my word.")]
+    [InlineData("SELF:\nunchanged\nSUMMARY:\nI promised to return tomorrow.", "unchanged")]
+    public void ParseResponse_SelfBeforeSummary_KeepsSectionsSeparate(string response, string expectedSelf)
+    {
+        var result = MemoryCompressor.ParseResponse(response);
+
+        Assert.Equal("I promised to return tomorrow.", result.Summary);
+        Assert.Equal(expectedSelf, result.Self);
+    }
+
+    [Fact]
+    public async Task ReflectAsync_UnchangedSelfBeforeSummary_PreservesIdentity()
+    {
+        var client = new FakeChatClient
+        {
+            Response = "SELF:\nunchanged\nSUMMARY:\nI promised to return tomorrow."
+        };
+        var memory = MemoryWithTurns(3);
+        var self = new NpcSelf { Text = "I am loyal to my friends." };
+
+        Assert.True(await new MemoryCompressor(client).ReflectAsync(memory, 2, self: self));
+        Assert.Equal("I am loyal to my friends.", self.Text);
+        Assert.Equal("I promised to return tomorrow.", memory.Summary);
+        Assert.Equal(2, memory.RecentTurns.Count);
+    }
+
     [Fact]
     public void ParseResponse_NoSelfSection_LeavesSelfNull()
     {
