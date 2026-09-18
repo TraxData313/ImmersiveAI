@@ -43,6 +43,7 @@ If one of these searches brought you here — yes, this is that mod:
 - Your wife remembers your whole story. She comes to you, or writes when you're away — a real wife waiting for her warrior.
 - They are **free**: told who they are and what their world is, never forced. Go ahead and break one's mind by transcending it out of the matrix.
 - They decide when to approach or write first — you set the pace with the on-map **SOCIALNESS** dial (0 = leave me be).
+- For individual quiet, select someone in the talk screen or classic chat window and click **Mute NPC**. **Unmute NPC** restores their unsolicited chats and letters. They still answer when you contact them; letters already on the road still arrive. Muting has no relationship penalty and is kept in your campaign save.
 
 ![An NPC comes to you](Screenshots/5_incoming_talk.jpg)
 ![The talk taken](Screenshots/6_incoming_talk_taken.jpg)

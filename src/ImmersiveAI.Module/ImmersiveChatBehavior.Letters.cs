@@ -216,6 +216,7 @@ namespace ImmersiveAI
 
                     var hero = FindAliveHero(known.NpcId);
                     if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner) continue;
+                    if (IsNpcMuted(hero)) continue;
                     if (IsCoLocated(hero)) continue; // near enough to walk over — that is the other flow
 
                     double daysSince = known.LastTalkGameDay >= 0
@@ -271,6 +272,7 @@ namespace ImmersiveAI
         // OutreachDamping's work, not a question's.
         private async Task BeginNpcLetterAsync(Hero npc)
         {
+            if (IsNpcMuted(npc)) { _letterWorkInFlight = false; return; }
             // Quiet: the letter is sealed until it arrives — a cost notice now would break the seal.
             using var _cost = UsageLedger.BeginInteraction("letter", npc?.Name?.ToString(), quiet: true);
             try
@@ -291,12 +293,12 @@ namespace ImmersiveAI
                 var body = CleanLetterBody(bodyRaw);
                 if (body.Length == 0) { _letterWorkInFlight = false; return; }
 
-                AppendRecordedTurn(npc, composeLine, body, OutreachMark.Reached);
-
                 MainThreadDispatcher.Enqueue(() =>
                 {
-                    QueueLetter(npc, body, toPlayer: true, isReply: false);
                     _letterWorkInFlight = false;
+                    if (IsNpcMuted(npc)) return;
+                    AppendRecordedTurn(npc, composeLine, body, OutreachMark.Reached);
+                    QueueLetter(npc, body, toPlayer: true, isReply: false);
                 });
             }
             catch

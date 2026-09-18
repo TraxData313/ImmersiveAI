@@ -108,6 +108,12 @@
                       </Children>
                     </ButtonWidget>
 
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="150" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="28" MarginRight="392" Brush="Popup.Cancel.Button" Command.Click="ExecuteToggleMute">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Center" Text="@MuteButtonText" />
+                      </Children>
+                    </ButtonWidget>
+
                     <!-- header: their name and how their heart stands toward you, under the buttons.
                          MarginRight only clears the misgivings button riding at its right. -->
                     <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="76" MarginRight="210" StackLayout.LayoutMethod="HorizontalLeftToRight">

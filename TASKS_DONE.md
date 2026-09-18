@@ -1506,3 +1506,14 @@ first three change how the whole road behaves.
   stops new sparks, and the existing prompt editor remains the safe place to revise old ones.
   901 tests green; module build 0 errors; dev mod redeployed and installed DLL hash matches.
   (2026.09.18 11.10.01)
+- [x] PER-NPC MUTE TOGGLE (Anton: companions keep interrupting with unwanted reasons).
+  Added Mute NPC / Unmute NPC to the talk screen and classic chat window. Stored per hero in
+  the campaign save, defaulting to unmuted for older saves. Muted NPCs are excluded from nearby
+  outreach and spontaneous-letter rolls; async delivery rechecks mute before recording or showing
+  a greeting or dispatching a new letter. Existing chat notices are invalidated without rejection
+  or relationship changes. Player-initiated chats and letter replies still work, and letters already
+  travelling still arrive. The selected NPC's status and developer odds identify muted contacts.
+  Release build passed; all 901 existing Core tests passed; XML and button bindings checked.
+  Deployed to ImmersiveAI.Dev and verified both DLLs and both changed prefab hashes. In-game
+  toggle, save/reload persistence, and layout still need playtesting.
+  (2026.09.18 14.31.36)

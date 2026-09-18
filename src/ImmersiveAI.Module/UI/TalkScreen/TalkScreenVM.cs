@@ -898,6 +898,8 @@ namespace ImmersiveAI.UI.TalkScreen
         private void RefreshSelectionState()
         {
             SelectedName = _selected?.Name ?? string.Empty;
+            OnPropertyChanged("MuteButtonText");
+            OnPropertyChanged("CanMute");
 
             // How this one can be reached at all — the one question that decides the button, the
             // key bindings, and what the grey line under the name says.
@@ -1184,6 +1186,19 @@ namespace ImmersiveAI.UI.TalkScreen
         public void ExecuteClose() => TalkScreenManager.Close();
 
         public void ExecuteToggleInfo() => IsInfoShown = !IsInfoShown;
+
+        [DataSourceProperty]
+        public string MuteButtonText => ImmersiveChatBehavior.IsNpcMuted(_selected?.Hero) ? "Unmute NPC" : "Mute NPC";
+
+        [DataSourceProperty]
+        public bool CanMute => _selected?.Hero != null;
+
+        public void ExecuteToggleMute()
+        {
+            if (_selected?.Hero == null) return;
+            ImmersiveChatBehavior.ToggleNpcMute(_selected.Hero);
+            RefreshSelectionState();
+        }
 
         /// <summary>The way back out of whichever page is up — the same order Escape folds them in.
         /// Every overlay wears it as a button, because "X" closes the whole screen and nothing else
@@ -2772,6 +2787,7 @@ namespace ImmersiveAI.UI.TalkScreen
             "Everyone you know stands in one place here — those in the room with you and those a kingdom away — and what has passed between you reads as one story, whether it was spoken or carried by a courier.\n" +
             "\n" +
             "WHO IS LISTED\n" +
+            "• Mute NPC stops that person's unsolicited chats and new letters; Unmute NPC allows them again. They still answer you, and letters already on the road still arrive. This choice is kept in your campaign save.\n" +
             "• (here) — they can hear you now: write, press Enter, and they answer.\n" +
             "• (away) — too far for words. The same box writes them a letter instead, and the button becomes \"Seal and send\".\n" +
             "• (gone) — they have died. Their letters stay readable; nothing more can be sent.\n" +

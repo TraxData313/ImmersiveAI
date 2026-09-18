@@ -1059,6 +1059,8 @@ namespace ImmersiveAI
         public override void SyncData(IDataStore dataStore)
         {
             dataStore.SyncData("ImmersiveAI_CampaignId", ref _campaignId);
+            dataStore.SyncData("ImmersiveAI_MutedNpcIds", ref _mutedNpcIds);
+            if (_mutedNpcIds == null) _mutedNpcIds = new List<string>();
 
             // Mint a fresh snapshot token for THIS save before it is written, so the token stored inside the
             // file is the one OnSaveOver photographs; on load this reads back the token saved with the file,
@@ -2161,6 +2163,8 @@ namespace ImmersiveAI
                 var doorLine = DoorLabelFor(npc);
                 if (!string.IsNullOrEmpty(doorLine)) sb.Append(" · ").Append(doorLine);
 
+                if (IsNpcMuted(npc)) return sb.Append(" · muted (no unsolicited chats or letters)").ToString();
+
                 // Why the quiet, in a word: waiting on an answer, or simply resting after a visit paid.
                 if (known != null && known.UnansweredOutreach > 0)
                     sb.Append($" · awaits your answer ({known.UnansweredOutreach} unanswered)");
@@ -2497,6 +2501,7 @@ namespace ImmersiveAI
         // any true history exists, station no longer gates the bond.
         private double CoLocatedPull(Hero hero, double nowDay)
         {
+            if (IsNpcMuted(hero)) return 0;
             double hearth = HearthFactor(hero);
 
             // THE COLD BITES THE PRESENCE FLOOR TOO (2026.08.16), and it has to, or the change means
@@ -2751,6 +2756,7 @@ namespace ImmersiveAI
         // waves off is no longer paid for in tokens, where the ponder used to bill for it in advance.
         private async Task BeginInitiationAsync(Hero npc)
         {
+            if (IsNpcMuted(npc)) { _initiationInFlight = false; return; }
             // Quiet: the words themselves are billed where they are made (the first word, the approach).
             using var _cost = UsageLedger.BeginInteraction("reaching out", npc?.Name?.ToString(), quiet: true);
             try
@@ -2855,6 +2861,7 @@ namespace ImmersiveAI
         // is shown directly, as it always was. Runs on the game thread.
         private void ShowInitiationOffer(Hero npc, string situation)
         {
+            if (IsNpcMuted(npc)) { _initiationInFlight = false; return; }
             try
             {
                 var name = npc.Name?.ToString() ?? "Someone";
@@ -2889,6 +2896,7 @@ namespace ImmersiveAI
         // the notice UI is unavailable. Pauses like a ransom broker's offer so it is a real choice.
         private void ShowInitiationInquiry(Hero npc, string situation)
         {
+            if (IsNpcMuted(npc)) { _initiationInFlight = false; return; }
             try
             {
                 _initiationNpc = npc;
@@ -3298,6 +3306,7 @@ namespace ImmersiveAI
                         if (string.IsNullOrWhiteSpace(name)) name = known.NpcId;
 
                         if (hero == null) { sb.AppendLine($"• {name}: not found in the world (dead or away)."); shown++; continue; }
+                        if (IsNpcMuted(hero)) { sb.AppendLine($"• {name}: muted — no unsolicited chats or letters."); shown++; continue; }
 
                         bool coLocated = IsCoLocated(hero);
                         int relation = GetStanding(hero);
@@ -3352,6 +3361,7 @@ namespace ImmersiveAI
                     {
                         if (hero == null || hero == Hero.MainHero || !hero.IsAlive || hero.IsPrisoner || hero.IsChild) continue;
                         if (knownIds.Contains(hero.StringId)) continue;
+                        if (IsNpcMuted(hero)) continue;
                         if (!IsCoLocated(hero)) continue;
                         strangersHere++;
                         double strangerHearth = HearthFactor(hero);
@@ -3830,13 +3840,14 @@ namespace ImmersiveAI
                 if (string.IsNullOrWhiteSpace(raw)) { MainThreadDispatcher.Enqueue(() => _initiationInFlight = false); return; }
                 var words = raw.Trim();
 
-                AppendRecordedTurn(npc, PromptBuilder.FirstWordNote(ctx.PlayerName), words,
-                    OutreachMark.Reached, ConversationTurn.InnerSpeaker);
-                PersistSituation(npc, situation);
-
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     _initiationInFlight = false;
+                    // The player may have muted them while the model was composing this greeting.
+                    if (IsNpcMuted(npc)) return;
+                    AppendRecordedTurn(npc, PromptBuilder.FirstWordNote(ctx.PlayerName), words,
+                        OutreachMark.Reached, ConversationTurn.InnerSpeaker);
+                    PersistSituation(npc, situation);
                     MarkMetInWorldsEyes(npc);
                     var name = npc.Name?.ToString() ?? "Someone";
                     var opening = stranger ? $"{name} approaches you and says:" : $"{name} sees you and says:";

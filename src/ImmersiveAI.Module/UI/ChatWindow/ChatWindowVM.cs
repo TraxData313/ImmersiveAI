@@ -489,6 +489,7 @@ namespace ImmersiveAI.UI.ChatWindow
         private void RefreshSelectionState()
         {
             SelectedName = _selected?.Hero?.Name?.ToString() ?? string.Empty;
+            OnPropertyChanged("MuteButtonText");
             OnPropertyChanged("HasSelection");
             OnPropertyChanged("DevTitleText");
             OnPropertyChanged("HasOverview");
@@ -931,6 +932,16 @@ namespace ImmersiveAI.UI.ChatWindow
 
         [DataSourceProperty]
         public bool HasSelection => _selected != null;
+
+        [DataSourceProperty]
+        public string MuteButtonText => ImmersiveChatBehavior.IsNpcMuted(_selected?.Hero) ? "Unmute NPC" : "Mute NPC";
+
+        public void ExecuteToggleMute()
+        {
+            if (_selected == null) return;
+            ImmersiveChatBehavior.ToggleNpcMute(_selected.Hero);
+            RefreshSelectionState();
+        }
 
         [DataSourceProperty]
         public string RelationText
@@ -1459,6 +1470,7 @@ namespace ImmersiveAI.UI.ChatWindow
             "• Under a chosen name: how much story you share, how fresh it is, and the hour's chance they are moved to come to you (or, away, to write).\n" +
             "\n" +
             "HOW IT WORKS\n" +
+            "• Mute NPC stops that person's unsolicited chats and new letters; Unmute NPC allows them again. They still answer you, and letters already on the road still arrive. This choice is kept in your campaign save.\n" +
             "• Enter sends; Escape closes. An unsent draft is kept — closing the window loses nothing.\n" +
             "• \"Let me think…\" (Shift+Enter) has your own character find the next line for you — they read everything the one before you reads, and their words land in your writing box, yours to keep or change. It works on an empty box, on a half-typed rant, or on an preset.\n" +
             "• \"Preset…\" keeps standing wishes to steer that thinking (\"something romantic\", \"a courteous way out\"). Choosing one fills the box with the WISH, not with words to send — Shift+Enter turns it into a line. Add your own on its Edit page.\n" +
