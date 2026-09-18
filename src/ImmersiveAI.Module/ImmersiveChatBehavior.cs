@@ -4096,8 +4096,8 @@ namespace ImmersiveAI
         // style and the player's global prompt, steered by two drawn muse cards and a weighted
         // intensity die (PersonaSpark, Core). The spark lands in custom_instructions.txt — the very
         // file the player edits — under a "# spark:" stamp comment, and from there rides every
-        // prompt as "Of myself, this I hold true:". Modes (PersonaSparkMode): Generate (default,
-        // quiet), Ask (a once-per-soul popup on the player-facing paths), Off. Deleting the file,
+        // prompt as "Of myself, this I hold true:". Modes (PersonaSparkMode): Off (default), Ask
+        // (a once-per-soul popup on the player-facing paths), Generate (quiet). Deleting the file,
         // or the DevMode reroll lever, invites the director back.
 
         /// <summary>Seeds the spark if this soul still needs one. Cheap no-op in the common case

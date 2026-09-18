@@ -10,10 +10,15 @@
     /// </summary>
     internal static class McmChoiceLists
     {
-        // Gemini and DeepSeek joined on 2026.08.02, ClaudeCode (the subscription road) on
-        // 2026.08.28 — all APPENDED, not slotted in beside the other cloud services: an old store
+        // Gemini and DeepSeek joined on 2026.08.02, ClaudeCode on 2026.08.28, and Codex on
+        // 2026.09.18 — all APPENDED, not slotted in beside the other cloud services: an old store
         // file's "3" must keep meaning Local.
-        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek", "ClaudeCode" };
+        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek", "ClaudeCode", "Codex" };
+
+        /// <summary>The current Codex subscription family. Sol mirrors living-abby's proven default;
+        /// Astra is the strongest, Terra the balanced step-down, Luna the lightest.</summary>
+        public static readonly string[] CodexModels =
+            { "gpt-5.6-sol", "gpt-6-astra", "gpt-5.6-terra", "gpt-5.6-luna" };
 
         /// <summary>The models the Claude Code road offers by name. Whatever the player's plan
         /// carries works — these are the ones worth listing; anything else goes in the custom

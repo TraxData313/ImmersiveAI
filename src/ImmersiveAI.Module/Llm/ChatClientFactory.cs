@@ -52,6 +52,11 @@ namespace ImmersiveAI.Llm
             if (config != null && config.Backend == "ClaudeCode")
                 return new ClaudeCodeChatClient(config.ClaudeCodeModel, config.ClaudeCodePath, maxTokens);
 
+            // Codex: the parallel subscription road, authenticated by the installed Codex app/CLI
+            // through ChatGPT. It accepts no API-key session and exposes none of Codex's own tools.
+            if (config != null && config.Backend == "Codex")
+                return new CodexAppServerChatClient(config.CodexModel, config.CodexPath, maxTokens);
+
             // Local: the same client speaking to a server on the player's own machine (LM Studio,
             // Ollama, llama.cpp). Keyless is normal there; errors name "Local AI" so a dead server
             // never sends anyone checking a cloud account.

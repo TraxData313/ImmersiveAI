@@ -63,6 +63,8 @@ namespace ImmersiveAI
                 : backend == "OpenRouter" ? config?.OpenRouterModel
                 : backend == "Gemini" ? config?.GeminiModel
                 : backend == "DeepSeek" ? config?.DeepSeekModel
+                : backend == "ClaudeCode" ? config?.ClaudeCodeModel
+                : backend == "Codex" ? config?.CodexModel
                 : config?.AnthropicModel) ?? "").ToLowerInvariant();
 
             // The configured (user-editable) model table decides; the longest key contained in the

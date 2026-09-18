@@ -25,8 +25,8 @@ If one of these searches brought you here — yes, this is that mod:
 - **voiced NPCs** — hear them speak, in voices of their own people: clone your own or use hosted ones
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
 - **never knowing what to say?** one key and your own hero drafts your next line for you
-- **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — a **claude.ai Pro/Max plan**
-  through your installed Claude Code app (no API key) — or, for tinkerers only, a
+- **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — plus your existing
+  **ChatGPT/Codex** or **claude.ai Pro/Max** subscription through the installed app (no API key) — or, for tinkerers only, a
   **local model (LM Studio / Ollama)** at your own risk
 
 
@@ -141,19 +141,22 @@ words, the box now saying "Seal and send", and a courier already on the road bet
 
 ## What it runs on — and what it costs
 
-Bring **your own API key**. Pick a row:
+Bring **your own account or API key**. Pick a row:
 
-| If you want… | Pick | Key from |
+| If you want… | Pick | Account/key from |
 |---|---|---|
 | **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
+| **A ChatGPT plan you already pay for** | Codex + `gpt-5.6-sol` — through the installed Codex app, no API key | ChatGPT |
+| **A Claude plan you already pay for** | ClaudeCode — through the installed Claude Code app, no API key | claude.ai |
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best play, denars no object** | `gpt-5.6-terra` — the live-tested step-up | openrouter.ai |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — tinkerers only | — |
 
-A typical exchange costs about a tenth of a cent on the default — $10 covers many thousands of
-messages. Every interaction shows its tokens and price in-game, daily totals are kept, and an
-optional hard daily cap makes runaway costs impossible.
+A typical exchange costs about a tenth of a cent on the API default — $10 covers many thousands
+of messages. The Codex and ClaudeCode roads instead spend the subscription you already have and
+show its 5-hour/weekly gauge. Every interaction shows its tokens and metered price when there is
+one, daily totals are kept, and an optional hard daily cap makes runaway calls impossible.
 
 **Two catches worth knowing about free:** Google states that free-tier traffic is used to improve
 their products, so your roleplay isn't private there (paying moves the same key to their paid
@@ -166,15 +169,15 @@ local-model setup. Read as far down as you need.
 
 **Quick setup:**
 
-1. Get a key at **openrouter.ai** (recommended) and add a little credit — or a free one at
-   **aistudio.google.com**.
+1. Get a key at **openrouter.ai** (recommended) and add a little credit — or use an existing
+   ChatGPT subscription: install Codex and run `codex login` once.
 2. Enable the mod, start the game once — it creates
    `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you where
    to paste the key.
-3. Paste the key (or use the Mod Options menu with MCM), restart — the startup check says
-   plainly whether it connected. Then go talk to somebody.
+3. Paste the key, or choose **Codex** in Mod Options; the startup check says plainly whether it
+   connected. Then go talk to somebody.
 
-**Privacy:** conversations go only to the AI provider *you* configure, under *your* key. No
+**Privacy:** conversations go only to the AI provider *you* configure, under *your* account or key. No
 telemetry; every memory is plain text on your own disk, yours to read, edit, or delete. (Web
 searches go to DuckDuckGo — `EnableWebSearch: false` turns that off.) What the provider does with
 it is *their* policy — notably, **Google's free Gemini tier trains on what it receives**.

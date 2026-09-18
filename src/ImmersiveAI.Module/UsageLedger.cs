@@ -100,12 +100,16 @@ namespace ImmersiveAI
 
         /// <summary>Called by the chat clients with the usage the API reported for one call.
         /// <paramref name="exactCostUsd"/> is for a backend that measures its own money (Claude
-        /// Code reports the run's true figure) — when given it outranks the price-table guess.</summary>
-        public static void RecordCall(string model, int tokensIn, int tokensOut, double? exactCostUsd = null)
+        /// Code reports the run's true figure) — when given it outranks the price-table guess.
+        /// <paramref name="estimateCost"/> is false for a subscription that reports tokens but has
+        /// no per-call API bill, so API list prices are never presented as money actually spent.</summary>
+        public static void RecordCall(string model, int tokensIn, int tokensOut,
+            double? exactCostUsd = null, bool estimateCost = true)
         {
             try
             {
-                bool known = TryPrice(model, tokensIn, tokensOut, out var cost);
+                double cost = 0;
+                bool known = estimateCost && TryPrice(model, tokensIn, tokensOut, out cost);
                 if (exactCostUsd.HasValue) { known = true; cost = exactCostUsd.Value; }
 
                 lock (Gate)
@@ -210,9 +214,9 @@ namespace ImmersiveAI
                 // On the subscription road the honest currency is the plan itself, so the same
                 // notice carries how much of its windows the day has spent — "5h at 9%, weekly
                 // at 1%" (Anton's own shape, 2026.08.28).
-                if (_config?.Backend == "ClaudeCode")
+                if (_config?.Backend == "ClaudeCode" || _config?.Backend == "Codex")
                 {
-                    var plan = PlanGauge.Label();
+                    var plan = SubscriptionPlanLabel();
                     if (plan != null) line += " · " + plan;
                 }
 
@@ -230,12 +234,29 @@ namespace ImmersiveAI
             lock (Gate)
             {
                 RollDate();
-                var plan = _config?.Backend == "ClaudeCode" ? PlanGauge.Label() : null;
-                return $"This session: {_sessionCalls} calls, {_sessionIn:n0} → {_sessionOut:n0} tokens, ~${_sessionCost.ToString("0.00", CultureInfo.InvariantCulture)}. " +
-                       $"Today (all sessions): {_today.Requests} calls, ~${_today.CostUsd.ToString("0.00", CultureInfo.InvariantCulture)}" +
+                var plan = SubscriptionPlanLabel();
+                var codex = _config?.Backend == "Codex";
+                // Codex calls themselves carry no metered API bill, but hosted voice (or calls made
+                // through another backend earlier today) still does. Hide an invented $0.00, never
+                // real metered spend that happened beside the subscription.
+                var sessionMoney = codex && _sessionCost <= 0
+                    ? ". "
+                    : $", ~${_sessionCost.ToString("0.00", CultureInfo.InvariantCulture)}. ";
+                var todayMoney = codex && _today.CostUsd <= 0
+                    ? ""
+                    : $", ~${_today.CostUsd.ToString("0.00", CultureInfo.InvariantCulture)}";
+                return $"This session: {_sessionCalls} calls, {_sessionIn:n0} → {_sessionOut:n0} tokens" + sessionMoney +
+                       $"Today (all sessions): {_today.Requests} calls" + todayMoney +
                        (_config != null && _config.MaxDailyRequests > 0 ? $" of a {_config.MaxDailyRequests}-call cap." : ".") +
                        (plan != null ? $" Plan: {plan}." : "");
             }
+        }
+
+        private static string? SubscriptionPlanLabel()
+        {
+            if (_config?.Backend == "ClaudeCode") return PlanGauge.Label();
+            if (_config?.Backend == "Codex") return CodexPlanGauge.Label();
+            return null;
         }
 
         // ------------------------------ prices ------------------------------

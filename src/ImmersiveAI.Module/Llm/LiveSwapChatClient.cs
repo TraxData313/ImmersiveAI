@@ -95,6 +95,7 @@ namespace ImmersiveAI.Llm
                 c.GeminiApiKey, c.GeminiModel,
                 c.DeepSeekApiKey, c.DeepSeekModel,
                 c.ClaudeCodeModel, c.ClaudeCodePath,
+                c.CodexModel, c.CodexPath,
                 c.LocalEndpoint, c.LocalModel, c.LocalApiKey);
         }
 
@@ -120,6 +121,7 @@ namespace ImmersiveAI.Llm
                 case "Gemini": return _config.GeminiModel;
                 case "DeepSeek": return _config.DeepSeekModel;
                 case "ClaudeCode": return _config.ClaudeCodeModel + " (your Claude plan)";
+                case "Codex": return _config.CodexModel + " (your ChatGPT plan)";
                 case "Local": return string.IsNullOrWhiteSpace(_config.LocalModel) ? "the loaded local model" : _config.LocalModel;
                 default: return _config.AnthropicModel;
             }

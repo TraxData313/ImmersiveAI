@@ -31,7 +31,7 @@ namespace ImmersiveAI.Mcm
         // takes hold on the very next reply — no restart.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
-            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. ClaudeCode speaks through your installed Claude Code app - a claude.ai Pro/Max plan, NO key. Anthropic works but is less tested. Local runs on YOUR machine - tinkerers only, unsupported.")]
+            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. ClaudeCode uses a claude.ai plan; Codex uses your ChatGPT subscription after 'codex login' - both need NO key. Anthropic works but is less tested. Local runs on YOUR machine - tinkerers only, unsupported.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 2);
 
@@ -134,6 +134,16 @@ namespace ImmersiveAI.Mcm
             HintText = "While this holds text it OVERRIDES the dropdown: any model name Claude Code itself accepts (an alias like 'sonnet' or a full id). Empty = the dropdown chooses.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string ClaudeCodeModelCustom { get; set; } = string.Empty;
+
+        [SettingPropertyDropdown("Codex subscription model", Order = 22, RequireRestart = false,
+            HintText = "When the backend is Codex: which model answers through your ChatGPT subscription after one 'codex login'. Sol is the proven living-abby default; Astra is strongest but heavier; Terra and Luna are lighter. No OpenAI API key is used and there is no pay-as-you-go fallback. The cost notice shows the subscription's 5-hour and weekly gauges.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> CodexModel { get; set; } = new Dropdown<string>(McmChoiceLists.CodexModels, 0);
+
+        [SettingPropertyText("Codex model (type any id)", Order = 23, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: any model id your installed Codex app-server lists. Empty = the dropdown chooses.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public string CodexModelCustom { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("How long they speak", Order = 18, RequireRestart = false,
             HintText = "Brief = one to three sentences, the way people actually talk. Conversational = the default. Full = let a real feeling take the room it needs. Shorter is also noticeably FASTER, because most of the wait for a reply is the words being written one after another.")]
@@ -291,9 +301,9 @@ namespace ImmersiveAI.Mcm
         public string CloudVoiceApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Starting personality (the director's spark)", Order = 11, RequireRestart = false,
-            HintText = "At a character's first interaction, one small AI call writes them a private starting truth (1-3 sentences - a wound, a habit, a vanity) into their editable prompt file, grown from their real story, traits and your world prompt. 'Ask first' shows a popup per new face; Off leaves souls to begin plain.")]
+            HintText = "Off by default: characters begin from game truth without an invented private history. Generate makes one small AI call at a character's first interaction and writes 1-3 sentences into their editable prompt file. Ask first shows a popup per new face.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
-        public Dropdown<string> PersonaSparkMode { get; set; } = new Dropdown<string>(McmChoiceLists.SparkModes, 0);
+        public Dropdown<string> PersonaSparkMode { get; set; } = new Dropdown<string>(McmChoiceLists.SparkModes, 2);
 
         [SettingPropertyBool("Marriage by courtship", Order = 12, RequireRestart = false,
             HintText = "Characters can truly be courted: their heart walks a real road (liking, love, readiness, betrothal, wedding) moved by their own judgment of your talks, with private wishes they hint at but never recite. Nothing is sealed by words alone - betrothal and wedding each take your confirming click, and the wedding is the real game marriage.")]

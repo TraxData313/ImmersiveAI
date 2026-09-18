@@ -38,7 +38,8 @@ namespace ImmersiveAI
                     : "OpenRouterApiKey";
                 var body =
                     "Immersive AI gives every character a real, remembering mind — but the minds speak " +
-                    "through an AI service, with YOUR OWN key, and no key is set yet. Until one is, the world stays silent.\n\n" +
+                    "through an AI service under YOUR OWN account or key, and no API key is set yet. Until one " +
+                    "is — or you choose a subscription road — the world stays silent.\n\n" +
                     "1. GET A KEY — openrouter.ai is recommended: one key, every model, and the mod comes set " +
                     "to openai/gpt-5.6-luna (openai/gpt-5.4-mini is the proven fallback). platform.openai.com " +
                     "with those same two works as well; console.anthropic.com (Claude) works but is less tested. " +
@@ -50,9 +51,13 @@ namespace ImmersiveAI
                     "so nothing said there is private. CHEAPEST PAID — platform.deepseek.com, roughly half the " +
                     "cost of the default for near-equal answers (Backend \"DeepSeek\"; their servers are in China). " +
                     "(Local models: tinkerers only, unsupported.)\n\n" +
+                    "ALREADY PAY FOR CHATGPT OR CLAUDE — choose Backend \"Codex\" after installing Codex and " +
+                    "running 'codex login', or \"ClaudeCode\" after signing in to Claude Code. Those roads use " +
+                    "your subscription windows and need no API key or pay-as-you-go fallback.\n\n" +
                     "2. PUT IT HERE — open:\n" + ModConfig.ConfigFilePath + "\n" +
                     "and paste the key into \"" + keyField + "\"." +
-                    " (With the Mod Configuration Menu installed, the key can also be set in-game under Mod Options.)\n\n" +
+                    " (With the Mod Configuration Menu installed, the key or subscription backend can be set " +
+                    "in-game under Mod Options.)\n\n" +
                     "3. RESTART THE GAME — a short \"connected\" notice will greet you when the world is listening.";
 
                 MainThreadDispatcher.Enqueue(() =>

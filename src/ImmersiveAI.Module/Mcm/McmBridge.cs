@@ -209,9 +209,10 @@ namespace ImmersiveAI.Mcm
             if (s.GeminiModel == null) { s.GeminiModel = new Dropdown<string>(McmChoiceLists.GeminiModels, 0); repaired = true; }
             if (s.DeepSeekModel == null) { s.DeepSeekModel = new Dropdown<string>(McmChoiceLists.DeepSeekModels, 0); repaired = true; }
             if (s.ClaudeCodeModel == null) { s.ClaudeCodeModel = new Dropdown<string>(McmChoiceLists.ClaudeCodeModels, 0); repaired = true; }
+            if (s.CodexModel == null) { s.CodexModel = new Dropdown<string>(McmChoiceLists.CodexModels, 0); repaired = true; }
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
-            if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 0); repaired = true; }
+            if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 2); repaired = true; }
             if (s.VoiceDelivery == null) { s.VoiceDelivery = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 1); repaired = true; }
             if (s.VoiceForMe == null) { s.VoiceForMe = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
             if (s.VoicePanicKey == null) { s.VoicePanicKey = new Dropdown<string>(McmChoiceLists.PanicKeys, 0); repaired = true; }
@@ -243,6 +244,7 @@ namespace ImmersiveAI.Mcm
                 s.GeminiApiKey, ChosenModel(s.GeminiModel, s.GeminiModelCustom),
                 s.DeepSeekApiKey, SelectedOf(s.DeepSeekModel),
                 ChosenModel(s.ClaudeCodeModel, s.ClaudeCodeModelCustom),
+                ChosenModel(s.CodexModel, s.CodexModelCustom),
                 s.OpenAIBaseUrl, s.LocalEndpoint, s.LocalModel, s.LocalContextWindow, s.MaxTokens,
                 s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
@@ -278,6 +280,7 @@ namespace ImmersiveAI.Mcm
                 c.GeminiApiKey, c.GeminiModel,
                 c.DeepSeekApiKey, c.DeepSeekModel,
                 c.ClaudeCodeModel,
+                c.CodexModel,
                 c.OpenAIBaseUrl, c.LocalEndpoint, c.LocalModel, c.LocalContextWindow, c.MaxTokens,
                 c.EnableChatWindow, c.ChatWindowHotkey, c.LetterWindowHotkey,
                 c.NotifyWhenReplyReady, c.EnableNpcInitiatedChats, c.DailyInitiationRate, c.ShowSocialnessControl,
@@ -322,6 +325,7 @@ namespace ImmersiveAI.Mcm
             // carry simply leaves the dropdown where it stands rather than being wedged in.
             Select(s.DeepSeekModel, c.DeepSeekModel);
             s.ClaudeCodeModelCustom = SelectOrCustom(s.ClaudeCodeModel, c.ClaudeCodeModel);
+            s.CodexModelCustom = SelectOrCustom(s.CodexModel, c.CodexModel);
             // The endpoint shows blank while it is the real OpenAI — the field is for the exception.
             s.OpenAIBaseUrl = string.Equals(c.OpenAIBaseUrl, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase)
                 ? string.Empty
@@ -426,6 +430,7 @@ namespace ImmersiveAI.Mcm
             c.DeepSeekApiKey = s.DeepSeekApiKey ?? string.Empty;
             c.DeepSeekModel = SelectedOf(s.DeepSeekModel) ?? c.DeepSeekModel;
             c.ClaudeCodeModel = ChosenModel(s.ClaudeCodeModel, s.ClaudeCodeModelCustom) ?? c.ClaudeCodeModel;
+            c.CodexModel = ChosenModel(s.CodexModel, s.CodexModelCustom) ?? c.CodexModel;
             // Blank means the real OpenAI; Normalize (run by the caller) completes a pasted /v1 base.
             c.OpenAIBaseUrl = string.IsNullOrWhiteSpace(s.OpenAIBaseUrl)
                 ? ModConfig.DefaultOpenAIEndpoint
@@ -680,6 +685,8 @@ namespace ImmersiveAI.Mcm
                     live.DeepSeekModel, defaults.DeepSeekModel, v => live.DeepSeekModel = v, "DeepSeek model", adopted);
                 AdoptModel(store, "ClaudeCodeModel", "ClaudeCodeModelCustom", McmChoiceLists.ClaudeCodeModels,
                     live.ClaudeCodeModel, defaults.ClaudeCodeModel, v => live.ClaudeCodeModel = v, "Claude Code model", adopted);
+                AdoptModel(store, "CodexModel", "CodexModelCustom", McmChoiceLists.CodexModels,
+                    live.CodexModel, defaults.CodexModel, v => live.CodexModel = v, "Codex model", adopted);
 
                 var storeEndpoint = TextOf(store, "OpenAIBaseUrl");
                 if (!string.IsNullOrWhiteSpace(storeEndpoint) &&
@@ -697,7 +704,8 @@ namespace ImmersiveAI.Mcm
                     adopted.Add("local endpoint");
                 }
 
-                // The spark mode: adopted only over the untouched default, like the models.
+                // The spark mode was once rescued over the untouched Generate default. Off is now
+                // deliberately safe and must never be replaced by an old MCM store's Generate row.
                 var storeSpark = SparkModeValue(McmChoiceLists.AtIndex(McmChoiceLists.SparkModes, IntOf(store, "PersonaSparkMode")));
                 if (storeSpark != null && live.PersonaSparkMode == "Generate" && storeSpark != "Generate")
                 {
@@ -741,6 +749,7 @@ namespace ImmersiveAI.Mcm
                 case "DeepSeek": return !string.IsNullOrWhiteSpace(c.DeepSeekApiKey);
                 case "Local": return true;
                 case "ClaudeCode": return true;
+                case "Codex": return true;
                 default: return !string.IsNullOrWhiteSpace(c.AnthropicApiKey);
             }
         }

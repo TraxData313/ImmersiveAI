@@ -1,18 +1,19 @@
 # Which AI should I use?
 
-Immersive AI runs on **your own API key**. This page helps you pick one. It gets more detailed
+Immersive AI runs on **your own account or API key**. This page helps you pick one. It gets more detailed
 as you scroll — **read only as far as you need.**
 
 ---
 
 ## Just tell me what to pick
 
-| If you want… | Pick | Key from |
+| If you want… | Pick | Account/key from |
 |---|---|---|
 | **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best play, denars no object** | OpenRouter + `openai/gpt-5.6-terra` (or `anthropic/claude-sonnet-5`) | openrouter.ai |
+| **A ChatGPT plan you already pay for** | Codex + `gpt-5.6-sol` — through the Codex app, no API key | ChatGPT |
 | **A Claude plan you already pay for** | ClaudeCode — your claude.ai Pro/Max, through the Claude Code app, no key | — |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
 
@@ -30,6 +31,7 @@ switch in the mod options, no restart.
 
 | Model | Per exchange | $10 lasts about |
 |---|---|---|
+| **Codex / ClaudeCode subscription** | no metered API bill | uses your plan windows |
 | **Gemini free tier** | **$0** | forever — ~1,500 replies/day |
 | `deepseek-v4-flash` | ~0.05¢ | ~20,000 exchanges |
 | `gpt-5.6-luna` *(default)* | ~0.1¢ | ~10,000 exchanges |
@@ -55,6 +57,7 @@ Every option has exactly one thing worth knowing before you commit.
 | **Gemini** | **Google trains on free-tier traffic** (their own pricing page says so; paying moves the same key to the paid tier, where they say they don't). **And it's slow** — Gemini's thinking cannot be switched off, so every reply carries silent thought before the words: live in the chat window (hotkey `O`), because the face-to-face panel handles the long wait poorly. Its *paid* rates are worse than luna's, so only use it free. |
 | **DeepSeek** | Prices **double during Beijing peak hours** (09:00–12:00 and 14:00–18:00 UTC+8 — European evenings fall in the cheap window). Servers are in China. |
 | **Anthropic** | Works fine, just less tested here. Pricier per word than the rest. |
+| **Codex** | Needs the [Codex app or CLI](https://developers.openai.com/codex/auth) installed and signed in with a **ChatGPT plan that includes Codex**. The NPCs then ride that subscription with no OpenAI API key or pay-as-you-go fallback. Each call is an isolated, ephemeral app-server session with Codex's shell, web, plugins, MCP and skills disabled; only the mod's own typed NPC tools come back. The notice shows the plan's 5-hour/weekly gauge. |
 | **ClaudeCode** | Needs the [Claude Code](https://claude.com/code) app installed and signed in to a **claude.ai Pro/Max plan** — then the NPCs ride your subscription with **no API key at all**. Replies spend your plan's 5-hour/weekly windows (the cost notice shows the gauge: "5h at 9%, weekly at 1%"), and each one starts a short background run of the app, so it's a touch slower than a direct API call. |
 | **Local** | It's a project, not a setting. [See below.](#local-models-tinkerers-only) |
 
@@ -85,7 +88,7 @@ Nothing is locked in. Change the backend or model in the **Mod Options** menu (w
 installed) or in `config.json`, and it takes hold **on the very next reply — no restart.** Your
 NPCs and all their memories are untouched by a model change.
 
-If a key or model is wrong, the startup check says so plainly and tells you where to fix it.
+If a key, subscription login, or model is wrong, the startup check says so plainly and tells you where to fix it.
 
 ---
 
@@ -107,14 +110,15 @@ models are where it gets shaky.
 ### 2. Its thinking must be switchable off
 
 Reasoning/thinking models spend tokens silently before they speak. With a ~400-token reply budget
-that means the NPC thinks its whole allowance away and answers `...`. The mod therefore **turns
-thinking off on every backend**, and each provider spells that differently:
+that means the NPC thinks its whole allowance away and answers `...`. The direct API and ClaudeCode
+roads turn it off; Codex runs at its lightest available effort. Each provider spells that differently:
 
 | Provider | How it's silenced | Thinks by default? |
 |---|---|---|
 | OpenAI / OpenRouter | `reasoning_effort: "none"` | yes |
 | Anthropic | `thinking: disabled` | yes |
 | DeepSeek | `thinking: disabled` | yes |
+| Codex subscription | app-server `effort: "low"` | yes |
 | **Gemini** | **can't be, on 3.x — only turned down** | **yes, at maximum** |
 
 Gemini is the awkward one: its 3.x models cannot be silenced at all, and their token ceiling

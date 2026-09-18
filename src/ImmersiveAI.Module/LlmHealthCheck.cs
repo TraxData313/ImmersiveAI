@@ -71,9 +71,11 @@ namespace ImmersiveAI
                 // cannot be switched off, and even the tiny ping can chew half a minute of silent
                 // thought (30s expired live on 2026.08.02 and misread a healthy backend as a dead
                 // internet connection).
-                // Claude Code sits with Gemini: a whole process starts per call, and a first run
-                // after an update can dawdle before the model even hears the ping.
-                var pingSeconds = isLocal ? 180 : config?.Backend == "Gemini" || config?.Backend == "ClaudeCode" ? 90 : 30;
+                // The subscription roads sit with Gemini: a whole process starts per call, and a
+                // first run after an update can dawdle before the model even hears the ping.
+                var pingSeconds = isLocal ? 180
+                    : config?.Backend == "Gemini" || config?.Backend == "ClaudeCode" || config?.Backend == "Codex" ? 90
+                    : 30;
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(pingSeconds)))
                 {
                     await client.CompleteAsync(messages, cts.Token).ConfigureAwait(false);
@@ -114,6 +116,9 @@ namespace ImmersiveAI
                         + "so replies run slow. It may still speak fine in play (the chat window, hotkey "
                         + (config.ChatWindowHotkey ?? "O") + ", wears the wait best); if it stays silent, pick "
                         + "another backend in the mod options.";
+                if (config?.Backend == "Codex")
+                    return "Codex took too long to answer the startup ping. Check that 'codex login status' shows "
+                        + "a ChatGPT subscription login, then restart the game.";
                 return "could not reach the AI service — check your internet connection, then restart the game.";
             }
 
@@ -123,6 +128,11 @@ namespace ImmersiveAI
             // signed in / stopped after N seconds) — hand them on whole rather than letting the
             // API-key branches below blame a key this backend never uses.
             if (config?.Backend == "ClaudeCode" && Mentions(msg, "Claude Code"))
+                return msg + (msg.EndsWith(".") ? "" : ".") + " Then restart the game.";
+
+            // The Codex client likewise owns its installation/login/account diagnosis. Keep the
+            // sentence whole so an API-key subscription mismatch is never reduced to "bad key".
+            if (config?.Backend == "Codex" && Mentions(msg, "Codex"))
                 return msg + (msg.EndsWith(".") ? "" : ".") + " Then restart the game.";
 
             // A model that spent its whole token budget before it could speak (reasoning is sent
@@ -195,6 +205,11 @@ namespace ImmersiveAI
                     // through the ping with the client's own actionable words.
                     apiKey = "(your Claude plan)"; model = config.ClaudeCodeModel;
                     return "Claude Code";
+                case "Codex":
+                    // Keyless here means subscription-authenticated through the installed CLI.
+                    // account/read verifies ChatGPT (and rejects an API-key login) before the ping.
+                    apiKey = "(your ChatGPT plan)"; model = config.CodexModel;
+                    return "Codex subscription";
                 case "Local":
                     apiKey = config.LocalApiKey; model = config.LocalModel;
                     return "your local AI server (" + HostOf(config.LocalEndpoint) + ")";

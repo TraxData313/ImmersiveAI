@@ -21,9 +21,9 @@ namespace ImmersiveAI
         /// against — gpt-5.6-luna first, gpt-5.4-mini as the cheaper fallback — live there. OpenAI with
         /// the same two is the equal second. "Gemini" is the way in for FREE (Google's own free tier —
         /// see <see cref="GeminiApiKey"/>); "DeepSeek" the cheapest paid road (see
-        /// <see cref="DeepSeekApiKey"/>); Anthropic works and is untested at length; "Local" is
-        /// tinkerers' territory, unsupported by design.</summary>
-        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Gemini", "DeepSeek", "Anthropic", "ClaudeCode" or "Local"
+        /// <see cref="DeepSeekApiKey"/>); Anthropic works and is untested at length; ClaudeCode and
+        /// Codex use the player's subscriptions; "Local" is tinkerers' territory, unsupported.</summary>
+        public string Backend { get; set; } = "OpenRouter"; // "OpenRouter", "OpenAI", "Gemini", "DeepSeek", "Anthropic", "ClaudeCode", "Codex" or "Local"
 
         public string AnthropicApiKey { get; set; } = "";
         public string AnthropicModel { get; set; } = "claude-haiku-4-5";
@@ -41,6 +41,17 @@ namespace ImmersiveAI
         /// <summary>Where claude.exe lives, only when the finder cannot see it on its own (PATH,
         /// then the Claude apps' own folders). Blank = find it.</summary>
         public string ClaudeCodePath { get; set; } = "";
+
+        /// <summary>The ChatGPT-subscription road: set <c>Backend</c> to "Codex" and the NPCs speak
+        /// through the installed Codex app server after one <c>codex login</c>. No API key and no
+        /// pay-as-you-go fallback: the client verifies that the active Codex account is a ChatGPT
+        /// login before a model turn begins. Each call is ephemeral and model-only; Codex tools,
+        /// plugins, MCP servers, skills and filesystem access stay disabled.</summary>
+        public string CodexModel { get; set; } = "gpt-5.6-sol";
+
+        /// <summary>Where codex.exe lives, only when the finder cannot see it on PATH or inside the
+        /// desktop app's versioned bin folder. Blank = find it.</summary>
+        public string CodexPath { get; set; } = "";
 
         /// <summary>OpenRouter as a first-class backend (2026.07.16, asked for on Nexus): one key at
         /// openrouter.ai reaches both GPT and Claude models (and hundreds more) through their
@@ -152,10 +163,10 @@ namespace ImmersiveAI
         public bool IsLocalBackend => Backend == "Local";
 
         /// <summary>Backends where a slow reply is normal rather than lost — the local machine, and
-        /// the Claude Code road (a whole process per call, and a thinking model may sit long). The
-        /// self-heal watchdogs breathe wider on these so patience is never misread as a hang.</summary>
+        /// the subscription roads (a whole process per call, and a thinking model may sit long).
+        /// The self-heal watchdogs breathe wider on these so patience is never misread as a hang.</summary>
         [JsonIgnore]
-        public bool IsPatientBackend => IsLocalBackend || Backend == "ClaudeCode";
+        public bool IsPatientBackend => IsLocalBackend || Backend == "ClaudeCode" || Backend == "Codex";
 
         // NOTE (2026.07.13): reasoning/thinking is switched OFF for good on every model — the
         // clients send OpenAI reasoning_effort "none" and Anthropic thinking "disabled" themselves.
@@ -784,9 +795,9 @@ namespace ImmersiveAI
         /// something wilder) into their custom_instructions.txt, seeded from their real story, traits,
         /// speech style and the world's global prompt, plus drawn muse cards for variety. The file stays
         /// yours to edit or erase (delete the whole file to reroll; a "# spark:" comment marks it done).
-        /// Values: "Generate" (default — write it quietly), "Ask" (a popup asks you first, once per soul),
-        /// "Off" (no spark; souls begin plain).</summary>
-        public string PersonaSparkMode { get; set; } = "Generate";
+        /// Values: "Off" (default — no generated history; souls begin from game truth), "Ask" (a
+        /// popup asks you first, once per soul), "Generate" (write it quietly).</summary>
+        public string PersonaSparkMode { get; set; } = "Off";
 
         /// <summary>When true, an unhired wanderer the player speaks with may strike the hiring bargain
         /// inside the conversation itself (the strike_bargain tool — needs a tool-capable backend).
@@ -1106,6 +1117,7 @@ namespace ImmersiveAI
                 ["gpt-5.4-nano"] = 400000,
                 ["gpt-5.5"] = 1000000,
                 ["gpt-5.6"] = 1000000,
+                ["gpt-6-astra"] = 1050000,
                 ["claude"] = 200000,
                 ["claude-opus-4"] = 1000000,
                 ["claude-sonnet-5"] = 1000000,
@@ -1304,12 +1316,22 @@ namespace ImmersiveAI
                 ConfigVersion = 6;
             }
 
+            // V7 (2026.09.18): the director's spark was inventing a private mini-history the first
+            // time each NPC was spoken to. That is exactly the experiment Anton wants paused while
+            // its shape is reconsidered, so the shipped automatic default moves to Off for existing
+            // configs too. Ask and Off were deliberate choices and remain untouched.
+            if (ConfigVersion < 7)
+            {
+                if (PersonaSparkMode == "Generate") PersonaSparkMode = "Off";
+                ConfigVersion = 7;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The spark mode knows exactly three spellings; anything else (typos, old hand edits)
-            // falls back to the default so a soul is never silently left plain by a misspelling.
+            // falls back to the safe default so a typo never silently creates invented history.
             if (PersonaSparkMode != "Generate" && PersonaSparkMode != "Ask" && PersonaSparkMode != "Off")
-                PersonaSparkMode = "Generate";
+                PersonaSparkMode = "Off";
 
             // The OpenAI-compatible endpoints: blank falls back to each backend's default; a pasted
             // base URL ending in /v1 (the way every provider states it) is completed to the full
@@ -1351,6 +1373,12 @@ namespace ImmersiveAI
             ClaudeCodeModel = (ClaudeCodeModel ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(ClaudeCodeModel)) ClaudeCodeModel = new ModConfig().ClaudeCodeModel;
             ClaudeCodePath = (ClaudeCodePath ?? string.Empty).Trim();
+
+            // Codex: same keyless subscription contract. Model ids come from app-server's own
+            // catalog; the path is only an override for desktop installs the inherited PATH missed.
+            CodexModel = (CodexModel ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(CodexModel)) CodexModel = new ModConfig().CodexModel;
+            CodexPath = (CodexPath ?? string.Empty).Trim();
 
             // The daily request cap: negative is a typo; 0 stays "no cap".
             if (MaxDailyRequests < 0) MaxDailyRequests = 0;

@@ -1462,3 +1462,47 @@ first three change how the whole road behaves.
   anyway, he writes to support himself — which is the one road package.ps1's own comment says was
   never actually tried.
   (2026.09.02 16.05.00)
+
+
+- **THE CODEX SUBSCRIPTION ROAD — Backend `Codex`** (Anton's ask, reusing living-abby's proven
+  app-server seam): NPCs can now speak through the player's installed Codex app/CLI and existing
+  ChatGPT subscription after one `codex login`, with no OpenAI API key and deliberately no
+  pay-as-you-go fallback. `CodexAppServerChatClient` runs one ephemeral
+  `codex app-server --stdio` session per call, verifies `account/read` is a ChatGPT login, removes
+  inherited API-key variables, isolates thread/SQLite state while leaving Codex's credential store
+  persistent, and disables shell, web, browser, apps, plugins, every inherited MCP, skills,
+  memories, project docs and Codex's own tools; only the mod's typed tool envelope returns through
+  Core `CodexAppServerShape` and its OpenAI-strict schema. The subscription's real 5-hour/weekly
+  windows ride `CodexPlanGauge`; exact tokens are counted without inventing an API-dollar charge.
+  Full backend wiring: config (`CodexModel` default `gpt-5.6-sol` + optional `CodexPath`), factory,
+  live swap, context profile, patient watchdogs, health check, usage notices, MCM (backend appended
+  so persisted indices stay stable; Sol/Astra/Terra/Luna + custom), first-run guide and docs.
+  LIVE-PROVED against Anton's ChatGPT login through the built client: Sol answered `OK`; Astra
+  returned `recall_person({"name":"Rhagaea"})` as a real mod tool call. A current Bannerlord API
+  drift found during the build was repaired too: hideout visibility now uses `Settlement.IsVisible`
+  instead of the removed `Hideout.IsSpotted`. 901 Core tests green, module build 0 errors, deployed
+  to `ImmersiveAI.Dev` with the source/installed DLL hashes matching. (2026.09.18 08.38.03)
+
+- **CODEX SECOND-MESSAGE LOGIN BUG FIXED** (Anton's first real playtest, same morning): the first
+  message spoke, the next claimed no ChatGPT sign-in. The exact cause was ours, not his login:
+  `account/read(refreshToken: true)` FORCED Codex to refresh its managed token inside a copied,
+  per-call `auth.json`, then cleanup deleted the refreshed credential and the next process inherited
+  the stale original. OpenAI's app-server docs explicitly define `true` as a forced refresh and the
+  auth docs require refreshed managed credentials to persist. The client now uses Codex's normal
+  credential store directly with `refreshToken: false`, while SQLite/thread state stays per-call in
+  scratch. Sharing the credential home does not reopen Codex's workshop: `config/read` enumerates
+  every inherited MCP server and switches each off alongside apps/plugins/browser/shell/skills/web,
+  and all server-side permission/tool requests remain refused. Two separate live app-server
+  processes returned `OK-1` then `OK-2`; 901 tests green, redeployed, installed hash matches.
+  (2026.09.18 09.35.29)
+- [x] THE DIRECTOR'S SPARK IS OFF BY DEFAULT (Anton clarified the visible first-meeting
+  “they are becoming somebody all their own…” call was the nonsense generator, not `self.txt`).
+  `PersonaSparkMode` now defaults to `Off`; MCM → Life of the NPCs → “Starting personality (the
+  director's spark)” opens on Off and explains that Generate invents the 1–3 sentence private
+  history. Config V7 also migrates the old untouched automatic `Generate` setting to `Off`, while
+  preserving deliberate `Ask` and `Off` choices. Invalid hand-edits now fail safe to Off. The
+  earlier mistaken evolving-self switch was removed completely, restoring reflection/self.txt to
+  its prior behavior. Existing generated `custom_instructions.txt` files are not destroyed; this
+  stops new sparks, and the existing prompt editor remains the safe place to revise old ones.
+  901 tests green; module build 0 errors; dev mod redeployed and installed DLL hash matches.
+  (2026.09.18 11.10.01)

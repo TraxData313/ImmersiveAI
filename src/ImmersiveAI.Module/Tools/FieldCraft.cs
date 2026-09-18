@@ -196,7 +196,7 @@ namespace ImmersiveAI.Tools
             Try(() =>
             {
                 var dens = Settlement.All
-                    .Where(s => s != null && s.IsHideout && Safe(() => s.Hideout.IsSpotted))
+                    .Where(s => s != null && s.IsHideout && Safe(() => s.IsVisible))
                     .Select(s => new { Den = s, Dist = SafeSettlementDistance(s, party) })
                     .Where(x => x.Dist >= 0 && x.Dist <= range)
                     .OrderBy(x => x.Dist)
@@ -737,7 +737,7 @@ namespace ImmersiveAI.Tools
                     || needle.IndexOf("den", StringComparison.OrdinalIgnoreCase) >= 0
                     || needle.IndexOf("lair", StringComparison.OrdinalIgnoreCase) >= 0;
                 return Settlement.All
-                    .Where(s => s != null && s.IsHideout && Safe(() => s.Hideout.IsSpotted))
+                    .Where(s => s != null && s.IsHideout && Safe(() => s.IsVisible))
                     .Where(s => denWords
                         || (s.Name?.ToString()?.IndexOf(needle, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0
                         || Safe(() => (s.Hideout.MapFaction?.Name?.ToString()?.IndexOf(needle, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0))

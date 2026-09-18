@@ -217,7 +217,9 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use),
                           ClaudeCodeChatClient (the subscription road — headless claude.exe per call,
                           tools via Core ClaudeCliShape's structured output; PlanGauge.cs beside it
-                          reads the plan's 5h/weekly percentages), factory
+                          reads the plan's 5h/weekly percentages), CodexAppServerChatClient (the
+                          ChatGPT-subscription road — isolated ephemeral app-server per call; strict
+                          Core CodexAppServerShape; CodexPlanGauge), factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm lookups from live campaign data
   Tools/FieldCraft.cs     the field-craft (2026.07.12): survey_surroundings + weigh_battle — the country
                           about and the scales of battle, only for souls with a party on the map
@@ -462,6 +464,29 @@ TaleWorlds API usage patterns, never copy from it.
   structured answer are unharmed with it off (opus reached recall_company and weighed move_heart in
   one breath) — verified before shipping, because this road's tool use rides the same answer. Watchdogs treat it
   like Local (`IsPatientBackend`).
+- **THE CODEX SUBSCRIPTION ROAD (2026.09.18, Anton's ask — again borrowed from living-abby's
+  proven seam):** `Backend: "Codex"` speaks through the installed Codex app/CLI after `codex login`,
+  spending the player's ChatGPT subscription rather than an OpenAI API key. Module
+  `CodexAppServerChatClient` starts `codex app-server --stdio` for one ephemeral call, initializes
+  the JSONL protocol, verifies `account/read` says `chatgpt` (API-key sessions are deliberately
+  rejected), then sends `thread/start` + `turn/start` with a strict `outputSchema`. It runs in a
+  fresh scratch directory with isolated SQLite/thread state, while Codex keeps its normal persistent
+  credential home so managed ChatGPT token refreshes survive the call; inherited
+  `OPENAI_API_KEY`/`CODEX_API_KEY` are removed. `account/read` MUST use `refreshToken: false` — true
+  forces a refresh, and the first build paired it with a disposable auth copy, producing one good
+  call followed by "sign in" once the discarded refresh mattered. Shell, web, browser, apps,
+  plugins and every inherited MCP server (enumerated by `config/read`), skills,
+  memories, project docs and Codex's own dynamic tools are disabled; approval is `never`, sandbox
+  is read-only, and any server request for a client-side ability is refused. The only hands are the
+  mod's own typed tool calls in Core's answer envelope. Core `CodexAppServerShape` shares the
+  already-proven ClaudeCli transcript/tool contract, seals it for OpenAI strict structured output
+  (all object properties required; optional args nullable), folds streamed final-answer/usage events,
+  and formats rate windows. `CodexPlanGauge` asks `account/rateLimits/read` inside the already-
+  authenticated process and keeps only the percentages; the ledger records exact tokens without
+  inventing API-dollar spend. Default model is `gpt-5.6-sol`; dropdown also offers Astra, Terra and
+  Luna. LIVE-PROVED through the built client on Anton's ChatGPT login: Sol plain reply `OK`; Astra
+  returned `recall_person({"name":"Rhagaea"})`. Sol also surfaced a genuine temporary capacity
+  refusal on the tool probe, which is passed through as a provider error rather than hidden.
 - **Gemini and DeepSeek are first-class backends since 2026.08.02** (asked for on Steam — "weird to
   offer only Claude and OpenAI while Gemini allows free usage"). Both are OpenAI-compatible and ride
   `OpenAIChatClient` through a new `OpenAiDialect` enum whose ONLY job is how each provider is told to
@@ -595,12 +620,16 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 ## User-editable runtime files (NOT in the repo)
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
-- `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"Local"),
+- `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"ClaudeCode"/"Codex"/"Local"),
   model, `MaxTokens`, memory limits,
   `ClaudeCodeModel` + `ClaudeCodePath` (2026.08.28 — `Backend: "ClaudeCode"`, the subscription
   road: NPCs speak through the player's installed Claude Code app on their claude.ai Pro/Max plan,
   keyless; model dropdown haiku-4-5 (default) / sonnet-5 / opus-5 / fable-5 + custom; path blank =
   find claude.exe on PATH then the Claude apps' folders; cost notices carry the plan gauge),
+  `CodexModel` + `CodexPath` (2026.09.18 — `Backend: "Codex"`, the ChatGPT-subscription road:
+  installed Codex app/CLI + one `codex login`, keyless; default `gpt-5.6-sol`, with Astra/Terra/Luna
+  + custom in MCM; path blank = PATH then the desktop app's versioned bin folders; no API-key
+  fallback, and cost notices carry the app-server's 5h/weekly plan gauge),
   `GeminiApiKey` + `GeminiModel` (2026.08.02 — `Backend: "Gemini"`, the FREE road: the same
   OpenAIChatClient pointed at `ModConfig.GeminiEndpoint` (Google's OpenAI-compat door) with
   `OpenAiDialect.Gemini`; default `gemini-3.6-flash` — deliberately not a Lite, the tools need the
@@ -749,7 +778,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   ClampToSentences; prompt LIVE-VALIDATED on gpt-5.6-terra before shipping), Module
   `EnsurePersonaSparkAsync` hooked into all five first-interaction paths (recap, player turn,
   reach-out ponder, letter write, letter answer; facts gathered before the first await = game
-  thread). "Generate" (default) / "Ask" (once-per-soul popup, player-facing paths only; it GATES
+  thread). "Off" (default since 2026.09.18 — no invented first-meeting history) / "Generate" /
+  "Ask" (once-per-soul popup, player-facing paths only; it GATES
   the first exchange — the reply is made only after the player's word, so a granted spark speaks
   from her very first answer (2026.08.07 playtest fix: the popup fired async at first and her reply
   outran it); a 10-min safety net proceeds plain and a late "Shape them" falls back to a background
@@ -1085,10 +1115,10 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored), written in the
-    character's own first person; folds in as "Of myself, this I hold true:". Usually begins with
-    the director's spark (a generated 1–3 sentence starting truth under a `# spark:` stamp comment —
-    see `PersonaSparkMode`); the stamp marks the soul as sparked (or declined), hand-written content
-    always wins, and deleting the file invites the director back.
+    character's own first person; folds in as "Of myself, this I hold true:". When enabled, the
+    director's spark may add a generated 1–3 sentence starting truth under a `# spark:` stamp comment
+    (see `PersonaSparkMode`); it defaults off. The stamp marks the soul as sparked (or declined),
+    hand-written content always wins, and deleting the file invites the director back when enabled.
   - `current_situation_info.txt` — environmental facts (when/where/who) snapshot plus recent world
     tidings and local rumors (see `TidingsBuilder` below), rewritten every time the player opens a
     chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as a gentle

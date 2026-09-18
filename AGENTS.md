@@ -43,7 +43,7 @@ src/ImmersiveAI.Module/   net472 — the Bannerlord module; references game DLLs
   SubModule.cs            entry point: registers behavior, drains dispatcher each tick
   ImmersiveChatBehavior.cs  the campaign behavior: dialog + conversation turn orchestration
   ImmersiveChatBehavior.Letters.cs  partial: the letter flows (NPC writes, player writes, arrivals)
-  Llm/                    AnthropicChatClient, OpenAIChatClient (raw HttpClient, native tool use), factory
+  Llm/                    Anthropic/OpenAI clients + ClaudeCode/Codex subscription clients, factory
   Tools/WorldRecall.cs    the gift of recall: person/place/clan/realm/troop/market/own-company lookups from live campaign data
   Tools/WebWisdom.cs      the sages' counsel: web search (DuckDuckGo, game name quietly prepended), in-world framed
   Personas/PersonaBuilder.cs  builds NpcPersona from live Hero data + assigned speech style
@@ -75,8 +75,9 @@ TaleWorlds API usage patterns, never copy from it.
 - **Every NPC gets a distinct voice.** `PersonaBuilder` deterministically assigns a speech
   style from `Hero.StringId` so it's stable across sessions, plus personality from real
   traits. Distinct voices + relevant-only context are the levers against repetition.
-- **Anthropic is the default backend**, model `claude-haiku-4-5`. Clients use raw `HttpClient`
-  because the official SDK needs modern .NET and the game runs mods on .NET Framework 4.7.2.
+- **OpenRouter is the default backend**, model `openai/gpt-5.6-luna`. Direct API clients use raw
+  `HttpClient` because the official SDK needs modern .NET and the game runs mods on .NET Framework
+  4.7.2. `ClaudeCode` and `Codex` are keyless subscription roads through their installed apps.
 - **Async LLM calls never touch UI directly.** Background results are queued via
   `MainThreadDispatcher.Enqueue` and drained on `SubModule.OnApplicationTick`.
 
@@ -102,8 +103,11 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 ## User-editable runtime files (NOT in the repo)
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
-- `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"Local"),
+- `config.json` — API keys, `Backend` ("OpenRouter"/"OpenAI"/"Gemini"/"DeepSeek"/"Anthropic"/"ClaudeCode"/"Codex"/"Local"),
   model, `MaxTokens`, memory limits,
+  `ClaudeCodeModel` + `ClaudeCodePath` / `CodexModel` + `CodexPath` (keyless subscription roads;
+  Claude Code uses a claude.ai plan, Codex uses an installed Codex app/CLI signed in by `codex login`
+  to a ChatGPT plan; both show their 5h/weekly gauges and neither silently falls back to an API key),
   `OpenRouterApiKey` + `OpenRouterModel` (OpenRouter as a first-class backend, `Backend: "OpenRouter"` —
   one key reaches GPT and Claude, ids in OpenRouter's dotted spelling like "anthropic/claude-haiku-4.5"),
   `GeminiApiKey` + `GeminiModel` / `DeepSeekApiKey` + `DeepSeekModel` (2026.08.02 — the free road and
@@ -135,6 +139,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   messages instead of accept/decline popups),
   `SeedSelfFromWorldStory` (a never-spoken-with NPC's deep memory opens with the story the world
   tells of them — since 2026.08.08 a rewritable memory, not a self.txt page),
+  `PersonaSparkMode` (optional first-meeting generated starting personality in
+  `custom_instructions.txt`; "Off" by default, with "Ask" and "Generate" available in MCM),
   `EnableActingOut` (the acting-out grammar: a small acted gesture between single *asterisks* apart
   from the spoken words — the one exception to the plain-speech rule, sparing by its own wording,
   cutting both ways; the chat window draws gestures as soft narration via Core `EmoteText` +
@@ -168,9 +174,9 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   The folder name embeds the first name for readability; identity is still the stringId. Holds:
   - `memories.json` — persisted NpcMemory for that NPC.
   - `custom_instructions.txt` — per-NPC prompt (comment lines `#`/`//` ignored), written in the
-    character's own first person; folds in as "Of myself, this I hold true:". Usually begins with
-    the director's spark (a generated 1–3 sentence starting truth under a `# spark:` stamp — see
-    `PersonaSparkMode` in CLAUDE.md); hand-written content always wins, deleting the file re-seeds.
+    character's own first person; folds in as "Of myself, this I hold true:". When enabled, the
+    director's spark may add a generated 1–3 sentence starting truth under a `# spark:` stamp (see
+    `PersonaSparkMode` in CLAUDE.md); it defaults off. Hand-written content always wins.
   - `current_situation_info.txt` — environmental facts (when/where/who) snapshot plus recent
     world tidings & local rumors (`TidingsBuilder`), rewritten every time the player opens a
     chat; built by `SituationBuilder` relative to the party the NPC speaks with, written as the
