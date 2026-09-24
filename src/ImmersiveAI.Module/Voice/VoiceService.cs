@@ -88,6 +88,17 @@ namespace ImmersiveAI.Voice
         /// <summary>Whether a reply should speak of its own accord, or wait to be asked.</summary>
         public static bool AutoSpeakEnabled => Config?.VoiceAutoSpeak ?? true;
 
+        /// <summary>The sounds and whether a mood is followed, by the engine speaking now — nothing
+        /// while voices are off, the app is down, or the player turned the acting off. The one
+        /// answer the sheet, the speaking and the thread all share.</summary>
+        public static (IList<string>? Sounds, bool TakesMood) WhatTheVoiceCanDo()
+        {
+            if (!Enabled || !(Config?.VoicePerformSounds ?? true)) return (null, false);
+            var now = ClaudeVoiceApp.Now;
+            if (!now.Running || now.Health == null) return (null, false);
+            return (now.Health.Sounds, now.Health.TakesMood);
+        }
+
         /// <summary>Roughly whether something of ours is still in the air — for the Stop button and
         /// the panic key, which should only take a key while there is something to stop. Worked out
         /// from the line's length, generously: a Stop pressed after the line ended costs nothing.</summary>

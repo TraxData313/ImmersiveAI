@@ -842,12 +842,16 @@ namespace ImmersiveAI.UI.TalkScreen
                 messages.Add(Voiced(new ChatMessageVM(header, body, isNarration: false, headerColor), byPlayer, body));
                 return;
             }
+            // What the voice does with a gesture — a laugh made, a line whispered — shown beside it,
+            // so the thread and the voice app tell the same story. Only while it is really so.
+            var (sounds, takesMood) = Voice.VoiceService.WhatTheVoiceCanDo();
             bool first = true;
             foreach (var seg in segments)
             {
                 var head = first ? header : string.Empty;
+                var cue = seg.IsGesture ? Core.Voices.SpeakableText.CuesOf(seg.Text, sounds, takesMood) : string.Empty;
                 var row = seg.IsGesture
-                    ? new ChatMessageVM(head, $"*{seg.Text}*", isNarration: true, headerColor)
+                    ? new ChatMessageVM(head, (cue.Length > 0 ? cue + " " : string.Empty) + $"*{seg.Text}*", isNarration: true, headerColor)
                     : new ChatMessageVM(head, seg.Text, isNarration: false, headerColor);
                 messages.Add(first ? Voiced(row, byPlayer, body) : row);
                 first = false;

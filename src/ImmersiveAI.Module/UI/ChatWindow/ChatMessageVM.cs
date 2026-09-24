@@ -25,10 +25,26 @@ namespace ImmersiveAI.UI.ChatWindow
         public ChatMessageVM(string header, string body, bool isNarration, Color headerColor)
         {
             _header = header ?? string.Empty;
-            _body = body ?? string.Empty;
+            _body = HighlightVoiceCues(body ?? string.Empty);
             _isNarration = isNarration;
             _headerColor = headerColor;
         }
+
+        // The moods and sounds a soul writes for her voice — (tender), (laugh) — stay in her words, as
+        // Anton asked, drawn in the orange the Abby app gives them so they read as delivery, not speech.
+        // By name (or a near word for one), plus any one-word bracket OPENING a row — her stage direction,
+        // which the voice never reads either; any other bracket is her own and stays plain. The style lives in the brush
+        // ImmersiveAI.Thread.Text, which every thread body wears.
+        private static readonly System.Text.RegularExpressions.Regex VoiceCue =
+            new System.Text.RegularExpressions.Regex(
+                @"^\(\s*[A-Za-z]+\s*\)|\((?:" + string.Join("|", Core.Voices.SpeakableText.Moods)
+                         + "|" + string.Join("|", Core.Voices.SpeakableText.MoodAliases.Keys)
+                         + @"|laugh|sigh|cough|clears throat)\)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        private static string HighlightVoiceCues(string body)
+            => body.IndexOf('(') < 0 ? body : VoiceCue.Replace(body, m => "<span style=\"VoiceCue\">" + m.Value + "</span>");
 
         /// <summary>
         /// Gives this row a ▶: these words, in this voice, on demand.
@@ -36,9 +52,7 @@ namespace ImmersiveAI.UI.ChatWindow
         /// THE ROW HOLDS NO AUDIO STATE, and that is a rule rather than an omission. The thread is
         /// rebuilt into a fresh list on every change — a reply landing, a letter arriving, a day
         /// turning — so anything a row remembered would be thrown away moments later. What it holds
-        /// is the WORDS; the audio is found (or made) from those, which is exactly what
-        /// <see cref="Core.Voices.VoiceCacheKey"/> exists for. A line heard once is instant ever
-        /// after, and a line never heard is made on the spot, with no bookkeeping in between.
+        /// is the WORDS, handed to claude-voice afresh each time the ▶ is pressed.
         /// </para>
         /// <para>
         /// <paramref name="spokenText"/> is the words THEMSELVES, not the row's decorated body: a

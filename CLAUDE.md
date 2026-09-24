@@ -2039,6 +2039,21 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
   `releases/latest/download/ClaudeVoiceSetup.exe` (`ClaudeVoiceSetupUrl` overrides, a local path
   works for testing) — fetched by the game, so no Mark-of-the-Web and no SmartScreen prompt.
   **IT MUST BE ATTACHED TO A CLAUDE-VOICE RELEASE** or the Install button 404s.
+- **SHE IS TOLD WHAT HER VOICE CAN DO** (Anton, same day: Sibylla never set a mood while his Abby,
+  told every turn, used them freely — the first cut only TRANSLATED her *laughs* after the fact).
+  `PromptBuilder.VoiceGuidance`, right after the acting-out line, offers `(laugh)`-style sounds and a
+  leading `(mood)` — ONLY what the engine speaking now reports (`NpcPersona.VoiceSounds`/
+  `VoiceTakesMood`, filled in `BuildContext` from `ClaudeVoiceApp.Now`), nothing when voices are off.
+  The tags STAY in her recorded words (Anton: "leave the mood in the text") — which also keeps her
+  using them — and are drawn orange by `ChatMessageVM` via a `<span style="VoiceCue">` against the
+  mod's own brush `ImmersiveAI.Thread.Text` (`module\GUI\Brushes`; a span resolves against the
+  WIDGET'S brush, so every thread body wears it). `SpeakableText.TakeMood` lifts the mood out of the
+  words before `/speak` and sends it in the field, so it is never read aloud on any engine.
+  FIRMED the same evening: offered as an invitation, Sibylla (haiku, 400 replies of asterisk habit)
+  used none, so the mood is now a FORM ("every reply of mine opens with…") and the sound is told to
+  replace the gesture ("(laugh), never *I laugh*"). A gesture the voice acts on anyway shows its cue
+  beside it in the thread (`SpeakableText.CuesOf`, the same judgement as `Performed`), so game and
+  app tell one story. `VoiceService.WhatTheVoiceCanDo()` is the ONE answer sheet, speech and thread share.
 - **A ▶ RIDES EVERY THREAD ROW** — replies, letters, inner beats, the great days — via
   `ChatMessageVM.WithVoice`; Backspace (`VoicePanicKey`) stops it anywhere, read only while a line of
   ours may still be playing (`VoiceService.IsSpeaking`, a generous estimate from the line's length).

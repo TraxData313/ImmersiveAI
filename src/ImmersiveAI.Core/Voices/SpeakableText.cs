@@ -196,8 +196,107 @@ namespace ImmersiveAI.Core.Voices
                 if (speakActed && !(carried && shortGesture)) parts.Add(Closed(gesture));
             }
 
-            line.Text = Collapse(Normalize(string.Join(" ", parts)));
+            var text = string.Join(" ", parts);
+
+            // A mood the soul wrote herself — "(tender) I am here" — is taken out of the words whether
+            // or not this engine follows one, so it is never read aloud; where it does, it wins over a
+            // whispered gesture, being the more deliberate of the two.
+            var mood = TakeMood(ref text);
+            if (takesMood && mood.Length > 0) line.Mood = mood;
+
+            line.Text = Collapse(Normalize(text));
             return line;
+        }
+
+        /// <summary>The moods claude-voice knows by name (its docs/api.md, "Moods, beside the words").
+        /// A soul is offered exactly these, and only these are lifted out of her words.</summary>
+        public static readonly string[] Moods =
+        {
+            "happy", "excited", "playful", "calm", "tender", "sad", "tired", "serious", "whisper",
+            "surprised", "angry",
+        };
+
+        /// <summary>The words a soul reaches for instead of a mood's own name — claude-voice's own
+        /// table, and the ones Crushfinger taught us on the first evening ("(startled)"). Each is taken
+        /// as the mood it means.</summary>
+        public static readonly Dictionary<string, string> MoodAliases = new Dictionary<string, string>
+        {
+            ["whispering"] = "whisper", ["whispered"] = "whisper", ["whispers"] = "whisper",
+            ["hushed"] = "whisper", ["quietly"] = "whisper", ["softly"] = "tender", ["soft"] = "tender",
+            ["tenderly"] = "tender", ["warm"] = "tender", ["warmly"] = "tender", ["fond"] = "tender",
+            ["fondly"] = "tender", ["loving"] = "tender", ["lovingly"] = "tender",
+            ["sadly"] = "sad", ["sorrowful"] = "sad", ["mournful"] = "sad",
+            ["joyful"] = "happy", ["cheerful"] = "happy", ["happily"] = "happy", ["bright"] = "happy",
+            ["excitedly"] = "excited", ["eager"] = "excited", ["eagerly"] = "excited",
+            ["gentle"] = "calm", ["gently"] = "calm", ["calmly"] = "calm",
+            ["weary"] = "tired", ["wearily"] = "tired", ["sleepy"] = "tired",
+            ["mad"] = "angry", ["angrily"] = "angry", ["furious"] = "angry",
+            ["shocked"] = "surprised", ["startled"] = "surprised", ["astonished"] = "surprised",
+            ["teasing"] = "playful", ["teasingly"] = "playful", ["playfully"] = "playful", ["amused"] = "playful",
+            ["grim"] = "serious", ["grave"] = "serious", ["gravely"] = "serious", ["stern"] = "serious",
+        };
+
+        /// <summary>The mood a word means — its own name or one of <see cref="MoodAliases"/> — or empty.</summary>
+        public static string MoodOf(string? word)
+        {
+            var w = (word ?? string.Empty).Trim().ToLowerInvariant();
+            if (Array.IndexOf(Moods, w) >= 0) return w;
+            return MoodAliases.TryGetValue(w, out var m) ? m : string.Empty;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex MoodTag =
+            new System.Text.RegularExpressions.Regex(@"\(\s*([A-Za-z]+)\s*\)\s*",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        private static readonly System.Text.RegularExpressions.Regex LeadingTag =
+            new System.Text.RegularExpressions.Regex(@"^\s*\(\s*([A-Za-z]+)\s*\)\s*",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        /// <summary>Removes every one-word bracket naming a mood (by name or alias) from
+        /// <paramref name="text"/> and returns the first such mood, or empty. A one-word bracket that
+        /// OPENS the line is her stage direction whatever the word — "(startled)", "(wary)" — and is
+        /// never read aloud either. Sounds — (laugh) — and any other bracket stay.</summary>
+        public static string TakeMood(ref string text)
+        {
+            var found = string.Empty;
+            var t = text ?? string.Empty;
+            var lead = LeadingTag.Match(t);
+            if (lead.Success && !IsSoundWord(lead.Groups[1].Value))
+            {
+                found = MoodOf(lead.Groups[1].Value);
+                t = t.Substring(lead.Length);
+            }
+            text = MoodTag.Replace(t, m =>
+            {
+                var mood = MoodOf(m.Groups[1].Value);
+                if (mood.Length == 0) return m.Value;
+                if (found.Length == 0) found = mood;
+                return string.Empty;
+            });
+            return found;
+        }
+
+        private static bool IsSoundWord(string word)
+        {
+            foreach (var pair in Sounds)
+                if (pair.Value.IsMatch(word)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// What the voice will DO with a gesture, written the way the thread shows it: "(laugh)" for
+        /// *laughs softly*, "(whisper)" for *whispers*, both, or empty. The same judgement
+        /// <see cref="Performed"/> makes, so what the player sees beside a gesture is exactly what is
+        /// heard (Anton, 2026.09.24: the app showed "(laugh)" where the game showed only the gesture).
+        /// </summary>
+        public static string CuesOf(string? gesture, ICollection<string>? sounds, bool takesMood)
+        {
+            if (string.IsNullOrWhiteSpace(gesture)) return string.Empty;
+            var cues = new List<string>(2);
+            if (takesMood && IsWhisper(gesture!)) cues.Add("(whisper)");
+            var sound = SoundIn(gesture!, sounds);
+            if (sound != null) cues.Add("(" + sound + ")");
+            return string.Join(" ", cues);
         }
 
         /// <summary>A gesture this short that holds a sound is taken to BE the sound.</summary>

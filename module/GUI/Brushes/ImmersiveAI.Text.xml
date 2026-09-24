@@ -1,0 +1,11 @@
+<Brushes>
+  <!-- The talk thread's text: Popup.Description.Text as it stands, plus the one style the words may
+       wear inside it. VoiceCue colours the moods and sounds a soul writes for her voice - (tender),
+       (laugh) - orange, the way the Abby app draws them, so they read as delivery, not as speech. -->
+  <Brush Name="ImmersiveAI.Thread.Text" Font="FiraSansExtraCondensed-Regular" TextHorizontalAlignment="Left">
+    <Styles>
+      <Style Name="Default" FontColor="#F1E9DAFF" TextGlowColor="#000000FF" TextOutlineColor="#000000FF" TextOutlineAmount="0" TextGlowRadius="0" TextBlur="0" FontSize="20" />
+      <Style Name="VoiceCue" FontColor="#E8A559FF" TextGlowColor="#000000FF" TextOutlineColor="#000000FF" TextOutlineAmount="0" TextGlowRadius="0" TextBlur="0" />
+    </Styles>
+  </Brush>
+</Brushes>

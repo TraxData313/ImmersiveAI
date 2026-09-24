@@ -3993,6 +3993,10 @@ namespace ImmersiveAI
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;
             persona.ReplyLength = ReplyLengthOf(_config);
+            // What her voice can do, from the engine speaking NOW — offered only while it is really so.
+            var (voiceSounds, voiceMood) = Voice.VoiceService.WhatTheVoiceCanDo();
+            if (voiceSounds != null) persona.VoiceSounds = voiceSounds;
+            persona.VoiceTakesMood = voiceMood;
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

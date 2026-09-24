@@ -304,8 +304,8 @@
                                             <ListPanel DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginBottom="14" MarginRight="16" StackLayout.LayoutMethod="VerticalTopToBottom">
                                               <Children>
                                                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@Header" IsVisible="@HasHeader" />
-                                                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="18" Text="@Body" IsHidden="@IsNarration" />
-                                                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#9AA3B2FF" Text="@Body" IsVisible="@IsNarration" />
+                                                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="ImmersiveAI.Thread.Text" Brush.FontSize="18" Text="@Body" IsHidden="@IsNarration" />
+                                                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginLeft="10" Brush="ImmersiveAI.Thread.Text" Brush.FontSize="16" Brush.FontColor="#9AA3B2FF" Text="@Body" IsVisible="@IsNarration" />
                                               </Children>
                                             </ListPanel>
                                           </ItemTemplate>
@@ -357,8 +357,8 @@
                                         <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginRight="34" StackLayout.LayoutMethod="VerticalTopToBottom">
                                           <Children>
                                             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="@HeaderColor" Brush.TextHorizontalAlignment="Left" Text="@Header" IsVisible="@HasHeader" />
-                                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="Popup.Description.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Text="@Body" IsHidden="@IsNarration" />
-                                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" MarginLeft="14" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@Body" IsVisible="@IsNarration" />
+                                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" Brush="ImmersiveAI.Thread.Text" Brush.FontSize="17" Brush.TextHorizontalAlignment="Left" Text="@Body" IsHidden="@IsNarration" />
+                                            <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="2" MarginLeft="14" Brush="ImmersiveAI.Thread.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@Body" IsVisible="@IsNarration" />
                                           </Children>
                                         </ListPanel>
                                         <!-- A NOTE, not a play triangle: U+25B6 drew as "?" here

@@ -615,6 +615,38 @@ namespace ImmersiveAI.Core.Prompts
             "one such act, rarely two. When the one before me writes between asterisks, they did it, " +
             "not said it.";
 
+        /// <summary>
+        /// What a soul is told of her own voice when it can ACT (2026.09.24, Anton: Sibylla never set a
+        /// mood while his Abby, told the same thing every turn, used them freely). Built from the
+        /// engine speaking NOW, so nothing is offered that the next line would not really do: sounds
+        /// only where the engine makes them, a mood only where it follows one, and nothing at all when
+        /// voices are off. Never on paper — a letter is read, not heard. The words in brackets are
+        /// claude-voice's own keys, so they stay English whatever tongue the talk is in.
+        /// </summary>
+        public static string VoiceGuidance(IList<string>? sounds, bool takesMood)
+        {
+            var hasSounds = sounds != null && sounds.Count > 0;
+            if (!hasSounds && !takesMood) return string.Empty;
+
+            // FIRMED the same evening: offered as an invitation ("I am not shy with them"), Sibylla on
+            // haiku used none across a whole talk — four hundred replies of asterisk habit outweigh one
+            // polite line. So the mood is a FORM now, like Abby's own field: every reply opens with one.
+            // And the sound is told to REPLACE the gesture, or *I laugh softly* keeps winning.
+            var sb = new StringBuilder("- My voice is heard.");
+            if (takesMood)
+                sb.Append(" Every reply of mine opens with one word in brackets for how all of it sounds, " +
+                          "chosen afresh for this moment: " +
+                          string.Join(" ", SpeakableTextMoods.Select(x => "(" + x + ")")) + ".");
+            if (hasSounds)
+                sb.Append(" A sound is written in brackets just where it breaks into my words, and it is " +
+                          "truly heard: " + string.Join(" ", sounds!.Select(x => "(" + x + ")")) +
+                          " — so I write (laugh), never *I laugh*, and never the sound twice.");
+            sb.Append(" These very words, whatever tongue I speak; never in a letter.");
+            return sb.ToString();
+        }
+
+        private static IEnumerable<string> SpeakableTextMoods => ImmersiveAI.Core.Voices.SpeakableText.Moods;
+
         // Lowercases only the first character, so a persona fragment like "Calculating, cautious"
         // reads naturally after a lead-in ("In your nature, you are calculating, cautious").
         private static string LowerFirst(string s)
@@ -913,6 +945,9 @@ namespace ImmersiveAI.Core.Prompts
             // Immediately after the plain-speech rule, because it IS that rule's one exception.
             if (persona.EncourageActingOut)
                 sb.AppendLine(ActingOutGuidance);
+            var voice = VoiceGuidance(persona.VoiceSounds, persona.VoiceTakesMood);
+            if (voice.Length > 0)
+                sb.AppendLine(voice);
 
             // The eight per-tool whisper paragraphs that used to stand here moved INTO the tool
             // definitions themselves on 2026.08.14 (Anton: the section had grown "too big and too

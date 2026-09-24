@@ -20,6 +20,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Three engines to choose from: Breeze laughs and whispers, Qwen reads every language, Pocket runs on any PC
 - No graphics card? Pocket speaks on any computer now
 - A character who *laughs* or *sighs* is heard doing it on Breeze, and a whisper is whispered
+- Characters now know what their voice can do: they set a mood like (tender) or (playful), and laugh or sigh on Breeze
+- Moods and sounds show in orange in the talk, the way they are heard
 - The Voices page says whether the voice app is running, and starts, opens or closes it for you
 - All ninety-odd voices of Calradia work on every engine
 - The mod's download carries no program any more, so Nexus no longer blocks it

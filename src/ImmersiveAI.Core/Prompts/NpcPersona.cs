@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 namespace ImmersiveAI.Core.Prompts
 {
     /// <summary>
@@ -77,6 +78,15 @@ namespace ImmersiveAI.Core.Prompts
         /// <see cref="PromptBuilder.ActingOutGuidance"/>). The chat window draws such spans as soft
         /// narration; kept sparing by the guidance itself. Set from the game layer's EnableActingOut.</summary>
         public bool EncourageActingOut { get; set; }
+
+        /// <summary>The sounds the voice speaking for them can make when written into the words —
+        /// claude-voice's own list for the engine speaking now (Breeze: laugh, sigh, cough, clears
+        /// throat). Empty when voices are off or the engine makes none, and then nothing is said of
+        /// them (see <see cref="PromptBuilder.VoiceGuidance"/>).</summary>
+        public IList<string> VoiceSounds { get; set; } = new List<string>();
+
+        /// <summary>True when the engine speaking for them follows a mood for the whole line.</summary>
+        public bool VoiceTakesMood { get; set; }
 
         /// <summary>How long they speak — the player's own dial (2026.08.28). Defaults to the
         /// long-standing Conversational, so nothing changes for anyone who never touches it.</summary>
