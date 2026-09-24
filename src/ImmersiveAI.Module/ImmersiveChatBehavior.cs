@@ -1877,12 +1877,6 @@ namespace ImmersiveAI
                 var feltShift = outcome.FeltShift;
                 _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
 
-                // Start making the sound while we are still off the game thread. Prewarm only fills
-                // the cache — nothing is heard yet, because in the face-to-face panel the words are
-                // not on screen until the player clicks to advance the line. Speaking here would put
-                // her voice in the room while the box still reads "...".
-                Voice.VoiceService.Prewarm(npc, reply);
-
                 MainThreadDispatcher.Enqueue(() =>
                 {
                     MBTextManager.SetTextVariable(ResponseVar, reply, false);
@@ -3441,78 +3435,6 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("dev: revealing the mind", ex); }
         }
 
-        /// <summary>
-        /// VOICEOVER MILESTONE 1 — the one thing no amount of reading settles: will the game's own
-        /// audio engine play a WAV we made ourselves, from a path of our choosing?
-        /// <para>
-        /// Vanilla only ever hands FMOD Ogg files out of its own banks, so this is genuinely unknown.
-        /// Both roads are tried in one click because they lead to very different designs: the file
-        /// road needs a disk cache with pruning and file handles, while the BUFFER road — if it works
-        /// — deletes that whole subsystem and hands audio straight from memory. Whichever answers,
-        /// answers for the voice-over bus too (the player's own volume slider, mute on alt-tab, the
-        /// game's ducking), which is the reason to want the engine rather than our own player.
-        /// </para>
-        /// <para>Drop any .wav into <c>Configs\ImmersiveAI\Voices\_test\</c> and click. Delete this
-        /// whole method once the answer is written down.</para>
-        /// </summary>
-        internal static void DevTestSound(Hero npc)
-        {
-            try
-            {
-                var folder = Path.Combine(ModConfig.ConfigDirectory, "Voices", "_test");
-                if (!Directory.Exists(folder))
-                {
-                    Directory.CreateDirectory(folder);
-                    Notify($"Put a .wav in {folder} and click again.");
-                    return;
-                }
-
-                var wav = Directory.GetFiles(folder, "*.wav").FirstOrDefault();
-                if (wav == null) { Notify($"No .wav found in {folder}."); return; }
-
-                Notify($"Trying: {Path.GetFileName(wav)}");
-                ModLog.Info($"voice M1: testing playback of {wav}");
-
-                // Road 1 — the external file. "event:/" names a programmer event on FMOD's own
-                // voice-over bus; if this plays, playback costs us nothing but a path.
-                try
-                {
-                    var byFile = TaleWorlds.Engine.SoundEvent.CreateEventFromExternalFile(
-                        "event:/Extra/voiceover", wav, scene: null, is3d: false, isBlocking: false);
-                    var madeFile = byFile != null && !byFile.IsNullSoundEvent();
-                    var playedFile = madeFile && byFile!.Play();
-                    Notify($"external file: created={madeFile} playing={playedFile}");
-                    ModLog.Info($"voice M1: external file created={madeFile} play={playedFile}");
-                }
-                catch (Exception ex)
-                {
-                    Notify("external file: threw — see log.");
-                    ModLog.Error("voice M1: external file", ex);
-                }
-
-                // Road 2 — straight from memory. Zero callers in the shipped game, so TaleWorlds
-                // never tested it; if it works anyway it is worth a great deal.
-                try
-                {
-                    var bytes = File.ReadAllBytes(wav);
-                    var byBuffer = TaleWorlds.Engine.SoundEvent.CreateEventFromSoundBuffer(
-                        "event:/Extra/voiceover", bytes, scene: null, is3d: false, isBlocking: false);
-                    var madeBuffer = byBuffer != null && !byBuffer.IsNullSoundEvent();
-                    Notify($"from memory: created={madeBuffer} (not played — one at a time)");
-                    ModLog.Info($"voice M1: sound buffer created={madeBuffer} bytes={bytes.Length}");
-                }
-                catch (Exception ex)
-                {
-                    Notify("from memory: threw — see log.");
-                    ModLog.Error("voice M1: sound buffer", ex);
-                }
-            }
-            catch (Exception ex) { ModLog.Error("dev: testing sound", ex); }
-
-            void Notify(string line) =>
-                InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + line));
-        }
-
         internal static void DevRevealCourtship(Hero npc)
         {
             try { if (npc != null) Current?.RevealCourtshipFor(npc); }
@@ -3772,9 +3694,6 @@ namespace ImmersiveAI
             try
             {
                 var outcome = await ExecutePlayerTurnAsync(npc, playerInput, situation).ConfigureAwait(false);
-
-                // Still off the game thread — begin making the sound while the words travel.
-                Voice.VoiceService.Prewarm(npc, outcome.Reply);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {

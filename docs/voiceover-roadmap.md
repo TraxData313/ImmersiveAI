@@ -1,5 +1,10 @@
 # Voiceover: what was left, and what is left now
 
+> **HISTORICAL since 2026.09.24.** The mod no longer carries a speech engine: the voices are spoken by
+> [claude-voice](https://github.com/TraxData313/claude-voice), which runs the same engine (and two
+> others). This page is the record of the in-mod engine, kept for its measurements — claude-voice's
+> `docs/engine-notes.md` is where the engine is looked after now. See `src/ImmersiveAI.Module/Voice/`.
+
 Written 2026.08.14 after the first working playtest; **worked through in one pass on the night of
 2026.08.15**. Everything in Waves 1–5 below is built, and what could be proved without the game
 running was proved against the real engine and the real hosted API. **None of it has been played

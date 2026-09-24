@@ -1,4 +1,23 @@
-﻿WHERE THINGS STAND (2026.09.02 — **v3.3.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
+﻿WHERE THINGS STAND (2026.09.24 — **THE VOICES MOVED OUT TO CLAUDE-VOICE**)
+
+  ** LEFT FOR ANTON — THREE THINGS BEFORE PLAYERS CAN USE IT
+      1. PUBLISH CLAUDE-VOICE. The mod's "Install the voice app" button downloads
+         https://github.com/TraxData313/claude-voice/releases/latest/download/ClaudeVoiceSetup.exe
+         and the setup exe fetches claude-voice's `main` branch zip. Until claude-voice's changes
+         are pushed AND a release carries `setup-app\dist\ClaudeVoiceSetup.exe` as an asset, the
+         button answers "could not be fetched". (Build it: `.\setup-app\build.ps1` in claude-voice.)
+         claude-voice's CHANGELOG has the 1.14.0 section written; version.json is NOT bumped yet.
+      2. PLAYTEST in game (your own claude-voice is running, so the Install button will not show —
+         you get "Open the voice app"): voices on → a reply speaks; ▶ on a row; Backspace stops;
+         the engine row (✦ Pocket / Qwen / Breeze) switches; "Close the voice app" and Start again;
+         the notice when the game loads a campaign. You play in Bulgarian: QWEN is your engine —
+         on Pocket or Breeze every Cyrillic line is refused and you are told so once.
+      3. BREEZE LIVE TEST, when LM Studio is not holding 6 GB of the card: switch to Breeze, have a
+         Battanian say something with *laughs softly* in it, and listen for the laugh.
+      The Nexus quarantine and the derail playtest below are MOOT: the mod carries no exe at all now
+      (package.ps1 refuses one), and the engine it derailed in is gone from the mod.
+
+WHERE THINGS STAND (2026.09.02 — **v3.3.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
 
   ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.3.0 (five minutes, and only you can do it)
       Steam is done (uploaded 2026.09.02, "Uploading done!", item 3764210301). On Nexus the MOD
@@ -21,52 +40,8 @@
       (the proposal is now in the "Looking for...?" list): docs\steam-page-final.bbcode.txt (7850 of
       8000 bytes) and docs\nexus-page.bbcode.txt are ready to paste whenever you feel like it.
 
-  ** THE QUARANTINE — THE THING THAT ACTUALLY MATTERS (2026.09.02)
-      **v3.2.0 has been sitting quarantined on Nexus since 30 August**: uploaded, red-crossed, ONE
-      download, undownloadable by anybody, for three days. That is the fourth release in a row
-      (v3.0.0, v3.1.0, v3.1.1, v3.2.0) and v3.3.0 will land the same way — you said to upload it
-      anyway and write to them yourself, which is right, because the one road package.ps1's own
-      comment admits was NEVER TRIED is asking support.
-      What to send support@nexusmods.com: the file is quarantined for containing
-      VoiceHost\ImmersiveAI.VoiceHost.exe, a text-to-speech helper process we build ourselves; the
-      full source is at github.com/TraxData313/ImmersiveAI (src/ImmersiveAI.VoiceHost) and it builds
-      with `dotnet publish`. That is exactly what their notice asks for.
-      IF THEY SAY NO, the fallback is known and was already tried once: split the host into a second
-      optional file. It was reverted 2026.08.21 because half the players never found the second file
-      (Fritz3593) — so if it comes back it needs a line in the main file's own description.
-
-  ** NEXT PLAYTEST — DID THE VOICES STOP DERAILING? (2026.08.17)
-      Anton heard Sibylla hold one wordless note for ~30 s mid-reply. Three things shipped for it:
-      a guard that cuts such a note within ~2 s, a character whitelist before the engine, and the
-      speech engine's own sampling restored (we had cooled it for a problem streaming had already
-      solved). Root cause was narrowed by comparing against claude-voice — same DLL, same card,
-      0.1% derails against our 6% — but WHICH of the two differences carried it is not known.
-      WHAT TO CHECK, all in Configs\ImmersiveAI\voicehost.log:
-        - `derail guard` lines. Twelve in 196 readings before; they should now be rare or gone.
-          If they are NOT, set VoiceTemperature 0.55 / VoiceTopP 0.85 in config.json to put half
-          the change back and compare — one edit, no rebuild.
-        - `listening to ...: swing= quiet=` lines, which the new guard writes for every piece it
-          judges. These are the first real numbers for what a derail measures against speech; the
-          two thresholds (DroneSwing 0.35, DroneQuietFraction 0.05) were REASONED, not measured.
-        - Whether the guard ever cut an honest reading. It only judges past the end of the words,
-          so it should be impossible — but "should be" is why this is on the list.
-      BY EAR: the restored sampling is the one change that could cost something. Listen to a long
-      multi-sentence reply and check the voice still sounds like the one that was cloned. If it
-      wanders, VoiceTemperature is the dial and lower is tighter.
-      ALSO SEEN, not chased: a VoiceHost found alive with the game long closed, holding its VRAM.
-      The watchdog (parent PID + stdin EOF) is supposed to make that impossible.
-
-  ** LEFT FOR ANTON:
-      1. WATCH THE NEXUS VIRUS SCAN. v3.0.0 was AUTOMATICALLY QUARANTINED there ("may be unsafe",
-         undownloadable) and it sat that way for a day unnoticed — almost certainly the voice host
-         .exe, which first shipped in that release. v3.1.0 is in the scanner queue now; if it is
-         quarantined too, the file page’s "How can I fix this?" appeal can only be filed by the
-         account owner. Until it clears, NEXUS HAS NO WORKING DOWNLOAD and Steam is the only road.
-      2. Press the download button on a machine with no engine — the one path in v3.1.0 that has
-         been read but never clicked. (Anton has the engine already, so the button hides for him.)
-      3. Optional, whenever the pages are next touched: both store descriptions gained one clause
-         about voices ("one button installs it (NVIDIA card, or a key for hosted voices)").
-         docs\steam-page-final.bbcode.txt is 7709 bytes of 8000. A paste, nothing more.
+  ** (The quarantine appeal, the derail playtest and the three voice-host items that stood here
+      were settled by the 2026.09.24 move to claude-voice — see TASKS_DONE.)
 
   v3.0.0 went up to the Workshop on 2026.08.16 ("Uploading done!", 10,747,516 bytes): 54 commits
   since v2.2.1 six days before — the one talk screen, the voices whole, the birth chronicle, the

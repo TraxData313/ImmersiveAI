@@ -152,6 +152,90 @@ namespace ImmersiveAI.Core.Voices
             return Collapse(Normalize(string.Join(" ", segments.Select(s => Closed(s.Text)))));
         }
 
+        /// <summary>
+        /// The line as a voice that can ACT would say it: a gesture that is a sound becomes the sound
+        /// itself, written the way the voice app wants it — <c>*laughs softly*</c> becomes
+        /// <c>(laugh)</c>, heard as a laugh rather than read as a word — and a whispered gesture makes
+        /// the whole line a whisper.
+        /// <para>
+        /// Only what the engine says it can do is asked of it. <paramref name="sounds"/> is the voice
+        /// app's own list for the engine speaking now (Breeze: laugh, sigh, cough, clears throat; the
+        /// others: none), and <paramref name="takesMood"/> whether it follows a mood at all. With
+        /// neither, this is exactly <see cref="SpokenWithGestures"/> or <see cref="SpokenOnly"/>, so an
+        /// engine that cannot act loses nothing it had.
+        /// </para>
+        /// <para>
+        /// A short gesture that IS the sound — <c>*chuckles*</c>, <c>*sighs deeply*</c> — is replaced by
+        /// it whole; read aloud after the laugh it would be the same moment twice. A longer one keeps
+        /// its narration after the sound when acted parts are read, because <c>*laughs and pours the
+        /// wine*</c> is two things and only the first of them is a sound.
+        /// </para>
+        /// </summary>
+        public static PerformedLine Performed(string? body, bool speakActed, ICollection<string>? sounds, bool takesMood)
+        {
+            var line = new PerformedLine();
+            var segments = EmoteText.Split(body);
+            if (segments.Count == 0) return line;
+
+            var parts = new List<string>(segments.Count);
+            foreach (var segment in segments)
+            {
+                if (!segment.IsGesture) { parts.Add(segment.Text); continue; }
+
+                var gesture = segment.Text;
+                var whisper = takesMood && IsWhisper(gesture);
+                if (whisper) line.Mood = "whisper";
+
+                var sound = SoundIn(gesture, sounds);
+                var shortGesture = WordCount(gesture) <= ShortGestureWords;
+                if (sound != null) parts.Add("(" + sound + ")");
+
+                // The narration, when it is wanted and the gesture said more than a sound or a
+                // whisper already carries.
+                var carried = sound != null || whisper;
+                if (speakActed && !(carried && shortGesture)) parts.Add(Closed(gesture));
+            }
+
+            line.Text = Collapse(Normalize(string.Join(" ", parts)));
+            return line;
+        }
+
+        /// <summary>A gesture this short that holds a sound is taken to BE the sound.</summary>
+        private const int ShortGestureWords = 4;
+
+        /// <summary>The sounds, by the words a writer reaches for. Cyrillic too: the mod is played in
+        /// Bulgarian, and a laugh is a laugh in any alphabet even where the words around it cannot be
+        /// read by the engine that would make it.</summary>
+        private static readonly KeyValuePair<string, System.Text.RegularExpressions.Regex>[] Sounds =
+        {
+            Sound("laugh", @"\b(laugh\w*|chuckl\w*|giggl\w*|snicker\w*|chortl\w*|cackl\w*)\b|смя|смее|кикот|засмя"),
+            Sound("sigh", @"\bsigh\w*\b|въздиш|въздъхн"),
+            Sound("cough", @"\bcough\w*\b|кашл|изкашл"),
+            Sound("clears throat", @"\bclear\w*\s+(?:\w+\s+)?throat\b|прочиств\w*\s+гърло"),
+        };
+
+        private static readonly System.Text.RegularExpressions.Regex Whisper =
+            new System.Text.RegularExpressions.Regex(@"\bwhisper\w*\b|шепн|шепот|прошеп",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        private static KeyValuePair<string, System.Text.RegularExpressions.Regex> Sound(string name, string pattern)
+            => new KeyValuePair<string, System.Text.RegularExpressions.Regex>(name,
+                new System.Text.RegularExpressions.Regex(pattern,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant));
+
+        private static string? SoundIn(string gesture, ICollection<string>? sounds)
+        {
+            if (sounds == null || sounds.Count == 0) return null;
+            foreach (var pair in Sounds)
+                if (sounds.Contains(pair.Key) && pair.Value.IsMatch(gesture)) return pair.Key;
+            return null;
+        }
+
+        private static bool IsWhisper(string gesture) => Whisper.IsMatch(gesture);
+
+        private static int WordCount(string text)
+            => text.Split(new[] { ' ', '\t', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length;
+
         /// <summary>Gives a segment an ending when it has none, so the next one does not run into it.
         /// Only a segment finishing on a letter or a digit is touched — a comma, a dash or a question
         /// mark is the writer's own choice and is left alone.</summary>
@@ -351,5 +435,16 @@ namespace ImmersiveAI.Core.Voices
             }
             return sb.ToString().Trim();
         }
+    }
+}
+
+namespace ImmersiveAI.Core.Voices
+{
+    /// <summary>What <see cref="SpeakableText.Performed"/> hands back: the words to send, and a mood
+    /// for the whole line ("whisper") or empty for none.</summary>
+    public sealed class PerformedLine
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Mood { get; set; } = string.Empty;
     }
 }

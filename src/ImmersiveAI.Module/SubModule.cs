@@ -48,12 +48,11 @@ namespace ImmersiveAI
                 behavior.AddDialogs(starter);
                 // The cost ledger needs the config (prices, caps) before the first call is made.
                 UsageLedger.Configure(config);
-                // The voices. Configure only reads settings — the speech engine is not started here
-                // and is never started at all unless a line actually wants speaking, because bringing
-                // it up costs seconds and gigabytes of video memory that a silent campaign should
-                // never pay. Absent engine, absent models, absent runtime: it stays quiet and says so
-                // once, and no reply is ever delayed by it.
+                // The voices. They are spoken by claude-voice, a separate app; with voices on, the
+                // game wakes it if it is installed and asleep (VoiceStartAppWithGame), and says in
+                // one line whether it is there. With voices off it is never looked for at all.
                 Voice.VoiceService.Configure(config);
+                if (config.EnableVoice) Voice.ClaudeVoiceApp.WakeIfWanted();
                 // A quiet "are you there?" to the LLM the moment a game is entered, so a missing key,
                 // a wrong key, or a dead connection surfaces as plain guidance now — not as mute NPCs
                 // discovered mid-conversation. Runs once per process, off-thread. On a keyless fresh
@@ -92,12 +91,11 @@ namespace ImmersiveAI
 
         public override void OnGameEnd(Game game)
         {
-            // Leaving a campaign lets the speech engine go. The sidecar's own watchdog would catch a
-            // crash, but quitting to the main menu is not a crash and there is no reason to sit at it
-            // holding several gigabytes of video memory. It comes back up on the next line that wants
-            // speaking, in about a second and a half.
-            try { Voice.VoiceService.Shutdown(); }
-            catch (Exception ex) { ModLog.Error("voice: letting the engine go", ex); }
+            // Leaving a campaign silences the voice, and no more: the next save loaded wants it
+            // again, and waking it costs the better part of a minute. It is closed on the way out
+            // of the GAME (VoiceService's process-exit hook), and only if the game opened it.
+            try { Voice.VoiceService.Stop(); }
+            catch (Exception ex) { ModLog.Error("voice: stopping", ex); }
             base.OnGameEnd(game);
         }
 
@@ -134,10 +132,10 @@ namespace ImmersiveAI
             UI.NightWindow.NightWindowManager.Tick();
             // The socialness control: appears with the map, folds away everywhere else.
             UI.Socialness.SocialnessManager.Tick();
-            // Hands the next piece of a spoken reply over the instant the one before it ends. A
-            // no-op whenever nothing is speaking, which is almost always — and called EVERY FRAME on
-            // purpose: the handover is timed by the clock, and a frame is the precision it gets.
-            Voice.VoicePlayback.Tick();
+            // Keeps an eye on the voice app while voices are on, so its coming and going is told
+            // once, plainly. A look is a few-millisecond HTTP call off the game thread, at most
+            // every few seconds; with voices off it never looks at all.
+            if (Config?.EnableVoice == true) Voice.ClaudeVoiceApp.Poll();
             // The inventory screen coming up: the moment a soul's gear is about to change, and the
             // only place to stand to find out what it was before.
             TickInventoryWatch();
@@ -166,7 +164,7 @@ namespace ImmersiveAI
         {
             try
             {
-                if (!Voice.VoicePlayback.IsSpeaking) return;
+                if (!Voice.VoiceService.IsSpeaking) return;
 
                 var name = Config?.VoicePanicKey;
                 if (string.IsNullOrWhiteSpace(name)) return;

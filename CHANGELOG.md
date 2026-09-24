@@ -15,6 +15,16 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+**Voices, rebuilt around claude-voice:**
+- The voices now come from claude-voice, a free app the Voices page installs in one click
+- Three engines to choose from: Breeze laughs and whispers, Qwen reads every language, Pocket runs on any PC
+- No graphics card? Pocket speaks on any computer now
+- A character who *laughs* or *sighs* is heard doing it on Breeze, and a whisper is whispered
+- The Voices page says whether the voice app is running, and starts, opens or closes it for you
+- All ninety-odd voices of Calradia work on every engine
+- The mod's download carries no program any more, so Nexus no longer blocks it
+- Hosted voices (the OpenAI key) are retired — Pocket covers the no-graphics-card case for free
+
 ## v3.3.0 — 2026.09.02
 
 The asking becomes yours: a real proposal with a ring and a written day, and a marriage road you

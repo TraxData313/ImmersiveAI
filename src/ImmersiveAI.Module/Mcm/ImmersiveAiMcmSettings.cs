@@ -247,7 +247,7 @@ namespace ImmersiveAI.Mcm
         // ---------------------------- Voices ----------------------------
 
         [SettingPropertyBool("Speak their words aloud", Order = 0, RequireRestart = false,
-            HintText = "Characters read their replies out loud in a voice you choose, made on your own machine. The talk screen's Voices page fetches what it needs itself (about 2.8 GB) — it wants an NVIDIA card, or a key for the hosted voices instead. Off costs nothing and changes nothing else.")]
+            HintText = "Characters read their replies out loud in a voice you choose. The voices come from claude-voice, a free app that runs beside the game - the talk screen's Voices page installs it in one click and picks what suits your computer (any PC works; an NVIDIA card sounds best). Nothing leaves your computer. Off costs nothing and changes nothing else.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool EnableVoice { get; set; }
 
@@ -257,7 +257,7 @@ namespace ImmersiveAI.Mcm
         public bool VoiceAutoSpeak { get; set; } = true;
 
         [SettingPropertyBool("Speak answers you are not watching", Order = 6, RequireRestart = false,
-            HintText = "An answer speaks itself even with the screen shut, so you can send a line and listen while you ride. Needs 'Speak without being asked'. There is one voice at a time, so two answers landing together means the second cuts off the first - Backspace silences it. With a hosted voice this is billed without you pressing anything.")]
+            HintText = "An answer speaks itself even with the screen shut, so you can send a line and listen while you ride. Needs 'Speak without being asked'. There is one voice at a time, so two answers landing together means the second cuts off the first - Backspace silences it.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool VoiceSpeakWhenClosed { get; set; } = true;
 
@@ -270,11 +270,6 @@ namespace ImmersiveAI.Mcm
             HintText = "Anyone you have not cast yourself is given a voice of their own culture and sex, so a Battanian woman sounds Battanian without you casting every soul by hand. It is worked out from their own name, so it never changes between sessions. Anything you cast yourself, and any voice given to all women or all men, still wins. Off: only your own castings speak.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public bool VoiceAutoCast { get; set; } = true;
-
-        [SettingPropertyDropdown("How a reply is spoken", Order = 3, RequireRestart = false,
-            HintText = "Streaming (recommended): one reading, played as it is made - the first words come in well under a second and the pieces are joined so there is no seam. Full read: waits for the whole reading before a word is heard; slower to start, and now no steadier. By line: a separate reading per sentence - the voice changes character at every sentence, kept only for comparison.")]
-        [SettingPropertyGroup("Voices", GroupOrder = 3)]
-        public Dropdown<string> VoiceDelivery { get; set; } = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 1);
 
         // The three castings. The lists are built AT BIND TIME from the player's own voices folder,
         // which is why they start as a lone placeholder here — and why the bridge always re-selects
@@ -295,10 +290,15 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
         public Dropdown<string> VoicePanicKey { get; set; } = new Dropdown<string>(McmChoiceLists.PanicKeys, 0);
 
-        [SettingPropertyText("Hosted voices: API key", Order = 9, RequireRestart = false,
-            HintText = "A key for a hosted speech service (OpenAI's, by default) - the road for a machine that cannot run a speech engine. Nothing is downloaded and no voice can be cloned; you pick from a fixed shelf, billed by the minute and shown in the same cost line as everything else. Leave empty to use only voices made on this machine.")]
+        [SettingPropertyBool("Let them laugh and whisper", Order = 3, RequireRestart = false,
+            HintText = "When a character laughs, sighs or coughs in their acted parts (*laughs softly*), the voice does it rather than reading the word - on the Breeze engine, which can. A whispered line is whispered on Breeze and Qwen. On Pocket it changes nothing.")]
         [SettingPropertyGroup("Voices", GroupOrder = 3)]
-        public string CloudVoiceApiKey { get; set; } = string.Empty;
+        public bool VoicePerformSounds { get; set; } = true;
+
+        [SettingPropertyBool("Start the voice app with the game", Order = 9, RequireRestart = false,
+            HintText = "With voices on, wakes the voice app (claude-voice) when a campaign loads if it is installed and asleep - and closes it when the game exits, but only if the game was the one that opened it.")]
+        [SettingPropertyGroup("Voices", GroupOrder = 3)]
+        public bool VoiceStartAppWithGame { get; set; } = true;
 
         [SettingPropertyDropdown("Starting personality (the director's spark)", Order = 11, RequireRestart = false,
             HintText = "Off by default: characters begin from game truth without an invented private history. Generate makes one small AI call at a character's first interaction and writes 1-3 sentences into their editable prompt file. Ask first shows a popup per new face.")]

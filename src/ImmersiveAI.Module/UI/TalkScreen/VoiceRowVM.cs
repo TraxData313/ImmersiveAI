@@ -154,31 +154,13 @@ namespace ImmersiveAI.UI.TalkScreen
         public void ExecuteSelect() => _select?.Invoke(this);
         public void ExecuteHear() => _hear?.Invoke(this);
 
-        /// <summary>
-        /// The name with WHO MAKES IT after it — "Sibylla (Qwen TTS Studio)", "Alloy (OpenAI)".
-        /// <para>
-        /// Said on every row rather than only on the hosted ones (Anton, 2026.08.15: the hosted
-        /// voices wore a mark and the local ones wore nothing, which reads as though only one kind
-        /// came from anywhere). The tag lives HERE and not in the preset's own Name so it stays a
-        /// piece of rendering: nothing on disk, nothing in the casting sheet, and a voice shared
-        /// with a friend carries only its real name.
-        /// </para>
-        /// </summary>
+        /// <summary>The voice's own name. Which engine speaks it is said once, at the top of the
+        /// page, rather than on every row: every voice in the list is spoken by the same one.</summary>
         private static string NameFor(VoicePreset? voice)
         {
             if (voice == null) return string.Empty;
             var name = (voice.Name ?? string.Empty).Trim();
-            var tag = TagFor(voice);
-            return tag.Length == 0 ? name : (name.Length == 0 ? tag : name + " " + tag);
-        }
-
-        private static string TagFor(VoicePreset voice)
-        {
-            if (voice.Backend == VoiceBackend.Remote) return "(OpenAI)";
-            // The model's own speakers are Qwen too, but they were never cloned in Studio — saying
-            // so would be a small lie, and which shelf a voice came off is the useful half anyway.
-            if (!string.IsNullOrWhiteSpace(voice.SpeakerName)) return "(Qwen TTS, built-in)";
-            return "(Qwen TTS Studio)";
+            return name.Length == 0 ? voice.Id ?? string.Empty : name;
         }
 
         /// <summary>
@@ -199,7 +181,7 @@ namespace ImmersiveAI.UI.TalkScreen
             var where = VoiceCasting.Label(voice);
             if (where.Length > 0) parts.Add(where);
 
-            var said = (voice.ReferenceText ?? string.Empty).Trim();
+            var said = (voice.Style ?? string.Empty).Trim();
             if (said.Length > 80) said = said.Substring(0, 80).TrimEnd() + "…";
             if (said.Length > 0) parts.Add(said);
 

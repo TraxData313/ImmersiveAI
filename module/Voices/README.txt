@@ -1,8 +1,21 @@
 ﻿The voices that travel with the mod
 ===================================
 
-Every voice folder in here is copied onto the player's own shelf the first time they run the
-mod, so a fresh install is never a shelf with nothing on it.
+Since 2026.09.24 the voices are spoken by claude-voice, a separate free app the Voices page
+installs. The mod tells it about this folder every time it comes up, and it reads every voice in
+here WHERE IT LIES - nothing is copied onto a shelf any more.
+
+Each voice needs two things to speak on all three of claude-voice's engines:
+
+    embedding.json                          Qwen speaks from this
+    breeze-reference.wav + .txt             Breeze learns the voice from this clip and its exact
+                                            words; Pocket clones from it (where cloning is set up)
+
+A voice with only the embedding speaks on Qwen alone. Make the clip with claude-voice:
+
+    python make_reference_clips.py <this folder>
+
+It renders the same short Calradian line in every voice that lacks one, about 13 seconds each.
 
 Where things go
 ---------------
@@ -13,7 +26,7 @@ Where things go
                 gwen\               one voice = one folder
                     voice.json          what it is called, and who it suits
                     embedding.json      THE VOICE ITSELF (Studio's voice-<n>-d2048.json, renamed)
-                    reference.wav       optional: the clip it was cloned from
+                    breeze-reference.wav/.txt   a clip of it and its words, for Breeze and Pocket
             empire\ vlandia\ sturgia\ aserai\ khuzait\ nord\
             other\
                 sibylla\            belongs to no people - offered to everyone
@@ -56,9 +69,6 @@ given one of their own people and their own sex, chosen from their own name, so 
 voice every session, survives every reload, and is never written down anywhere. If their people
 have no voices yet, the ones under "other" are used, and failing those, anyone of the right sex.
 
-Only voices made on the player's own machine are given out this way; a hosted voice costs money
-per line and is only ever used when the player puts one on somebody themselves.
-
 There were once "all women" / "all men" slots that outranked all of this. They were retired
 (2026.08.15): one press gave every man in the world the same voice, beating ninety-three
 culture-matched ones, and nothing could undo it. Do not bring them back.
@@ -67,17 +77,13 @@ Adding a voice to a people later moves only about one soul in n onto it, not eve
 choice is made by scoring every candidate against the soul's name and taking the highest, not by
 counting down a list. So the shelf can grow between versions without recasting the whole world.
 
-Two rules the seeding keeps, and both are about not overruling the player
-------------------------------------------------------------------------
+The seeding is retired
+----------------------
 
-1. A name already on their shelf is never written over. Someone who renamed or re-cloned a
-   voice keeps their version through every update.
-2. A voice already offered is never offered again. Deleting one MEANS something. That is what
-   Configs\ImmersiveAI\Voices\_seeded.json records; adding a NEW voice here in a later version
-   still arrives on its own.
-
-A voice that is broken (no embedding, mangled voice.json) is skipped with a line in the log and
-costs nothing but itself - and arrives on the next start once it is mended.
+Until 2026.09.24 these folders were copied onto the player's shelf once each, with a ledger so a
+deleted one was never offered again. claude-voice reads them in place now, so there is nothing to
+copy and nothing to remember. Voices a player made in those days stay on their shelf
+(Configs\ImmersiveAI\Voices) and claude-voice is told about that folder too.
 
 Where the voices in here came from
 ---------------------------------

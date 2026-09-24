@@ -45,7 +45,7 @@ Ask anyone anything about the game - they quietly search the web mid-reply and a
 [list]
 [*]Face to face - they greet you as you approach.
 [*][b]One talk screen[/b] (hotkey [b]O[/b]) - everyone you know in one list - near, far or gone - the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
-[*][b]Hear them[/b] - a play mark beside every line, and a Voices page to cast anyone. Off by default; one button installs it - NVIDIA card, or a key for hosted voices: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
+[*][b]Hear them[/b] - a play mark beside every line, and a Voices page to cast anyone. Off by default; one click installs the free voice app - any PC works: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [*]Edit a character's prompt, or the world's, [b]without leaving the game[/b] - it speaks from the next reply.
 [*][b]Think[/b] (Shift+Enter) - stuck for words? Your own hero drafts your next line from all you two have said, to keep, change or bin. Presets steer it: starter, romantic, ender, or your own.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)
@@ -86,7 +86,7 @@ Nexus rescans every upload, and one of its 70 checks flags the bundled Immersive
 [list]
 [*][b]Read the startup message.[/b] It says what it found ("connected", a missing/wrong key, a network problem) and where to fix it. Fix config.json and restart; the check runs again.
 [*][b]Check the log:[/b] Configs\ImmersiveAI\log.txt records every call and error in plain words. A dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Stuck? Post its last lines in the comments - your key is never logged.
-[*][b]No voices, or "no speech engine installed"?[/b] Voices are off by default and need a ~2.9 GB engine on your own PC and an [b]NVIDIA[/b] card - CUDA only, so no AMD, Intel or CPU road. Talk screen (O) -> Voices -> Download the voices, then Turn voices on. No NVIDIA card: paste an OpenAI key into Voices -> Hosted voices instead, and thirteen voices appear with nothing to download. Whole story: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
+[*][b]No voices?[/b] Voices are off by default. Talk screen (O) -> Voices -> Install the voice app, and follow its setup window (Alt+Tab if hidden). Breeze laughs (English, NVIDIA 16 GB), Qwen reads every language (NVIDIA), Pocket runs on any PC. Lines in Cyrillic silent? Switch to Qwen. Whole story: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [/list]
 
 [b][size=4]Privacy[/size][/b]

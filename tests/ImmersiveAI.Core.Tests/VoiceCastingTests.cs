@@ -14,7 +14,6 @@ namespace ImmersiveAI.Core.Tests
                 Name = id,
                 Gender = gender,
                 Culture = culture,
-                SpeakerName = "built-in",     // enough to be speakable without touching disk
             };
 
         private static List<VoicePreset> Shelf() => new List<VoicePreset>
@@ -115,24 +114,12 @@ namespace ImmersiveAI.Core.Tests
             Assert.False(sheet.ClearDeadDefaults());     // nothing left to clear
         }
 
-        /// <summary>Hosted voices are billed by the minute; handing one out to a soul nobody cast
-        /// would put the whole world on the meter without anyone choosing it.</summary>
+        /// <summary>A voice with no id is nothing the app could be asked for, and is never handed out.</summary>
         [Fact]
-        public void A_hosted_voice_is_never_given_out_automatically()
+        public void A_voice_with_no_id_is_never_given_out()
         {
-            var hosted = new VoicePreset
-            {
-                Id = "alloy", Name = "Alloy", Gender = VoiceGender.Female,
-                Culture = "battania", Backend = VoiceBackend.Remote, RemoteVoiceId = "alloy",
-            };
-            var shelf = new List<VoicePreset> { hosted };
-
+            var shelf = new List<VoicePreset> { new VoicePreset { Name = "Nobody", Gender = VoiceGender.Female, Culture = "battania" } };
             Assert.Equal(string.Empty, VoiceCasting.Pick(new VoiceAssignments(), shelf, "lord_1_1", true, "battania"));
-
-            // ...but the player may still put one on somebody by hand.
-            var sheet = new VoiceAssignments();
-            sheet.Cast("lord_1_1", "alloy");
-            Assert.Equal("alloy", VoiceCasting.Pick(sheet, shelf, "lord_1_1", true, "battania"));
         }
 
         [Fact]

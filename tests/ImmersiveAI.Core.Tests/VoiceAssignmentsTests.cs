@@ -1,11 +1,11 @@
-using ImmersiveAI.Core.Voices;
+﻿using ImmersiveAI.Core.Voices;
 
 namespace ImmersiveAI.Core.Tests;
 
 public class VoiceAssignmentsTests
 {
     private static VoicePreset Voice(string id, VoiceGender gender)
-        => new VoicePreset { Id = id, Name = id, Gender = gender, RemoteVoiceId = "x", Backend = VoiceBackend.Remote };
+        => new VoicePreset { Id = id, Name = id, Gender = gender };
 
     private static VoiceAssignments Cast()
         => new VoiceAssignments { DefaultFemale = "sibylla", DefaultMale = "achilles" };
@@ -129,7 +129,7 @@ public class VoiceAssignmentsTests
     [Fact]
     public void FillEmptyDefaults_SkipsAVoiceThatCannotSpeak()
     {
-        var mute = new VoicePreset { Id = "mute", Name = "Mute", Gender = VoiceGender.Female };
+        var mute = new VoicePreset { Id = "", Name = "Mute", Gender = VoiceGender.Female };
         Assert.False(mute.IsSpeakable);
 
         var cast = new VoiceAssignments();

@@ -1517,3 +1517,29 @@ first three change how the whole road behaves.
   Deployed to ImmersiveAI.Dev and verified both DLLs and both changed prefab hashes. In-game
   toggle, save/reload persistence, and layout still need playtesting.
   (2026.09.18 14.31.36)
+- [x] THE VOICES MOVED OUT TO CLAUDE-VOICE (Anton: "separate the voice to work with the
+  claude-voice app", the way his Abby app does; "remove the immersive AI exe … it blocked it on
+  the nexus"; "very very easy and nice and intuitive"). The mod no longer carries a speech engine:
+  `ImmersiveAI.VoiceHost`, VoicePlayback/VoiceCache/VoiceFetcher/VoiceEngineDiscovery/Gate, the
+  hosted OpenAI road, VoiceLibrary/VoiceSeeds/VoiceBudget/VoiceCacheKey/WavFiles/VoiceHostProtocol
+  are deleted (199 test cases with them; 901 → 713, +11 new). New Module `ClaudeVoiceClient` (HTTP
+  to 127.0.0.1:8765), `ClaudeVoiceApp` (installed/starting/running snapshot, where.json discovery,
+  start/close/open panel/set engine, fetch+run the setup exe, registers the module's Voices and
+  the player's old shelf, one notice per coming and going), `VoiceService` rewritten around it.
+  Core `SpeakableText.Performed`: *laughs* → (laugh) on engines that list the sound, *whispers* →
+  mood whisper. The Voices page is the app's remote: one next-step button (Install / Start / Open
+  the voice app), an engine row, Close the voice app. Settings: +VoicePerformSounds,
+  +VoiceStartAppWithGame, +ClaudeVoicePort, +ClaudeVoiceSetupUrl; retired the engine paths,
+  sampling, cache, delivery and CloudVoice*. package.ps1 now REFUSES any executable.
+  All 93 shipped voices got a `breeze-reference.wav/.txt` (Qwen render of one Calradian line,
+  ~13 s, 53 MB total) so Breeze and Pocket speak them too.
+  claude-voice side (uncommitted there): `/voices`, `/voice-roots`, `/panel`, `announce:false`,
+  `unreadable:"refuse"`, version on /health, where.json; flat voice folders; Pocket clones clip
+  voices where `pocketCloning`; `setup.ps1 -Engine breeze` + `-NoClaude`; panel not on top by
+  default; `make_reference_clips.py`; `setup-app\` = ClaudeVoiceSetup.exe (net48 WinForms, Abby,
+  three engine cards from nvidia-smi, wraps setup.ps1, says hello) — tested end to end with
+  `--auto` into a temp folder. Anton's own copy: all Calradia voices in
+  `claude-voice\voices-local\calradia` (gitignored), on every engine.
+  Player guide rewritten: docs/voiceover-setup.md. Store pages updated, all shorter than before.
+  Deployed. Not yet playtested in game; Breeze not live-tested (the card was busy).
+  (2026.09.24 18.23.00)

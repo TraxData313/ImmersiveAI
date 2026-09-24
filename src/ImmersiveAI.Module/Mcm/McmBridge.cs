@@ -213,7 +213,6 @@ namespace ImmersiveAI.Mcm
             if (s.ChatWindowHotkey == null) { s.ChatWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 0); repaired = true; }
             if (s.LetterWindowHotkey == null) { s.LetterWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 8); repaired = true; }
             if (s.PersonaSparkMode == null) { s.PersonaSparkMode = new Dropdown<string>(McmChoiceLists.SparkModes, 2); repaired = true; }
-            if (s.VoiceDelivery == null) { s.VoiceDelivery = new Dropdown<string>(McmChoiceLists.VoiceDeliveryModes, 1); repaired = true; }
             if (s.VoiceForMe == null) { s.VoiceForMe = new Dropdown<string>(McmChoiceLists.NoVoice, 0); repaired = true; }
             if (s.VoicePanicKey == null) { s.VoicePanicKey = new Dropdown<string>(McmChoiceLists.PanicKeys, 0); repaired = true; }
             if (s.NightWindowHotkey == null) { s.NightWindowHotkey = new Dropdown<string>(McmChoiceLists.HotkeyKeys, 9); repaired = true; }
@@ -255,9 +254,9 @@ namespace ImmersiveAI.Mcm
                 s.EnableLoversRoad, s.LoverRansomHagglePercent, s.EnableClosedDoors, s.AllowDutyNights,
                 SelectedOf(s.PersonaSparkMode),
                 s.EnableVoice, s.VoiceAutoSpeak, s.VoiceSpeakWhenClosed, s.VoiceSpeakActedParts, s.VoiceAutoCast,
-                SelectedOf(s.VoiceDelivery),
+                s.VoicePerformSounds,
                 SelectedOf(s.VoiceForMe),
-                s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.CloudVoiceApiKey,
+                s.VoiceSpeakReachOuts, SelectedOf(s.VoicePanicKey), s.VoiceStartAppWithGame,
                 s.EnableNights, s.NightsAutoVisit, s.NightsPreventChild, s.NightDayResetHour,
                 s.ConceptionRevealDelayDays, s.ShowConceptionOdds, s.PaidNightsDisorganizeParty,
                 s.AskWhatYouHaveInMind,
@@ -290,12 +289,12 @@ namespace ImmersiveAI.Mcm
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.EnableLoversRoad, c.LoverRansomHagglePercent, c.EnableClosedDoors, c.AllowDutyNights,
                 c.PersonaSparkMode,
-                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceSpeakWhenClosed, c.VoiceSpeakActedParts, c.VoiceAutoCast, c.VoiceDelivery,
+                c.EnableVoice, c.VoiceAutoSpeak, c.VoiceSpeakWhenClosed, c.VoiceSpeakActedParts, c.VoiceAutoCast, c.VoicePerformSounds,
                 // The castings live in the voices' own sheet, not in config.json — so the signature
                 // asks the service for them, and a voice given in the talk screen's panel shows up
                 // in the menu on the next poll without either side owning the truth twice.
                 Voice.VoiceService.PlayerVoiceId,
-                c.VoiceSpeakReachOuts, c.VoicePanicKey, c.CloudVoiceApiKey,
+                c.VoiceSpeakReachOuts, c.VoicePanicKey, c.VoiceStartAppWithGame,
                 c.EnableNights, c.NightsAutoVisit, c.NightsPreventChild, c.NightDayResetHour,
                 c.ConceptionRevealDelayDays, c.ShowConceptionOdds, c.PaidNightsDisorganizeParty,
                 c.AskWhatYouHaveInMind,
@@ -366,10 +365,10 @@ namespace ImmersiveAI.Mcm
             s.VoiceSpeakWhenClosed = c.VoiceSpeakWhenClosed;
             s.VoiceSpeakActedParts = c.VoiceSpeakActedParts;
             s.VoiceAutoCast = c.VoiceAutoCast;
-            Select(s.VoiceDelivery, VoiceDeliveryLabel(c.VoiceDelivery));
+            s.VoicePerformSounds = c.VoicePerformSounds;
             s.VoiceSpeakReachOuts = c.VoiceSpeakReachOuts;
             SelectOrAdd(s.VoicePanicKey, c.VoicePanicKey);
-            s.CloudVoiceApiKey = c.CloudVoiceApiKey ?? string.Empty;
+            s.VoiceStartAppWithGame = c.VoiceStartAppWithGame;
             PushVoiceCastings(s);
             s.EnableNights = c.EnableNights;
             s.NightsAutoVisit = c.NightsAutoVisit;
@@ -479,10 +478,10 @@ namespace ImmersiveAI.Mcm
             c.VoiceSpeakWhenClosed = s.VoiceSpeakWhenClosed;
             c.VoiceSpeakActedParts = s.VoiceSpeakActedParts;
             c.VoiceAutoCast = s.VoiceAutoCast;
-            c.VoiceDelivery = VoiceDeliveryValue(SelectedOf(s.VoiceDelivery)) ?? c.VoiceDelivery;
+            c.VoicePerformSounds = s.VoicePerformSounds;
             c.VoiceSpeakReachOuts = s.VoiceSpeakReachOuts;
             c.VoicePanicKey = SelectedOf(s.VoicePanicKey) ?? c.VoicePanicKey;
-            c.CloudVoiceApiKey = s.CloudVoiceApiKey ?? string.Empty;
+            c.VoiceStartAppWithGame = s.VoiceStartAppWithGame;
             PullVoiceCastings(s);
             c.EnableNights = s.EnableNights;
             c.NightsAutoVisit = s.NightsAutoVisit;
@@ -858,25 +857,6 @@ namespace ImmersiveAI.Mcm
 
         private static string? SparkModeValue(string? menuLabel) =>
             menuLabel == null ? null : (menuLabel == "Ask first" ? "Ask" : menuLabel);
-
-        // The menu spells the roads for a reader; config.json spells them for a parser. Matched on
-        // the leading word so the parenthetical hints can be reworded without breaking stored files.
-        private static string VoiceDeliveryLabel(string configValue)
-        {
-            if (string.Equals(configValue, "Streaming", StringComparison.OrdinalIgnoreCase))
-                return McmChoiceLists.VoiceDeliveryModes[1];
-            if (string.Equals(configValue, "ByLine", StringComparison.OrdinalIgnoreCase))
-                return McmChoiceLists.VoiceDeliveryModes[2];
-            return McmChoiceLists.VoiceDeliveryModes[0];
-        }
-
-        private static string? VoiceDeliveryValue(string? menuLabel)
-        {
-            if (menuLabel == null) return null;
-            if (menuLabel.StartsWith("Streaming", StringComparison.OrdinalIgnoreCase)) return "Streaming";
-            if (menuLabel.StartsWith("By line", StringComparison.OrdinalIgnoreCase)) return "ByLine";
-            return "FullRead";
-        }
 
         private static int Clamp(int value, int min, int max) =>
             value < min ? min : (value > max ? max : value);

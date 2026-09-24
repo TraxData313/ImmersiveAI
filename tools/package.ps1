@@ -30,55 +30,11 @@ Copy-Item (Join-Path $outDir "0Harmony.dll") $binDir -Force -ErrorAction Silentl
 # MIT obliges the notice to travel with the DLL it covers.
 Copy-Item (Join-Path $repoRoot "lib\0Harmony.LICENSE.txt") $binDir -Force -ErrorAction SilentlyContinue
 
-# --- The voice host ---------------------------------------------------------------------------
-# The separate net8.0 TTS process, published FRAMEWORK-DEPENDENT into a VoiceHost FOLDER at the
-# module root. The full reasoning lives in deploy.ps1; the short of it is that 33 MB of bundled
-# runtime in every player's download buys nothing for a feature already gated behind a
-# hand-installed, multi-gigabyte local engine, and that the folder sits outside bin because the
-# game must never see net8.0 assemblies among the ones it loads.
-#
-# IT GOES BACK IN THE MAIN DOWNLOAD (2026.08.21, Anton's call). It was split out on 2026.08.17
-# because Nexus auto-quarantined v3.0.0, v3.1.0 and then v3.1.1: the first two shipped the host as a
-# .NET single-file bundle, which their rules read as a self-extracting archive, and the third shipped
-# it as ordinary files and was blocked anyway. From that we concluded that ANY executable in an
-# archive is blocked, and split the download in two.
-#
-# The split cost more than it saved. It is invisible on the mod page, so a player installs the main
-# file, finds "no speech engine installed", and has no way to know a second file exists - which is
-# exactly what happened (Fritz3593, 2026.08.21). One download that MIGHT be flagged and can be
-# argued with support beats two downloads where half the players silently get no voices.
-#
-# So: one zip, host inside, and if it is quarantined again we ask Nexus support - they were never
-# actually asked, and they said nothing about it when the earlier ones came back.
-#
-# Differences from deploy.ps1, both deliberate: no pdb ships, and a voice host that EXISTS but
-# fails to build stops the packaging dead. A release that quietly lost its voices is a defect, and
-# a clean-slate packager is exactly where that must be caught.
-$voiceHostProj = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\ImmersiveAI.VoiceHost.csproj"
-$voiceHostShipped = $false
-
-if (Test-Path $voiceHostProj) {
-    # Clean slate here too - a stale file from an older build must never ride along.
-    $voiceOut = Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\bin\publish\package-$Configuration"
-    if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force }
-
-    dotnet publish $voiceHostProj -c $Configuration -r win-x64 --self-contained true -p:DebugType=none -o $voiceOut
-    if ($LASTEXITCODE -ne 0) { throw "The voice host failed to build - refusing to package a release without it." }
-
-    # The game spawns it BY NAME; a renamed exe would ship as a silent no-voices bug.
-    $hostExe = Join-Path $voiceOut "ImmersiveAI.VoiceHost.exe"
-    if (-not (Test-Path $hostExe)) { throw "Published the voice host but no ImmersiveAI.VoiceHost.exe came out - the game spawns it by that exact name." }
-
-    $hostDir = Join-Path $moduleDir "VoiceHost"
-    New-Item -ItemType Directory -Force $hostDir | Out-Null
-    Copy-Item (Join-Path $voiceOut "*") $hostDir -Recurse -Force
-    # Anything the host bundles that obliges a notice travels with it, same habit as Harmony.
-    # createdump.exe is the runtime's crash-dump helper, never invoked by us. Dropping it
-    # leaves ONE executable in the package for a scanner to weigh, instead of two.
-    Remove-Item (Join-Path $hostDir "createdump.exe") -Force -ErrorAction SilentlyContinue
-    Copy-Item (Join-Path $repoRoot "src\ImmersiveAI.VoiceHost\THIRD-PARTY-NOTICES.txt") $hostDir -Force -ErrorAction SilentlyContinue
-    $voiceHostShipped = $true
-}
+# --- No voice host, and no executable of any kind (2026.09.24) -----------------------------------
+# The mod carried its own speech engine as an exe from v3.0.0 to v3.3.x, and Nexus quarantined
+# every one of those archives on the file type alone. The voices now come from claude-voice, a
+# separate app the Voices page downloads and installs on demand - so this package holds no program
+# at all, and the check at the end REFUSES to package one that does.
 
 # GUI assets - contents-into-ensured-destination, same trap-avoidance as deploy.ps1.
 $guiSource = Join-Path $repoRoot "module\GUI"
@@ -185,28 +141,21 @@ function Write-ModuleZip {
     }
 }
 
-# The executable inventory. The voice host is DELIBERATELY in here now (see above), so this no
-# longer stops the packaging - but it still prints what a Nexus scanner will see, because that list
-# is the first thing to check if a download is ever flagged again.
+# The executable inventory, and now a hard stop. Nexus blocks any archive with a program in it,
+# whatever the program is; this mod ships none since the voices moved to claude-voice, so one here
+# is a mistake that would cost every Nexus player the download.
 $strayExes = @(Get-ChildItem $moduleDir -Recurse -File -Include *.exe, *.com, *.scr, *.bat, *.cmd -ErrorAction SilentlyContinue)
 if ($strayExes.Count -gt 0) {
-    $names = ($strayExes | ForEach-Object { $_.FullName.Substring($moduleDir.Length).TrimStart('') }) -join ", "
-    Write-Host "Executables in this package (what a Nexus scan sees): $names"
+    $names = ($strayExes | ForEach-Object { $_.FullName.Substring($moduleDir.Length) }) -join ", "
+    throw "Refusing to package: the module holds executable(s) - $names. Nexus quarantines any archive with a program in it."
 }
 
 $zipPath = Join-Path $distRoot "ImmersiveAI_$version.zip"
 Write-ModuleZip -ModuleFolder $moduleDir -ZipPath $zipPath
 
-# ONE zip for both stores now. Steam gets the same folder it always did; Nexus gets the same
-# archive rather than a main file plus an optional extra.
-$hostZipPath = ""
+# ONE zip for both stores, and no optional extra: the voice app is fetched from the game itself.
 
 Write-Host "Packaged $version to $moduleDir"
-if ($voiceHostShipped) {
-    Write-Host "Voice host: INSIDE the main package (self-contained - players need no .NET runtime)."
-} else {
-    Write-Host "Voice host: NOT built (no project in this tree) - this build ships without voices."
-}
-Write-Host "Voices shipped with the mod: $shippedVoices"
-Write-Host "The one zip: $zipPath   (holds the voice host; ONE upload, no optional extra)"
+Write-Host "Voices shipped with the mod: $shippedVoices (spoken by claude-voice, installed from the Voices page)"
+Write-Host "The one zip: $zipPath   (no executables inside - clean for Nexus)"
 Write-Host "Workshop upload: point the uploader at the dist\ImmersiveAI folder."

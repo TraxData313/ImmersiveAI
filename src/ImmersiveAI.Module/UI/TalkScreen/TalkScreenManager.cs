@@ -539,15 +539,15 @@ namespace ImmersiveAI.UI.TalkScreen
             // VM only raises a change when it truly changed.
             try
             {
-                if (_vm != null) _vm.IsVoicePlaying = Voice.VoicePlayback.IsSpeaking;
+                if (_vm != null) _vm.IsVoicePlaying = Voice.VoiceService.IsSpeaking;
             }
             catch { /* the button is a courtesy */ }
 
-            // And the download's own line, while the voices page is open. Only then: it is a
-            // twenty-minute errand and nobody watches it, but the one who does needs to see it move.
+            // And the voice app's standing, while the voices page is open: installing, waking,
+            // running — a page that only changed when the player clicked would look stalled.
             try
             {
-                if (_vm != null && _vm.IsVoiceShown) _vm.RefreshVoiceFetchLine();
+                if (_vm != null && _vm.IsVoiceShown) Voice.ClaudeVoiceApp.Poll();
             }
             catch { /* likewise */ }
 

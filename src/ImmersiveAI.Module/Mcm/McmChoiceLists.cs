@@ -74,13 +74,6 @@
         /// "Generate"/"Ask"/"Off" (see McmBridge.SparkModeValue for the mapping). Append-only.</summary>
         public static readonly string[] SparkModes = { "Generate", "Ask first", "Off" };
 
-        /// <summary>How a spoken reply is made and delivered, as the MENU spells it; config.json
-        /// spells them "FullRead"/"Streaming"/"ByLine" (see McmBridge.VoiceDeliveryValue).
-        /// APPEND-ONLY: these are persisted by MCM as indices into this array, so a reorder silently
-        /// changes what an existing store file means. Index 0 is the default.</summary>
-        public static readonly string[] VoiceDeliveryModes =
-            { "Full read (steadiest)", "Streaming (starts soonest)", "By line (oldest)" };
-
         /// <summary>
         /// What a voice dropdown holds before the shelf has been read: the "nobody" entry, which is
         /// also a real choice (no voice for this kind of soul at all).

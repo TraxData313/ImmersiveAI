@@ -914,13 +914,12 @@ namespace ImmersiveAI
         // ------------------------------ the voices ------------------------------
 
         /// <summary>
-        /// When true, the NPCs' words can also be HEARD: a speech engine on your own machine turns a
-        /// reply into a voice, in the voice you cast for that soul. Off by default, and deliberately
-        /// so — it wants a several-gigabyte download and a real graphics card, and nobody should have
-        /// a feature they cannot run switched on for them. The engine runs as its own little program
-        /// beside the game, never inside it, so if it ever falls over it costs you the voices for a
-        /// session and nothing else. Everything is free after the download; nothing is ever sent
-        /// anywhere. With this off the mod is exactly what it was before it could speak.
+        /// When true, the NPCs' words can also be HEARD, in a voice you cast for each soul. The speaking
+        /// is done by claude-voice, a free app that runs beside the game (the Voices page installs it
+        /// in one click): an NVIDIA card gets Qwen, which reads every language, or Breeze, which laughs
+        /// and whispers; any PC gets Pocket. Off by default, and deliberately so — nobody should have a
+        /// feature switched on that wants a separate program. Nothing is ever sent anywhere; with this
+        /// off the mod is exactly what it was before it could speak.
         /// </summary>
         public bool EnableVoice { get; set; }
 
@@ -950,9 +949,7 @@ namespace ImmersiveAI
         /// This deliberately reverses an earlier rule ("a voice from a conversation they walked away
         /// from is a ghost in the room") because the asking happened. The old hazard is real and
         /// unchanged: there is one voice at a time, so if two answers land close together the second
-        /// cuts off the first — Backspace silences either, and the words keep their play mark. For a
-        /// HOSTED voice this also means a line is made, and billed, without anyone pressing anything;
-        /// turn it off if you would rather pay only for what you ask to hear.
+        /// cuts off the first — Backspace silences either, and the words keep their play mark.
         /// </para>
         /// </summary>
         public bool VoiceSpeakWhenClosed { get; set; } = true;
@@ -984,68 +981,6 @@ namespace ImmersiveAI
         /// </summary>
         public bool VoiceAutoCast { get; set; } = true;
 
-        /// <summary>Where the speech engine's own files live (the folder holding qwen3_tts.dll and
-        /// its companions). Leave empty and it is looked for in the usual places — this is only for
-        /// an unusual install, or to point at a second copy.</summary>
-        public string VoiceEnginePath { get; set; } = string.Empty;
-
-        /// <summary>The folder of speech models (.gguf). Empty = found on its own.</summary>
-        public string VoiceModelDir { get; set; } = string.Empty;
-
-        /// <summary>Which speech model speaks, by file name. Empty = whichever talker model is
-        /// there. A bigger model sounds better and takes longer; both are honest choices.</summary>
-        public string VoiceModelName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// How freely the voice may vary its reading, and how wide a choice it draws from
-        /// (temperature and top-p). 0 = leave both to the speech engine's own defaults, which is
-        /// what almost everyone should do.
-        /// <para>
-        /// Here because it is the one dial that has been shown to matter for the glitch where a
-        /// voice loses the words and holds a single note: a colder setting makes a speech model
-        /// likelier to fall into repeating itself, and that is what a held note IS. The engine's own
-        /// values (0.9 and 1.0) are what we now use, after a sister tool driving the same engine at
-        /// those values proved sixty times steadier. Lower it only if a voice wanders too far from
-        /// the one you cloned — and expect more stumbles if you do.
-        /// </para>
-        /// </summary>
-        public float VoiceTemperature { get; set; }
-
-        /// <summary>The other half of <see cref="VoiceTemperature"/>. 0 = the engine's own.</summary>
-        public float VoiceTopP { get; set; }
-
-        /// <summary>How much disk the spoken lines may keep, in megabytes. Every line is made once
-        /// and then simply played, so the cache is what makes a voice instant the second time; when
-        /// it grows past this the oldest lines are quietly swept, whole replies at a time. 0 keeps
-        /// everything for ever, which on a large disk is a perfectly good answer.</summary>
-        public int VoiceCacheBudgetMb { get; set; } = 2048;
-
-        /// <summary>The FMOD event a spoken line is handed to. Leave it alone unless the voices are
-        /// silent or oddly quiet. This is the game's OWN event for audio it did not ship (verified
-        /// 2026.08.15 in its event table, beside "event:/Extra/external" and
-        /// "event:/Extra/voicechat"), so it already rides the game's own routing and volume. If it
-        /// ever needs moving, "event:/Extra/external" is the nearest sibling. Takes hold on the next
-        /// line spoken.</summary>
-        public string VoiceSoundEvent { get; set; } = "event:/Extra/voiceover";
-
-        /// <summary>
-        /// How a spoken reply is made and delivered. Three roads, and which one is best depends on
-        /// how hard the graphics card is already working:
-        /// <list type="bullet">
-        /// <item><c>FullRead</c> (default) - one generation for the whole reply, and not a word is
-        /// heard until all of it exists. The steadiest voice and no gaps ever, at the cost of
-        /// waiting longer before she starts.</item>
-        /// <item><c>Streaming</c> - the same single generation, but each second of it is played the
-        /// moment it is made. She starts speaking in well under a second; if the card is busy
-        /// enough that making the audio falls behind playing it, the reply breaks into gaps.</item>
-        /// <item><c>ByLine</c> - a separate generation per sentence. The oldest road, kept for
-        /// comparison: it starts quickly on a loaded card but the voice audibly changes person at
-        /// every sentence, because each generation rolls its own prosody.</item>
-        /// </list>
-        /// Takes hold on the next line spoken; no restart.
-        /// </summary>
-        public string VoiceDelivery { get; set; } = "Streaming";
-
         /// <summary>
         /// The key that stops a voice DEAD, wherever you are — on the map, in a battle, with every
         /// window shut. It exists because of the one thing this feature can do that nothing else in
@@ -1068,34 +1003,25 @@ namespace ImmersiveAI
         public bool VoiceSpeakReachOuts { get; set; } = true;
 
         /// <summary>
-        /// A hosted speech service, for the far more common player who has no graphics card to spare
-        /// and no wish to download several gigabytes. Empty = the local engine only.
-        /// <para>
-        /// It cannot clone anybody, which is exactly why it is the stranger's road and the Qwen
-        /// engine is the author's: you pick from a fixed shelf of voices instead of making your own.
-        /// Billed per minute of speech to whichever key you put here, and every line is written down
-        /// in the same cost ledger as everything else.
-        /// </para>
+        /// When true, a soul who LAUGHS, sighs or coughs in their acted parts (*laughs softly*) is heard
+        /// doing it rather than having it read out — on an engine that can (Breeze) — and a whispered
+        /// line is whispered (Breeze and Qwen). On any other engine it changes nothing.
         /// </summary>
-        public string CloudVoiceApiKey { get; set; } = string.Empty;
+        public bool VoicePerformSounds { get; set; } = true;
 
-        /// <summary>Where the hosted speech service lives. The default is OpenAI's own; any service
-        /// that speaks the same shape works, which is the same courtesy the LLM side extends.</summary>
-        public string CloudVoiceEndpoint { get; set; } = DefaultCloudVoiceEndpoint;
+        /// <summary>When true and voices are on, the game wakes claude-voice as a campaign loads if it
+        /// is installed and asleep — and closes it again on the way out, but ONLY if the game was the
+        /// one that opened it. A voice app you started yourself (for Claude Code, or for Abby) is yours
+        /// and is never closed by the game.</summary>
+        public bool VoiceStartAppWithGame { get; set; } = true;
 
-        /// <summary>OpenAI's own speech endpoint — verified against the live documentation
-        /// 2026.08.15, along with the thirteen voice names and the WAV response format.</summary>
-        public const string DefaultCloudVoiceEndpoint = "https://api.openai.com/v1/audio/speech";
+        /// <summary>Where claude-voice listens. It is always this machine; only the port can differ,
+        /// and only if you changed it there ("port" in its config.json).</summary>
+        public int ClaudeVoicePort { get; set; } = 8765;
 
-        /// <summary>Which hosted model speaks. gpt-4o-mini-tts is the cheapest of them and carries
-        /// all thirteen voices; tts-1 is quicker and older and carries nine.</summary>
-        public string CloudVoiceModel { get; set; } = "gpt-4o-mini-tts";
-
-        /// <summary>What a minute of hosted speech costs, in dollars, for the cost notices. OpenAI's
-        /// own published figure for gpt-4o-mini-tts is $0.015 a minute. We know exactly how many
-        /// seconds came back, so this is measured rather than estimated — edit it if you speak with
-        /// somebody else's service.</summary>
-        public double CloudVoicePricePerMinute { get; set; } = 0.015;
+        /// <summary>Where the voice app's one-click setup is fetched from. Empty = claude-voice's own
+        /// latest release. A path to a local ClaudeVoiceSetup.exe works too, for testing a build.</summary>
+        public string ClaudeVoiceSetupUrl { get; set; } = string.Empty;
 
         /// <summary>The once-per-install nudge that the voices exist at all has been shown. Voices
         /// are off by default and must never become a thing the player has to turn off to be left
@@ -1297,12 +1223,10 @@ namespace ImmersiveAI
             // So it migrates like the memory budget did — a mode that exists only to dodge a defect
             // is not taste — and ONLY where it still holds the exact old default. Anyone who chose
             // Full read by hand chose it, and keeps it.
+            // (Its setting was retired with the mod's own speech engine on 2026.09.24 — the voice
+            // app decides how a line is made now — so the step only moves the stamp.)
             if (ConfigVersion < 5)
-            {
-                if (string.Equals(VoiceDelivery, "FullRead", StringComparison.Ordinal))
-                    VoiceDelivery = "Streaming";
                 ConfigVersion = 5;
-            }
 
             // V6 (2026.08.31): the betrothal wait's default fell 3 → 0 on 2026.08.30 ("if she is
             // 5/5 ready just be able to propose") — but a default alone never reaches a player who
@@ -1441,49 +1365,14 @@ namespace ImmersiveAI
             if (string.IsNullOrWhiteSpace(NightWindowHotkey)) NightWindowHotkey = "H";
             NightWindowHotkey = NightWindowHotkey.Trim();
 
-            // The voices. The three paths are the player's own words and are honored as written —
-            // only trimmed, because a pasted path drags a space along often enough to matter, and a
-            // trailing separator would turn into an escaped quote on the host's command line.
-            VoiceEnginePath = (VoiceEnginePath ?? string.Empty).Trim();
-            VoiceModelDir = (VoiceModelDir ?? string.Empty).Trim();
-            VoiceModelName = (VoiceModelName ?? string.Empty).Trim();
-
-            // 0 means "the engine's own", so only a real setting is railed. Greedy decoding (a
-            // temperature at or near zero) is the one setting guaranteed to loop, which is the very
-            // fault these exist to avoid.
-            if (VoiceTemperature != 0f && (VoiceTemperature < 0.05f || VoiceTemperature > 2f)) VoiceTemperature = 0f;
-            if (VoiceTopP != 0f && (VoiceTopP < 0.05f || VoiceTopP > 1f)) VoiceTopP = 0f;
-
-            // The cache budget: 0 stays a legitimate "keep everything", a negative is a typo, and
-            // the ceiling is only there so a stray keystroke cannot promise a terabyte.
-            // The delivery road knows exactly three spellings; a typo or an old hand edit becomes
-            // the default rather than silently meaning nothing.
-            var road = (VoiceDelivery ?? string.Empty).Trim();
-            if (!road.Equals("FullRead", StringComparison.OrdinalIgnoreCase)
-                && !road.Equals("Streaming", StringComparison.OrdinalIgnoreCase)
-                && !road.Equals("ByLine", StringComparison.OrdinalIgnoreCase))
-                VoiceDelivery = "Streaming";
-            else
-                VoiceDelivery = road.Equals("FullRead", StringComparison.OrdinalIgnoreCase) ? "FullRead"
-                              : road.Equals("Streaming", StringComparison.OrdinalIgnoreCase) ? "Streaming"
-                              : "ByLine";
-
-            if (VoiceCacheBudgetMb < 0) VoiceCacheBudgetMb = 0;
-            if (VoiceCacheBudgetMb > 200000) VoiceCacheBudgetMb = 200000;
+            // The voice app's port: anything that is not a port is the default.
+            if (ClaudeVoicePort <= 0 || ClaudeVoicePort > 65535) ClaudeVoicePort = 8765;
+            ClaudeVoiceSetupUrl = (ClaudeVoiceSetupUrl ?? string.Empty).Trim();
 
             // The panic key: an unreadable name would leave the player with no way to stop a voice
             // at all, which is the one failure this feature must not have.
             if (string.IsNullOrWhiteSpace(VoicePanicKey)) VoicePanicKey = "Backspace";
             VoicePanicKey = VoicePanicKey.Trim();
-
-            // The hosted road: the key is the player's own words, and the endpoint is completed the
-            // same way every other pasted base URL in this file is.
-            CloudVoiceApiKey = (CloudVoiceApiKey ?? string.Empty).Trim();
-            CloudVoiceModel = (CloudVoiceModel ?? string.Empty).Trim();
-            if (CloudVoiceModel.Length == 0) CloudVoiceModel = "gpt-4o-mini-tts";
-            CloudVoiceEndpoint = (CloudVoiceEndpoint ?? string.Empty).Trim();
-            if (CloudVoiceEndpoint.Length == 0) CloudVoiceEndpoint = DefaultCloudVoiceEndpoint;
-            if (CloudVoicePricePerMinute < 0) CloudVoicePricePerMinute = 0;
 
             // The model table: never null, and every built-in entry present (so new defaults reach
             // configs written before them); user edits to existing keys are honored as-is.

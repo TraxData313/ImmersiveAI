@@ -650,21 +650,44 @@
 
                 <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" MarginTop="14" MarginLeft="20" MarginRight="20" Brush="Popup.Title.Text" Brush.TextHorizontalAlignment="Left" Text="@VoiceTitleText" />
 
-                <!-- The one button that replaces the setup page. Beside the title rather than down
-                     with the housekeeping row: it is the first thing to do on a machine with no
-                     voices, and the bottom row is already full. It shows only when it is the right
-                     answer - see ShowVoiceFetch. -->
-                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="270" SuggestedHeight="38" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="14" MarginRight="20" Brush="Popup.Done.Button" IsVisible="@ShowVoiceFetch" Command.Click="ExecuteVoiceFetch">
+                <!-- THE ONE BUTTON: always the next step with the voice app (claude-voice) -
+                     install it, start it, or open its own window once it runs. Beside the title,
+                     because on a machine with no voices it is the first and only thing to do. -->
+                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="270" SuggestedHeight="38" HorizontalAlignment="Right" VerticalAlignment="Top" MarginTop="14" MarginRight="20" Brush="Popup.Done.Button" IsVisible="@ShowVoiceAction" Command.Click="ExecuteVoiceAction">
                   <Children>
-                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceFetchText" />
+                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceActionText" />
                   </Children>
                 </ButtonWidget>
                 <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="54" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceStatusText" />
-                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="104" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceHintText" />
-                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="176" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@NoVoicesText" IsHidden="@HasVoices" />
+
+                <!-- which engine speaks: only while the app runs. The one speaking wears a star,
+                     one not installed yet a plus (pressing it offers to add it). -->
+                <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="34" HorizontalAlignment="Left" VerticalAlignment="Top" MarginTop="140" MarginLeft="20" StackLayout.LayoutMethod="HorizontalLeftToRight" IsVisible="@ShowVoiceEngines">
+                  <Children>
+                    <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="34" VerticalAlignment="Center" MarginRight="10" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#A79E86FF" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@VoiceEngineTitleText" />
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceEngineBreeze">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceEngineBreezeText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceEngineQwen">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceEngineQwenText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="34" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceEnginePocket">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceEnginePocketText" />
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </ListPanel>
+
+                <RichTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="184" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="14" Brush.FontColor="#8E8A80FF" Brush.TextHorizontalAlignment="Left" Text="@VoiceHintText" />
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="262" MarginLeft="20" MarginRight="20" Brush="Popup.Description.Text" Brush.FontSize="15" Brush.FontColor="#9A968CFF" Brush.TextHorizontalAlignment="Left" Text="@NoVoicesText" IsHidden="@HasVoices" />
 
                 <!-- the shelf -->
-                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="196" MarginBottom="140" MarginLeft="20" MarginRight="20">
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" MarginTop="256" MarginBottom="140" MarginLeft="20" MarginRight="20">
                   <Children>
                     <ScrollablePanel Id="VoicesScroller" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" ClipRect="VoicesClip" InnerPanel="VoicesClip\VoicesList" VerticalScrollbar="..\VoicesScrollbar" MouseScrollAxis="Vertical" AutoHideScrollBars="true">
                       <Children>
@@ -759,9 +782,9 @@
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceShowAllText" />
                       </Children>
                     </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="40" MarginRight="10" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceImport">
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="230" SuggestedHeight="40" MarginRight="10" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceAppClose" IsVisible="@ShowVoiceAppClose">
                       <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceImportText" />
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@VoiceAppCloseText" />
                       </Children>
                     </ButtonWidget>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="190" SuggestedHeight="40" Brush="Popup.Cancel.Button" Command.Click="ExecuteVoiceOpenFolder">
@@ -846,11 +869,6 @@
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="42" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevOpenDoor">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Lay all of it to rest" />
-                      </Children>
-                    </ButtonWidget>
-                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="42" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevTestSound">
-                      <Children>
-                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Test — make a sound" />
                       </Children>
                     </ButtonWidget>
                               </Children>

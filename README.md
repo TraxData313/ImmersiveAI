@@ -122,13 +122,13 @@ had a proper talk.*
   the one you choose drawn there alive, the way the game draws a talk on the map. Words if they can
   hear you, a letter riding real in-game days if they cannot, one thread for both. (The two older
   windows survive behind a setting.)
-- **Hear them** — a play mark beside every line, and a Voices page to cast anyone: voices ship with
-  the mod, clone your own locally, or use hosted ones by the minute. Off by default. One button on
-  that page fetches everything the local road needs (~2.8 GB) — nothing to install, no administrator
-  rights, and it wants an **NVIDIA** card; hosted voices want none at all.
-  📖 [Hearing them speak](docs/voiceover-setup.md) — what it costs, how to set it up, and
-  what to do when it says *no speech engine installed* or the download button does nothing
-  (or [do it by hand](docs/voices-without-admin.md)).
+- **Hear them** — a play mark beside every line, and a Voices page to cast anyone, with ninety-odd
+  voices of Calradia's own peoples shipped with the mod. Off by default. The voices are spoken by
+  [claude-voice](https://github.com/TraxData313/claude-voice), a free app the Voices page installs in
+  one click: **Breeze** laughs and whispers (English, big NVIDIA card), **Qwen** reads every language
+  (NVIDIA), **Pocket** runs on any PC. Free, private, no administrator rights.
+  📖 [Hearing them speak](docs/voiceover-setup.md) — which engine suits you, and what to do when
+  it goes quiet.
 - The screen edits a character's own prompt, or the whole world's, **without leaving the game** — it speaks from the very next reply.
 - **Think** (Shift+Enter) — stuck for words? Your own hero drafts your next line from everything the two of you have said; it lands in your writing box to keep, change or bin. Standing presets steer it: *starter*, *romantic*, *ender*, or your own.
 - Any language in, the same language out.
@@ -208,7 +208,7 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 - `NPCs\campaign_*\_births\` — every child born to you: the hour of it in the mother's own words,
   which stays between the two of you, and the feast you kept for the child, which everyone who
   stood there remembers.
-- `Voices\` — the voices on your shelf, and who has been cast in which. It sits *outside* the
+- `Voices\` — who has been cast in which voice, and any voice you made yourself. It sits *outside* the
   campaign folders on purpose: loading an older save rewinds what everyone remembers, and it must
   never quietly recast anybody along with it.
 

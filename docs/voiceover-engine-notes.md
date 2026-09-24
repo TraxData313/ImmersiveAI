@@ -1,5 +1,10 @@
 # The speech engine: what we measured, and what will bite you
 
+> **HISTORICAL since 2026.09.24.** The mod no longer carries a speech engine: the voices are spoken by
+> [claude-voice](https://github.com/TraxData313/claude-voice), which runs the same engine (and two
+> others). This page is the record of the in-mod engine, kept for its measurements — claude-voice's
+> `docs/engine-notes.md` is where the engine is looked after now. See `src/ImmersiveAI.Module/Voice/`.
+
 The developer's record behind [voiceover-setup.md](voiceover-setup.md), which is the player-facing
 page. Everything here was measured or verified on 2026.08.14 against the real engine on the author's
 machine (RTX 5080 Laptop, 16 GB VRAM) — **nothing below is inferred from documentation**, because
