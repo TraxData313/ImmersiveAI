@@ -4,7 +4,7 @@ Same BBCode dialect as the description.
 === THREAD 1 — title: "FAQ — read before asking" ===
 
 [b]Is it free?[/b]
-The mod is free (public domain, even). The AI usually isn't — you bring your own API key (OpenRouter by default and recommended) and put a few bucks on it. [b]Two free roads exist:[/b] a [b]Gemini[/b] key from aistudio.google.com has a real free tier (~1,500 replies a day, no card — but Google trains on free-tier traffic so it isn't private, and it's slow: its thinking can't be switched off), or a local model on your own machine — tinkerers only, unsupported; see below. No key and no local model, no talking NPCs.
+The mod is free (public domain, even). The AI usually isn't — you bring your own API key (OpenRouter by default and recommended) and put a few bucks on it. [b]Already pay for ChatGPT or claude.ai?[/b] Pick Codex or Claude Code in Mod Options and your plan carries the NPCs — no key at all. [b]Free:[/b] a [b]Gemini[/b] key from aistudio.google.com (~1,500 replies a day, no card — but Google trains on free-tier traffic, and it's slow), or a local model — tinkerers only, see below.
 
 [b]OK, but how much does it actually cost?[/b]
 A typical exchange is about a tenth of a cent on the default — $10 covers many thousands of messages. The mod shows each interaction's tokens and price as you play, keeps daily totals, and has an optional hard daily cap (MaxDailyRequests) so it can never run away from you. Your key, your bill, your eyes on it.
@@ -42,7 +42,7 @@ Another PC: not automatically. Steam Cloud syncs your Bannerlord saves, but NOT 
 Still stuck? Post the last lines of log.txt in the Bug reports thread — the mod never logs your key.
 
 [b]How do I get the voices working?[/b]
-Voices are [b]off by default[/b]. Open the talk screen (O) -> [b]Voices[/b] -> [b]Install the voice app[/b]. A small setup window opens beside the game (Alt+Tab if hidden): keep the choice marked [b]recommended[/b] and press Install. It is claude-voice, a free app that runs on your own PC - no account, nothing leaves your computer.
+Voices are [b]off by default[/b]. Open the talk screen (O) -> [b]Voices[/b], pick an engine (the page marks the one that suits your graphics card, with a sample to hear) and press [b]Install it[/b] — every step shows on the page while you keep playing. It is claude-voice, a free app that runs on your own PC - no account, nothing leaves your computer.
 Which engine? [b]Breeze[/b] laughs and whispers (English, NVIDIA 16 GB). [b]Qwen[/b] reads every language (NVIDIA 4 GB). [b]Pocket[/b] runs on any PC, no graphics card. Silent in Bulgarian or Russian? Switch to Qwen. Full guide: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url]
 
 [b]Which model should I pick?[/b]

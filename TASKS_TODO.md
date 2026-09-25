@@ -1,97 +1,32 @@
-﻿WHERE THINGS STAND (2026.09.25 — **THE VOICES INSTALL FROM INSIDE THE GAME**)
+﻿WHERE THINGS STAND (2026.09.25 — **v3.4.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
 
-  ** LEFT FOR ANTON — THE FRESH-START TEST (his own ask: "like a normal chap who knows nothing")
-      His own claude-voice, Studio and the Qwen models were MOVED ASIDE (not deleted) into
-      C:\Users\Trax\claude-voice-hidden-for-test\ so the game sees an empty machine. Abby is silent
-      until he double-clicks "Bring Abby's voice back.cmd" on the Desktop (it puts everything back
-      and starts her). Breeze at D:\tts-lab and Studio's own embeddings/presets were never touched.
-      The test: game → talk screen → Voices is RED → pick an engine (♪ samples) and a drive →
-      Install → watch the four steps → button turns GREEN, the soul on screen speaks → try
-      "Engines & storage" (sizes, Open, Remove) → Remove it all → red again.
-      NOT PLAYTESTED BY ME: the new Voices page layout (drawn blind from proven widgets, every binding
-      cross-checked) and the in-game progress. claude-voice 1.15.0 IS published and its quiet install +
-      uninstall were tested end to end from the public release.
-      ImmersiveAI changes are deployed but NOT committed.
-      ROUND ONE (morning of 2026.09.25) found two things, both fixed and deployed:
-        - Voices was RED as it should be, but the tabs, the language switch and the engine cards did
-          nothing: each page's full-panel container was drawn over them and took their clicks (the
-          prefab now marks every page container DoNotAcceptEvents — see its comment).
-        - Hiding the folder LOCKED CLAUDE CODE OUT: the hooks ran `python ...\speak_hook.py`, python
-          exits 2 on a missing script, and 2 means "block". The hook line in ~\.claude\settings.json
-          is guarded now (claude-voice's install.ps1 writes it too — UNCOMMITTED there, "Unreleased"
-          in its CHANGELOG, with test_hooks.py). ROUND TWO also leaves a stand-in speak_hook.py in
-          Documents\claude-voice for sessions still holding the old line; the restore removes it.
-      ROUND TWO (same morning) — install, first words, casting and engine switching all WORKED. Found and
-      fixed (mod deployed, NOT committed):
-        - the engine cards (and the drive row) showed on every page: a DataSource widget binds its own
-          IsVisible to its data source — both lists now sit in visibility wrappers;
-        - no Calradian voice after a game install: the voice roots are now told once per app PROCESS;
-        - Breeze sample was a line of Claude's narration, Pocket's was cut mid-word: both re-rendered
-          straight through the engines and checked with Windows' dictation (Pocket's is now "eve");
-        - the app's window opens once when a game install finishes; Breeze's "Can't run here" now
-          says "Not enough room on C:" when that is the truth; install copy no longer says "nothing to
-          click" above a Stop button;
-        - upgraders: Qwen's card/drive/install text show the real download when the old mod's model
-          is already in ~\.qwen-tts-studio\models; the old engine's DLL-only folder is swept at start.
-      claude-voice side, UNCOMMITTED ("Unreleased" in its CHANGELOG): hamburger menu top-left with
-      Settings + where every engine's files are (per-folder sizes via /storage `sizes`), Abby first on
-      every engine (female stock voice on Pocket without cloning), a desktop icon on the game's quiet
-      install. These reach players only in a claude-voice RELEASE (1.16.0) — ask Anton before publishing.
-      NOT YET TESTED IN GAME: "Remove the voice app…". Round three = publish 1.16.0, Remove from the
-      game, install again from red.
-      ROUND THREE, SET UP 2026.09.25 ~11:30 (Anton: "lets test it first"): the round-two install was
-      removed with its own uninstall.ps1 (clean — except the setup's log kept its folder alive, fixed
-      in 1.16.0's uninstall.ps1). The game now installs the 1.16.0 CANDIDATE, not GitHub's 1.15.0:
-      Anton's config.json has `ClaudeVoiceSetupUrl` = the session scratchpad's
-      cv-candidate-exe\ClaudeVoiceSetup.exe and `ClaudeVoiceSetupSource` = scratchpad\cv-candidate
-      (a clean export of the claude-voice working copy, version.json stamped 1.16.0).
-      **CLEAR BOTH KEYS AFTER THE TEST** — the scratchpad does not outlive the session.
-      Check after his install: Settings > Apps entry (round two's quiet game install had NONE and
-      wrote nothing to %LOCALAPPDATA%\claude-voice\setup.log, while last night's manual quiet runs
-      did both — cause not found yet), desktop icon, window opens once, menu, Abby, the cast.
-      "Reads my lines": a game install never follows Claude Code (watch off, no hooks, by design) —
-      `voice_cli.py watch on`, restart, `on`, from the install folder, to try it. DONE 12:24: it spoke.
-      ROUND THREE FOUND (midday): samples "superb", installer loved; Removing page never noticed the
-      end (settle window expired with no refresh — FIXED in mod); Breeze card locked because cards were
-      judged by the drive picked FOR Qwen (FIXED: judged by the roomiest drive); Choose chip said "Not
-      installed" over an installed app (FIXED). claude-voice side, all in the 1.16.0 candidate:
-      adding Breeze QUIT the running app for the whole install and install.ps1 named breeze before it
-      existed, so the stop left the app pointing at nothing; the engine thread died on a failed start
-      so picking Pocket never recovered it; a same-version copy over a running Pocket failed on its
-      mmapped voice file; PyTorch had no counter (pip --progress-bar raw now, parsed by the exe — not
-      yet seen live, torch is already done on D:). Menu button now opens Settings, folders first.
-      LM Studio's flood was the Digital Assistant Manager's recall polling, not us.
-      OPEN: game-run installs leave NO setup.log lines and NO Settings > Apps entry; the same exe with
-      the same args from a shell leaves both. The status file now carries logError / logTail /
-      appsEntry — read setup-status.json right after the next game-run install. Mod fixes need a
-      deploy with the game closed.
-      AFTERNOON: Breeze sample = a whispered teaser + the traveller line, Anton's pick of 6 ("a bit
-      spicy but not too much"; the sultrier takes were "18+"). NPCs now END every Qwen/Breeze reply
-      with [voice: …] (Core VoiceLine) — first live test pending. claude-voice 1.16.0 gained a
-      "hide game voices" tick (panel list only; the game still sees them all).
+  ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.4.0 (five minutes, and only you can do it)
+      Steam is done (uploaded 2026.09.25 17:23, "Uploading done!", item 3764210301 — public, not
+      banned, 2,381 subscribers). Nexus still has V3.3.0 as main file AND mod version. The zip is
+      48 MB — far past the browser bridge's 10 MB cap, so it cannot go up from here:
 
-WHERE THINGS STAND (2026.09.02 — **v3.3.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
+      Mod 12119 -> Manage -> Files -> the "Update" button on the ImmersiveAI V3.3.0 row.
+        - The zip: dist\ImmersiveAI_v3.4.0.zip (also latest-release\ on GitHub)
+        - Tick ARCHIVE EXISTING FILE, then SET THE DISPLAY NAME BACK to `ImmersiveAI V3.4.0`.
+        - Paste the fenced block under v3.4.0 in CHANGELOG.md into BOTH the file Description and
+          Add changelog (251 of the 255 cap).
+        - The file's own Version field: V3.4.0 — and on the General step the MOD version V3.4.0
+          too (the one Vortex compares).
+        - Come back an hour later: done means the scan is GREEN. This is the first upload with no
+          exe in it, so it should pass clean.
+      BOTH store descriptions changed (hosted voices gone from "Looking for…?", the ChatGPT /
+      claude.ai plans added, the quarantine block and the setup-window steps gone, the spark line
+      made true): paste docs\steam-page-final.bbcode.txt (7824 of 8000 bytes) into the Workshop
+      description, docs\nexus-page.bbcode.txt into Nexus, and the voices + "Is it free?" answers of
+      docs\steam-faq.bbcode.txt into the pinned FAQ thread.
 
-  ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.3.0 (five minutes, and only you can do it)
-      Steam is done (uploaded 2026.09.02, "Uploading done!", item 3764210301). On Nexus the MOD
-      VERSION is already set to V3.3.0 and saved — that is the field Vortex reads, and it had been
-      stranded at V3.1.3 while the file said V3.2.0, so Vortex users were never told v3.2.0 existed.
-      What is left is the FILE, which could not go up from here: the browser's upload bridge caps at
-      10 MB, the zip is 14.2 MB, and the Nexus public API has no upload endpoint. So:
+  ** OPEN (claude-voice): game-run quiet installs leave NO setup.log lines and NO Settings > Apps
+      entry; the same exe with the same args from a shell leaves both. The status file carries
+      logError / logTail / appsEntry — read setup-status.json right after the next game-run install.
 
-      Mod 12119 -> Manage -> Files -> the "Update" button on the ImmersiveAI V3.2.0 row.
-        - The zip: dist\ImmersiveAI_v3.3.0.zip
-        - Tick ARCHIVE EXISTING FILE, then SET THE DISPLAY NAME BACK to `ImmersiveAI V3.3.0` —
-          picking the old file silently overwrites the name with the old one's.
-        - Paste this into BOTH the file Description and Add changelog (240 of the 255 cap):
-              * Ask for their hand: a proposal, a ring, a written day
-              * The marriage road drawn under their name, and your next move
-              * Its every step, doubt and refusal now shows in the talk itself
-              * Doubts stop breeding, and "Ready" now comes on its own
-        - The file's own Version field: V3.3.0.
-      The Steam description needs no repaste for the build — but BOTH store pages changed this time
-      (the proposal is now in the "Looking for...?" list): docs\steam-page-final.bbcode.txt (7850 of
-      8000 bytes) and docs\nexus-page.bbcode.txt are ready to paste whenever you feel like it.
+  ** Breeze card should weigh free VRAM / commit memory, not only card size: a game-run Breeze
+      install downloaded fine and then died on its first start with "paging file too small"
+      (LM Studio + two Qwens loaded, C: too full for the page file to grow).
 
   ** (The quarantine appeal, the derail playtest and the three voice-host items that stood here
       were settled by the 2026.09.24 move to claude-voice — see TASKS_DONE.)

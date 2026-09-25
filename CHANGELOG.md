@@ -15,7 +15,24 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-**Voices, rebuilt around claude-voice:**
+## v3.4.0 — 2026.09.25
+
+Their voices move to a free app you install without leaving the game — and they now direct how
+every line of theirs sounds.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Voices via the free claude-voice app, installed in-game
+* 3 engines: Breeze laughs, Qwen reads any tongue, Pocket runs on any PC
+* Characters direct how each line sounds
+* No program in the download now
+* Talk on your ChatGPT plan, no key
+* Mute NPC
+```
+
+### Voices, rebuilt around claude-voice
+
 - The voices now come from claude-voice, a free app installed right from the Voices page — no window, no terminal
 - The Voices button is red, amber or green: not set up, working on it, ready
 - Three engines, each with a sample to hear first — Breeze's opens with a whisper: it laughs and whispers, Qwen reads every language, Pocket runs on any PC
@@ -35,6 +52,15 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - All ninety-odd voices of Calradia work on Qwen and Breeze
 - The mod's download carries no program any more, so Nexus no longer blocks it
 - Hosted voices (the OpenAI key) are retired — Pocket covers the no-graphics-card case for free
+
+### New ways to play
+
+- Already pay for ChatGPT? Choose Codex in the options and your plan carries the NPCs — no API key
+- Mute NPC, on the talk screen: that person stops coming to you and writing first, but still answers you — no penalty, kept in your save
+
+### Changed
+
+- Characters no longer invent a private backstory at your first meeting — the starting personality is off unless you switch it on
 
 ## v3.3.0 — 2026.09.02
 

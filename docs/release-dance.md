@@ -88,6 +88,14 @@ different voice that merely shares a name.
 `dist\ImmersiveAI\bin\Win64_Shipping_Client\ImmersiveAI.dll` against the newest source file. Any
 code change after packaging — even a one-line fix — means packaging again.
 
+### 6b. Refresh the GitHub download
+`latest-release\` is what the Nexus page links to ("Also on… GitHub"), so it must carry THIS
+version: copy the new zip in, keep only the previous one as the fallback (`git rm` the older
+ones), and update the version, file name, size and fallback in its `README.md`. It sat at v3.1.3
+through two releases because this step lived nowhere (found 2026.09.25). Mind GitHub's 50 MiB
+per-file warning — v3.4.0 is 48 MiB, most of it the voices' reference clips; past 100 MB a push is
+refused and the zip must move to a GitHub Release asset instead.
+
 ### 7. Upload to Steam (Claude runs this)
 Steam client open and logged in. Details and uploader quirks: `tools/WORKSHOP-UPLOAD.md`.
 

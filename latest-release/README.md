@@ -1,6 +1,6 @@
 # Download Immersive AI
 
-The current version is **v3.1.3**. Everything the mod needs is inside that one file.
+The current version is **v3.4.0**. Everything the mod needs is inside that one file.
 
 ---
 
@@ -8,8 +8,8 @@ The current version is **v3.1.3**. Everything the mod needs is inside that one f
 
 **1. Download**
 
-Click **[ImmersiveAI_v3.1.3.zip](ImmersiveAI_v3.1.3.zip)** above, then press the **Download**
-button on the page that opens. (It is 13 MB.)
+Click **[ImmersiveAI_v3.4.0.zip](ImmersiveAI_v3.4.0.zip)** above, then press the **Download**
+button on the page that opens. (It is 48 MB — most of it is the voices of Calradia.)
 
 **2. Find your Bannerlord `Modules` folder**
 
@@ -36,7 +36,6 @@ Modules\
     bin\
     GUI\
     Voices\
-    VoiceHost\
 ```
 
 > **If it does not look like that**, you probably have `Modules\ImmersiveAI\ImmersiveAI\…`
@@ -68,20 +67,20 @@ The full guide, including free options and what each one costs, is here:
 **Do I need to install anything else first?**
 No. No .NET, no separate downloads, nothing. This one file is everything.
 
-**My antivirus flagged something.**
-The mod includes a small program (`VoiceHost\ImmersiveAI.VoiceHost.exe`) that speaks the
-NPCs' lines out loud. It is only used if you turn voices on, and it is off by default.
-If you would rather not have it, delete the whole `VoiceHost` folder — the mod works fine
-without it, just silently. Source code for it is in this same repository, in
-`src/ImmersiveAI.VoiceHost`.
+**Is there a program inside?**
+No. The download holds no executable at all — only the mod's library, its screens and the
+voice files.
 
-**Do I need a good graphics card for the voices?**
-For voices generated on your own machine, yes — an NVIDIA card. There is also a hosted
-option that works on any machine. Either way, voices are **off** until you switch them on.
+**How do I hear the voices? Do I need a good graphics card?**
+Voices are **off** until you switch them on. In the game, open the talk screen (**O**) →
+**Voices**, pick an engine and press **Install it** — it installs
+[claude-voice](https://github.com/TraxData313/claude-voice), a free app that speaks on your own
+PC. Qwen reads every language (NVIDIA, 4 GB), Breeze laughs and whispers (English, NVIDIA
+16 GB), Pocket runs on any PC. More: [Hearing them speak](../docs/voiceover-setup.md).
 
 **Can I keep my old version?**
-Yes. The previous release, `ImmersiveAI_v3.1.2.zip`, is kept in this folder as a fallback.
-Only download it if v3.1.3 gives you trouble.
+Yes. The previous release, `ImmersiveAI_v3.3.0.zip`, is kept in this folder as a fallback.
+Only download it if v3.4.0 gives you trouble.
 
 **Updating from an older version?**
 Delete the old `Modules\ImmersiveAI` folder first, then unzip the new one. Your settings

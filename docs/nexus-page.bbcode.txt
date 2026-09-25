@@ -4,11 +4,11 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 If one of these searches brought you here - yes, this is that mod:
 
 [list]
-[*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through the AI you choose, including a [b]free[/b] Gemini key
+[*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through the AI you choose - a [b]free[/b] Gemini key, or the [b]ChatGPT / claude.ai plan[/b] you already pay for
 [*]NPCs with [b]real long-term memory[/b] - they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story - [b]courted, proposed to and wed[/b] in conversation, companions included
-[*][b]voiced NPCs[/b] - hear them speak, in voices of their own people: clone your own or use hosted ones
+[*][b]voiced NPCs[/b] - voices of their own people, each line spoken as they direct it, free on your own PC
 [*]asking about [b]game mechanics in-game[/b] instead of alt-tabbing to Google
 [*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
 [/list]
@@ -17,7 +17,7 @@ If one of these searches brought you here - yes, this is that mod:
 [list]
 [*]Distinct voices, no repetition - leave a letter unanswered and they hear the silence, and hold their peace.
 [*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite themselves - the names, promises and debts between you - beside their own sense of self.
-[*]Every soul begins as somebody: a private starting truth written for them at your first meeting - an old wound, an odd habit, a vanity - grown from their real story.
+[*]Every soul begins as somebody: their real story from before you met - and, if you switch it on in the options, a private starting truth grown from it.
 [*]They see the moment - time, place, who stands near, what lately happened in the world - and carry moods of their own.
 [*][b]They remember your battles[/b] - who downed whom, who bled, what was won, the last in detail - [b]and the everyday road[/b]: the towns, the trade, the men you hired, how each task ended. They know their own wounds, and see yours.
 [*]They are free: told who they are and what their world is, never forced. Go ahead and break an NPC's mind by transcending it out of the matrix!
@@ -53,12 +53,13 @@ Ask anyone anything about the game - they quietly search the web mid-reply and a
 
 [b][size=4]What you need - and what it costs[/size][/b]
 
-You bring [b]your own API key[/b]. Pick a row:
+You bring [b]your own API key[/b] - or a plan you already pay for. Pick a row:
 
 [list]
 [*][b]Just works[/b] - OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
 [*][b]Free[/b] - Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Two catches: Google trains on free-tier traffic, and it's slow.
 [*][b]Cheapest paid[/b] - DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
+[*][b]No key at all[/b] - already pay for ChatGPT or claude.ai? Pick Codex or Claude Code in Mod Options, and your plan carries the NPCs.
 [*][b]Also fine[/b] - OpenAI, Anthropic (Claude), a local model, or any OpenAI-compatible service via the Custom endpoint option.
 [/list]
 
@@ -66,19 +67,17 @@ You bring [b]your own API key[/b]. Pick a row:
 
 [b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own that setup.
 
-[b][size=4]File quarantined here? Two other ways to get it[/size][/b]
-
-Nexus rescans every upload, and one of its 70 checks flags the bundled ImmersiveAI.VoiceHost.exe - the small helper that speaks NPC lines on your own machine (optional, off by default, runs nowhere but your PC, source public). Nothing is wrong with the mod; a human reviewer clears it, which takes a while. Until then:
+[b][size=4]Also on[/size][/b]
 [list]
 [*][b]GitHub[/b] - the same file, with install steps: [url=https://github.com/TraxData313/ImmersiveAI/tree/master/latest-release]download the latest version here[/url]
-[*][b]Steam Workshop[/b] - never blocked, and it auto-updates: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3764210301]subscribe here[/url]
+[*][b]Steam Workshop[/b] - auto-updates: [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3764210301]subscribe here[/url]
 [/list]
 
 [b][size=4]Installation[/size][/b]
 
 [list=1]
 [*]Vortex: install as usual. Manual: extract the zip into your game's Modules folder, so you get Modules\ImmersiveAI\SubModule.xml.
-[*]Get a key at [b]openrouter.ai[/b] and add a little credit ($5-10 goes a long way), or a free one at [b]aistudio.google.com[/b]. Running a local model? Skip this step.
+[*]Get a key at [b]openrouter.ai[/b] and add a little credit ($5-10 goes a long way), or a free one at [b]aistudio.google.com[/b]. Paying for ChatGPT or claude.ai? Install Codex or Claude Code and log in instead. Running a local model? Skip this step.
 [*]Enable [b]Immersive AI[/b] and start the game once - it creates Documents\...\Configs\ImmersiveAI\config.json and tells you exactly where to paste the key. Paste it (or use Mod Options with MCM), pick your backend, restart.
 [/list]
 
@@ -86,7 +85,7 @@ Nexus rescans every upload, and one of its 70 checks flags the bundled Immersive
 [list]
 [*][b]Read the startup message.[/b] It says what it found ("connected", a missing/wrong key, a network problem) and where to fix it. Fix config.json and restart; the check runs again.
 [*][b]Check the log:[/b] Configs\ImmersiveAI\log.txt records every call and error in plain words. A dead key shows ONE amber notice, then goes quiet instead of erroring hourly. Stuck? Post its last lines in the comments - your key is never logged.
-[*][b]No voices?[/b] Voices are off by default. Talk screen (O) -> Voices -> Install the voice app, and follow its setup window (Alt+Tab if hidden). Breeze laughs (English, NVIDIA 16 GB), Qwen reads every language (NVIDIA), Pocket runs on any PC. Lines in Cyrillic silent? Switch to Qwen. Whole story: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
+[*][b]No voices?[/b] Voices are off by default. Talk screen (O) -> Voices -> pick an engine -> Install it; the page shows every step while you play. Breeze laughs (English, NVIDIA 16 GB), Qwen reads every language (NVIDIA 4 GB), Pocket runs on any PC. Lines in Cyrillic silent? Switch to Qwen. Whole story: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [/list]
 
 [b][size=4]Privacy[/size][/b]

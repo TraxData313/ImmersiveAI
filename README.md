@@ -22,7 +22,7 @@ If one of these searches brought you here — yes, this is that mod:
 - NPCs that **approach you** and **write you letters** on their own
 - an **AI wife or companion** that roleplays and never forgets your story — **courted, proposed to
   and wed in conversation**, companions included
-- **voiced NPCs** — hear them speak, in voices of their own people: clone your own or use hosted ones
+- **voiced NPCs** — voices of their own people, each line spoken as they direct it, free on your own PC
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
 - **never knowing what to say?** one key and your own hero drafts your next line for you
 - **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — plus your existing
@@ -34,7 +34,7 @@ If one of these searches brought you here — yes, this is that mod:
 
 - Distinct manners of speech, no repetition — and when you leave a letter unanswered, they hear the silence and hold their peace.
 - They grow: recent talks stay word-for-word, old ones settle into one deep memory they rewrite in their own words — the names, promises and debts between you — alongside their own sense of self and their opinion of you.
-- Every soul begins as somebody: at your first meeting, a private starting truth is written for them — an old wound, an odd habit, a vanity — grown from their real story, traits and your world prompt. It lands in their own editable prompt file, yours to read, rewrite or erase.
+- Every soul begins as somebody: their real story from before you met. Switch on **Starting personality** in the options and, at your first meeting, a private starting truth is also written for them — an old wound, an odd habit, a vanity — grown from their real story, traits and your world prompt. It lands in their own editable prompt file, yours to read, rewrite or erase.
 - They see the moment — time, place, who stands near, what lately happened in the world.
 - They have moods — down to the women keeping a personal monthly cycle, gently simulated.
 - They remember your battles: everyone who fought at your side keeps the day in memory — who downed whom, who bled, what was won — the last battle fresh in detail, the older ones by name ("what happened at the storming of Varcheg?"), all drawn from a real chronicle the mod writes for every fight, sea-battles included.

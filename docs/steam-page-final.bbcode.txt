@@ -3,11 +3,11 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [h1]Looking for…?[/h1]
 If one of these searches brought you here — yes, this is that mod:
 [list]
-[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], or a local model
+[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], your [b]ChatGPT or claude.ai plan[/b], or a local model
 [*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted, proposed to and wed[/b] in conversation, companions included
-[*][b]voiced NPCs[/b] — hear them speak, in voices of their own people: clone your own or use hosted ones
+[*][b]voiced NPCs[/b] — voices of their own people, each line spoken as they direct it, free on your PC
 [*][b]never know what to say?[/b] one key and your own hero drafts your next line for you
 [/list]
 
@@ -15,10 +15,10 @@ If one of these searches brought you here — yes, this is that mod:
 [list]
 [*]Distinct manners of speech, no repetition — leave a letter unanswered and they hear the silence.
 [*]They grow: recent talks stay word-for-word, older ones settle into one deep memory they rewrite themselves.
-[*]Every soul begins as somebody: a private starting truth written for them at your first meeting, grown from their real story.
+[*]Every soul begins as somebody: their real story from before you met.
 [*]They see the moment — time, place, who stands near, what lately happened in the world — and carry moods of their own.
 [*][b]They remember your battles[/b] — who downed whom, who bled, what was won, the last in detail — [b]and the everyday road[/b]: the towns, the trade, the men you hired, how each task ended.
-[*]They are free: told who they are and what the world is, never forced into anything. Go ahead and break an NPC's mind by transcending it out of the matrix!
+[*]They are free: told who they are and what the world is, never forced. Go ahead and break an NPC's mind by transcending it out of the matrix!
 [*]They decide when to approach or write first — you set the pace with the on-map SOCIALNESS dial (0 = leave me be).
 [/list]
 
@@ -43,27 +43,28 @@ Ask anyone anything about the game — they quietly search the web mid-reply and
 [list]
 [*]Face to face — they greet you as you approach.
 [*][b]One talk screen[/b] (hotkey [b]O[/b]): everyone you know in one list — near, far or gone — the chosen one drawn there alive. Words if they can hear you, a letter riding real days if not, one thread for both.
-[*][b]Hear them[/b] — a play mark beside every line, and a Voices page to cast anyone. Off by default; one click installs the free voice app, any PC: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
+[*][b]Hear them[/b] — a play mark on every line, a Voices page to cast anyone. Off by default; one click installs the free voice app, any PC: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/voiceover-setup.md]Hearing them speak[/url].
 [*]Edit a character's prompt, or the world's, [b]without leaving the game[/b].
-[*][b]Think[/b] (Shift+Enter) — stuck for words? Your own hero drafts your next line from all you two have said. Keep it, change it, or bin it.
+[*][b]Think[/b] (Shift+Enter) — stuck for words? Your own hero drafts your next line from all you two have said — keep, change or bin.
 [*]Any language in, the same language out. (The mod's own UI is English for now.)
 [/list]
 
 [h1]What you need — and what it costs[/h1]
 
-You bring [b]your own API key[/b]. Pick a row:
+Bring [b]your own API key[/b], or a plan. Pick a row:
 [list]
 [*][b]Just works[/b] — OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
-[*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Two catches: Google trains on free-tier traffic, and it's slow.
+[*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Catches: Google trains on it, and it's slow.
 [*][b]Cheapest paid[/b] — DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
+[*][b]No key[/b] — ChatGPT or claude.ai plan? Pick Codex or Claude Code; the plan carries them.
 [*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model.
 [/list]
 
-[b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b].
+[b]Costs are yours and visible.[/b] A typical exchange costs a tenth of a cent on the default; daily totals, a hard cap. Any model must carry [b]native tool calling[/b].
 
 [b]Not sure?[/b] Prices side by side, each provider's catch, the local setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url]
 
-[b]Setup, five minutes:[/b] get your key, start the game once, paste it where the mod tells you, restart. It tests the connection at load and says whether it worked. Silent NPCs? Read that message, then log.txt, then [b]the FAQ[/b].
+[b]Setup, five minutes:[/b] get your key, start the game once, paste it where the mod says, restart — the load check tells you if it worked. Silent NPCs? Read that message, then log.txt, then [b]the FAQ[/b].
 
 [h1]Privacy[/h1]
 [list]
@@ -76,7 +77,7 @@ You bring [b]your own API key[/b]. Pick a row:
 [h1]Compatibility & shaping[/h1]
 [list]
 [*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional.
-[*]Safe to remove mid-campaign — saves load fine without it, and memories live outside them, so reinstall later and everyone still remembers you.
+[*]Safe to remove mid-campaign — saves load fine without it, and memories live outside them: reinstall and everyone still remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod — fully original source.
 [/list]
 

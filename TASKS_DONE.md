@@ -1562,3 +1562,24 @@ first three change how the whole road behaves.
   data folder. Tested end to end from the public release (quiet Pocket install into a temp folder,
   then uninstall -Yes). Five bugs found by walking the flow as the player, fixed before shipping.
   Not playtested in game. (2026.09.25 00.30.00)
+- [x] THE FRESH-START VOICE TEST, THREE ROUNDS (2026.09.25, Anton: "like a normal chap who knows
+  nothing"). His own claude-voice was moved aside and the game installed from nothing. Round one:
+  the page containers ate every click (now DoNotAcceptEvents) and hiding the folder locked Claude
+  Code out through its hook (guarded in claude-voice). Round two: install, first words, casting and
+  switching WORKED; fixed cards drawn on every page, no Calradian voices after a game install (roots
+  now told once per app PID), the Breeze/Pocket samples re-rendered and dictation-checked. Round
+  three installed the 1.16.0 candidate through `ClaudeVoiceSetupUrl` + `ClaudeVoiceSetupSource`:
+  the Removing page never noticed the end, Breeze judged by the wrong drive, a wrong chip — all fixed;
+  claude-voice's side (adding an engine no longer silences the running one) shipped in its 1.16.0.
+  Both test keys cleared, his copy restored. Still open (in TODO): game-run installs leave no
+  setup.log / Settings > Apps entry, and Breeze's card should weigh free memory. (2026.09.25 16.30.00)
+- [x] v3.4.0 RELEASED ON STEAM — the voices move to claude-voice. Five commits since v3.3.0: the
+  Codex subscription backend + the spark defaulting Off, the per-NPC mute, and the three voice
+  commits. Their pills were missing from [Unreleased] (both Codex commits wrote none) and were added
+  at release. Store pages swept: "clone your own or use hosted ones" (hosted is retired), the Nexus
+  quarantine block (no exe any more), "follow its setup window" (the install is quiet now) and the
+  spark line ("written at your first meeting" — no longer by default) were all ghosts; the ChatGPT /
+  claude.ai plans joined the "Looking for…?" lists. `latest-release\` had sat at v3.1.3 through two
+  releases — refreshed, and the step written into docs/release-dance.md. 722 Core tests green;
+  zip 48 MB, 92 voices, no executable. Uploaded 17:23 ("Uploading done!"). Nexus file left for
+  Anton (48 MB > the browser's 10 MB bridge). (2026.09.25 17.40.00)
