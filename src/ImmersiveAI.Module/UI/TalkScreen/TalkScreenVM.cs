@@ -836,24 +836,34 @@ namespace ImmersiveAI.UI.TalkScreen
             MBBindingList<ChatMessageVM> messages, string header, string body, Color headerColor,
             bool byPlayer = false)
         {
+            // Her voice key — [voice: …], the last line of a reply while the engine follows directions —
+            // is drawn small and orange UNDER the words, the way the Abby app shows its sound line, and
+            // never as part of them. The ▶ still gets the whole text: the key is what it is spoken with.
+            var full = body;
+            body = Core.Voices.VoiceLine.Split(body, out var direction);
+            var directionLine = direction.Length == 0 ? string.Empty
+                : "\n<span style=\"VoiceLine\">♪  " + direction.Replace("(", "").Replace(")", "").Replace("<", "").Replace(">", "") + "</span>";
+
             var segments = Core.Prompts.EmoteText.Split(body);
             if (segments.Count == 0)
             {
-                messages.Add(Voiced(new ChatMessageVM(header, body, isNarration: false, headerColor), byPlayer, body));
+                messages.Add(Voiced(new ChatMessageVM(header, body + directionLine, isNarration: false, headerColor), byPlayer, full));
                 return;
             }
             // What the voice does with a gesture — a laugh made, a line whispered — shown beside it,
             // so the thread and the voice app tell the same story. Only while it is really so.
             var (sounds, takesMood) = Voice.VoiceService.WhatTheVoiceCanDo();
             bool first = true;
-            foreach (var seg in segments)
+            for (var i = 0; i < segments.Count; i++)
             {
+                var seg = segments[i];
+                var tail = i == segments.Count - 1 ? directionLine : string.Empty;
                 var head = first ? header : string.Empty;
                 var cue = seg.IsGesture ? Core.Voices.SpeakableText.CuesOf(seg.Text, sounds, takesMood) : string.Empty;
                 var row = seg.IsGesture
-                    ? new ChatMessageVM(head, (cue.Length > 0 ? cue + " " : string.Empty) + $"*{seg.Text}*", isNarration: true, headerColor)
-                    : new ChatMessageVM(head, seg.Text, isNarration: false, headerColor);
-                messages.Add(first ? Voiced(row, byPlayer, body) : row);
+                    ? new ChatMessageVM(head, (cue.Length > 0 ? cue + " " : string.Empty) + $"*{seg.Text}*" + tail, isNarration: true, headerColor)
+                    : new ChatMessageVM(head, seg.Text + tail, isNarration: false, headerColor);
+                messages.Add(first ? Voiced(row, byPlayer, full) : row);
                 first = false;
             }
         }
@@ -1335,15 +1345,24 @@ namespace ImmersiveAI.UI.TalkScreen
 
         // ------------------------------ the voices ------------------------------
         //
-        // THE PANEL EVERY PLAYER SEES. Voices are OFF by default and must stay a thing you discover
+        // THE PAGE EVERY PLAYER SEES. Voices are OFF by default and must stay a thing you discover
         // rather than a thing you have to turn off — but a feature nobody can find is a feature nobody
-        // has, so the button sits in the bar for everybody and this page explains itself.
+        // has, so the button sits in the bar for everybody, coloured by where the voice app stands.
         //
-        // SINCE 2026.09.24 THE VOICES ARE CLAUDE-VOICE'S, a separate free app, so this page is also
-        // its remote: one big button that is always the NEXT thing to do (install it, start it, open
-        // its window), a row to switch its engine, and the casting that was always here. Written for
-        // somebody who has never heard the words "TTS" or "GPU": what it is, what to press, what
-        // happens next — and nothing else.
+        // REBUILT 2026.09.24 FROM THE PLAYER'S CHAIR (Anton: "picture it from the point of that user
+        // who knows nothing and just wants to hear his digital lady speak"). One page per moment, and
+        // every moment answers the question the player has right then:
+        //   • nothing installed  — what this is, which engine suits THIS computer (and a sample of each
+        //                           to hear first), where the files will go and how big, one button;
+        //   • installing         — four steps with ticks, what is downloading, how much, how fast,
+        //                           how long is left; nothing to click, and quitting the game is fine;
+        //   • stopped / failed   — what happened in plain words, that nothing is lost, try again;
+        //   • asleep / waking    — why it must run, one button, and that it hands the graphics card
+        //                           back when the game closes;
+        //   • running            — the casting (as it always was) and, one tab over, the engines with
+        //                           their files, sizes and folders, what to do if the game stutters,
+        //                           and how to take all of it off the computer again.
+        // The voices themselves are claude-voice's — a separate free app — and this page is its remote.
 
         private MBBindingList<VoiceRowVM> _voiceRows = new MBBindingList<VoiceRowVM>();
         private VoiceRowVM? _voicePick;
@@ -1351,35 +1370,826 @@ namespace ImmersiveAI.UI.TalkScreen
         private string _voiceStatusText = string.Empty;
         private bool _hookedVoiceApp;
 
+        private enum VoicePageKind { Looking, Choose, Installing, Failed, Asleep, Waking, Removing, Cast, Engines }
+
+        private VoicePageKind _voicePage = VoicePageKind.Looking;
+        private string _voiceTab = "cast";              // cast | engines, once the app runs
+        private bool? _speakEnglish;                     // null: follow the game's own language
+        private string _chosenEngine = string.Empty;     // before an install; empty = the recommendation
+        private bool _enginePickedByHand;
+        private bool _forceChoose;                        // "Choose again" / "Choose an engine…": the cards, whatever is half-there
+        private string _chosenDrive = string.Empty;      // a drive root; empty = the default
+        private DateTime _voicePageTickUtc = DateTime.MinValue;
+
+        private MBBindingList<VoiceEngineCardVM> _voiceEngineCards = new MBBindingList<VoiceEngineCardVM>();
+        private MBBindingList<VoiceDriveVM> _voiceDrives = new MBBindingList<VoiceDriveVM>();
+        private MBBindingList<VoiceStepVM> _voiceSteps = new MBBindingList<VoiceStepVM>();
+        private MBBindingList<VoiceStorageRowVM> _voiceStorage = new MBBindingList<VoiceStorageRowVM>();
+
+        private string _voiceStateText = string.Empty, _voiceLeadText = string.Empty;
+        private Color _voiceStateColor = VoicePalette.Muted;
+        private string _voiceStoreText = string.Empty, _voiceInstallText = string.Empty;
+        private bool _canInstallVoice, _showVoiceDrives;
+        private string _voiceProgressTitle = string.Empty, _voiceProgressHeadline = string.Empty;
+        private string _voiceProgressDetail = string.Empty, _voiceProgressOverall = string.Empty;
+        private int _voiceProgressAmount;
+        private bool _showVoiceBar;
+        private string _voiceFailTitle = string.Empty, _voiceFailText = string.Empty;
+        private string _voiceAsleepTitle = string.Empty, _voiceAsleepText = string.Empty, _voiceStartText = string.Empty;
+        private bool _canStartVoice, _showVoiceStart;
+        private string _voiceStorageTotal = string.Empty;
+
         public void ExecuteToggleVoice()
         {
             if (!_isVoiceShown)
             {
-                if (!_hookedVoiceApp)
-                {
-                    _hookedVoiceApp = true;
-                    Voice.ClaudeVoiceApp.Changed += OnVoiceAppChanged;
-                }
+                HookVoiceApp();
+                Voice.VoiceMachine.Probe(() => { if (_isVoiceShown) RefreshVoicePage(); });
                 Voice.ClaudeVoiceApp.Poll(force: true);
+                if (_voiceTab == "engines") Voice.ClaudeVoiceApp.RefreshStorage();
                 RefreshVoices();
             }
             IsVoiceShown = !_isVoiceShown;
         }
 
-        /// <summary>The app came, went, or changed engine: the page and the badge follow it.</summary>
+        private void HookVoiceApp()
+        {
+            if (_hookedVoiceApp) return;
+            _hookedVoiceApp = true;
+            Voice.ClaudeVoiceApp.Changed += OnVoiceAppChanged;
+            Voice.ClaudeVoiceApp.JustInstalled += OnVoiceJustInstalled;
+        }
+
+        /// <summary>Called by the manager as the screen closes: the app's events are static, and a
+        /// closed screen must not go on being told about it.</summary>
+        public void DetachVoiceApp()
+        {
+            if (!_hookedVoiceApp) return;
+            _hookedVoiceApp = false;
+            Voice.ClaudeVoiceApp.Changed -= OnVoiceAppChanged;
+            Voice.ClaudeVoiceApp.JustInstalled -= OnVoiceJustInstalled;
+            Voice.VoiceService.StopSample();
+        }
+
+        /// <summary>The app came, went, changed engine, or the install moved: the page and the badge follow it.</summary>
         private void OnVoiceAppChanged()
         {
             try
             {
                 if (_isVoiceShown) RefreshVoices();
                 RefreshVoiceBadge();
+                FollowVoiceApp();
             }
             catch { /* a page that could not redraw is still a page */ }
         }
 
+        /// <summary>
+        /// The install the player asked for has just come up speaking. Voices go on — that is what
+        /// installing them meant — and whoever is on screen says their first words, so the player
+        /// HEARS that it worked rather than reading that it did.
+        /// </summary>
+        private void OnVoiceJustInstalled()
+        {
+            if (_config != null && !_config.EnableVoice) { _config.EnableVoice = true; _config.Save(); }
+            _voiceTab = "cast";
+            RefreshVoices();
+            RefreshVoiceBadge();
+            var hero = _selected?.Hero;
+            if (hero != null) Voice.VoiceService.Speak(hero, FirstWordsAfterInstall);
+        }
+
+        private const string FirstWordsAfterInstall = "There. Can you hear me now? Good. It seems I have a voice at last.";
+
+        /// <summary>Everything on the page, then the shelf when there is one to show.</summary>
+        private void RefreshVoices()
+        {
+            RefreshVoicePage();
+            if (Voice.ClaudeVoiceApp.Now.Running) RefreshShelf();
+            else if (_voiceRows.Count > 0) { VoiceRows = new MBBindingList<VoiceRowVM>(); _voicePick = null; }
+        }
+
+        // ---- which page, and what it says ----
+
+        private VoicePageKind WhichVoicePage()
+        {
+            var app = Voice.ClaudeVoiceApp.Now;
+            if (Voice.ClaudeVoiceApp.Uninstalling) return VoicePageKind.Removing;
+            if (_forceChoose && (app.State == Voice.ClaudeVoiceApp.AppState.Installed || app.State == Voice.ClaudeVoiceApp.AppState.NotInstalled
+                                 || (app.State == Voice.ClaudeVoiceApp.AppState.Starting && AppCannotLoad(app))))
+                return VoicePageKind.Choose;
+            if (app.State != Voice.ClaudeVoiceApp.AppState.Installed && app.State != Voice.ClaudeVoiceApp.AppState.NotInstalled
+                && app.State != Voice.ClaudeVoiceApp.AppState.Starting) _forceChoose = false;
+            switch (app.State)
+            {
+                case Voice.ClaudeVoiceApp.AppState.Installing: return VoicePageKind.Installing;
+                case Voice.ClaudeVoiceApp.AppState.Running: return _voiceTab == "engines" ? VoicePageKind.Engines : VoicePageKind.Cast;
+                case Voice.ClaudeVoiceApp.AppState.Starting: return VoicePageKind.Waking;
+                case Voice.ClaudeVoiceApp.AppState.Installed: return InstallStopped(app) ? VoicePageKind.Failed : VoicePageKind.Asleep;
+                case Voice.ClaudeVoiceApp.AppState.NotInstalled: return InstallStopped(app) ? VoicePageKind.Failed : VoicePageKind.Choose;
+                default: return VoicePageKind.Looking;
+            }
+        }
+
+        /// <summary>The app answers but says it could not load its engine — a half-finished install, say.</summary>
+        private static bool AppCannotLoad(Voice.ClaudeVoiceApp.Snapshot app)
+            => app.Health != null && !app.Health.Ready && !string.IsNullOrWhiteSpace(app.Health.Error);
+
+        /// <summary>An install that ended without finishing — failed, stopped, or its process gone.</summary>
+        private static bool InstallStopped(Voice.ClaudeVoiceApp.Snapshot app)
+            => app.Setup != null && (app.Setup.IsFailed || app.Setup.IsCancelled || app.Setup.IsRunning);
+
+        private bool SpeakEnglish
+        {
+            get
+            {
+                if (_speakEnglish.HasValue) return _speakEnglish.Value;
+                try { return (TaleWorlds.Localization.MBTextManager.ActiveTextLanguage ?? "English").StartsWith("English", StringComparison.OrdinalIgnoreCase); }
+                catch { return true; }
+            }
+        }
+
+        private void RefreshVoicePage()
+        {
+            try
+            {
+                var app = Voice.ClaudeVoiceApp.Now;
+                _voicePage = WhichVoicePage();
+                BuildVoiceChip(app);
+                BuildVoiceLead(app);
+                // The drive decides how much room the cards may assume, and the chosen card decides
+                // how much room the drive needs: settle the drive, judge the cards, then settle it again.
+                if (_voicePage == VoicePageKind.Choose) BuildDriveChoice();
+                BuildEngineCards(app);
+                if (_voicePage == VoicePageKind.Choose) BuildDriveChoice();
+                if (_voicePage == VoicePageKind.Installing) BuildInstallProgress(app);
+                if (_voicePage == VoicePageKind.Failed) BuildInstallFailure(app);
+                if (_voicePage == VoicePageKind.Asleep || _voicePage == VoicePageKind.Waking
+                    || _voicePage == VoicePageKind.Removing || _voicePage == VoicePageKind.Looking) BuildAsleep(app);
+                if (_voicePage == VoicePageKind.Engines) BuildStorage();
+                if (_voicePage == VoicePageKind.Cast) VoiceStatusText = BuildVoiceStatus();
+
+                foreach (var name in VoicePageProperties) OnPropertyChanged(name);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("voice: building the voices page", ex);
+            }
+        }
+
+        private static readonly string[] VoicePageProperties =
+        {
+            "VoiceStateText", "VoiceStateColor", "VoiceLeadText", "ShowVoiceTabs", "VoiceTabCastText", "VoiceTabEnginesText",
+            "ShowVoicePageChoose", "ShowVoicePageInstalling", "ShowVoicePageFailed", "ShowVoicePageAsleep",
+            "ShowVoicePageCast", "ShowVoicePageEngines", "ShowEngineCards", "VoiceMachineText",
+            "VoiceLangEnglishText", "VoiceLangOtherText", "VoiceEngineCards", "VoiceDrives", "ShowVoiceDrives",
+            "VoiceStoreText", "VoiceInstallText", "CanInstallVoice", "VoiceInstallNote",
+            "VoiceProgressTitle", "VoiceInstallSteps", "VoiceProgressHeadline", "ShowVoiceBar", "VoiceProgressAmount",
+            "VoiceProgressDetail", "VoiceProgressOverall", "VoiceFailTitle", "VoiceFailText",
+            "VoiceAsleepTitle", "VoiceAsleepText", "VoiceStartText", "CanStartVoice", "ShowVoiceStart", "ShowVoiceRemoveAsleep",
+            "VoiceStorageRows", "VoiceStorageTotal", "VoiceEnabledText", "ShowVoicesOffBanner", "VoiceStatusText",
+            "ShowVoiceAppClose", "VoiceCloseAppText", "VoiceButtonColor", "VoiceTipText",
+        };
+
+        private void BuildVoiceChip(Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            switch (_voicePage)
+            {
+                // "Choose again" also lands here with the app installed (a stopped install, an engine
+                // that will not load): "Not installed" there was simply untrue (2026.09.25 playtest).
+                case VoicePageKind.Choose:
+                    SetChip(app.State == Voice.ClaudeVoiceApp.AppState.NotInstalled ? "Not installed" : "Installed · choosing an engine",
+                            VoicePalette.Bad);
+                    break;
+                case VoicePageKind.Installing:
+                    var pct = app.Setup?.Fraction;
+                    SetChip(pct.HasValue ? $"Installing · {Math.Round(pct.Value * 100)}%" : "Installing", VoicePalette.Busy);
+                    break;
+                case VoicePageKind.Failed: SetChip(app.Setup?.IsCancelled == true ? "Install stopped" : "Install didn't finish", VoicePalette.Bad); break;
+                case VoicePageKind.Asleep: SetChip("Installed · not running", VoicePalette.Bad); break;
+                case VoicePageKind.Waking: SetChip("Waking up…", VoicePalette.Busy); break;
+                case VoicePageKind.Removing: SetChip("Removing…", VoicePalette.Busy); break;
+                case VoicePageKind.Cast:
+                case VoicePageKind.Engines:
+                    SetChip("Running · " + Voice.ClaudeVoiceApp.EngineName(app.Engine)
+                            + (_config != null && !_config.EnableVoice ? " · voices off" : string.Empty),
+                            _config != null && !_config.EnableVoice ? VoicePalette.Busy : VoicePalette.Good);
+                    break;
+                default: SetChip("Looking…", VoicePalette.Muted); break;
+            }
+
+            void SetChip(string text, Color color) { _voiceStateText = text; _voiceStateColor = color; }
+        }
+
+        private void BuildVoiceLead(Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            var engine = Voice.ClaudeVoiceApp.EngineName(app.Engine);
+            switch (_voicePage)
+            {
+                case VoicePageKind.Choose:
+                    _voiceLeadText = "Hear every character speak, each in a voice of their own. The voices are made right here on your computer by "
+                                   + "claude-voice, a free app that runs beside the game — nothing is sent anywhere, and it costs nothing. "
+                                   + "Pick how they should speak and where to keep the files; the rest installs itself.";
+                    break;
+                case VoicePageKind.Installing:
+                    _voiceLeadText = "Setting up the voices. Close this page and keep playing if you like — "
+                                   + "the Voices button turns green when they are ready.";
+                    break;
+                case VoicePageKind.Failed:
+                    _voiceLeadText = "The voices are not set up yet. Nothing that was downloaded is lost.";
+                    break;
+                case VoicePageKind.Asleep:
+                    _voiceLeadText = "The voice app is on this computer, but it isn't running — and the characters can only speak while it runs.";
+                    break;
+                case VoicePageKind.Waking:
+                    _voiceLeadText = "The voice app is starting and loading its voice. The characters can speak in a moment.";
+                    break;
+                case VoicePageKind.Removing:
+                    _voiceLeadText = "Taking the voice app and its voice files off this computer.";
+                    break;
+                case VoicePageKind.Cast:
+                    _voiceLeadText = _config != null && !_config.EnableVoice
+                        ? "The voice app is running, but voices are OFF in the game — nothing is spoken until you turn them on."
+                        : $"{engine} is speaking. Everyone already has a voice of their own people; here you can hear them, and change any of them.";
+                    break;
+                case VoicePageKind.Engines:
+                    _voiceLeadText = "You can have more than one engine and switch whenever you like. Each keeps its own files; "
+                                   + "only the one speaking uses your graphics card.";
+                    break;
+                default:
+                    _voiceLeadText = "Looking for the voice app…";
+                    break;
+            }
+        }
+
+        // ---- the engine cards: chosen before an install, switched or added after ----
+
+        private void BuildEngineCards(Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            if (_voicePage != VoicePageKind.Choose && _voicePage != VoicePageKind.Engines)
+            {
+                // Off the two pages that show them the list is emptied as well, so that nothing but the
+                // page decides — the cards once stayed drawn over the install and the casting.
+                if (_voiceEngineCards.Count > 0) _voiceEngineCards = new MBBindingList<VoiceEngineCardVM>();
+                return;
+            }
+            var english = SpeakEnglish;
+            var free = FreeGbForCards();
+            var best = Voice.VoiceMachine.Recommend(free, english);
+            if (_voicePage == VoicePageKind.Choose)
+            {
+                var chosen = Voice.VoiceMachine.ById(_chosenEngine);
+                if (chosen == null || !_enginePickedByHand || Voice.VoiceMachine.Judge(chosen, free).Fit == Voice.VoiceMachine.Fit.No)
+                    _chosenEngine = best.Id;
+            }
+
+            var cards = new MBBindingList<VoiceEngineCardVM>();
+            foreach (var e in Voice.VoiceMachine.All)
+            {
+                var verdict = Voice.VoiceMachine.Judge(e, free);
+                var card = new VoiceEngineCardVM(e.Id, SelectEngineCard, HearEngineCard, ActOnEngineCard)
+                {
+                    NameText = e.Name,
+                    RoleText = "— " + e.Role,
+                    TaglineText = e.Tagline,
+                    SpeaksText = "Speaks:  " + e.Languages,
+                    NeedsText = "Needs:  " + e.Needs,
+                    SizeText = SizeLine(e, app),
+                    GpuText = e.GpuGb > 0
+                        ? $"Graphics card:  holds about {Voice.VoiceMachine.Gb(e.GpuGb)} while it runs"
+                        : "Graphics card:  not used — your processor does the work",
+                    VoicesText = "Voices:  " + e.VoicesNote,
+                    CanHear = Voice.VoiceService.HasSample(e.Id),
+                };
+
+                if (_voicePage == VoicePageKind.Engines)
+                {
+                    var current = string.Equals(app.Engine, e.Id, StringComparison.OrdinalIgnoreCase);
+                    var installed = app.Health?.Engines.Any(r => string.Equals(r.Id, e.Id, StringComparison.OrdinalIgnoreCase) && r.Installed) ?? false;
+                    card.ShowAction = true;
+                    card.CanPick = false;
+                    card.IsSelected = current;
+                    if (current) { card.VerdictText = "✦  Speaking now"; card.VerdictColor = VoicePalette.Good; card.ActionText = "Speaking now"; card.CanAct = false; }
+                    else if (installed) { card.VerdictText = "✓  Installed on this computer"; card.VerdictColor = VoicePalette.Good; card.ActionText = "Switch to " + e.Name; card.CanAct = true; }
+                    else if (verdict.Fit == Voice.VoiceMachine.Fit.No)
+                    {
+                        // Room is not hardware: say which drive is short, and by how much.
+                        var drive = DriveLabelForAdding();
+                        card.VerdictText = "✗  " + (verdict.NoRoom && drive.Length > 0
+                            ? $"Needs about {Voice.VoiceMachine.Gb(Voice.VoiceMachine.DiskGbFor(e))} free on {drive} — it has {Voice.VoiceMachine.Gb(free)}"
+                            : verdict.Why);
+                        card.VerdictColor = VoicePalette.Bad;
+                        card.ActionText = !verdict.NoRoom ? "Can't run here" : drive.Length > 0 ? "Not enough room on " + drive : "Not enough room";
+                        card.CanAct = false;
+                    }
+                    else
+                    {
+                        Judged(card, e, verdict, english, best);
+                        card.ActionText = "Install it  ·  " + Voice.VoiceMachine.Gb(Voice.VoiceMachine.DownloadGbFor(e));
+                        card.CanAct = true;
+                    }
+                }
+                else
+                {
+                    card.CanPick = verdict.Fit != Voice.VoiceMachine.Fit.No;
+                    card.IsSelected = string.Equals(e.Id, _chosenEngine, StringComparison.OrdinalIgnoreCase);
+                    if (verdict.Fit == Voice.VoiceMachine.Fit.No) { card.VerdictText = "✗  " + verdict.Why; card.VerdictColor = VoicePalette.Bad; }
+                    else Judged(card, e, verdict, english, best);
+                }
+                cards.Add(card);
+            }
+            _voiceEngineCards = cards;
+        }
+
+        /// <summary>What an engine weighs. For one not yet installed, what is already on this computer is
+        /// taken off: a player who had the mod's old built-in voices keeps Qwen's 2.2 GB model, and the
+        /// voice app uses it where it lies.</summary>
+        private static string SizeLine(Voice.VoiceMachine.Engine e, Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            var installed = app.Health?.Engines.Any(r => string.Equals(r.Id, e.Id, StringComparison.OrdinalIgnoreCase) && r.Installed) ?? false;
+            if (!installed && e == Voice.VoiceMachine.Qwen && Voice.VoiceMachine.QwenModelHere)
+                return $"Size:  {Voice.VoiceMachine.Gb(Voice.VoiceMachine.DownloadGbFor(e))} download — its "
+                       + $"{Voice.VoiceMachine.Gb(Voice.VoiceMachine.QwenModelGb)} model is already on this computer";
+            return $"Size:  {Voice.VoiceMachine.Gb(e.DownloadGb)} download, about {Voice.VoiceMachine.Gb(e.DiskGb)} on disk";
+        }
+
+        /// <summary>"D:", where a second engine's files would go; empty when that cannot be told.</summary>
+        private static string DriveLabelForAdding()
+        {
+            try
+            {
+                var data = VoiceDataDirForAdding();
+                return data.Length == 0 ? string.Empty : (Path.GetPathRoot(data) ?? string.Empty).TrimEnd('\\');
+            }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>The verdict line of a card this computer CAN run.</summary>
+        private static void Judged(VoiceEngineCardVM card, Voice.VoiceMachine.Engine e, Voice.VoiceMachine.Verdict verdict,
+                                   bool english, Voice.VoiceMachine.Engine best)
+        {
+            if (verdict.Fit == Voice.VoiceMachine.Fit.Slow) { card.VerdictText = "~  " + verdict.Why; card.VerdictColor = VoicePalette.Busy; }
+            else if (e.EnglishOnly && !english) { card.VerdictText = "✓  Runs here — but it speaks English only"; card.VerdictColor = VoicePalette.Busy; }
+            else if (e == best) { card.VerdictText = "✓  Best for your computer"; card.VerdictColor = VoicePalette.Good; }
+            else { card.VerdictText = "✓  Runs on your computer"; card.VerdictColor = VoicePalette.Good; }
+        }
+
+        /// <summary>Free room where the files could go: the roomiest drive before an install, the
+        /// install's own folder after one. 0 = unknown, which judges nothing.
+        /// <para>
+        /// The roomiest, not the one picked below the cards (2026.09.25 playtest, Anton: "I can't even
+        /// click on Breeze"). The drive is picked FOR the chosen engine, so a C: with room for Qwen locked
+        /// Breeze out until D: was clicked by hand — the very thing Breeze needed. An engine some drive
+        /// can hold is pickable; picking it moves the drive to one with room (<see cref="BuildDriveChoice"/>),
+        /// and a drive too small for it cannot be picked, nor installed onto.
+        /// </para></summary>
+        private double FreeGbForCards()
+        {
+            try
+            {
+                if (_voicePage == VoicePageKind.Choose)
+                    return Voice.VoiceMachine.Drives().Select(d => d.FreeGb).DefaultIfEmpty(0).Max();
+                var data = VoiceDataDirForAdding();
+                return string.IsNullOrEmpty(data) ? 0 : new DriveInfo(Path.GetPathRoot(data)).AvailableFreeSpace / 1_000_000_000.0;
+            }
+            catch { return 0; }
+        }
+
+        private void SelectEngineCard(VoiceEngineCardVM card)
+        {
+            _chosenEngine = card.Id;
+            _enginePickedByHand = true;
+            RefreshVoicePage();
+        }
+
+        /// <summary>A short recording of the engine, played by Windows itself — so an engine can be heard
+        /// before a gigabyte of it is fetched. The same line on all three — Abby's voice on Breeze and Qwen,
+        /// one of Pocket's own on Pocket, since that is all Pocket has on a fresh computer.</summary>
+        private void HearEngineCard(VoiceEngineCardVM card)
+        {
+            if (!Voice.VoiceService.PlaySample(card.Id))
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "That sample could not be played — its file is missing from the mod's Voices\\_samples folder.", PromptFrameColor));
+        }
+
+        /// <summary>A card's own button once the app runs: switch to an installed engine, or add one.</summary>
+        private void ActOnEngineCard(VoiceEngineCardVM card)
+        {
+            var app = Voice.ClaudeVoiceApp.Now;
+            var installed = app.Health?.Engines.Any(r => string.Equals(r.Id, card.Id, StringComparison.OrdinalIgnoreCase) && r.Installed) ?? false;
+            if (installed) PickEngine(card.Id);
+            else AskToAddEngine(card.Id);
+        }
+
+        public void ExecuteVoiceLangEnglish() { _speakEnglish = true; _enginePickedByHand = false; RefreshVoicePage(); }
+        public void ExecuteVoiceLangOther() { _speakEnglish = false; _enginePickedByHand = false; RefreshVoicePage(); }
+
+        // ---- where the files go ----
+
+        private void BuildDriveChoice()
+        {
+            var engine = Voice.VoiceMachine.ById(_chosenEngine) ?? Voice.VoiceMachine.Qwen;
+            var drives = Voice.VoiceMachine.Drives();
+            var disk = Voice.VoiceMachine.DiskGbFor(engine);
+            var need = disk + 1;
+
+            // The system drive when it has room to spare, else the roomiest — never one that cannot hold it.
+            if (!drives.Any(d => string.Equals(d.Root, _chosenDrive, StringComparison.OrdinalIgnoreCase) && d.FreeGb >= need))
+                _chosenDrive = (drives.FirstOrDefault(d => d.FreeGb >= need + 20)
+                                ?? drives.OrderByDescending(d => d.FreeGb).FirstOrDefault())?.Root ?? string.Empty;
+
+            var list = new MBBindingList<VoiceDriveVM>();
+            foreach (var d in drives)
+                list.Add(new VoiceDriveVM(d, string.Equals(d.Root, _chosenDrive, StringComparison.OrdinalIgnoreCase), d.FreeGb >= need, SelectDrive));
+            _voiceDrives = list;
+
+            var chosen = drives.FirstOrDefault(d => string.Equals(d.Root, _chosenDrive, StringComparison.OrdinalIgnoreCase));
+            var runnable = Voice.VoiceMachine.Judge(engine, chosen?.FreeGb ?? 0).Fit != Voice.VoiceMachine.Fit.No;
+
+            if (engine == Voice.VoiceMachine.Pocket)
+            {
+                // Pocket's few files live with the app itself; there is nothing big to place.
+                _showVoiceDrives = false;
+                _voiceStoreText = "Pocket is small — about 1.5 GB, kept beside the app in your user folder. Nothing to choose here.";
+            }
+            else
+            {
+                _showVoiceDrives = drives.Count > 0;
+                _voiceStoreText = chosen == null
+                    ? "No drive here has room for it."
+                    : engine == Voice.VoiceMachine.Qwen && Voice.VoiceMachine.QwenModelHere
+                        ? $"The Qwen model already on this computer stays where it is. The rest, about {Voice.VoiceMachine.Gb(disk)}, goes in:   {chosen.DataDir}"
+                        : $"{engine.Name} keeps about {Voice.VoiceMachine.Gb(disk)} of voice files in:   {chosen.DataDir}";
+            }
+            _voiceInstallText = $"Install {engine.Name}   ·   {Voice.VoiceMachine.Gb(Voice.VoiceMachine.DownloadGbFor(engine))} download";
+            _canInstallVoice = runnable && !Voice.ClaudeVoiceApp.SetupRunning && (engine == Voice.VoiceMachine.Pocket || chosen != null);
+        }
+
+        private void SelectDrive(VoiceDriveVM drive)
+        {
+            _chosenDrive = drive.Drive.Root;
+            RefreshVoicePage();
+        }
+
+        private string ChosenDataDir()
+        {
+            var drive = Voice.VoiceMachine.Drives().FirstOrDefault(d => string.Equals(d.Root, _chosenDrive, StringComparison.OrdinalIgnoreCase));
+            return drive?.DataDir ?? string.Empty;
+        }
+
+        /// <summary>Where a second engine's files go: beside the first one's, or the default place.</summary>
+        private static string VoiceDataDirForAdding()
+        {
+            var install = Voice.ClaudeVoiceApp.FindInstall();
+            var data = install?.DataDir ?? string.Empty;
+            if (data.Length > 0) return data;
+            return Voice.VoiceMachine.Drives().FirstOrDefault()?.DataDir ?? string.Empty;
+        }
+
+        public void ExecuteVoiceInstall()
+        {
+            if (!_canInstallVoice) return;
+            var engine = Voice.VoiceMachine.ById(_chosenEngine) ?? Voice.VoiceMachine.Qwen;
+            Voice.VoiceService.StopSample();
+            _forceChoose = false;
+            Voice.ClaudeVoiceApp.RunSetup(engine.Id, engine == Voice.VoiceMachine.Pocket ? string.Empty : ChosenDataDir());
+            RefreshVoices();
+        }
+
+        // ---- the install, as it goes ----
+
+        private static readonly string[] FourSteps = { "app", "engine", "model", "start" };
+
+        private void BuildInstallProgress(Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            var s = app.Setup != null && app.Setup.IsRunning ? app.Setup : null;
+            var engine = Voice.VoiceMachine.ById(s?.Engine) ?? Voice.VoiceMachine.ById(_chosenEngine) ?? Voice.VoiceMachine.Qwen;
+            _voiceProgressTitle = "Installing " + engine.Name;
+
+            var steps = engine == Voice.VoiceMachine.Pocket ? new[] { "app", "engine", "start" } : FourSteps;
+            var phase = s?.Phase ?? "app";
+            var at = Array.IndexOf(steps, phase);
+            if (at < 0) at = phase == "model" ? Array.IndexOf(steps, "start") : 0;
+
+            var list = new MBBindingList<VoiceStepVM>();
+            for (var i = 0; i < steps.Length; i++)
+            {
+                var (label, size) = StepWords(steps[i], engine);
+                var state = i < at ? 1 : i == at ? 0 : -1;
+                list.Add(new VoiceStepVM(label, state < 0 ? size : state == 0 ? "now" : "done", state));
+            }
+            _voiceSteps = list;
+
+            _voiceProgressHeadline = s != null && s.Headline.Length > 0 ? s.Headline
+                                   : Voice.ClaudeVoiceApp.SetupLine.Length > 0 ? Voice.ClaudeVoiceApp.SetupLine : "Getting ready…";
+            _showVoiceBar = s?.PhaseFraction != null;
+            _voiceProgressAmount = (int)Math.Round(Math.Max(0, Math.Min(1, s?.PhaseFraction ?? 0)) * 1000);
+
+            var detail = s?.Detail ?? string.Empty;
+            if (s != null && s.PhaseFraction == null && s.PhaseStartedUtc > DateTime.MinValue)
+                detail = (detail.Length > 0 ? detail + "   " : string.Empty) + "(" + Elapsed(DateTime.UtcNow - s.PhaseStartedUtc) + " so far)";
+            _voiceProgressDetail = detail;
+
+            _voiceProgressOverall = s?.Fraction != null
+                ? $"Overall about {Math.Round(s.Fraction.Value * 100)}% done" + (s.StartedUtc > DateTime.MinValue ? $"  ·  started {Elapsed(DateTime.UtcNow - s.StartedUtc)} ago" : string.Empty)
+                : string.Empty;
+        }
+
+        private static (string label, string size) StepWords(string step, Voice.VoiceMachine.Engine engine)
+        {
+            switch (step)
+            {
+                case "app": return ("The voice app", "a few MB — and Python, if this computer has none");
+                case "engine":
+                    return engine == Voice.VoiceMachine.Breeze ? ("PyTorch and Breeze", "about 3.5 GB")
+                         : engine == Voice.VoiceMachine.Pocket ? ("Pocket", "about 1 GB")
+                         : ("The speech engine", "about 0.7 GB");
+                case "model":
+                    return engine == Voice.VoiceMachine.Breeze ? ("The Breeze voice model", "7.7 GB — the long part")
+                         : ("The voice model", "about 2.4 GB");
+                default: return ("The first start", "a minute or so");
+            }
+        }
+
+        private static string Elapsed(TimeSpan t)
+        {
+            if (t.TotalSeconds < 60) return $"{Math.Max(1, (int)t.TotalSeconds)} s";
+            if (t.TotalMinutes < 60) return $"{(int)t.TotalMinutes} min {t.Seconds:00} s";
+            return $"{(int)t.TotalHours} h {t.Minutes:00} min";
+        }
+
+        public void ExecuteVoiceCancelInstall()
+        {
+            InformationManager.ShowInquiry(new InquiryData(
+                "Stop the install?",
+                "Nothing is lost — what has downloaded stays, and installing again carries on from where it stopped.",
+                true, true, "Stop it", "Keep going",
+                () => { Voice.ClaudeVoiceApp.CancelSetup(); RefreshVoices(); },
+                null));
+        }
+
+        // ---- when it stopped ----
+
+        private void BuildInstallFailure(Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            var s = app.Setup;
+            if (s == null) return;
+            var engine = Voice.VoiceMachine.ById(s.Engine);
+            if (s.IsCancelled)
+            {
+                _voiceFailTitle = "The install was stopped";
+                _voiceFailText = "Nothing is lost: what had downloaded stays where it is, and installing again carries on from there.";
+                return;
+            }
+            _voiceFailTitle = (engine == null ? "The install" : "Installing " + engine.Name) + " didn't finish";
+            var why = s.IsRunning ? "The installer closed before it was done — the computer may have gone to sleep, or it was shut down."
+                                  : (s.Error.Length > 0 ? s.Error : "It stopped without saying why.");
+            _voiceFailText = why + "\n\n"
+                           + "Nothing is lost: what had downloaded stays, and \"Try again\" carries on from where it stopped.\n\n"
+                           + "If it stops at the same place again, \"Show what happened\" opens its log, and \"Use the setup window\" runs the same install "
+                           + "in a window of its own — sometimes a firewall or antivirus asks there first.";
+        }
+
+        public void ExecuteVoiceRetry()
+        {
+            var s = Voice.ClaudeVoiceApp.Now.Setup;
+            var engine = Voice.VoiceMachine.ById(s?.Engine) ?? Voice.VoiceMachine.ById(_chosenEngine) ?? Voice.VoiceMachine.Qwen;
+            var data = s?.DataDir ?? string.Empty;
+            if (data.Length == 0 && engine != Voice.VoiceMachine.Pocket) data = ChosenDataDir();
+            _forceChoose = false;
+            Voice.ClaudeVoiceApp.RunSetup(engine.Id, data);
+            RefreshVoices();
+        }
+
+        public void ExecuteVoiceShowLog() => Voice.ClaudeVoiceApp.OpenSetupLog();
+
+        public void ExecuteVoiceSetupWindow()
+        {
+            var s = Voice.ClaudeVoiceApp.Now.Setup;
+            Voice.ClaudeVoiceApp.OpenSetupWindow(s?.Engine ?? _chosenEngine);
+            InformationManager.DisplayMessage(new InformationMessage(
+                "The voice app's setup is opening in its own window — Alt+Tab if it is hidden behind the game.", PromptFrameColor));
+            RefreshVoices();
+        }
+
+        /// <summary>Back to the engine cards — from a stopped install, or from an app that cannot load
+        /// what it has. What was already downloaded is kept; the next install carries on from it.</summary>
+        public void ExecuteVoiceChooseAgain()
+        {
+            Voice.ClaudeVoiceApp.DismissSetupResult();
+            _forceChoose = true;
+            RefreshVoices();
+        }
+
+        // ---- asleep, waking, removing ----
+
+        private void BuildAsleep(Voice.ClaudeVoiceApp.Snapshot app)
+        {
+            switch (_voicePage)
+            {
+                case VoicePageKind.Waking when AppCannotLoad(app):
+                    _voiceAsleepTitle = "The voice app can't load its voice";
+                    _voiceAsleepText = "It started, but said: " + app.Health!.Error.Trim() + "\n\n"
+                                     + "Usually this means an engine did not finish installing. \"Choose an engine…\" below installs one "
+                                     + "(what was already downloaded is kept), or \"Remove the voice app…\" clears it all for a fresh start.";
+                    _showVoiceStart = false;
+                    break;
+                case VoicePageKind.Waking:
+                    _voiceAsleepTitle = "Waking up the voices…";
+                    _voiceAsleepText = "Loading the voice model into memory. The first start after installing takes up to a minute; after that it is quicker.\n\n"
+                                     + "While it runs, it keeps its model in your graphics card — and it closes again when you leave the game, so the card is free for everything else.";
+                    _voiceStartText = "Waking up…";
+                    _canStartVoice = false;
+                    _showVoiceStart = true;
+                    break;
+                case VoicePageKind.Removing:
+                    _voiceAsleepTitle = "Removing the voice app…";
+                    _voiceAsleepText = "Taking claude-voice and the voice files it downloaded off this computer. It takes a few seconds.";
+                    _showVoiceStart = false;
+                    break;
+                case VoicePageKind.Looking:
+                    _voiceAsleepTitle = "Looking for the voice app…";
+                    _voiceAsleepText = string.Empty;
+                    _showVoiceStart = false;
+                    break;
+                default:
+                    _voiceAsleepTitle = "The voice app isn't running";
+                    _voiceAsleepText = "Start it and the characters can speak. It takes up to a minute to load its voice.\n\n"
+                                     + "While it runs, it keeps its model in your graphics card — and it closes again when you leave the game, so the card is free for everything else. "
+                                     + ((_config?.VoiceStartAppWithGame ?? true)
+                                         ? "With voices on, it also starts by itself whenever you load a campaign."
+                                         : "\"Start the voice app with the game\" in the mod's settings would start it by itself.");
+                    _voiceStartText = "Start the voice app";
+                    _canStartVoice = true;
+                    _showVoiceStart = true;
+                    break;
+            }
+        }
+
+        public void ExecuteVoiceStart()
+        {
+            if (_config != null && !_config.EnableVoice) { _config.EnableVoice = true; _config.Save(); }
+            if (!Voice.ClaudeVoiceApp.Start())
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "The voice app would not start. Try \"Remove the voice app\" and install it again.", PromptFrameColor));
+            RefreshVoices();
+        }
+
+        // ---- running: the tabs ----
+
+        public void ExecuteVoiceTabCast() { _voiceTab = "cast"; RefreshVoices(); }
+
+        public void ExecuteVoiceTabEngines()
+        {
+            _voiceTab = "engines";
+            Voice.ClaudeVoiceApp.RefreshStorage();
+            RefreshVoicePage();
+        }
+
+        /// <summary>Where each part lives and how big it is — the answer to "I downloaded twenty
+        /// gigabytes, where are they?" — with a button to open each folder.</summary>
+        private void BuildStorage()
+        {
+            var list = new MBBindingList<VoiceStorageRowVM>();
+            var st = Voice.ClaudeVoiceApp.Storage;
+            if (st == null)
+            {
+                list.Add(new VoiceStorageRowVM("Measuring…", string.Empty, string.Empty, string.Empty));
+                _voiceStorageTotal = string.Empty;
+            }
+            else
+            {
+                long total = 0;
+                void Row(string name, ImmersiveAI.Voice.ClaudeVoiceClient.Storage.Place place)
+                {
+                    if (place.Dirs.Count == 0) return;
+                    total += place.Bytes;
+                    var shown = place.Dirs[0] + (place.Dirs.Count > 1 ? $"   (and {place.Dirs.Count - 1} more folder)" : string.Empty);
+                    list.Add(new VoiceStorageRowVM(name, Voice.VoiceMachine.Bytes(place.Bytes), shown, place.Dirs[0]));
+                }
+                Row("The voice app", st.App);
+                foreach (var e in Voice.VoiceMachine.All)
+                    if (st.Engines.TryGetValue(e.Id, out var place) && (place.Installed || place.Bytes > 0))
+                        Row(e.Name, place);
+                _voiceStorageTotal = $"In all:  {Voice.VoiceMachine.Bytes(total)} on your drives. \"Remove the voice app\" below takes all of it away again.";
+            }
+            _voiceStorage = list;
+        }
+
+        public void ExecuteVoiceOpenPanel() => Voice.ClaudeVoiceApp.OpenPanel();
+
+        /// <summary>Closes the voice app — its model leaves the graphics card; nothing else is lost.</summary>
+        public void ExecuteVoiceAppClose()
+        {
+            Voice.ClaudeVoiceApp.Close();
+            InformationManager.DisplayMessage(new InformationMessage(
+                "Closing the voice app — your graphics card is free again. \"Start the voice app\" brings it back.", PromptFrameColor));
+        }
+
+        /// <summary>
+        /// Takes it all away — asked here, in the game, so nothing pops up outside it. Says how much it
+        /// removes and that nothing that was there before goes with it.
+        /// </summary>
+        public void ExecuteVoiceUninstall()
+        {
+            var install = Voice.ClaudeVoiceApp.FindInstall();
+            if (install == null) return;
+            if (install.IsGitCopy)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "This voice app is a developer's own copy (a git folder), so it is not removed from here — delete that folder by hand if you mean to.",
+                    PromptFrameColor));
+                return;
+            }
+            var st = Voice.ClaudeVoiceApp.Storage;
+            var total = st == null ? 0 : st.App.Bytes + st.Engines.Values.Sum(p => p.Bytes);
+            InformationManager.ShowInquiry(new InquiryData(
+                "Remove the voice app?",
+                "This takes claude-voice off your computer — the app and the voice files it downloaded"
+                + (total > 0 ? $" (about {Voice.VoiceMachine.Bytes(total)})" : string.Empty) + ". "
+                + "Anything that was on your computer before it stays.\n\n"
+                + "Voices are turned off in the game. You can install them again from this page whenever you like.",
+                true, true, "Remove it", "Keep it",
+                () =>
+                {
+                    if (_config != null && _config.EnableVoice) { _config.EnableVoice = false; _config.Save(); }
+                    Voice.VoiceService.Stop();
+                    if (!Voice.ClaudeVoiceApp.Uninstall())
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "The voice app could not be removed from here. Windows' Settings → Apps → claude-voice → Uninstall does the same.",
+                            PromptFrameColor));
+                    _voiceTab = "cast";
+                    RefreshVoices();
+                },
+                null));
+        }
+
+        /// <summary>Adding a second engine: what it is, how big, where it goes — then the same quiet install.</summary>
+        private void AskToAddEngine(string engineId)
+        {
+            var e = Voice.VoiceMachine.ById(engineId);
+            if (e == null) return;
+            var data = VoiceDataDirForAdding();
+            InformationManager.ShowInquiry(new InquiryData(
+                "Install " + e.Name + "?",
+                e.Tagline + "\n\n"
+                + $"It downloads about {Voice.VoiceMachine.Gb(e.DownloadGb)} and keeps about {Voice.VoiceMachine.Gb(e.DiskGb)}"
+                + (e == Voice.VoiceMachine.Pocket || data.Length == 0 ? " beside the app" : " in " + data) + ". "
+                + "The voices pause while it installs — usually 5 to 20 minutes — and come back speaking with " + e.Name + ".\n\n"
+                + "Your other engines stay; you can switch back whenever you like.",
+                true, true, "Install it", "Not now",
+                () =>
+                {
+                    Voice.ClaudeVoiceApp.RunSetup(e.Id, e == Voice.VoiceMachine.Pocket ? string.Empty : data);
+                    RefreshVoices();
+                },
+                null));
+        }
+
+        /// <summary>Switches to an installed engine.</summary>
+        private void PickEngine(string engine)
+        {
+            var app = Voice.ClaudeVoiceApp.Now;
+            if (!app.Running || string.Equals(app.Engine, engine, StringComparison.OrdinalIgnoreCase)) return;
+            Voice.ClaudeVoiceApp.SetEngine(engine);
+            InformationManager.DisplayMessage(new InformationMessage(
+                $"Switching to {Voice.ClaudeVoiceApp.EngineName(engine)}. The next line waits a moment while it loads.",
+                PromptFrameColor));
+        }
+
+        /// <summary>
+        /// The voice this soul speaks with, beside their name in the thread — because there is no
+        /// other way to know it without opening the panel (Anton, 2026.08.15: "he had the Max voice I
+        /// think, but I couldn't check"). Silent when voices are off.
+        /// </summary>
+        private void RefreshVoiceBadge()
+        {
+            try
+            {
+                var hero = _selected?.Hero;
+                if (hero == null || _config == null || !_config.EnableVoice)
+                {
+                    VoiceBadgeText = string.Empty;
+                    return;
+                }
+
+                var id = Voice.VoiceService.VoiceIdFor(hero);
+                var voice = Voice.VoiceService.Shelf()
+                    .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
+
+                if (voice == null) { VoiceBadgeText = Voice.ClaudeVoiceApp.Now.Running ? "(no voice)" : string.Empty; return; }
+
+                VoiceBadgeText = Voice.VoiceService.OriginFor(hero) == Voice.VoiceService.VoiceOrigin.Cast
+                    ? "(" + voice.Name + ")"
+                    : "(" + voice.Name + ", of their people)";
+            }
+            catch { VoiceBadgeText = string.Empty; }
+        }
+
+        // ---- the shelf: who speaks with what ----
+
         /// <summary>Rebuilds the shelf and everything said about it. Cheap, and called after every
         /// change so the marks under the names are never stale.</summary>
-        private void RefreshVoices()
+        private void RefreshShelf()
         {
             try
             {
@@ -1438,48 +2248,14 @@ namespace ImmersiveAI.UI.TalkScreen
                 VoiceRows = rows;
                 _voicePick = rows.FirstOrDefault(r => r.IsSelected);
                 VoiceStatusText = BuildVoiceStatus();
-                foreach (var name in new[]
-                {
-                    "HasVoicePick", "VoiceGiveText", "VoiceEnabledText", "VoiceActionText", "ShowVoiceAction",
-                    "ShowVoiceEngines", "VoiceEngineBreezeText", "VoiceEngineQwenText", "VoiceEnginePocketText",
-                    "ShowVoiceAppClose", "NoVoicesText",
-                })
+                foreach (var name in new[] { "HasVoicePick", "VoiceGiveText", "VoiceEnabledText", "NoVoicesText" })
                     OnPropertyChanged(name);
             }
             catch (Exception ex)
             {
-                ModLog.Error("voice: building the voices panel", ex);
+                ModLog.Error("voice: building the voices shelf", ex);
                 VoiceStatusText = "The voices could not be read just now.";
             }
-        }
-
-        /// <summary>
-        /// The voice this soul speaks with, beside their name in the thread — because there is no
-        /// other way to know it without opening the panel (Anton, 2026.08.15: "he had the Max voice I
-        /// think, but I couldn't check"). Silent when voices are off.
-        /// </summary>
-        private void RefreshVoiceBadge()
-        {
-            try
-            {
-                var hero = _selected?.Hero;
-                if (hero == null || _config == null || !_config.EnableVoice)
-                {
-                    VoiceBadgeText = string.Empty;
-                    return;
-                }
-
-                var id = Voice.VoiceService.VoiceIdFor(hero);
-                var voice = Voice.VoiceService.Shelf()
-                    .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
-
-                if (voice == null) { VoiceBadgeText = Voice.ClaudeVoiceApp.Now.Running ? "(no voice)" : string.Empty; return; }
-
-                VoiceBadgeText = Voice.VoiceService.OriginFor(hero) == Voice.VoiceService.VoiceOrigin.Cast
-                    ? "(" + voice.Name + ")"
-                    : "(" + voice.Name + ", of their people)";
-            }
-            catch { VoiceBadgeText = string.Empty; }
         }
 
         // ---- the shelf, in folders ----
@@ -1515,7 +2291,7 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             if (header == null || !header.IsHeader) return;
             if (!_foldedVoiceGroups.Remove(header.GroupKey)) _foldedVoiceGroups.Add(header.GroupKey);
-            RefreshVoices();
+            RefreshShelf();
         }
 
         /// <summary>
@@ -1550,67 +2326,20 @@ namespace ImmersiveAI.UI.TalkScreen
             catch { return string.Empty; }
         }
 
-        /// <summary>What the page says at the top: whether voices are on, where the app stands, and
-        /// what the soul in front of you sounds like. Short sentences, and always the next step.</summary>
+        /// <summary>One line over the shelf: who this soul sounds like right now, and why.</summary>
         private string BuildVoiceStatus()
         {
-            var lines = new List<string>(3);
             var app = Voice.ClaudeVoiceApp.Now;
-
-            if (_config == null || !_config.EnableVoice)
-                lines.Add("Voices are OFF in the game. Nothing is spoken until you press \"Turn voices on\" below.");
-
-            switch (app.State)
-            {
-                case Voice.ClaudeVoiceApp.AppState.NotInstalled:
-                    lines.Add("The voices come from claude-voice, a free app that runs beside the game. It isn't on this computer yet — "
-                              + "press \"Install the voice app\" and follow its window. It picks the right voice for your computer by itself.");
-                    break;
-                case Voice.ClaudeVoiceApp.AppState.Installing:
-                    lines.Add("Installing the voice app — "
-                              + (Voice.ClaudeVoiceApp.SetupLine.Length > 0 ? Voice.ClaudeVoiceApp.SetupLine : "follow its window")
-                              + ". Carry on playing; this page wakes up when it is done.");
-                    break;
-                case Voice.ClaudeVoiceApp.AppState.Installed:
-                    lines.Add("The voice app is installed, but asleep. Press \"Start the voice app\" — the first start takes up to a minute.");
-                    break;
-                case Voice.ClaudeVoiceApp.AppState.Starting:
-                    lines.Add("The voice app is waking up — loading its voice, up to a minute…");
-                    break;
-                case Voice.ClaudeVoiceApp.AppState.Running:
-                    lines.Add("The voice app is running, speaking with " + Voice.ClaudeVoiceApp.EngineName(app.Engine)
-                              + EngineManner(app.Engine) + ". Press ♪ beside a voice to hear it.");
-                    break;
-                default:
-                    lines.Add("Looking for the voice app…");
-                    break;
-            }
-
             var chosen = _selected?.Hero;
-            if (chosen != null && app.Running)
-            {
-                var id = Voice.VoiceService.VoiceIdFor(chosen);
-                var voice = Voice.VoiceService.Shelf()
-                    .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
-                lines.Add(voice == null
-                    ? $"{chosen.Name} has no voice yet."
-                    : Voice.VoiceService.OriginFor(chosen) == Voice.VoiceService.VoiceOrigin.Cast
-                        ? $"{chosen.Name} speaks with {voice.Name} — chosen by you."
-                        : $"{chosen.Name} speaks with {voice.Name} — a voice of their own people.");
-            }
-
-            return string.Join("\n", lines);
-        }
-
-        private static string EngineManner(string engine)
-        {
-            switch ((engine ?? string.Empty).ToLowerInvariant())
-            {
-                case "breeze": return ", which laughs, sighs and whispers (English)";
-                case "qwen": return ", which reads every language";
-                case "pocket": return ", which needs no graphics card (English and five European languages)";
-                default: return string.Empty;
-            }
+            if (chosen == null || !app.Running) return string.Empty;
+            var id = Voice.VoiceService.VoiceIdFor(chosen);
+            var voice = Voice.VoiceService.Shelf()
+                .FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase));
+            return voice == null
+                ? $"{chosen.Name} has no voice on this engine yet — pick one below and give it to them."
+                : Voice.VoiceService.OriginFor(chosen) == Voice.VoiceService.VoiceOrigin.Cast
+                    ? $"{chosen.Name} speaks with {voice.Name} — chosen by you."
+                    : $"{chosen.Name} speaks with {voice.Name} — a voice of their own people. Pick another below to change it.";
         }
 
         private void PickVoice(VoiceRowVM row)
@@ -1631,7 +2360,7 @@ namespace ImmersiveAI.UI.TalkScreen
             if (_config != null && !_config.EnableVoice)
             {
                 InformationManager.DisplayMessage(new InformationMessage(
-                    "Voices are off — turn them on here first, and this will speak.", PromptFrameColor));
+                    "Voices are off — turn them on first (the button at the top of this page), and this will speak.", PromptFrameColor));
                 return;
             }
             if (!row.IsReady)
@@ -1654,7 +2383,7 @@ namespace ImmersiveAI.UI.TalkScreen
             if (!_config.EnableVoice)
             {
                 Voice.VoiceService.Stop();
-                InformationManager.DisplayMessage(new InformationMessage("Voices are off.", PromptFrameColor));
+                InformationManager.DisplayMessage(new InformationMessage("Voices are off. The voice app keeps running until you close it or leave the game.", PromptFrameColor));
             }
             else
             {
@@ -1663,8 +2392,8 @@ namespace ImmersiveAI.UI.TalkScreen
                 if (state == Voice.ClaudeVoiceApp.AppState.Installed) Voice.ClaudeVoiceApp.Start();
                 InformationManager.DisplayMessage(new InformationMessage(
                     state == Voice.ClaudeVoiceApp.AppState.NotInstalled
-                        ? "Voices are on. One more step: press \"Install the voice app\"."
-                        : "Voices are on. Choose a voice below and press ♪ to hear it.", PromptFrameColor));
+                        ? "Voices are on. One more step: install the voice app on this page."
+                        : "Voices are on. Every character speaks with a voice of their own people — press ♪ to hear one.", PromptFrameColor));
             }
             RefreshVoices();
             RefreshVoiceBadge();
@@ -1688,7 +2417,7 @@ namespace ImmersiveAI.UI.TalkScreen
             give(row.Id);
             InformationManager.DisplayMessage(new InformationMessage(
                 $"{row.Name} is now the voice of {whom}.", PromptFrameColor));
-            RefreshVoices();
+            RefreshShelf();
             RefreshVoiceBadge();
         }
 
@@ -1700,7 +2429,7 @@ namespace ImmersiveAI.UI.TalkScreen
             Voice.VoiceService.Cast(npc, null);
             InformationManager.DisplayMessage(new InformationMessage(
                 $"{npc.Name} goes back to a voice of their own people.", PromptFrameColor));
-            RefreshVoices();
+            RefreshShelf();
             RefreshVoiceBadge();
         }
 
@@ -1711,92 +2440,8 @@ namespace ImmersiveAI.UI.TalkScreen
             _showEveryVoice = !_showEveryVoice;
             _voiceFoldSeed = string.Empty;
             OnPropertyChanged("VoiceShowAllText");
-            RefreshVoices();
+            RefreshShelf();
             RefreshVoiceBadge();
-        }
-
-        /// <summary>
-        /// THE ONE BUTTON, always the next step: install the app, start it, or — once it runs —
-        /// open its own window (volume, pause, the history of what was said).
-        /// </summary>
-        public void ExecuteVoiceAction()
-        {
-            switch (Voice.ClaudeVoiceApp.Now.State)
-            {
-                case Voice.ClaudeVoiceApp.AppState.NotInstalled:
-                    AskToInstall(null);
-                    break;
-                case Voice.ClaudeVoiceApp.AppState.Installed:
-                    if (_config != null && !_config.EnableVoice) { _config.EnableVoice = true; _config.Save(); }
-                    if (!Voice.ClaudeVoiceApp.Start())
-                        InformationManager.DisplayMessage(new InformationMessage(
-                            "The voice app would not start — try the Abby icon on your desktop, or install it again.", PromptFrameColor));
-                    break;
-                case Voice.ClaudeVoiceApp.AppState.Running:
-                    Voice.ClaudeVoiceApp.OpenPanel();
-                    break;
-                default:
-                    Voice.ClaudeVoiceApp.Poll(force: true);
-                    break;
-            }
-            RefreshVoices();
-        }
-
-        /// <summary>
-        /// Asks first, and the asking is the point: this fetches a program, and it will download a
-        /// voice model of a few gigabytes. So it says what happens, where, and that nothing needs
-        /// administrator rights — and does nothing until they say yes.
-        /// </summary>
-        private void AskToInstall(string? engine)
-        {
-            var what = engine == null ? "the voice app" : Voice.ClaudeVoiceApp.EngineName(engine);
-            InformationManager.ShowInquiry(new InquiryData(
-                engine == null ? "Install the voice app" : "Add " + what,
-                (engine == null
-                    ? "The voices are made by claude-voice — a free, open app that reads text aloud in natural voices, right on your own computer. Nothing leaves your PC.\n\n"
-                    : what + " is another voice engine for claude-voice. Its setup opens with " + what + " already chosen.\n\n")
-                + "Pressing Install downloads its small setup program and opens it beside the game (Alt+Tab if you don't see it). "
-                + "In its window, keep the choice marked \"recommended\" and press Install — it does the rest, and needs no administrator rights.\n\n"
-                + "It takes about 10–30 minutes, almost all of it downloading. You can keep playing; this page lights up when it's done.",
-                true, true, "Install", "Not now",
-                () =>
-                {
-                    if (_config != null && !_config.EnableVoice) { _config.EnableVoice = true; _config.Save(); }
-                    Voice.ClaudeVoiceApp.RunSetup(engine);
-                    RefreshVoices();
-                },
-                null));
-        }
-
-        /// <summary>Picks an engine: switches to it when it is installed, offers to add it when not.</summary>
-        private void PickEngine(string engine)
-        {
-            var app = Voice.ClaudeVoiceApp.Now;
-            if (!app.Running) return;
-            if (string.Equals(app.Engine, engine, StringComparison.OrdinalIgnoreCase)) return;
-
-            var row = app.Health?.Engines.FirstOrDefault(e => string.Equals(e.Id, engine, StringComparison.OrdinalIgnoreCase));
-            if (row != null && !row.Installed)
-            {
-                AskToInstall(engine);
-                return;
-            }
-            Voice.ClaudeVoiceApp.SetEngine(engine);
-            InformationManager.DisplayMessage(new InformationMessage(
-                $"Switching to {Voice.ClaudeVoiceApp.EngineName(engine)}. The first line after a switch waits while it loads — up to a minute.",
-                PromptFrameColor));
-        }
-
-        public void ExecuteVoiceEngineBreeze() => PickEngine("breeze");
-        public void ExecuteVoiceEngineQwen() => PickEngine("qwen");
-        public void ExecuteVoiceEnginePocket() => PickEngine("pocket");
-
-        /// <summary>Closes the voice app — its model and memory go with it; nothing else is lost.</summary>
-        public void ExecuteVoiceAppClose()
-        {
-            Voice.ClaudeVoiceApp.Close();
-            InformationManager.DisplayMessage(new InformationMessage(
-                "Closing the voice app. \"Start the voice app\" brings it back.", PromptFrameColor));
         }
 
         /// <summary>The player's own voices folder — where a voice somebody shared can be dropped.
@@ -2668,12 +3313,142 @@ namespace ImmersiveAI.UI.TalkScreen
         [DataSourceProperty]
         public string VoiceButtonText => "Voices";
 
+        // The bar's Voices button wears the app's standing (Anton, 2026.09.24: "red the first time"):
+        // green running, amber waking or installing, red not installed, not running, or an install
+        // that stopped. It is the one thing every player sees, so it is where "something here needs
+        // doing" is told first.
+        [DataSourceProperty]
+        public Color VoiceButtonColor
+        {
+            get
+            {
+                if (Voice.ClaudeVoiceApp.Uninstalling) return VoicePalette.Busy;
+                var app = Voice.ClaudeVoiceApp.Now;
+                switch (app.State)
+                {
+                    case Voice.ClaudeVoiceApp.AppState.Running: return VoicePalette.Good;
+                    case Voice.ClaudeVoiceApp.AppState.Starting:
+                    case Voice.ClaudeVoiceApp.AppState.Installing:
+                    case Voice.ClaudeVoiceApp.AppState.Checking: return VoicePalette.Busy;
+                    default: return VoicePalette.Bad;
+                }
+            }
+        }
+
+        private Voice.ClaudeVoiceApp.AppState? _voiceButtonState;
+
+        /// <summary>Called from the manager's tick: redraws the button's colour when the app's standing
+        /// moved, and — while something is happening that counts seconds (an install, a wake-up, a
+        /// removal) — lets the page's clocks tick once a second.</summary>
+        public void FollowVoiceApp()
+        {
+            var state = Voice.ClaudeVoiceApp.Now.State;
+            if (state != _voiceButtonState)
+            {
+                _voiceButtonState = state;
+                OnPropertyChanged(nameof(VoiceButtonColor));
+            }
+            if (_isVoiceShown
+                && (state == Voice.ClaudeVoiceApp.AppState.Installing || state == Voice.ClaudeVoiceApp.AppState.Starting || Voice.ClaudeVoiceApp.Uninstalling)
+                && DateTime.UtcNow - _voicePageTickUtc > TimeSpan.FromSeconds(1))
+            {
+                _voicePageTickUtc = DateTime.UtcNow;
+                RefreshVoicePage();
+            }
+        }
+
         [DataSourceProperty]
         public bool IsVoiceShown
         {
             get => _isVoiceShown;
-            set { if (value != _isVoiceShown) { _isVoiceShown = value; OnPropertyChangedWithValue(value, "IsVoiceShown"); } }
+            set
+            {
+                if (value == _isVoiceShown) return;
+                _isVoiceShown = value;
+                if (!value) Voice.VoiceService.StopSample();
+                OnPropertyChangedWithValue(value, "IsVoiceShown");
+            }
         }
+
+        [DataSourceProperty] public string VoiceTitleText => "Voices";
+        [DataSourceProperty] public string VoiceStateText => _voiceStateText;
+        [DataSourceProperty] public Color VoiceStateColor => _voiceStateColor;
+        [DataSourceProperty] public string VoiceLeadText => _voiceLeadText;
+
+        // ---- which page shows ----
+
+        [DataSourceProperty] public bool ShowVoicePageChoose => _voicePage == VoicePageKind.Choose;
+        [DataSourceProperty] public bool ShowVoicePageInstalling => _voicePage == VoicePageKind.Installing;
+        [DataSourceProperty] public bool ShowVoicePageFailed => _voicePage == VoicePageKind.Failed;
+        [DataSourceProperty]
+        public bool ShowVoicePageAsleep => _voicePage == VoicePageKind.Asleep || _voicePage == VoicePageKind.Waking
+                                           || _voicePage == VoicePageKind.Removing || _voicePage == VoicePageKind.Looking;
+        [DataSourceProperty] public bool ShowVoicePageCast => _voicePage == VoicePageKind.Cast;
+        [DataSourceProperty] public bool ShowVoicePageEngines => _voicePage == VoicePageKind.Engines;
+        [DataSourceProperty] public bool ShowEngineCards => _voicePage == VoicePageKind.Choose || _voicePage == VoicePageKind.Engines;
+        [DataSourceProperty] public bool ShowVoiceTabs => _voicePage == VoicePageKind.Cast || _voicePage == VoicePageKind.Engines;
+        [DataSourceProperty] public string VoiceTabCastText => (_voicePage == VoicePageKind.Cast ? "✦  " : string.Empty) + "Who speaks how";
+        [DataSourceProperty] public string VoiceTabEnginesText => (_voicePage == VoicePageKind.Engines ? "✦  " : string.Empty) + "Engines & storage";
+
+        // ---- choosing ----
+
+        [DataSourceProperty] public string VoiceChooseTitle => "1    Choose how they speak";
+        [DataSourceProperty] public string VoiceEnginesTitle => "Engines";
+        [DataSourceProperty] public string VoiceMachineText => "Your computer:  " + Voice.VoiceMachine.Describe();
+        [DataSourceProperty] public string VoiceLangTitle => "They'll speak";
+        [DataSourceProperty] public string VoiceLangEnglishText => (SpeakEnglish ? "✦  " : string.Empty) + "English";
+        [DataSourceProperty] public string VoiceLangOtherText => (!SpeakEnglish ? "✦  " : string.Empty) + "Another language";
+        [DataSourceProperty] public MBBindingList<VoiceEngineCardVM> VoiceEngineCards => _voiceEngineCards;
+
+        [DataSourceProperty] public string VoiceStoreTitle => "2    Where to keep the voice files";
+        [DataSourceProperty] public MBBindingList<VoiceDriveVM> VoiceDrives => _voiceDrives;
+        [DataSourceProperty] public bool ShowVoiceDrives => _showVoiceDrives;
+        [DataSourceProperty] public string VoiceStoreText => _voiceStoreText;
+        [DataSourceProperty] public string VoiceInstallText => _voiceInstallText;
+        [DataSourceProperty] public bool CanInstallVoice => _canInstallVoice;
+        [DataSourceProperty]
+        public string VoiceInstallNote =>
+            "Usually 5 to 20 minutes, almost all of it downloading. Close this page and keep playing if you like; "
+            + "the Voices button turns green when they are ready. No administrator rights, and it can all be removed again from this page.";
+
+        // ---- installing ----
+
+        [DataSourceProperty] public string VoiceProgressTitle => _voiceProgressTitle;
+        [DataSourceProperty] public MBBindingList<VoiceStepVM> VoiceInstallSteps => _voiceSteps;
+        [DataSourceProperty] public string VoiceProgressHeadline => _voiceProgressHeadline;
+        [DataSourceProperty] public bool ShowVoiceBar => _showVoiceBar;
+        [DataSourceProperty] public int VoiceProgressAmount => _voiceProgressAmount;
+        [DataSourceProperty] public string VoiceProgressDetail => _voiceProgressDetail;
+        [DataSourceProperty] public string VoiceProgressOverall => _voiceProgressOverall;
+        [DataSourceProperty]
+        public string VoiceProgressNote =>
+            "Quitting the game is fine too: the install carries on by itself, and this page picks it up again next time. "
+            + "When it is done, the voice app opens its own small window once, so you can see where it lives — "
+            + "closing that window is fine, the voices go on.";
+        [DataSourceProperty] public string VoiceCancelText => "Stop the install";
+
+        // ---- stopped ----
+
+        [DataSourceProperty] public string VoiceFailTitle => _voiceFailTitle;
+        [DataSourceProperty] public string VoiceFailText => _voiceFailText;
+        [DataSourceProperty] public string VoiceRetryText => "Try again";
+        [DataSourceProperty] public string VoiceLogText => "Show what happened";
+        [DataSourceProperty] public string VoiceWindowText => "Use the setup window";
+        [DataSourceProperty] public string VoiceChooseAgainText => "Choose again";
+
+        // ---- asleep / waking / removing ----
+
+        [DataSourceProperty] public string VoiceAsleepTitle => _voiceAsleepTitle;
+        [DataSourceProperty] public string VoiceAsleepText => _voiceAsleepText;
+        [DataSourceProperty] public string VoiceStartText => _voiceStartText;
+        [DataSourceProperty] public bool CanStartVoice => _canStartVoice;
+        [DataSourceProperty] public bool ShowVoiceStart => _showVoiceStart && _voicePage != VoicePageKind.Removing;
+        [DataSourceProperty]
+        public bool ShowVoiceRemoveAsleep => _voicePage == VoicePageKind.Asleep
+                                            || (_voicePage == VoicePageKind.Waking && AppCannotLoad(Voice.ClaudeVoiceApp.Now));
+        [DataSourceProperty] public string VoiceChooseEngineText => "Choose an engine…";
+
+        // ---- running: who speaks how ----
 
         [DataSourceProperty]
         public MBBindingList<VoiceRowVM> VoiceRows
@@ -2692,13 +3467,10 @@ namespace ImmersiveAI.UI.TalkScreen
             {
                 if (_voiceRows.Count > 0) return string.Empty;
                 return Voice.ClaudeVoiceApp.Now.Running
-                    ? "This engine has no voices yet. Switch engine above, or add one in the voice app's own window."
+                    ? "This engine has no voices to offer yet. \"Engines & storage\" above switches to another."
                     : "The voices appear here once the voice app is running.";
             }
         }
-
-        [DataSourceProperty]
-        public string VoiceTitleText => "Voices";
 
         [DataSourceProperty]
         public string VoiceStatusText
@@ -2707,97 +3479,40 @@ namespace ImmersiveAI.UI.TalkScreen
             set { if (value != _voiceStatusText) { _voiceStatusText = value; OnPropertyChangedWithValue(value, "VoiceStatusText"); } }
         }
 
+        [DataSourceProperty] public bool ShowVoicesOffBanner => _config != null && !_config.EnableVoice;
+        [DataSourceProperty] public string VoicesOffText => "Voices are OFF — nothing is spoken until you turn them on.";
+        [DataSourceProperty] public string VoicesOnText => "Turn voices on";
+
         [DataSourceProperty]
         public string VoiceHintText =>
             // ♪ NOT ▶ — see VoiceRowVM.HearText: the shipped fonts' fallback covers Miscellaneous
             // Symbols and Dingbats but NOT Geometric Shapes, so U+25B6 draws as a question mark.
-            "Press ♪ beside a voice to hear it, then give it to whoever you like — the same ♪ beside any words in the "
-            + "conversation reads them aloud.\n"
-            + "Breeze acts — it laughs, sighs and whispers (English; an NVIDIA card with 16 GB). "
-            + "Qwen reads every language, Bulgarian included (an NVIDIA card with 4 GB). "
-            + "Pocket runs on any computer (English and five European languages).";
+            "Press ♪ beside a voice to hear it. Pick one, then give it to someone below. The same ♪ beside any words in a talk reads them aloud.";
 
-        /// <summary>The one big button — always the next step. See ExecuteVoiceAction.</summary>
+        [DataSourceProperty] public bool HasVoicePick => _voicePick != null;
+        [DataSourceProperty] public string VoiceGiveText => _voicePick == null ? "Pick a voice above, then give it to…" : $"Give {_voicePick.Name} to…";
+        [DataSourceProperty] public string VoiceForThemText => _selected?.Hero == null ? "this soul" : SelectedName;
+        [DataSourceProperty] public bool CanCastOnThem => _selected?.Hero != null;
+        [DataSourceProperty] public string VoiceEnabledText => _config != null && _config.EnableVoice ? "Turn voices off" : "Turn voices on";
+        [DataSourceProperty] public string VoiceShowAllText => _showEveryVoice ? "Only theirs" : "Every voice";
+        [DataSourceProperty] public string VoiceFolderText => "My voices folder";
+        [DataSourceProperty] public string VoiceMineText => "me";
+        [DataSourceProperty] public string VoiceClearText => "Their people's";
+
+        // ---- running: engines & storage ----
+
+        [DataSourceProperty] public string VoiceStorageTitle => "Where the files are";
+        [DataSourceProperty] public MBBindingList<VoiceStorageRowVM> VoiceStorageRows => _voiceStorage;
+        [DataSourceProperty] public string VoiceStorageTotal => _voiceStorageTotal;
         [DataSourceProperty]
-        public string VoiceActionText
-        {
-            get
-            {
-                switch (Voice.ClaudeVoiceApp.Now.State)
-                {
-                    case Voice.ClaudeVoiceApp.AppState.NotInstalled: return "Install the voice app";
-                    case Voice.ClaudeVoiceApp.AppState.Installed: return "Start the voice app";
-                    case Voice.ClaudeVoiceApp.AppState.Starting: return "Waking up…";
-                    case Voice.ClaudeVoiceApp.AppState.Installing: return "Installing…";
-                    case Voice.ClaudeVoiceApp.AppState.Running: return "Open the voice app";
-                    default: return "Looking…";
-                }
-            }
-        }
-
-        [DataSourceProperty]
-        public bool ShowVoiceAction => true;
-
-        /// <summary>The engine row is only offered while the app runs: an engine can only be asked
-        /// for by something that is listening.</summary>
-        [DataSourceProperty]
-        public bool ShowVoiceEngines => Voice.ClaudeVoiceApp.Now.Running;
-
-        [DataSourceProperty]
-        public string VoiceEngineTitleText => "Engine:";
-
-        [DataSourceProperty]
-        public string VoiceEngineBreezeText => EngineButtonText("breeze");
-
-        [DataSourceProperty]
-        public string VoiceEngineQwenText => EngineButtonText("qwen");
-
-        [DataSourceProperty]
-        public string VoiceEnginePocketText => EngineButtonText("pocket");
-
-        /// <summary>"✦ Qwen" for the one speaking, "Breeze" for one installed, "Breeze +" for one that
-        /// is not installed yet (pressing it offers to add it). ✦ is Dingbats, which the fonts carry.</summary>
-        private static string EngineButtonText(string id)
-        {
-            var app = Voice.ClaudeVoiceApp.Now;
-            var name = Voice.ClaudeVoiceApp.EngineName(id);
-            if (string.Equals(app.Engine, id, StringComparison.OrdinalIgnoreCase)) return "✦ " + name;
-            var row = app.Health?.Engines.FirstOrDefault(e => string.Equals(e.Id, id, StringComparison.OrdinalIgnoreCase));
-            return row != null && !row.Installed ? name + " +" : name;
-        }
-
-        [DataSourceProperty]
-        public bool ShowVoiceAppClose => Voice.ClaudeVoiceApp.Now.Running;
-
-        [DataSourceProperty]
-        public string VoiceAppCloseText => "Close the voice app";
-
-        [DataSourceProperty]
-        public bool HasVoicePick => _voicePick != null;
-
-        [DataSourceProperty]
-        public string VoiceGiveText => _voicePick == null ? "Give this voice to…" : $"Give {_voicePick.Name} to…";
-
-        [DataSourceProperty]
-        public string VoiceForThemText => _selected?.Hero == null ? "this soul" : SelectedName;
-
-        [DataSourceProperty]
-        public bool CanCastOnThem => _selected?.Hero != null;
-
-        [DataSourceProperty]
-        public string VoiceEnabledText => _config != null && _config.EnableVoice ? "Turn voices off" : "Turn voices on";
-
-        [DataSourceProperty]
-        public string VoiceShowAllText => _showEveryVoice ? "Only theirs" : "Every voice";
-
-        [DataSourceProperty]
-        public string VoiceFolderText => "Voices folder";
-
-        [DataSourceProperty]
-        public string VoiceMineText => "me";
-
-        [DataSourceProperty]
-        public string VoiceClearText => "Take it away";
+        public string VoiceTipText =>
+            "Does the game stutter while they speak? The voice shares your graphics card with the game. Pocket runs on the processor instead "
+            + "and leaves the card to the game — install it above and switch. \"Close the voice app\" frees the graphics card completely; "
+            + (Voice.ClaudeVoiceApp.ClosesWithTheGame ? "it also closes by itself when you leave the game." : "it keeps running after the game only if you started it yourself.");
+        [DataSourceProperty] public bool ShowVoiceAppClose => Voice.ClaudeVoiceApp.Now.Running;
+        [DataSourceProperty] public string VoiceCloseAppText => "Close the voice app";
+        [DataSourceProperty] public string VoicePanelText => "Its own window";
+        [DataSourceProperty] public string VoiceUninstallText => "Remove the voice app…";
 
         /// <summary>The stop button, shown ONLY while something is actually speaking — so it is
         /// never a dead control, and its appearing is itself the hint that it exists. Kept in step by

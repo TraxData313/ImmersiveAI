@@ -87,19 +87,39 @@ You usually only need to open:
   every 2–4 s only while voices are on or the page is open; finds the install from claude-voice's
   own `%LOCALAPPDATA%\claude-voice\where.json`; starts it with `voice_cli.py start`; downloads and
   runs `ClaudeVoiceSetup.exe` from claude-voice's GitHub releases; registers the module's `Voices\`
-  and the player's old shelf with `/voice-roots` every time the app comes up; tells the player ONCE
+  and the player's old shelf with `/voice-roots` once per app PROCESS (by `/health`'s pid — "when it
+  comes up" missed every game-run install, whose app answers while the page still says Installing);
+  sweeps the old in-mod engine's DLL-only folder once at start (its Qwen model is REUSED by
+  claude-voice's setup, and the Qwen card says so); tells the player ONCE
   when it is running / closed / missing) + `Voice\VoiceService` (casting over the app's catalogue,
   `SpeakableText.Performed` → `/speak`, one notice when an engine cannot read the alphabet). Core
   keeps `SpeakableText` (+ `Performed`: `*laughs*` → `(laugh)` when the engine lists the sound,
   `*whispers*` → mood whisper; unit-tested in `PerformedSpeechTests`), `VoiceCasting`,
   `VoiceAssignments`, and a LEAN `VoicePreset` (Id/Name/Gender/Culture/Style — no paths: the files
-  are the app's). The panel in `TalkScreenVM` is the app's remote: ONE button that is always the next
-  step (Install / Start / Open the voice app), an engine row while it runs (✦ current, + not
-  installed → its setup opens with that engine chosen), Close the voice app, and the casting as
-  before. The game wakes the app at campaign load when voices are on (`VoiceStartAppWithGame`) and
-  closes it at PROCESS exit only if it opened it — never at campaign end (a reload would pay the
-  model load again), never an app the player started themselves.
-  **THE VOICES THAT SHIP WITH THE MOD** live in `module\Voices\<sex>\<culture>\<id>\` (93, tracked in
+  are the app's). THE VOICES PAGE WAS REBUILT FROM THE PLAYER'S CHAIR (2026.09.24 night, Anton:
+  "picture it from the point of that user who knows nothing … ok I downloaded some 20GB where are
+  they now, how to get them out of my GPU?"): ONE PAGE PER MOMENT, chosen by `WhichVoicePage()` —
+  Choose (engine cards from `Voice\VoiceMachine` — nvidia-smi read once per session, the SAME
+  thresholds as claude-voice's setup-app\Machine.cs, keep them together — each with ♪ a shipped
+  sample `module\Voices\_samples\<engine>.wav` played by `System.Media.SoundPlayer`, and a drive
+  picker with free space), Installing (four steps ✓ • –, a real `FillBarHorizontalWidget` bound to
+  an INT 0..1000 — its `InitialAmount` is int and redrawn every frame — speed/time-left, elapsed for
+  counter-less steps), Failed (plain words, Try again / Show what happened / Use the setup window /
+  Choose again), Asleep/Waking/Removing, and once running two tabs: "Who speaks how" (the casting)
+  and "Engines & storage" (switch/add engines, `/storage` folders+sizes with Open buttons, the
+  stutter tip, Close / Remove). The bar's Voices button is coloured red/amber/green by the state.
+  THE INSTALL IS QUIET AND FOLLOWED THROUGH A FILE: `ClaudeVoiceApp.RunSetup(engine, dataDir)` runs
+  `ClaudeVoiceSetup.exe --quiet --engine X --data D:\claude-voice`, which writes
+  `%LOCALAPPDATA%\claude-voice\setup-status.json` (state/phase/headline/detail/fractions/error/pid)
+  and stops on a `setup-cancel` file; the game polls it every second. A separate process, so quitting
+  the game mid-install is fine and the next game picks it up. When an install the GAME started comes
+  up running, `JustInstalled` fires: voices go ON and the selected soul says their first words.
+  The game wakes the app at campaign load when voices are on (`VoiceStartAppWithGame`) and closes it
+  at PROCESS exit whenever the game opened it — by starting it OR by installing it, so the graphics
+  card is always handed back — never at campaign end (a reload would pay the model load again),
+  never an app the player started themselves. **Remove the voice app…** asks in-game, then runs the
+  install's own `uninstall.ps1 -Yes` (a git checkout is refused: that is Anton's own copy).
+  **THE VOICES THAT SHIP WITH THE MOD** live in `module\Voices\<sex>\<culture>\<id>\` (92, tracked in
   git) and are read by claude-voice WHERE THEY LIE — no seeding any more (`VoiceSeeds`/`VoiceLibrary`
   are deleted). Each carries `embedding.json` (Qwen) AND, since 2026.09.24, `breeze-reference.wav` +
   `.txt` — a ~13 s Qwen render of one Calradian line, made by claude-voice's
@@ -2031,18 +2051,34 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
   4 GB NVIDIA), Pocket (CPU; English + 5 European). Cyrillic on Breeze/Pocket is REFUSED (422) rather
   than read with claude-voice's spoken "I skipped…" note — the mod shows one notice pointing at Qwen.
   Anton plays in Bulgarian: **Qwen is his engine.**
-- **THE SETUP EXE** is `claude-voice/setup-app` (net48 WinForms, ~400 KB, `asInvoker` manifest — an
+- **THE SETUP EXE** is `claude-voice/setup-app` (net48 WinForms, ~430 KB, `asInvoker` manifest — an
   exe named *setup* is otherwise elevated by Windows' installer detection). It wraps
-  `setup.ps1 -Engine <qwen|pocket|breeze> -NoPanel -NoClaude` (no hooks, no /voice, no CLAUDE.md
-  note, transcript watcher off — a game player may not have Claude Code), reads nvidia-smi to
-  recommend an engine, and says hello when done. The mod fetches it from
+  `setup.ps1 -Engine <qwen|pocket|breeze> -NoPanel -NoClaude [-DataDir X] [-Quiet]` (no hooks, no
+  /voice, no CLAUDE.md note, transcript watcher off — a game player may not have Claude Code). The
+  game uses its `--quiet` road (no window over a full-screen game; the Python installer runs
+  `/quiet` too); the window stays for double-clickers and as the page's "Use the setup window"
+  fallback. It installs its OWN release's code (tag `v<version>` stamped by build.ps1; `main` only
+  when the tag is missing), records what IT installed in `installed.json` (incl. the chosen `data`
+  folder) and registers per-user in Settings → Apps. The mod fetches it from
   `releases/latest/download/ClaudeVoiceSetup.exe` (`ClaudeVoiceSetupUrl` overrides, a local path
   works for testing) — fetched by the game, so no Mark-of-the-Web and no SmartScreen prompt.
+  **A LOCAL EXE ALONE STILL INSTALLS GITHUB'S CODE** (the setup fetches its own release's tag, `main`
+  when the tag is missing), so a release is tried through the game with BOTH: `ClaudeVoiceSetupUrl`
+  = the locally built exe and `ClaudeVoiceSetupSource` = a folder holding the code (passed as
+  `--source`). Export that folder from `git ls-files --cached --others --exclude-standard`, never
+  point it at a working copy: the setup copies everything but config/logs/.git, which would carry
+  the owner's git-ignored files (Abby's Pocket clips) into an install no release could produce.
+  Clear both keys after the test.
   **IT MUST BE ATTACHED TO A CLAUDE-VOICE RELEASE** or the Install button 404s.
 - **SHE IS TOLD WHAT HER VOICE CAN DO** (Anton, same day: Sibylla never set a mood while his Abby,
   told every turn, used them freely — the first cut only TRANSLATED her *laughs* after the fact).
-  `PromptBuilder.VoiceGuidance`, right after the acting-out line, offers `(laugh)`-style sounds and a
-  leading `(mood)` — ONLY what the engine speaking now reports (`NpcPersona.VoiceSounds`/
+  `PromptBuilder.VoiceGuidance`, right after the acting-out line, offers `(laugh)`-style sounds and —
+  since 2026.09.25 (Anton: "make the answer have a key they have to fill in") — REQUIRES a last line
+  `[voice: …]` in her own English words. Core `Voices\VoiceLine` owns it: kept in the recorded turn so
+  her own past replies teach the form, lifted off before speech and sent as claude-voice's
+  `instruction`, drawn small and orange under the reply (brush style `VoiceLine`), stripped from every
+  other display and from the Think transcript. It replaced the opening `(mood)` form, which souls
+  skipped; a leading `(mood)` is still honoured. ONLY what the engine speaking now reports (`NpcPersona.VoiceSounds`/
   `VoiceTakesMood`, filled in `BuildContext` from `ClaudeVoiceApp.Now`), nothing when voices are off.
   The tags STAY in her recorded words (Anton: "leave the mood in the text") — which also keeps her
   using them — and are drawn orange by `ChatMessageVM` via a `<span style="VoiceCue">` against the
@@ -2061,7 +2097,8 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
   `voice-shipping-constraint`).
 - Config: `EnableVoice`, `VoiceAutoSpeak`, `VoiceSpeakWhenClosed`, `VoiceSpeakActedParts`,
   `VoiceAutoCast`, `VoicePerformSounds`, `VoiceSpeakReachOuts`, `VoicePanicKey`,
-  `VoiceStartAppWithGame`, `ClaudeVoicePort`, `ClaudeVoiceSetupUrl`, `VoiceHintShown`. Retired
+  `VoiceStartAppWithGame`, `ClaudeVoicePort`, `ClaudeVoiceSetupUrl`, `ClaudeVoiceSetupSource`
+  (testing only), `VoiceHintShown`. Retired
   (Newtonsoft ignores them in old files): `VoiceEnginePath`/`VoiceModelDir`/`VoiceModelName`,
   `VoiceTemperature`/`VoiceTopP`, `VoiceCacheBudgetMb`, `VoiceSoundEvent`, `VoiceDelivery`,
   `CloudVoice*`. The casting sheet is still `Configs\ImmersiveAI\Voices\assignments.json`, OUTSIDE

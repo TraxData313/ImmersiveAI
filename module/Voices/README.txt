@@ -29,7 +29,7 @@ Where things go
                     breeze-reference.wav/.txt   a clip of it and its words, for Breeze and Pocket
             empire\ vlandia\ sturgia\ aserai\ khuzait\ nord\
             other\
-                sibylla\            belongs to no people - offered to everyone
+                <id>\               belongs to no people - offered to everyone
         male\
             ...
         README.txt              this file - never seeded, files at the top never are
@@ -40,7 +40,7 @@ what lets a soul nobody has cast be given a voice of their own people; put a voi
 "other" (or "misc", or "any") and it belongs to nobody in particular, which is the right home
 for a voice cloned off a friend.
 
-Both shallower shapes still work and always will: female\sibylla\ is a woman of no people, and
+Both shallower shapes still work and always will: female\<id>\ is a woman of no people, and
 a voice folder sitting loose at the top belongs to nobody at all.
 
 The voice folder's name becomes its id on the player's shelf, so keep it lowercase and plain.
@@ -76,6 +76,20 @@ culture-matched ones, and nothing could undo it. Do not bring them back.
 Adding a voice to a people later moves only about one soul in n onto it, not everybody: the
 choice is made by scoring every candidate against the soul's name and taking the highest, not by
 counting down a list. So the shelf can grow between versions without recasting the whole world.
+
+The samples
+-----------
+
+_samples\breeze.wav, qwen.wav and pocket.wav are the same line on each engine, rendered by
+claude-voice's own engines: "(laugh) Well met, traveller! Sit by the fire, the ale is better than it
+looks. Now then, tell me everything." Breeze and Qwen speak it in Abby's voice; Pocket in "eve",
+one of its OWN voices, because on a fresh computer Pocket cannot clone and a Calradian voice there
+would promise what it cannot give. The Voices page plays them with Windows' own player, so a player
+can HEAR an engine before downloading gigabytes of it. The folder starts with "_", so the voice app
+never mistakes it for a voice.
+Re-rendering one: straight through the engine (breeze_engine / pocket_engine .synthesize), never by
+collecting a file from the running app's history - that is how breeze.wav once shipped a line of
+Claude's own narration. Check what a file says before shipping it (Windows' own dictation will do).
 
 The seeding is retired
 ----------------------

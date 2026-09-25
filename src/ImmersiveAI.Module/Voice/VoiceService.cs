@@ -41,6 +41,7 @@ namespace ImmersiveAI.Voice
         {
             _config = config;
             SweepOldCache();
+            SweepOldEngine();
             if (!_hookedExit)
             {
                 _hookedExit = true;
@@ -159,7 +160,7 @@ namespace ImmersiveAI.Voice
                 var engine = snapshot.Engine;
                 Task.Run(async () =>
                 {
-                    var outcome = await ClaudeVoiceClient.SpeakAsync(line.Text, id, line.Mood).ConfigureAwait(false);
+                    var outcome = await ClaudeVoiceClient.SpeakAsync(line.Text, id, line.Mood, line.Instruction).ConfigureAwait(false);
                     switch (outcome)
                     {
                         case ClaudeVoiceClient.SpeakOutcome.Spoken:
@@ -193,8 +194,53 @@ namespace ImmersiveAI.Voice
         }
 
         /// <summary>Silence, now — ours and whatever else is waiting in the app.</summary>
+        // ------------------------------------------------------------------ hearing an engine first
+
+        private static System.Media.SoundPlayer? _sample;
+
+        /// <summary>The short recording of one engine that ships with the mod (Voices\_samples), so an
+        /// engine can be HEARD before a gigabyte of it is downloaded — the same line, in the same voice,
+        /// on each of the three, so what differs is the engine and nothing else.</summary>
+        public static string SamplePath(string engine)
+        {
+            var root = ClaudeVoiceApp.ShippedVoicesFolder();
+            return root.Length == 0 ? string.Empty : Path.Combine(root, "_samples", engine + ".wav");
+        }
+
+        public static bool HasSample(string engine)
+        {
+            var path = SamplePath(engine);
+            return path.Length > 0 && File.Exists(path);
+        }
+
+        /// <summary>Plays it through Windows' own player — no voice app needed, which is the point.</summary>
+        public static bool PlaySample(string engine)
+        {
+            try
+            {
+                StopSample();
+                if (!HasSample(engine)) return false;
+                _sample = new System.Media.SoundPlayer(SamplePath(engine));
+                _sample.Play();
+                _speakingUntilUtc = DateTime.UtcNow + TimeSpan.FromSeconds(11);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("voice: playing the " + engine + " sample", ex);
+                return false;
+            }
+        }
+
+        public static void StopSample()
+        {
+            try { _sample?.Stop(); _sample?.Dispose(); } catch { }
+            _sample = null;
+        }
+
         public static void Stop()
         {
+            StopSample();
             _speakingUntilUtc = DateTime.MinValue;
             if (!ClaudeVoiceApp.Now.Running) return;
             Task.Run(() => ClaudeVoiceClient.StopAsync());
@@ -379,6 +425,38 @@ namespace ImmersiveAI.Voice
                     }
                 }
                 catch (Exception ex) { ModLog.Warn("voice: could not sweep the old audio cache — " + ex.Message); }
+            });
+        }
+
+        /// <summary>
+        /// The speech engine an earlier version of the mod fetched for itself: eight DLLs, about 0.66 GB,
+        /// unpacked flat into %LOCALAPPDATA%\Programs\qwen-tts-studio. Nothing reads them any more —
+        /// claude-voice runs Qwen through the whole of Studio, a different download — so they are swept
+        /// once. Only that exact shape is touched, a folder of DLLs and nothing else: a real Studio there
+        /// has folders of its own (its Java runtime) and is somebody's working install. The model files
+        /// are NOT touched: they live elsewhere, and claude-voice uses them where they lie.
+        /// </summary>
+        private static void SweepOldEngine()
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "qwen-tts-studio");
+                    if (!Directory.Exists(dir) || !File.Exists(Path.Combine(dir, "qwen3_tts.dll"))) return;
+                    if (Directory.EnumerateDirectories(dir).Any()) return;
+                    var files = Directory.GetFiles(dir);
+                    if (files.Any(f => !f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                                       && !f.EndsWith(".part", StringComparison.OrdinalIgnoreCase))) return;
+                    // A setup somebody is running may be about to move a whole Studio in here.
+                    if (System.Diagnostics.Process.GetProcessesByName("ClaudeVoiceSetup").Length > 0) return;
+
+                    var bytes = files.Sum(f => new FileInfo(f).Length);
+                    Directory.Delete(dir, true);
+                    ModLog.Info("voice: swept the old built-in engine's DLLs (" + VoiceMachine.Bytes(bytes)
+                                + ") — the voice app brings its own; the Qwen model is kept for it.");
+                }
+                catch (Exception ex) { ModLog.Warn("voice: could not sweep the old engine's DLLs — " + ex.Message); }
             });
         }
     }

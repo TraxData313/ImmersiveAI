@@ -430,6 +430,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 _layer = null;
                 _movie = null;
                 _host = null;
+                try { _vm?.DetachVoiceApp(); } catch { /* the page's listeners go with it either way */ }
                 _vm = null;
                 _scrollCountdown = 0;
             }
@@ -543,11 +544,17 @@ namespace ImmersiveAI.UI.TalkScreen
             }
             catch { /* the button is a courtesy */ }
 
-            // And the voice app's standing, while the voices page is open: installing, waking,
-            // running — a page that only changed when the player clicked would look stalled.
+            // And the voice app's standing, all the while the screen is up: the Voices button is
+            // coloured by it, and the page behind it — installing, waking, running — would look
+            // stalled if it only changed when the player clicked. A look every few seconds at a
+            // local port and one file; nothing here waits on it.
             try
             {
-                if (_vm != null && _vm.IsVoiceShown) Voice.ClaudeVoiceApp.Poll();
+                if (_vm != null)
+                {
+                    Voice.ClaudeVoiceApp.Poll();
+                    _vm.FollowVoiceApp();
+                }
             }
             catch { /* likewise */ }
 

@@ -126,7 +126,7 @@ namespace ImmersiveAI.Core.Voices
         /// is nothing to say (a reply that was ALL gesture, or nothing at all).</summary>
         public static string SpokenOnly(string? body)
         {
-            var segments = EmoteText.Split(body);
+            var segments = EmoteText.Split(VoiceLine.Strip(body));
             if (segments.Count == 0) return string.Empty;
 
             var spoken = segments.Where(s => !s.IsGesture).Select(s => s.Text);
@@ -147,7 +147,7 @@ namespace ImmersiveAI.Core.Voices
         /// </summary>
         public static string SpokenWithGestures(string? body)
         {
-            var segments = EmoteText.Split(body);
+            var segments = EmoteText.Split(VoiceLine.Strip(body));
             if (segments.Count == 0) return string.Empty;
             return Collapse(Normalize(string.Join(" ", segments.Select(s => Closed(s.Text)))));
         }
@@ -174,6 +174,10 @@ namespace ImmersiveAI.Core.Voices
         public static PerformedLine Performed(string? body, bool speakActed, ICollection<string>? sounds, bool takesMood)
         {
             var line = new PerformedLine();
+            // Her voice key is never read aloud, on any engine; where the engine follows a direction
+            // it becomes the instruction.
+            body = VoiceLine.Split(body, out var direction);
+            if (takesMood) line.Instruction = direction;
             var segments = EmoteText.Split(body);
             if (segments.Count == 0) return line;
 
@@ -545,5 +549,7 @@ namespace ImmersiveAI.Core.Voices
     {
         public string Text { get; set; } = string.Empty;
         public string Mood { get; set; } = string.Empty;
+        /// <summary>Her own words for how the line sounds (<see cref="VoiceLine"/>); wins over <see cref="Mood"/>.</summary>
+        public string Instruction { get; set; } = string.Empty;
     }
 }

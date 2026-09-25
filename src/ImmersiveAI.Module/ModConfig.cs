@@ -1023,6 +1023,12 @@ namespace ImmersiveAI
         /// latest release. A path to a local ClaudeVoiceSetup.exe works too, for testing a build.</summary>
         public string ClaudeVoiceSetupUrl { get; set; } = string.Empty;
 
+        /// <summary>Where that setup takes claude-voice's own code from. Empty = the release the setup
+        /// belongs to, which is what every player gets. A folder holding a copy of claude-voice works
+        /// too: beside a local setup above, that is a whole release tried through the game before it
+        /// goes out.</summary>
+        public string ClaudeVoiceSetupSource { get; set; } = string.Empty;
+
         /// <summary>The once-per-install nudge that the voices exist at all has been shown. Voices
         /// are off by default and must never become a thing the player has to turn off to be left
         /// alone — so this is said once, softly, and never again.</summary>
@@ -1368,6 +1374,7 @@ namespace ImmersiveAI
             // The voice app's port: anything that is not a port is the default.
             if (ClaudeVoicePort <= 0 || ClaudeVoicePort > 65535) ClaudeVoicePort = 8765;
             ClaudeVoiceSetupUrl = (ClaudeVoiceSetupUrl ?? string.Empty).Trim();
+            ClaudeVoiceSetupSource = (ClaudeVoiceSetupSource ?? string.Empty).Trim();
 
             // The panic key: an unreadable name would leave the player with no way to stop a voice
             // at all, which is the one failure this feature must not have.

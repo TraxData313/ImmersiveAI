@@ -250,7 +250,7 @@ namespace ImmersiveAI.Core.Prompts
                     sb.AppendLine($"{stamp}{playerName}: {turn.PlayerLine.Trim()}");
 
                 if (!string.IsNullOrWhiteSpace(turn.NpcLine))
-                    sb.AppendLine($"{npcName}: {Tighten(turn.NpcLine)}");
+                    sb.AppendLine($"{npcName}: {Tighten(Voices.VoiceLine.Strip(turn.NpcLine))}");
             }
             return sb.ToString().TrimEnd();
         }
@@ -630,13 +630,18 @@ namespace ImmersiveAI.Core.Prompts
 
             // FIRMED the same evening: offered as an invitation ("I am not shy with them"), Sibylla on
             // haiku used none across a whole talk — four hundred replies of asterisk habit outweigh one
-            // polite line. So the mood is a FORM now, like Abby's own field: every reply opens with one.
+            // polite line. So the mood became a FORM. FIRMED AGAIN 2026.09.25 (Anton: "make the answer
+            // have a key they have to fill in, even if it be one word"): an opening mood word was still
+            // skipped, so it is Abby's own shape now — a KEY on the last line, in her own words, never
+            // missing (Core Voices\VoiceLine lifts it off, speaks it as the instruction, draws it
+            // orange under the reply). No worked example on purpose: named wording comes back verbatim.
             // And the sound is told to REPLACE the gesture, or *I laugh softly* keeps winning.
             var sb = new StringBuilder("- My voice is heard.");
             if (takesMood)
-                sb.Append(" Every reply of mine opens with one word in brackets for how all of it sounds, " +
-                          "chosen afresh for this moment: " +
-                          string.Join(" ", SpeakableTextMoods.Select(x => "(" + x + ")")) + ".");
+                sb.Append(" Every reply of mine ENDS with one line more, never left out: [voice: …] — in the " +
+                          "brackets, a few words of my own, in English, for how all of it sounds this time: its " +
+                          "pace, its warmth or chill, what lies under it. Chosen afresh each time; even a plain " +
+                          "moment gets its few words.");
             if (hasSounds)
                 sb.Append(" A sound is written in brackets just where it breaks into my words, and it is " +
                           "truly heard: " + string.Join(" ", sounds!.Select(x => "(" + x + ")")) +

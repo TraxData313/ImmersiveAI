@@ -87,6 +87,7 @@ namespace ImmersiveAI.Voice
             public List<string> Sounds = new List<string>();
             public List<EngineRow> Engines = new List<EngineRow>();
             public string Error = string.Empty;
+            public int Pid;                               // the app's own process: a new one has to be told our voices again
         }
 
         public sealed class EngineRow
@@ -109,6 +110,7 @@ namespace ImmersiveAI.Voice
                 Ready = (bool?)health["ready"] ?? false,
                 Version = (string?)health["version"] ?? string.Empty,
                 Error = (string?)health["error"] ?? string.Empty,
+                Pid = (int?)health["pid"] ?? 0,
             };
 
             // The rest from /capabilities, which answers for the engine the NEXT line comes out of.
@@ -179,7 +181,7 @@ namespace ImmersiveAI.Voice
         /// is the newest-words-win rule the voice has always had — while anyone ELSE's line it cuts
         /// off is said again straight after (claude-voice keeps that promise for us).
         /// </summary>
-        public static async Task<SpeakOutcome> SpeakAsync(string text, string voice, string mood)
+        public static async Task<SpeakOutcome> SpeakAsync(string text, string voice, string mood, string instruction = "")
         {
             var payload = new Dictionary<string, object>
             {
@@ -194,6 +196,8 @@ namespace ImmersiveAI.Voice
                 ["unreadable"] = "refuse",
             };
             if (!string.IsNullOrWhiteSpace(mood)) payload["mood"] = mood;
+            // Her own words for how it sounds; the app lets them win over a mood by name.
+            if (!string.IsNullOrWhiteSpace(instruction)) payload["instruction"] = instruction;
 
             var (body, status) = await PostAsync("/speak", payload, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             if (status == 0 || body == null) return SpeakOutcome.NotRunning;
@@ -223,6 +227,40 @@ namespace ImmersiveAI.Voice
         {
             var (_, status) = await PostAsync("/panel", null, TimeSpan.FromSeconds(4)).ConfigureAwait(false);
             return status == 200;
+        }
+
+        /// <summary>Where each engine's files are and how much room they take, as the app reports it.</summary>
+        public sealed class Storage
+        {
+            public sealed class Place
+            {
+                public List<string> Dirs = new List<string>();
+                public long Bytes;
+                public bool Installed;
+            }
+
+            public Place App = new Place();
+            public Dictionary<string, Place> Engines = new Dictionary<string, Place>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>The /storage route (claude-voice 1.15+). Null from an older app, or on any failure.
+        /// Walking a Breeze folder takes a few seconds the first time, so it is given room.</summary>
+        public static async Task<Storage?> StorageAsync()
+        {
+            var (body, status) = await PostAsync("/storage", null, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+            if (body == null || status != 200) return null;
+            var s = new Storage { App = PlaceOf(body["app"] as JObject) };
+            if (body["engines"] is JObject engines)
+                foreach (var prop in engines.Properties())
+                    s.Engines[prop.Name] = PlaceOf(prop.Value as JObject);
+            return s;
+
+            static Storage.Place PlaceOf(JObject? o) => new Storage.Place
+            {
+                Dirs = Strings(o?["dirs"]),
+                Bytes = (long?)o?["bytes"] ?? 0,
+                Installed = (bool?)o?["installed"] ?? false,
+            };
         }
 
         public static async Task<bool> QuitAsync()

@@ -1532,7 +1532,7 @@ namespace ImmersiveAI
                 }
 
                 AppendRecordedTurn(npc, arrivalLine, greeting);
-                _lastNpcLine = greeting;
+                _lastNpcLine = ImmersiveAI.Core.Voices.VoiceLine.Strip(greeting);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -1647,11 +1647,11 @@ namespace ImmersiveAI
                 var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
                 AppendRecordedTurn(npc, arrivalLine, greeting);
-                _lastNpcLine = greeting;
+                _lastNpcLine = ImmersiveAI.Core.Voices.VoiceLine.Strip(greeting);
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
-                    MBTextManager.SetTextVariable(RecapVar, greeting, false);
+                    MBTextManager.SetTextVariable(RecapVar, ImmersiveAI.Core.Voices.VoiceLine.Strip(greeting), false);
                     _recapReady = true;
                     NotifyReplyReady(npc); // the greeting is ready; save the player guessing at "gathers their thoughts..."
                 });
@@ -1875,11 +1875,11 @@ namespace ImmersiveAI
                 var outcome = await ExecutePlayerTurnAsync(npc, playerInput).ConfigureAwait(false);
                 var reply = outcome.Reply;
                 var feltShift = outcome.FeltShift;
-                _lastNpcLine = reply; // so the next "Say something..." keeps this line readable while typing
+                _lastNpcLine = ImmersiveAI.Core.Voices.VoiceLine.Strip(reply); // so the next "Say something..." keeps this line readable while typing
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
-                    MBTextManager.SetTextVariable(ResponseVar, reply, false);
+                    MBTextManager.SetTextVariable(ResponseVar, ImmersiveAI.Core.Voices.VoiceLine.Strip(reply), false);
                     // Armed for the reply line's consequence, which fires when these very words go up
                     // on the panel. Nothing else that resolves the await loop may take it.
                     _lineToSpeakNpc = npc;
@@ -2300,7 +2300,7 @@ namespace ImmersiveAI
             try
             {
                 var name = npc?.Name?.ToString() ?? "They";
-                InformationManager.DisplayMessage(new InformationMessage($"{name}: {line}", ConversationLogColor));
+                InformationManager.DisplayMessage(new InformationMessage($"{name}: {ImmersiveAI.Core.Voices.VoiceLine.Strip(line)}", ConversationLogColor));
             }
             catch { /* best-effort */ }
         }
@@ -2999,13 +2999,13 @@ namespace ImmersiveAI
 
                 _currentNpc = npc;
                 _currentSituation = pending.Situation;
-                _lastNpcLine = greeting;
+                _lastNpcLine = ImmersiveAI.Core.Voices.VoiceLine.Strip(greeting);
                 // The reach-out beat is already recorded; the goodbye needs no separate meeting note.
                 _conversationBeatNpcId = npc.StringId;
                 _pendingInitiation = true;
                 _recapReady = true;      // her opening words are already in hand — no "gathers thoughts" hold
                 _responseReady = true;
-                MBTextManager.SetTextVariable(RecapVar, greeting, false);
+                MBTextManager.SetTextVariable(RecapVar, ImmersiveAI.Core.Voices.VoiceLine.Strip(greeting), false);
 
                 PersistSituation(npc, pending.Situation);
                 OpenConversationWith(npc);
@@ -3087,10 +3087,10 @@ namespace ImmersiveAI
                     // Her greeting into the welcome; show it, and the conversation falls into the talk loop.
                     MainThreadDispatcher.Enqueue(() =>
                     {
-                        _lastNpcLine = npcLine;
+                        _lastNpcLine = ImmersiveAI.Core.Voices.VoiceLine.Strip(npcLine);
                         // The approach beat is already recorded — the goodbye needs no meeting note.
                         _conversationBeatNpcId = npc.StringId;
-                        MBTextManager.SetTextVariable(RecapVar, npcLine, false);
+                        MBTextManager.SetTextVariable(RecapVar, ImmersiveAI.Core.Voices.VoiceLine.Strip(npcLine), false);
                         _recapReady = true;
                     });
                 }
@@ -3816,7 +3816,7 @@ namespace ImmersiveAI
         // The toast shows the flash of her words; the window holds the whole of them.
         private static string Snippet(string words)
         {
-            var t = (words ?? string.Empty).Trim().Replace("\r", " ").Replace("\n", " ");
+            var t = ImmersiveAI.Core.Voices.VoiceLine.Strip(words).Trim().Replace("\r", " ").Replace("\n", " ");
             return t.Length <= 110 ? t : t.Substring(0, 110).TrimEnd() + "…";
         }
 

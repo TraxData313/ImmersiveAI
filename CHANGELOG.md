@@ -16,14 +16,23 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ## [Unreleased]
 
 **Voices, rebuilt around claude-voice:**
-- The voices now come from claude-voice, a free app the Voices page installs in one click
-- Three engines to choose from: Breeze laughs and whispers, Qwen reads every language, Pocket runs on any PC
-- No graphics card? Pocket speaks on any computer now
-- A character who *laughs* or *sighs* is heard doing it on Breeze, and a whisper is whispered
-- Characters now know what their voice can do: they set a mood like (tender) or (playful), and laugh or sigh on Breeze
+- The voices now come from claude-voice, a free app installed right from the Voices page — no window, no terminal
+- The Voices button is red, amber or green: not set up, working on it, ready
+- Three engines, each with a sample to hear first — Breeze's opens with a whisper: it laughs and whispers, Qwen reads every language, Pocket runs on any PC
+- The page reads your graphics card and marks the engine that suits it
+- Sibylla's voice leaves the mod — it was Abby's all along, and Abby comes with the voice app, beside a new voice, Neya
+- Pick which drive keeps the voice files — every drive shows its free space, and an engine too big for one moves to a drive that fits
+- Had the old built-in voices? The Qwen model you already have is reused, never downloaded twice, and the old engine's leftovers are cleared away
+- The install shows every step: what is downloading, how fast, how long is left — keep playing meanwhile
+- Quit mid-install and it carries on; stop it and nothing is lost — and adding a second engine keeps the first one talking meanwhile
+- When it's done, whoever you're talking to says their first words, and the voice app shows its window once so you know where it lives
+- "Engines & storage": switch engines, add one, see every folder and its size, open it
+- Game stutters while they speak? The page says why, and how Pocket or closing the app fixes it
+- The voice app gives the graphics card back when you leave the game
+- Remove the voice app and everything it downloaded from the Voices page, with one confirm
+- Characters direct their own voice on Qwen and Breeze — every reply ends with how it should sound, shown small in orange under their words — and they laugh or sigh on Breeze
 - Moods and sounds show in orange in the talk, the way they are heard
-- The Voices page says whether the voice app is running, and starts, opens or closes it for you
-- All ninety-odd voices of Calradia work on every engine
+- All ninety-odd voices of Calradia work on Qwen and Breeze
 - The mod's download carries no program any more, so Nexus no longer blocks it
 - Hosted voices (the OpenAI key) are retired — Pocket covers the no-graphics-card case for free
 

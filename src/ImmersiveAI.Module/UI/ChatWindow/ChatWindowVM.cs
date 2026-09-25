@@ -451,6 +451,7 @@ namespace ImmersiveAI.UI.ChatWindow
         private static void AddSpoken(
             MBBindingList<ChatMessageVM> messages, string header, string body, Color headerColor)
         {
+            body = Core.Voices.VoiceLine.Strip(body);   // the fallback window shows no voice notes
             var segments = Core.Prompts.EmoteText.Split(body);
             if (segments.Count == 0)
             {

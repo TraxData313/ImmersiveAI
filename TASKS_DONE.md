@@ -1543,3 +1543,22 @@ first three change how the whole road behaves.
   Player guide rewritten: docs/voiceover-setup.md. Store pages updated, all shorter than before.
   Deployed. Not yet playtested in game; Breeze not live-tested (the card was busy).
   (2026.09.24 18.23.00)
+- [x] THE VOICES PAGE, REBUILT FROM THE PLAYER'S CHAIR — AND THE INSTALL MOVED INSIDE THE GAME
+  (Anton: "picture it from the point of that user who knows nothing and just wants to hear his
+  digital lady speak … not click click, it lags, ok wth just happened? I downloaded some 20GB where
+  are they now, how to get them out of my GPU?"). The Voices page is one page per moment: choose
+  (three engine cards judged against THIS computer by `Voice\VoiceMachine` — nvidia-smi, drives —
+  each with a ♪ sample from `module\Voices\_samples`, a "They'll speak" language switch, a drive
+  picker with free space), installing (four steps ✓ • –, a real fill bar, MB/s and time left,
+  elapsed for counter-less steps, Stop), stopped (plain words, Try again / Show what happened / Use
+  the setup window / Choose again), asleep/waking (why it must run, that it gives the graphics card
+  back), and running with two tabs — "Who speaks how" (the casting) and "Engines & storage" (switch,
+  add, every folder and its size with Open, the stutter tip, Close, Remove the voice app…). The bar's
+  Voices button is red/amber/green. The install runs `ClaudeVoiceSetup.exe --quiet` and is followed
+  through `setup-status.json`; when it comes up, voices go on and the soul on screen says their first
+  words; the app is closed with the game whenever the game opened it — started OR installed.
+  claude-voice 1.15.0 (published): `--quiet`, `--data`/`-DataDir`, `-Quiet`, the status + cancel
+  files, `/storage`, tag-pinned code, Breeze weights measured by folder growth, uninstall clears the
+  data folder. Tested end to end from the public release (quiet Pocket install into a temp folder,
+  then uninstall -Yes). Five bugs found by walking the flow as the player, fixed before shipping.
+  Not playtested in game. (2026.09.25 00.30.00)

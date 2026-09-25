@@ -133,15 +133,50 @@ namespace ImmersiveAI.Core.Tests
             Assert.Equal(string.Empty, ImmersiveAI.Core.Prompts.PromptBuilder.VoiceGuidance(null, false));
 
             var qwen = ImmersiveAI.Core.Prompts.PromptBuilder.VoiceGuidance(new List<string>(), true);
-            Assert.Contains("(tender)", qwen);
+            Assert.Contains("[voice: …]", qwen);
+            Assert.Contains("never left out", qwen);
             Assert.DoesNotContain("(laugh)", qwen);
 
             var breeze = ImmersiveAI.Core.Prompts.PromptBuilder.VoiceGuidance(Breeze, true);
             Assert.Contains("(laugh)", breeze);
             Assert.Contains("(clears throat)", breeze);
             Assert.Contains("never in a letter", breeze);
-            Assert.Contains("opens with", breeze);
+            Assert.Contains("ENDS with", breeze);
             Assert.Contains("never *I laugh*", breeze);
+
+            // Pocket follows no direction: no key is asked of her at all.
+            Assert.DoesNotContain("[voice:", ImmersiveAI.Core.Prompts.PromptBuilder.VoiceGuidance(new List<string> { "laugh" }, false));
+        }
+
+        [Fact]
+        public void Her_voice_key_is_lifted_off_and_spoken_as_the_instruction()
+        {
+            var line = SpeakableText.Performed("Come closer. (laugh) Closer still.\n[voice: low and teasing, a smile in it]", true, Breeze, true);
+            Assert.Equal("Come closer. (laugh) Closer still.", line.Text);
+            Assert.Equal("low and teasing, a smile in it", line.Instruction);
+
+            // An engine that follows no direction still never reads the key aloud.
+            var pocket = SpeakableText.Performed("Come closer.\n[voice: low and teasing]", true, null, false);
+            Assert.Equal("Come closer.", pocket.Text);
+            Assert.Equal(string.Empty, pocket.Instruction);
+        }
+
+        [Fact]
+        public void The_voice_key_is_found_wherever_it_slipped_and_the_words_are_left_whole()
+        {
+            Assert.Equal("Aye.", VoiceLine.Split("Aye. [Voice: dry, unimpressed]", out var dry));
+            Assert.Equal("dry, unimpressed", dry);
+            Assert.Equal("Aye.", VoiceLine.Split("(voice - flat)\nAye.", out var flat));
+            Assert.Equal("flat", flat);
+
+            // No key: the reply comes back exactly as it was, brackets of other kinds untouched.
+            const string plain = "I said (and I meant it) that I would come.";
+            Assert.Equal(plain, VoiceLine.Split(plain, out var none));
+            Assert.Equal(string.Empty, none);
+
+            // Two keys: the last one is her final word on it, and neither is left in the text.
+            Assert.Equal("Hm.", VoiceLine.Split("[voice: warm]\nHm.\n[voice: cold]", out var last));
+            Assert.Equal("cold", last);
         }
 
         [Fact]

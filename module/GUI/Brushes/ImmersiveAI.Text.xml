@@ -6,6 +6,9 @@
     <Styles>
       <Style Name="Default" FontColor="#F1E9DAFF" TextGlowColor="#000000FF" TextOutlineColor="#000000FF" TextOutlineAmount="0" TextGlowRadius="0" TextBlur="0" FontSize="20" />
       <Style Name="VoiceCue" FontColor="#E8A559FF" TextGlowColor="#000000FF" TextOutlineColor="#000000FF" TextOutlineAmount="0" TextGlowRadius="0" TextBlur="0" />
+      <!-- A soul's own direction for her voice, [voice: ...], drawn under the reply: orange like the
+           cues and smaller, a note on the delivery beneath the words (2026.09.25). -->
+      <Style Name="VoiceLine" FontColor="#E8A559FF" TextGlowColor="#000000FF" TextOutlineColor="#000000FF" TextOutlineAmount="0" TextGlowRadius="0" TextBlur="0" FontSize="14" />
     </Styles>
   </Brush>
 </Brushes>
