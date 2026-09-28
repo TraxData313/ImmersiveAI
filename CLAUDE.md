@@ -477,7 +477,8 @@ TaleWorlds API usage patterns, never copy from it.
   (all object properties required; optional args nullable), folds streamed final-answer/usage events,
   and formats rate windows. `CodexPlanGauge` asks `account/rateLimits/read` inside the already-
   authenticated process and keeps only the percentages; the ledger records exact tokens without
-  inventing API-dollar spend. Default model is `gpt-5.6-sol`; dropdown also offers Astra, Terra and
+  inventing API-dollar spend. Default model is `gpt-6-sol` (was `gpt-5.6-sol` until 2026.09.28 — GPT-6 moved Sol and Luna up, Terra
+  stays on 5.6); dropdown also offers Astra, Terra and
   Luna. LIVE-PROVED through the built client on Anton's ChatGPT login: Sol plain reply `OK`; Astra
   returned `recall_person({"name":"Rhagaea"})`. Sol also surfaced a genuine temporary capacity
   refusal on the tool probe, which is passed through as a provider error rather than hidden.
@@ -494,7 +495,9 @@ TaleWorlds API usage patterns, never copy from it.
   luna's — **always disclose that Google's free tier trains on what it receives**; DeepSeek's pitch is
   cheap (~half an exchange's cost, prices DOUBLE in Beijing peak hours, servers in China). Defaults
   deliberately unchanged. Full rationale in `docs/models-and-costs.md`.
-- **OpenRouter is the default backend since 2026.07.28**, model `openai/gpt-5.6-luna` — Anton's call:
+- **OpenRouter is the default backend since 2026.07.28**, model `openai/gpt-6-luna` (was `openai/gpt-5.6-luna` until 2026.09.28; the GPT-6 ids were renamed IN
+  PLACE in McmChoiceLists — same family, same slot — and old configs keep their 5.6 id, shown in the
+  custom field; the V8 config step heals only the gpt-5.6-sol PRICE, 5/30 → 2/10) — Anton's call:
   one key reaches everything, and luna + `gpt-5.4-mini` are the only two he has really tested. The
   recommendation order everywhere (README, first-run popup, MCM hints) is OpenRouter(luna → 5.4-mini)
   → OpenAI(same two) → Anthropic(works, untested at length) → anything typed by hand, at your own risk
@@ -621,7 +624,7 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   keyless; model dropdown haiku-4-5 (default) / sonnet-5 / opus-5 / fable-5 + custom; path blank =
   find claude.exe on PATH then the Claude apps' folders; cost notices carry the plan gauge),
   `CodexModel` + `CodexPath` (2026.09.18 — `Backend: "Codex"`, the ChatGPT-subscription road:
-  installed Codex app/CLI + one `codex login`, keyless; default `gpt-5.6-sol`, with Astra/Terra/Luna
+  installed Codex app/CLI + one `codex login`, keyless; default `gpt-6-sol`, with Astra/Terra/Luna
   + custom in MCM; path blank = PATH then the desktop app's versioned bin folders; no API-key
   fallback, and cost notices carry the app-server's 5h/weekly plan gauge),
   `GeminiApiKey` + `GeminiModel` (2026.08.02 — `Backend: "Gemini"`, the FREE road: the same

@@ -30,7 +30,7 @@ namespace ImmersiveAI.Llm
 
         public CodexAppServerChatClient(string model, string configuredPath, int maxTokens = 0)
         {
-            _model = string.IsNullOrWhiteSpace(model) ? "gpt-5.6-sol" : model.Trim();
+            _model = string.IsNullOrWhiteSpace(model) ? "gpt-6-sol" : model.Trim();
             _configuredPath = (configuredPath ?? string.Empty).Trim();
             _maxTokens = maxTokens;
         }

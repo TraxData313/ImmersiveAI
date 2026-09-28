@@ -15,6 +15,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- OpenAI's GPT-6 is in: the default is now `gpt-6-luna` (half the price of 5.6 Luna), Codex defaults to `gpt-6-sol`, and Astra joins the lists. Your chosen model is kept.
+
 ## v3.4.0 — 2026.09.25
 
 Their voices move to a free app you install without leaving the game — and they now direct how

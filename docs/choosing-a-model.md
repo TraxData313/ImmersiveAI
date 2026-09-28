@@ -9,11 +9,11 @@ as you scroll — **read only as far as you need.**
 
 | If you want… | Pick | Account/key from |
 |---|---|---|
-| **It to just work** | OpenRouter + `openai/gpt-5.6-luna` — the default | openrouter.ai |
+| **It to just work** | OpenRouter + `openai/gpt-6-luna` — the default | openrouter.ai |
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best play, denars no object** | OpenRouter + `openai/gpt-5.6-terra` (or `anthropic/claude-sonnet-5`) | openrouter.ai |
-| **A ChatGPT plan you already pay for** | Codex + `gpt-5.6-sol` — through the Codex app, no API key | ChatGPT |
+| **A ChatGPT plan you already pay for** | Codex + `gpt-6-sol` — through the Codex app, no API key | ChatGPT |
 | **A Claude plan you already pay for** | ClaudeCode — your claude.ai Pro/Max, through the Claude Code app, no key | — |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
 
@@ -34,7 +34,7 @@ switch in the mod options, no restart.
 | **Codex / ClaudeCode subscription** | no metered API bill | uses your plan windows |
 | **Gemini free tier** | **$0** | forever — ~1,500 replies/day |
 | `deepseek-v4-flash` | ~0.05¢ | ~20,000 exchanges |
-| `gpt-5.6-luna` *(default)* | ~0.1¢ | ~10,000 exchanges |
+| `gpt-6-luna` *(default)* | ~0.05¢ | ~20,000 exchanges |
 | `gpt-5.4-mini` | ~0.35¢ | ~3,000 exchanges |
 | `claude-haiku-4.5` | ~0.4¢ | ~2,500 exchanges |
 | `gpt-5.6-terra` | ~0.9¢ | ~1,100 exchanges |

@@ -56,7 +56,7 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
-            HintText = "gpt-5.6-luna ($0.20/$1.20 per MTok since the July 2026 price cut) is the default and tested pick - now also nearly the cheapest. terra ($2/$12) is the RECOMMENDED step-up if you don't pinch denars - noticeably sharper in live play. gpt-5.4-mini ($0.75/$4.50) the proven fallback; sol/5.5 ($5/$30) flagships. Any other id: custom field below, at your own risk.")]
+            HintText = "gpt-6-luna ($0.10/$0.50 per MTok) is the default - the cheapest there is. gpt-5.6-terra ($2/$12) is the RECOMMENDED step-up if you don't pinch denars - noticeably sharper in live play. gpt-6-sol ($2/$10) the flagship, gpt-6-astra ($10/$50) the heaviest; gpt-5.4-mini ($0.75/$4.50) the proven fallback. Any other id: custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0);
 
@@ -71,7 +71,7 @@ namespace ImmersiveAI.Mcm
         public string OpenRouterApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenRouter model", Order = 8, RequireRestart = false,
-            HintText = "openai/gpt-5.6-luna is the default and tested pick (cheap since the July 2026 price cut), openai/gpt-5.4-mini the proven fallback — same prices as going direct. Claude, Gemini, Grok, DeepSeek and Mistral are verified to carry the NPCs' tools but are not what the mod is tuned to. Any other id goes in the custom field below, at your own risk.")]
+            HintText = "openai/gpt-6-luna is the default (the cheapest OpenAI model), openai/gpt-5.4-mini the proven fallback — same prices as going direct. Claude, Gemini, Grok, DeepSeek and Mistral are verified to carry the NPCs' tools but are not what the mod is tuned to. Any other id goes in the custom field below, at your own risk.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenRouterModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0);
 
@@ -96,7 +96,7 @@ namespace ImmersiveAI.Mcm
         public string GeminiModelCustom { get; set; } = string.Empty;
 
         [SettingPropertyText("DeepSeek API key", Order = 13, RequireRestart = false,
-            HintText = "The cheapest paid road: a key from platform.deepseek.com, about half the cost of gpt-5.6-luna per exchange for near-equal answers. Two things to know: prices DOUBLE during Beijing peak hours (09:00-12:00 and 14:00-18:00 UTC+8 - European evenings fall in the cheap window), and their servers are in China.")]
+            HintText = "The cheapest paid road: a key from platform.deepseek.com, about the cost of gpt-6-luna per exchange for near-equal answers. Two things to know: prices DOUBLE during Beijing peak hours (09:00-12:00 and 14:00-18:00 UTC+8 - European evenings fall in the cheap window), and their servers are in China.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string DeepSeekApiKey { get; set; } = string.Empty;
 

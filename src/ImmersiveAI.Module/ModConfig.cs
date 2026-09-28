@@ -18,7 +18,7 @@ namespace ImmersiveAI
 
         /// <summary>Which service the minds think through. OpenRouter is the DEFAULT since 2026.07.28:
         /// one key reaches every model worth using, and the two the mod is actually tuned and tested
-        /// against — gpt-5.6-luna first, gpt-5.4-mini as the cheaper fallback — live there. OpenAI with
+        /// against — gpt-6-luna first, gpt-5.4-mini as the cheaper fallback — live there. OpenAI with
         /// the same two is the equal second. "Gemini" is the way in for FREE (Google's own free tier —
         /// see <see cref="GeminiApiKey"/>); "DeepSeek" the cheapest paid road (see
         /// <see cref="DeepSeekApiKey"/>); Anthropic works and is untested at length; ClaudeCode and
@@ -47,7 +47,7 @@ namespace ImmersiveAI
         /// pay-as-you-go fallback: the client verifies that the active Codex account is a ChatGPT
         /// login before a model turn begins. Each call is ephemeral and model-only; Codex tools,
         /// plugins, MCP servers, skills and filesystem access stay disabled.</summary>
-        public string CodexModel { get; set; } = "gpt-5.6-sol";
+        public string CodexModel { get; set; } = "gpt-6-sol";
 
         /// <summary>Where codex.exe lives, only when the finder cannot see it on PATH or inside the
         /// desktop app's versioned bin folder. Blank = find it.</summary>
@@ -60,12 +60,12 @@ namespace ImmersiveAI
         /// context tables match them by containment. Live-verified 2026.07.16: plain replies,
         /// native tool calling, and reasoning-off all work through the router.</summary>
         public string OpenRouterApiKey { get; set; } = "";
-        public string OpenRouterModel { get; set; } = "openai/gpt-5.6-luna";
+        public string OpenRouterModel { get; set; } = "openai/gpt-6-luna";
 
         public const string OpenRouterEndpoint = "https://openrouter.ai/api/v1/chat/completions";
 
         public string OpenAIApiKey { get; set; } = "";
-        public string OpenAIModel { get; set; } = "gpt-5.6-luna";
+        public string OpenAIModel { get; set; } = "gpt-6-luna";
 
         /// <summary>The default (real OpenAI) chat-completions endpoint the OpenAI backend speaks to.</summary>
         public const string DefaultOpenAIEndpoint = "https://api.openai.com/v1/chat/completions";
@@ -1049,7 +1049,7 @@ namespace ImmersiveAI
                 ["gpt-5.4-nano"] = 400000,
                 ["gpt-5.5"] = 1000000,
                 ["gpt-5.6"] = 1000000,
-                ["gpt-6-astra"] = 1050000,
+                ["gpt-6"] = 1050000,         // sol, astra and luna alike
                 ["claude"] = 200000,
                 ["claude-opus-4"] = 1000000,
                 ["claude-sonnet-5"] = 1000000,
@@ -1073,9 +1073,13 @@ namespace ImmersiveAI
                 ["claude-sonnet"] = new ModelPrice(3, 15),
                 ["claude-haiku"] = new ModelPrice(1, 5),
                 ["claude-fable-5"] = new ModelPrice(10, 50),
-                // OpenAI — luna and terra were cut hard on 2026.07.30 (luna by 80%).
-                ["gpt-5.6"] = new ModelPrice(5, 30),          // the bare alias routes to Sol
-                ["gpt-5.6-sol"] = new ModelPrice(5, 30),      // unchanged in the July cut
+                // OpenAI — the GPT-6 line (2026.09.28): Sol and Luna moved up to 6, Terra stays on 5.6.
+                ["gpt-6-sol"] = new ModelPrice(2, 10),
+                ["gpt-6-astra"] = new ModelPrice(10, 50),
+                ["gpt-6-luna"] = new ModelPrice(0.1, 0.5),
+                // luna and terra were cut hard on 2026.07.30 (luna by 80%), sol by the GPT-6 launch.
+                ["gpt-5.6"] = new ModelPrice(2, 10),          // the bare alias routes to Sol
+                ["gpt-5.6-sol"] = new ModelPrice(2, 10),
                 ["gpt-5.6-terra"] = new ModelPrice(2, 12),
                 ["gpt-5.6-luna"] = new ModelPrice(0.2, 1.2),
                 ["gpt-5.5"] = new ModelPrice(5, 30),          // flagship tier; no mini/nano siblings exist
@@ -1118,7 +1122,25 @@ namespace ImmersiveAI
                 ["gpt-5.6-luna"] = new ModelPrice(1, 6),        // cut 80% on 2026.07.30
                 ["gpt-5.6-terra"] = new ModelPrice(2.5, 15),    // cut 20% the same day
                 ["deepseek-v4-flash"] = new ModelPrice(0.1, 0.2), // our own estimate; their real rate is 0.14/0.28
+                ["gpt-5.6"] = new ModelPrice(5, 30),            // sol's old rate, cut to 2/10 by 2026.09.28
+                ["gpt-5.6-sol"] = new ModelPrice(5, 30),
             };
+
+        /// <summary>Moves every price line still holding its exact superseded figure to today's.
+        /// Idempotent, and a hand-tuned price is the player's own and stays.</summary>
+        private void HealSupersededPrices()
+        {
+            if (ModelPrices == null) return;
+            var current = DefaultModelPrices();
+            foreach (var stale in SupersededModelPrices())
+            {
+                if (!ModelPrices.TryGetValue(stale.Key, out var held) || held == null) continue;
+                if (held.InputPerMTok != stale.Value.InputPerMTok
+                    || held.OutputPerMTok != stale.Value.OutputPerMTok) continue;
+                if (current.TryGetValue(stale.Key, out var fresh) && fresh != null)
+                    ModelPrices[stale.Key] = fresh;
+            }
+        }
 
         public static string ConfigDirectory =>
             Path.Combine(
@@ -1188,18 +1210,7 @@ namespace ImmersiveAI
             // exact superseded figure — a hand-tuned price is the player's own and stays.
             if (ConfigVersion < 3)
             {
-                if (ModelPrices != null)
-                {
-                    var current = DefaultModelPrices();
-                    foreach (var stale in SupersededModelPrices())
-                    {
-                        if (!ModelPrices.TryGetValue(stale.Key, out var held) || held == null) continue;
-                        if (held.InputPerMTok != stale.Value.InputPerMTok
-                            || held.OutputPerMTok != stale.Value.OutputPerMTok) continue;
-                        if (current.TryGetValue(stale.Key, out var fresh) && fresh != null)
-                            ModelPrices[stale.Key] = fresh;
-                    }
-                }
+                HealSupersededPrices();
                 ConfigVersion = 3;
             }
 
@@ -1256,6 +1267,15 @@ namespace ImmersiveAI
                 ConfigVersion = 7;
             }
 
+            // V8 (2026.09.28): GPT-6 arrived and gpt-5.6-sol fell from 5/30 to 2/10 — the same
+            // price heal as V3, for configs already past it. The model DEFAULTS moved to gpt-6-luna /
+            // gpt-6-sol too, and those are deliberately NOT migrated: a model is the player's voice.
+            if (ConfigVersion < 8)
+            {
+                HealSupersededPrices();
+                ConfigVersion = 8;
+            }
+
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";
 
             // The spark mode knows exactly three spellings; anything else (typos, old hand edits)
@@ -1286,7 +1306,7 @@ namespace ImmersiveAI
             // trailing space can't 400 the router.
             OpenRouterApiKey = (OpenRouterApiKey ?? string.Empty).Trim();
             OpenRouterModel = (OpenRouterModel ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-5.6-luna";
+            if (string.IsNullOrWhiteSpace(OpenRouterModel)) OpenRouterModel = "openai/gpt-6-luna";
 
             // Gemini and DeepSeek: same contract — trimmed keys and ids, a blank id falling back to
             // the tested default rather than 400-ing on an empty model name.

@@ -18,7 +18,7 @@
         /// <summary>The current Codex subscription family. Sol mirrors living-abby's proven default;
         /// Astra is the strongest, Terra the balanced step-down, Luna the lightest.</summary>
         public static readonly string[] CodexModels =
-            { "gpt-5.6-sol", "gpt-6-astra", "gpt-5.6-terra", "gpt-5.6-luna" };
+            { "gpt-6-sol", "gpt-6-astra", "gpt-5.6-terra", "gpt-6-luna" };
 
         /// <summary>The models the Claude Code road offers by name. Whatever the player's plan
         /// carries works — these are the ones worth listing; anything else goes in the custom
@@ -45,12 +45,14 @@
         // change meaning for old store files; the bridge's value-based push self-heals stored
         // indices at every successful bind, and the once-per-process rescue can at worst adopt the
         // swapped sibling — both fine models. Everything else remains append-at-the-END.
+        // 2026.09.28: Sol and Luna moved up to GPT-6, renamed IN PLACE (same family, same slot) —
+        // a config still holding a 5.6 id simply shows it in the custom field. Astra appended.
         public static readonly string[] OpenAIModels =
-            { "gpt-5.6-luna", "gpt-5.4-mini", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano" };
+            { "gpt-6-luna", "gpt-5.4-mini", "gpt-5.6-terra", "gpt-6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano", "gpt-6-astra" };
 
         public static readonly string[] OpenRouterModels =
         {
-            "openai/gpt-5.6-luna",
+            "openai/gpt-6-luna",
             "anthropic/claude-haiku-4.5",
             "deepseek/deepseek-v4-flash",
             "google/gemini-2.5-flash",
@@ -65,6 +67,7 @@
             "openai/gpt-5.4-nano",
             "google/gemini-3.6-flash",
             "deepseek/deepseek-v4-pro",
+            "openai/gpt-6-sol",
         };
 
         public static readonly string[] HotkeyKeys =
