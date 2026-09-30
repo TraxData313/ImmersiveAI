@@ -216,4 +216,43 @@ public class ToolLoopRunnerTests
 
         Assert.Equal(2, seed.Count);
     }
+
+    [Fact]
+    public async Task VoiceKeyAlone_AtTheEnd_IsSilence_TheEarlierWordsStandWithIt()
+    {
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("Aye, gladly. Point me at them.",
+            new[] { new ToolCall("call_1", "recall_person", "{\"name\":\"Rhagaea\"}") }));
+        client.Script.Enqueue(new ChatResult("[voice: brightening, with a firm edge]"));
+
+        var text = await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("found"));
+
+        Assert.Equal("Aye, gladly. Point me at them.\n[voice: brightening, with a firm edge]", text);
+    }
+
+    [Fact]
+    public async Task VoiceKeyAlone_AtTheEnd_KeepsTheEarlierWordsOwnKey()
+    {
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("Aye.\n[voice: warm]",
+            new[] { new ToolCall("call_1", "recall_person", "{\"name\":\"Rhagaea\"}") }));
+        client.Script.Enqueue(new ChatResult("[voice: cold]"));
+
+        var text = await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("found"));
+
+        Assert.Equal("Aye.\n[voice: warm]", text);
+    }
+
+    [Fact]
+    public async Task VoiceKeyAlone_InAToolRound_IsNotRememberedAsWords()
+    {
+        var client = new ScriptedToolClient();
+        client.Script.Enqueue(new ChatResult("[voice: warm]",
+            new[] { new ToolCall("call_1", "recall_person", "{\"name\":\"Rhagaea\"}") }));
+        client.Script.Enqueue(new ChatResult("She is the empress."));
+
+        var text = await ToolLoopRunner.RunAsync(client, Seed(), RecallTools, _ => Task.FromResult("found"));
+
+        Assert.Equal("She is the empress.", text);
+    }
 }

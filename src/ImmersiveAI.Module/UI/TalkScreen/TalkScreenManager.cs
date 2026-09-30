@@ -280,6 +280,12 @@ namespace ImmersiveAI.UI.TalkScreen
             }
             if (!CanOpenNow()) return;
 
+            // The post catches up HERE, not only in TalkUI's doors: the hotkey and the hearth open
+            // this screen directly, and the frozen world means no hourly tick can do it once we are up
+            // — so a letter to someone who has since ridden in stayed "4.2 days out" at her side.
+            try { ImmersiveChatBehavior.DeliverLettersWhoseEndsHaveMet(); }
+            catch { /* the post is never worth a door that will not open */ }
+
             try
             {
                 _vm = new TalkScreenVM(_config!);

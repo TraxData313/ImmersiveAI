@@ -46,9 +46,9 @@ namespace ImmersiveAI.Core.Llm
                     .ConfigureAwait(false);
 
                 if (!result.WantsTools || !allowToolUse)
-                    return string.IsNullOrWhiteSpace(result.Text) ? spokenAlongTheWay : result.Text;
+                    return FinalWords(result.Text ?? "", spokenAlongTheWay);
 
-                if (!string.IsNullOrWhiteSpace(result.Text))
+                if (HasWords(result.Text))
                     spokenAlongTheWay = result.Text;
 
                 working.Add(ChatMessage.AssistantToolCalls(result.Text, result.ToolCalls));
@@ -62,6 +62,25 @@ namespace ImmersiveAI.Core.Llm
                     working.Add(ChatMessage.ToolResult(call.Id, answer));
                 }
             }
+        }
+
+        /// <summary>A reply is words, not its voice key: a final round of nothing but
+        /// <c>[voice: …]</c> is silence (Ira on gpt-6-sol, 2026.09.30 — her words came with
+        /// move_heart, the last round returned only the key, and the key alone was recorded).</summary>
+        private static bool HasWords(string? text) =>
+            !string.IsNullOrWhiteSpace(Voices.VoiceLine.Strip(text));
+
+        private static string FinalWords(string final, string spokenAlongTheWay)
+        {
+            if (HasWords(final) || !HasWords(spokenAlongTheWay))
+                return string.IsNullOrWhiteSpace(final) ? spokenAlongTheWay : final;
+
+            // The words came earlier; a direction that arrived only at the end still belongs to them.
+            Voices.VoiceLine.Split(final, out var lateDirection);
+            Voices.VoiceLine.Split(spokenAlongTheWay, out var ownDirection);
+            return lateDirection.Length > 0 && ownDirection.Length == 0
+                ? spokenAlongTheWay.TrimEnd() + "\n[voice: " + lateDirection + "]"
+                : spokenAlongTheWay;
         }
     }
 }

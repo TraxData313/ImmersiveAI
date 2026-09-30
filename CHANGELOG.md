@@ -17,6 +17,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 - OpenAI's GPT-6 is in: the default is now `gpt-6-luna` (half the price of 5.6 Luna), Codex defaults to `gpt-6-sol`, and Astra joins the lists. Your chosen model is kept.
 - Developer mode: the talk screen's Dev panel can step a character's traits (mercy, valor, honor, generosity, calculating) — they feel it on their next reply.
+- Fixed: a letter to someone who has since joined you is now handed over when you open the talk screen by its hotkey too, instead of staying "days out" at their side.
+- Fixed: a reply that came back as only its voice note (no words) now keeps the words they spoke a moment earlier, instead of showing an empty answer.
 
 ## v3.4.0 — 2026.09.25
 
