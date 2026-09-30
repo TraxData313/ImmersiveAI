@@ -100,7 +100,7 @@ refused and the zip must move to a GitHub Release asset instead.
 Steam client open and logged in. Details and uploader quirks: `tools/WORKSHOP-UPLOAD.md`.
 
 ```powershell
-& "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord\bin\Win64_Shipping_Client\TaleWorlds.MountAndBlade.SteamWorkshop.exe" "C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\tools\WorkshopUpdate.xml"
+& "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord\bin\Win64_Shipping_Client\TaleWorlds.MountAndBlade.SteamWorkshop.exe" "C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\tools\WorkshopUpdate.xml"
 ```
 
 - **Success is the words `Uploading done!` in the output — never the exit code.** The tool ends by

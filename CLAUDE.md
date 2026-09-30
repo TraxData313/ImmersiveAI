@@ -2129,4 +2129,4 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
 - The user commits from GitHub Desktop too — write descriptive commit messages, expect a
   shared history. Closing VS Code / Explorer windows on the repo may be needed before folder
   renames on Windows.
-- `<GameFolder>` currently: `C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord`.
+- `<GameFolder>` currently: `D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord`.

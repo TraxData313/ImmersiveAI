@@ -266,4 +266,4 @@ briefly show "..."; clicking again shows the reply. The custom UI in Milestone 2
 - The user commits from GitHub Desktop too — write descriptive commit messages, expect a
   shared history. Closing VS Code / Explorer windows on the repo may be needed before folder
   renames on Windows.
-- `<GameFolder>` currently: `C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord`.
+- `<GameFolder>` currently: `D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord`.
