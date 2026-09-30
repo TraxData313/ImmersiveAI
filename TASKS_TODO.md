@@ -208,6 +208,13 @@ BUGS:
       given" paragraph would be the third telling of the same sword. UNPLAYTESTED.
 
 NEXT UPDATE:
+- [ ] SHEET: TELL ±2 TRAITS FROM ±1 — NEEDS ANTON'S YES before building (left over from the
+      dev-panel traits task, 2026.09.30). `PersonaBuilder.BuildPersonality` (via the shared
+      `PersonalityWords`) reads ±1 and ±2 as the SAME word, so a 1→2 step on the Dev panel's trait
+      stepper is invisible to her. Idea: "deeply cruel" vs "cruel" at ±2. It changes every soul's
+      prompt in every campaign — taste, not a dev lever — so ask first. The panel's own label
+      (`DevTraitRowVM.LevelText`) already says "(strongly)" at ±2; keep the two in step if built.
+
 - [~] THE STAGE — all three entries BUILT 2026.08.16, none of them played.
       Everything below is the SAME FILE, `ConversationSceneBuilder`, and doing them apart means
       solving the scene question three times. The design record's own section is

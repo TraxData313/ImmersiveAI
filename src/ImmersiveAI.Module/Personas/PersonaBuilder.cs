@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using ImmersiveAI.Core.Prompts;
 using TaleWorlds.CampaignSystem;
@@ -253,14 +254,26 @@ namespace ImmersiveAI.Personas
             return "bitter enemy";
         }
 
+        /// <summary>
+        /// The five personality traits and the words the sheet reads them in. Shared with the
+        /// dev panel's trait steppers so the panel can never name a trait differently from what
+        /// she is told. Built on call: DefaultTraits are campaign-instance objects.
+        /// </summary>
+        internal static IReadOnlyList<(TraitObject Trait, string High, string Low)> PersonalityWords() =>
+            new List<(TraitObject, string, string)>
+            {
+                (DefaultTraits.Honor, "honorable", "deceitful"),
+                (DefaultTraits.Valor, "daring", "cautious"),
+                (DefaultTraits.Mercy, "compassionate", "cruel"),
+                (DefaultTraits.Generosity, "generous", "closefisted"),
+                (DefaultTraits.Calculating, "calculating", "impulsive"),
+            };
+
         private static string BuildPersonality(Hero npc)
         {
             var sb = new StringBuilder();
-            AppendTrait(sb, npc.GetTraitLevel(DefaultTraits.Honor), "honorable", "deceitful");
-            AppendTrait(sb, npc.GetTraitLevel(DefaultTraits.Valor), "daring", "cautious");
-            AppendTrait(sb, npc.GetTraitLevel(DefaultTraits.Mercy), "compassionate", "cruel");
-            AppendTrait(sb, npc.GetTraitLevel(DefaultTraits.Generosity), "generous", "closefisted");
-            AppendTrait(sb, npc.GetTraitLevel(DefaultTraits.Calculating), "calculating", "impulsive");
+            foreach (var (trait, high, low) in PersonalityWords())
+                AppendTrait(sb, npc.GetTraitLevel(trait), high, low);
             return sb.Length == 0 ? "Unremarkable temperament." : sb.ToString().TrimEnd(',', ' ') + ".";
         }
 

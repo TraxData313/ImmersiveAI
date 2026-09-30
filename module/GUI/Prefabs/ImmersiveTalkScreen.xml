@@ -1074,6 +1074,34 @@
                           <Children>
                             <ListPanel Id="DevList" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginRight="14" StackLayout.LayoutMethod="VerticalTopToBottom">
                               <Children>
+                    <!-- THEIR TRAITS: five steppers acting in place, the panel staying open. The visibility
+                         lives on this wrapper, never on the DataSource list inside (a DataSource widget binds
+                         its own IsVisible against the child source). -->
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginBottom="14" StackLayout.LayoutMethod="VerticalTopToBottom" IsVisible="@HasDevTraits">
+                      <Children>
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="30" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#E8D8B0FF" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@DevTraitsTitle" />
+                        <ListPanel DataSource="{DevTraits}" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" StackLayout.LayoutMethod="VerticalTopToBottom">
+                          <ItemTemplate>
+                            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="38">
+                              <Children>
+                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="160" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#D8D0BCFF" Brush.TextHorizontalAlignment="Left" Brush.TextVerticalAlignment="Center" Text="@NameText" />
+                                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="160" Brush="Popup.Cancel.Button" Command.Click="ExecuteDecrease" IsEnabled="@CanDecrease">
+                                  <Children>
+                                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="20" Brush.TextHorizontalAlignment="Center" Text="-" />
+                                  </Children>
+                                </ButtonWidget>
+                                <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="300" MarginLeft="200" Brush="Popup.Description.Text" Brush.FontSize="16" Brush.FontColor="#E8D8B0FF" Brush.TextHorizontalAlignment="Center" Brush.TextVerticalAlignment="Center" Text="@LevelText" />
+                                <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="36" SuggestedHeight="32" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="504" Brush="Popup.Cancel.Button" Command.Click="ExecuteIncrease" IsEnabled="@CanIncrease">
+                                  <Children>
+                                    <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="20" Brush.TextHorizontalAlignment="Center" Text="+" />
+                                  </Children>
+                                </ButtonWidget>
+                              </Children>
+                            </Widget>
+                          </ItemTemplate>
+                        </ListPanel>
+                      </Children>
+                    </ListPanel>
                     <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="42" MarginBottom="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteDevRevealMind">
                       <Children>
                         <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="Reveal their whole prompt (and save it)" />

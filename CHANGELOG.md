@@ -16,6 +16,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ## [Unreleased]
 
 - OpenAI's GPT-6 is in: the default is now `gpt-6-luna` (half the price of 5.6 Luna), Codex defaults to `gpt-6-sol`, and Astra joins the lists. Your chosen model is kept.
+- Developer mode: the talk screen's Dev panel can step a character's traits (mercy, valor, honor, generosity, calculating) — they feel it on their next reply.
 
 ## v3.4.0 — 2026.09.25
 

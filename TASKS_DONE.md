@@ -1583,3 +1583,133 @@ first three change how the whole road behaves.
   releases — refreshed, and the step written into docs/release-dance.md. 722 Core tests green;
   zip 48 MB, 92 voices, no executable. Uploaded 17:23 ("Uploading done!"). Nexus file left for
   Anton (48 MB > the browser's 10 MB bridge). (2026.09.25 17.40.00)
+- [x] DEV PANEL: EDIT A SOUL'S TRAITS (Anton, 2026.09.30: "Give me a devmode option to change their
+      traits (cruel, merciful etc), some dropdown in the dev options maybe.")
+      PLANNED 2026.09.30 — research done, nothing built. Implement from the checklist below alone.
+
+      RESEARCH (all verified, file:line as of commit 6dba213):
+      * THE DEV PANEL (talk screen) — VM: `src\ImmersiveAI.Module\UI\TalkScreen\TalkScreenVM.cs`
+        - `ExecuteToggleDev` :2469; `RunDev(Action<Hero>)` :2471-2477 acts on `_selected?.Hero`
+          and CLOSES the panel (`IsDevShown = false`) before running the lever; levers :2479-2541
+          (e.g. `ExecuteDevShutDoor` => `RunDev(npc => { ImmersiveChatBehavior.DevShutDoor(npc);
+          RefreshSelectionState(); })`).
+        - Bound props: `IsDevMode` :3290 (gates the bar's Dev button), `IsDevShown` :3293-3297,
+          `DevTitleText` :3300 (names the selected soul), `DevHintText` :3305. Field
+          `_isDevShown` :172. Escape folds it: TalkScreenVM :1226, TalkScreenManager :513/:522.
+        - `RefreshSelectionState()` :913 is what selection changes run; `SelectContact` :292.
+      * THE PREFAB — `module\GUI\Prefabs\ImmersiveTalkScreen.xml`: dev overlay :1055-1142 (760x660
+        box, title :1062, hint :1063, a SCROLLED list — `ScrollablePanel Id="DevScroller"` :1071,
+        `ListPanel Id="DevList"` :1075 whose children are the lever buttons :1077-1121, each
+        `ButtonWidget ... SuggestedHeight="42" MarginBottom="8" Brush="Popup.Cancel.Button"` with a
+        `TextWidget Brush="Popup.Button.Text" Brush.FontSize="15"`). Dev button in the bar :1258.
+      * THE BRIDGES — `internal static void Dev*(Hero)` on `ImmersiveChatBehavior`, each
+        `try { if (npc != null) Current?.XFor(npc); } catch (ex) { ModLog.Error("dev: …", ex); }`
+        — e.g. `DevRevealMind` ImmersiveChatBehavior.cs:3432, `DevShutDoor` ImmersiveChatBehavior.Doors.cs:428.
+      * THE OLD CHAT WINDOW has its own dev panel (`UI\ChatWindow\ChatWindowVM.cs` :856/:1410,
+        `ImmersiveChatWindow.xml`). It is the FALLBACK only (`UseClassicChatWindow`) — leave it
+        alone; this lever is talk-screen only.
+      * THE TRAIT API (decompiled from bin\Win64_Shipping_Client\TaleWorlds.CampaignSystem.dll with
+        `$env:DOTNET_ROLL_FORWARD='LatestMajor'; ilspycmd -t …`):
+        - `public void Hero.SetTraitLevel(TraitObject trait, int value)` — clamps itself with
+          `MBMath.ClampInt(value, trait.MinValue, trait.MaxValue)` then writes `_heroTraits`. PUBLIC,
+          no reflection. It NREs if `_heroTraits` is null (nulled when a hero is removed) — so wrap it.
+        - `public int Hero.GetTraitLevel(TraitObject trait)` — returns 0 when `_heroTraits` is null.
+        - `DefaultTraits` (namespace `TaleWorlds.CampaignSystem.CharacterDevelopment`): `Mercy`,
+          `Valor`, `Honor`, `Generosity`, `Calculating`, all `Initialize(..., isHidden:false, -2, 2)`;
+          `DefaultTraits.Personality` enumerates exactly those five. `TraitObject.MinValue`/`MaxValue`/
+          `Name` (TextObject) are public. Range is -2..2.
+        - Traits live in the SAVE (`_heroTraits` is a saved field), so a change persists with the game
+          save and ALSO affects vanilla (AI decisions, relation reactions to player choices,
+          encyclopedia "reputation of being…"). Fine for a dev lever; say so in the hint.
+      * HOW IT REACHES THE PROMPT — `src\ImmersiveAI.Module\Personas\PersonaBuilder.cs:256-271`
+        `BuildPersonality` reads the five live via `npc.GetTraitLevel(DefaultTraits.X)` with word
+        pairs Honor honorable/deceitful, Valor daring/cautious, Mercy compassionate/cruel,
+        Generosity generous/closefisted, Calculating calculating/impulsive (>0 high, <0 low, 0
+        nothing). `PersonaBuilder.Build(npc, _config)` is called FRESH per exchange
+        (ImmersiveChatBehavior.cs:3930, :4127, …) — there is NO persona cache, so a change reaches
+        the very next reply and the scrollback preview with nothing else to refresh. Traits are read
+        nowhere else in src (grep). NOTE: the sheet reads ±1 and ±2 as the SAME word — a 1→2 change
+        is invisible to her (see the optional last step).
+      * WIDGETS: no dropdown/selector exists anywhere in the mod's prefabs (no SelectorVM). What DOES
+        exist and is proven: the −/+ stepper (`module\GUI\Prefabs\ImmersiveSocialness.xml:47-63`,
+        `UI\Socialness\SocialnessVM.cs:34-44` `ExecuteDecrease`/`ExecuteIncrease`) and row lists
+        with a per-row VM + buttons in THIS prefab (`VoiceStorageRows` :1004-1018, row VM
+        `VoiceStorageRowVM` in `UI\TalkScreen\VoicePageVMs.cs:109-128`).
+
+      CHOSEN UI: a "Their traits" block at the TOP of the dev list — five rows, one per personality
+      trait: `[Mercy]  [−]  -1 · cruel  [+]`. Stepper, not dropdown: it is the shape the mod
+      already has, needs no new widget type, and a five-value range is two clicks at most. The
+      panel STAYS OPEN while stepping (unlike `RunDev` levers) so several traits can be set in a
+      row; the label updates at once. No map-log toast for feedback — the talk screen covers the
+      map's message log (CLAUDE.md, "the narration was real and invisible"); the row label IS the
+      feedback. One ModLog line per change for the record.
+
+      CHECKLIST:
+      [x] 1. (done: PersonaBuilder.cs PersonalityWords + loop) PersonaBuilder: expose the word pairs so the sheet and the panel can never disagree.
+             Add `internal static IReadOnlyList<(TraitObject Trait, string High, string Low)>
+             PersonalityWords()` (built on call — `DefaultTraits.*` are instance-backed, so no static
+             readonly), order Honor, Valor, Mercy, Generosity, Calculating; rewrite
+             `BuildPersonality` to loop over it. Output must stay byte-identical.
+      [x] 2. (done: ImmersiveChatBehavior.cs DevStepTrait after DevRevealMind) New bridge in ImmersiveChatBehavior.cs beside `DevRevealMind` (~:3432):
+             `internal static int DevStepTrait(Hero npc, TraitObject trait, int delta)` — reads
+             `GetTraitLevel`, calls `npc.SetTraitLevel(trait, old + delta)` (the game clamps), returns
+             the new level; try/catch → `ModLog.Error("dev: stepping a trait", ex)` and return the
+             old level; on a real change `ModLog.Info` "dev: {name} {trait} {old} -> {new}". Game thread
+             only (VM commands already are).
+      [x] 3. (done: UI\TalkScreen\DevTraitRowVM.cs, ASCII '-' glyph like the Socialness stepper) New file `src\ImmersiveAI.Module\UI\TalkScreen\DevTraitRowVM.cs` (: ViewModel), modelled
+             on `VoiceStorageRowVM`: ctor (Hero hero, TraitObject trait, string high, string low).
+             Bound: `NameText` (trait.Name.ToString()), `LevelText` (e.g. "+2 · compassionate
+             (strongly)", "+1 · compassionate", "0 · neither", "-1 · cruel", "-2 · cruel (strongly)"),
+             `CanDecrease` (level > trait.MinValue), `CanIncrease` (level < trait.MaxValue).
+             Commands `ExecuteDecrease`/`ExecuteIncrease` → `ImmersiveChatBehavior.DevStepTrait(hero,
+             trait, ∓1)` then `OnPropertyChanged` for LevelText/CanDecrease/CanIncrease.
+             (The Module csproj is SDK-style with globbing — verified, no `<Compile Include>` — so the
+             new file needs no project edit.)
+      [x] 4. (done: TalkScreenVM.cs _devTraits/DevTraits/HasDevTraits/DevTraitsTitle/RefreshDevTraits) TalkScreenVM: field `MBBindingList<DevTraitRowVM> _devTraits = new()`, bound
+             `[DataSourceProperty] public MBBindingList<DevTraitRowVM> DevTraits`, and
+             `[DataSourceProperty] public string DevTraitsTitle => "Their traits (the sheet reads them
+             on the next reply; saved with the game)"`. Private `RefreshDevTraits()`: clear, then if
+             `_selected?.Hero` is alive add one row per `PersonaBuilder.PersonalityWords()` entry.
+             Call it from `ExecuteToggleDev` when OPENING (`if (IsDevShown) RefreshDevTraits();`) —
+             the overlay is modal, so the selection cannot change under it. Do NOT route the steppers
+             through `RunDev` (it closes the panel). `[DataSourceProperty] public bool HasDevTraits =>
+             _devTraits.Count > 0` (raise it after refresh) to hide the block when nobody is chosen.
+      [x] 5. (done: ImmersiveTalkScreen.xml, traits block atop DevList; ASCII '-' glyph) Prefab: at the TOP of `DevList`'s children (before the ExecuteDevRevealMind button,
+             ImmersiveTalkScreen.xml :1077) add a `Widget` IsVisible="@HasDevTraits",
+             HeightSizePolicy="CoverChildren", MarginBottom="14", containing a title TextWidget
+             (`Popup.Description.Text`, FontSize 16, FontColor #E8D8B0FF, Text="@DevTraitsTitle") and a
+             `ListPanel DataSource="{DevTraits}"` VerticalTopToBottom whose ItemTemplate is a 38-high
+             row: name TextWidget (fixed 160 wide, `Popup.Description.Text` 16 #D8D0BCFF) · `−`
+             ButtonWidget (36x32, `Popup.Cancel.Button`, Command.Click="ExecuteDecrease",
+             IsEnabled="@CanDecrease", child TextWidget `Popup.Button.Text` "−") · level TextWidget
+             (fixed ~300 wide, centered, #E8D8B0FF, Text="@LevelText") · `+` ButtonWidget likewise
+             with ExecuteIncrease/@CanIncrease. Copy attributes from the Socialness stepper and the
+             VoiceStorageRows row; campaign-safe brushes only (the ones named here). A DataSource
+             widget binds its own IsVisible to the CHILD source — keep IsVisible="@HasDevTraits" on
+             a wrapper WITHOUT DataSource (memory note harmony-decided-and-ui-patterns).
+      [x] 6. (done: TalkScreenVM.cs DevHintText, one closing sentence) Update `DevHintText` (TalkScreenVM :3305) by one short clause: traits change the game's
+             own hero too and persist with the save.
+      [x] 7. Build: `dotnet build -c Release`; test: `dotnet test -c Release` (Core untouched, must stay
+             green); deploy (game closed): `powershell -ExecutionPolicy Bypass -File tools\deploy.ps1`.
+      [x] 8. CHANGELOG.md under [Unreleased], one pill: "Developer mode: the Dev panel can now set a
+             character's traits (mercy, valor, honor, generosity, calculating) — they feel it on
+             their next reply."
+      [x] 9. CLAUDE.md breadcrumb: in the chat-window/talk-screen DEV PANEL sentence ("The window
+             carries a DEV PANEL since 2026.08.08 …"), add: "2026.09.30: a 'Their traits' stepper
+             block tops the talk screen's dev list (`DevTraitRowVM` + `DevStepTrait`; the game's own
+             public `Hero.SetTraitLevel`, clamped -2..2; the panel stays open while stepping; words
+             shared with the sheet via `PersonaBuilder.PersonalityWords`)."
+      [x] 10. Move this entry to the end of TASKS_DONE.md with a done timestamp (YYYY.MM.DD HH.MM.SS).
+      UNPLAYTESTED until Anton steps a trait in game and hears the difference.
+      Review (step 3, 2026.09.30): checked BuildPersonality (same five, same order, same words,
+      same separators and "Unremarkable temperament." case — byte-identical); DevStepTrait (UI click
+      = game thread, null guard, try/catch answers the old level, game clamps, one ModLog per real
+      change); DevTraitRowVM (rails read MinValue/MaxValue, label + both Can* re-read the real level
+      after the set); prefab bindings match VM names, IsVisible on the wrapper not the DataSource
+      list, brushes/sprite already used in the prefab, rows inside the scrolled DevList, no
+      overlapping click targets. FIXED: rows refreshed only on opening — a contacts refresh or a
+      knock that changes/clears the soul on stage while the panel is up left the OLD soul's steppers
+      live; RefreshSelectionState now rebuilds them whenever the panel is shown. Build clean.
+      Step 4 (2026.09.30): build clean, 722 Core tests green; deploy FAILED — the game held
+      ImmersiveAI.dll locked, so redeploy with the game closed. CHANGELOG pill + CLAUDE.md
+      breadcrumb written. Item 11 (±2 wording) left open in TASKS_TODO. (2026.09.30 19.26.40)

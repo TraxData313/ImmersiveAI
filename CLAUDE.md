@@ -1507,6 +1507,11 @@ editor → dev panel → misgivings → info → close; Enter never sends under 
 face-to-face menu itself was re-ordered the same day: "Speak freely with me." rides priority 120
 (top of the vanilla hub), "Farewell." dropped to 85 so it sits BELOW all the devmode levers
 (95..88) instead of stranded mid-list.
+**THEIR TRAITS (2026.09.30)**: the talk screen's dev list opens with a stepper row per personality
+trait (`DevTraitRowVM` → `ImmersiveChatBehavior.DevStepTrait`). The steppers bypass `RunDev` so the
+panel stays open; words come from the shared `PersonaBuilder.PersonalityWords` so panel and sheet
+never drift. `Hero.SetTraitLevel` clamps -2..2 itself, persists in the save, and throws on a hero
+with no traits (hence the try/catch).
 
 **Tidings & the talk of the town.** Every NPC's situation now carries what has lately happened in the
 world as far as it would have reached their ears, plus what the common folk are whispering where they

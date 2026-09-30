@@ -170,6 +170,7 @@ namespace ImmersiveAI.UI.TalkScreen
         private string _misgivingsTitleText = string.Empty;
         private string _misgivingsBodyText = string.Empty;
         private bool _isDevShown;
+        private readonly MBBindingList<DevTraitRowVM> _devTraits = new MBBindingList<DevTraitRowVM>();
 
         // "Let me think…" — the player's own next line (see the behavior's Thoughts partial).
         // _isWish marks that what stands in the writing box is an INTENDED MEANING rather than words:
@@ -913,6 +914,9 @@ namespace ImmersiveAI.UI.TalkScreen
         private void RefreshSelectionState()
         {
             SelectedName = _selected?.Name ?? string.Empty;
+            // The overlay is modal to clicks, but not to the code: a contacts refresh or a knock can
+            // change (or clear) the soul on stage while it is up, and stale rows would step the OLD one.
+            if (IsDevShown) RefreshDevTraits();
             OnPropertyChanged("MuteButtonText");
             OnPropertyChanged("CanMute");
 
@@ -2466,7 +2470,22 @@ namespace ImmersiveAI.UI.TalkScreen
 
         // ------------------------------ the dev panel ------------------------------
 
-        public void ExecuteToggleDev() => IsDevShown = !IsDevShown;
+        public void ExecuteToggleDev()
+        {
+            IsDevShown = !IsDevShown;
+            if (IsDevShown) RefreshDevTraits();
+        }
+
+        // The trait steppers act in place and keep the panel open (never through RunDev, which closes it).
+        private void RefreshDevTraits()
+        {
+            _devTraits.Clear();
+            var hero = _selected?.Hero;
+            if (hero != null && hero.IsAlive)
+                foreach (var (trait, high, low) in Personas.PersonaBuilder.PersonalityWords())
+                    _devTraits.Add(new DevTraitRowVM(hero, trait, high, low));
+            OnPropertyChanged(nameof(HasDevTraits));
+        }
 
         private void RunDev(Action<Hero> lever)
         {
@@ -3303,7 +3322,16 @@ namespace ImmersiveAI.UI.TalkScreen
 
         [DataSourceProperty]
         public string DevHintText =>
-            "The same test levers as the face-to-face menu, without the walk over. Popups open above this screen; levers that start something async (reach-out, letter, spark) show their result as it lands.";
+            "The same test levers as the face-to-face menu, without the walk over. Popups open above this screen; levers that start something async (reach-out, letter, spark) show their result as it lands. Traits change the game's own hero too and are kept with the save.";
+
+        [DataSourceProperty]
+        public MBBindingList<DevTraitRowVM> DevTraits => _devTraits;
+
+        [DataSourceProperty]
+        public bool HasDevTraits => _devTraits.Count > 0;
+
+        [DataSourceProperty]
+        public string DevTraitsTitle => "Their traits (the sheet reads them on the next reply; saved with the game)";
 
         // ------------------------------ the voices overlay ------------------------------
 

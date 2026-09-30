@@ -3435,6 +3435,30 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("dev: revealing the mind", ex); }
         }
 
+        /// <summary>
+        /// Steps one of a soul's personality traits by <paramref name="delta"/> and returns the level
+        /// it now stands at. The game clamps to the trait's own range; traits are saved fields, so the
+        /// change also reaches vanilla's own reading of the hero. SetTraitLevel NREs on a removed hero,
+        /// hence the guard: a failure answers the old level and changes nothing.
+        /// </summary>
+        internal static int DevStepTrait(Hero npc, TaleWorlds.CampaignSystem.CharacterDevelopment.TraitObject trait, int delta)
+        {
+            if (npc == null || trait == null) return 0;
+            int old = npc.GetTraitLevel(trait);
+            try
+            {
+                npc.SetTraitLevel(trait, old + delta);
+                int now = npc.GetTraitLevel(trait);
+                if (now != old) ModLog.Info($"dev: {npc.Name} {trait.StringId} {old} -> {now}");
+                return now;
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("dev: stepping a trait", ex);
+                return old;
+            }
+        }
+
         internal static void DevRevealCourtship(Hero npc)
         {
             try { if (npc != null) Current?.RevealCourtshipFor(npc); }
