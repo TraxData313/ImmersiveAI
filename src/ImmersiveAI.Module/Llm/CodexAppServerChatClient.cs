@@ -20,9 +20,15 @@ namespace ImmersiveAI.Llm
     /// hands through strict structured output. No OpenAI API key is read and there is deliberately
     /// no pay-as-you-go fallback.
     /// </summary>
-    public sealed class CodexAppServerChatClient : IToolChatClient
+    public sealed class CodexAppServerChatClient : IToolChatClient, IToolOfferPolicy
     {
         private const int TimeoutSeconds = 300;
+        private const string ScratchPrefix = "immersive-ai-codex-";
+        private static int _sweptStaleScratch;
+
+        /// <summary>The whole history is flattened and the hands ride a schema rebuilt every call,
+        /// so a silent hand already used this turn may leave the offer.</summary>
+        public bool OfferMayNarrowMidTurn => true;
 
         private readonly string _model;
         private readonly string _configuredPath;
@@ -55,7 +61,7 @@ namespace ImmersiveAI.Llm
         {
             var envelope = await RunAsync(messages, tools, allowToolUse, cancellationToken)
                 .ConfigureAwait(false);
-            return CodexAppServerShape.ParseToolResult(envelope.ResultText);
+            return CodexAppServerShape.ParseToolResult(envelope.ResultText, tools);
         }
 
         private async Task<CodexAppServerShape.TurnEnvelope> RunAsync(
@@ -76,8 +82,9 @@ namespace ImmersiveAI.Llm
             var system = CodexAppServerShape.BuildSystem(messages, tools, allowToolUse, _maxTokens);
             var prompt = CodexAppServerShape.BuildTranscript(messages);
             var schema = CodexAppServerShape.BuildStrictSchema(tools, allowToolUse);
+            SweepStaleScratchOnce();
             var scratch = Path.Combine(Path.GetTempPath(),
-                "immersive-ai-codex-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+                ScratchPrefix + Guid.NewGuid().ToString("N").Substring(0, 8));
             Directory.CreateDirectory(scratch);
 
             try
@@ -112,8 +119,52 @@ namespace ImmersiveAI.Llm
             }
             finally
             {
-                try { Directory.Delete(scratch, recursive: true); } catch { /* temp hygiene only */ }
+                DeleteScratch(scratch);
             }
+        }
+
+        // ONE FOLDER PER CALL USED TO STAY BEHIND (48 of them by 2026.10.01): the delete raced
+        // codex.exe's exit — the process (or a hook it ran) still held a file for a moment, the
+        // single attempt threw, and the catch swallowed it. A few short retries let the handles go.
+        private static void DeleteScratch(string scratch)
+        {
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    if (!Directory.Exists(scratch)) return;
+                    Directory.Delete(scratch, recursive: true);
+                    return;
+                }
+                catch
+                {
+                    if (attempt < 4) Thread.Sleep(150 * (attempt + 1));
+                }
+            }
+        }
+
+        /// <summary>Once per game session, off-thread: whatever an earlier crash or a stubborn
+        /// handle left in %TEMP% older than a day is cleared. Best-effort, silent.</summary>
+        private static void SweepStaleScratchOnce()
+        {
+            if (Interlocked.Exchange(ref _sweptStaleScratch, 1) != 0) return;
+            Task.Run(() =>
+            {
+                try
+                {
+                    var cutoff = DateTime.UtcNow.AddDays(-1);
+                    foreach (var dir in Directory.GetDirectories(Path.GetTempPath(), ScratchPrefix + "*"))
+                    {
+                        try
+                        {
+                            if (Directory.GetLastWriteTimeUtc(dir) < cutoff)
+                                Directory.Delete(dir, recursive: true);
+                        }
+                        catch { /* in use or locked: next session */ }
+                    }
+                }
+                catch { /* temp hygiene only */ }
+            });
         }
 
         private CodexAppServerShape.TurnEnvelope RunProcess(
@@ -145,7 +196,8 @@ namespace ImmersiveAI.Llm
                     ["model"] = _model,
                     ["modelProvider"] = "openai",
                     ["baseInstructions"] = system,
-                    ["developerInstructions"] = string.Empty,
+                    // The player's global AGENTS.md rides every thread with no switch to skip it.
+                    ["developerInstructions"] = CodexAppServerShape.ForeignInstructionsNeutralizer,
                     ["ephemeral"] = true,
                     ["cwd"] = scratch,
                     ["environments"] = new JArray(),
@@ -222,6 +274,8 @@ namespace ImmersiveAI.Llm
                 ["orchestrator.mcp.enabled"] = false,
                 ["orchestrator.skills.enabled"] = false,
             };
+            foreach (var quiet in CodexAppServerShape.QuietContextOverrides)
+                disabled[quiet.Key] = quiet.Value;
 
             // Sharing Codex's credential home also makes its config visible. Enumerate every MCP
             // entry and explicitly switch it off for this thread; the process additionally refuses

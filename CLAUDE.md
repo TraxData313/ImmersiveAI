@@ -482,6 +482,17 @@ TaleWorlds API usage patterns, never copy from it.
   Luna. LIVE-PROVED through the built client on Anton's ChatGPT login: Sol plain reply `OK`; Astra
   returned `recall_person({"name":"Rhagaea"})`. Sol also surfaced a genuine temporary capacity
   refusal on the tool probe, which is passed through as a provider error rather than hidden.
+  **CODEX BRINGS ITS OWN CONTEXT — QUIET IT, NEUTRALIZE WHAT CANNOT BE QUIETED (2026.10.01, the
+  Ira/Rhagaea review, verified in captures of the real request):** `CodexAppServerShape.
+  QuietContextOverrides` (11 keys: permissions/environment/collaboration/apps blocks off, hooks off,
+  sleep/image-gen/goals/async/request-input/clock tools off — ~1.5k tokens a call; Codex IGNORES
+  unknown keys silently, so a new key proves nothing until a capture shows it). The player's GLOBAL
+  `~/.codex/AGENTS.md` is injected into EVERY thread and no key skips it (Anton's holds his Neya
+  persona: a bare "Answer OK." came back "OK, Toni. I'm Neya."), so `ForeignInstructionsNeutralizer`
+  rides as `developerInstructions` — never in her sheet. The scratch dir is deleted with retries and
+  `%TEMP%\immersive-ai-codex-*` older than a day is swept once a session (they leaked per call).
+  **`gpt-6-luna` on Codex is WORSE than sol** — code-mode hidden internal samplings, more calls and
+  tokens per reply — so keep sol the Codex default.
 - **Gemini and DeepSeek are first-class backends since 2026.08.02** (asked for on Steam — "weird to
   offer only Claude and OpenAI while Gemini allows free usage"). Both are OpenAI-compatible and ride
   `OpenAIChatClient` through a new `OpenAiDialect` enum whose ONLY job is how each provider is told to
@@ -516,7 +527,18 @@ TaleWorlds API usage patterns, never copy from it.
   Both clients also implement `IToolChatClient` (native tool/function calling — the recall);
   plain `IChatClient` stays the base so test fakes and simple calls remain untouched. Once a
   history holds tool calls, both APIs require the tool definitions to keep riding along; the
-  final spoken-only round is forced with `tool_choice: none`, never by dropping the definitions.
+  final round names the `speak` hand (or `tool_choice: none` with no answer field), never by
+  dropping the definitions.
+  **THE LOOP NEVER THROWS AWAY WORDS THAT CAME BESIDE A HAND (2026.10.01, the "coda" bug):** a
+  round with words + only SILENT hands (`ToolDefinition.Silent` — `move_heart`, now the `heart`
+  answer field) is FINAL; it once fed the heart back, asked again, and recorded the model's
+  afterthought ("Now I give my answer…") instead of the answer — 3-4 calls and a stranger reply.
+  Words beside a REAL reach are a DRAFT, kept if the next round brings none; on flattened roads
+  (`IToolOfferPolicy`) the offer narrows once weighed. Guarded by `ToolLoopRunnerTests`.
+  **Test prompt changes LIVE with the probe harness** (`tools\probe\README.txt`): rebuilds the real
+  message list from a campaign's runtime files (read from copies), drives the real ToolLoopRunner
+  against Codex / Claude Code (subscription, free to iterate) or OpenAI / Anthropic (BILLED — few
+  calls), and tallies per-section tokens. `runs\` is git-ignored.
 - **A tool's contract lives in its SCHEMA, not in its prose** (2026.08.09, learned the hard way on
   `weigh_misgivings` — see TASKS_DONE). A closed set of words explained only in a parameter's
   description comes back as the model's own synonym ("resolve" for `settle`), and a parameter named
@@ -1217,31 +1239,33 @@ told plainly ("add your key to <config> and restart", "check your internet conne
 classified) instead of surfacing as mute NPCs mid-conversation. Success shows a soft "connected to
 <backend · model>." The remedy for any failure is fix-config-and-restart, which re-runs the check.
 
-Each exchange can also move the NPC's standing with the player. **The heart moves by her own hand now
-(2026.07.10, Anton's ask): a `move_heart` native tool** (`Tools\HeartTool`) rides every spoken path
-beside the recalls — mid-reply the NPC may shift her regard herself, the resolver applies it at once via
-`ApplyRelationShift` and tallies it into the turn's `FeltShift` (`TurnOutcome.FeltShiftApplied` keeps
-callers from applying twice), and a calibration lives in the tool description + a "My heart is my own"
-whisper (`NpcPersona.CanMoveHeart`). This lets greetings, reach-outs, and letters move the heart, which
-the after-the-reply question never covered. **Hybrid since 2026.07.12** (gpt-4o went shy of volunteering
-the call again once eleven tools rode along — a whole warm playtest landed 0s): a turn only counts as
-weighed when a `move_heart` call actually CAME with a readable number (`HeartTool.Tally.Weighed`; an
-honest mid-reply 0 is respected and asks nothing twice) — when the tool never came,
-`ExecutePlayerTurnAsync` falls back to the **second, isolated feeling call**
-(`PromptBuilder.BuildFeelingQuery`, her own first-person inner weighing, one signed number via `FeelingParser.ParseShift`,
-deliberately NOT told where the standing rests), the same path used when the tool shape is off or the
-backend cannot carry tools. `ChangeRelationAction` folds shifts into the real game relation
-(clamped −100..100, no external judge and no ±cap like ChatAi — the NPC sets it however they truly
-feel); the colored message always shows the FELT shift even when the relation is already pinned at ±100
-(the impact is the story; the rail just has nowhere left to move — 2026.07.09, Anton's ask,
-ChatAi-style). Toggles: `EnableRelationshipChanges` (master), `RelationshipChangesViaTool` (default on).
-Why tool-or-separate-call and never in-message marks — **settled twice, don't retry**: both a ♥
-tail-mark (early) and a firm `<relation>±N</relation>` tag (tried and reverted the same day,
-2026.07.09) failed on gpt-4o — the model narrates the number in prose inside the spoken reply and never
-emits the mark, so nothing moves AND the number leaks into her words. Native tool calling is a
-different, first-class API channel (the one the recalls ride reliably on both backends) — that is why
-`move_heart` is worth the third try where inline marks were not; if a backend proves shy of reaching
-for it, `RelationshipChangesViaTool: false` restores the separate question without a redeploy.
+Each exchange can also move the NPC's standing with the player. **THE HEART RIDES THE ANSWER
+(2026.10.01, Anton: "output it with their answer always, even if it is 0 — not another go that takes
+time"):** the measure is a REQUIRED structured field of every spoken answer, beside the words, never
+inside them — `HeartTool.Tool` is an *answer field* (`ToolDefinition.AnswerField = "heart"`, integer). On
+the flattened roads (Codex, Claude Code) it is a required property next to `reply` in the JSON schema;
+on the native-tool roads (OpenAI-compatible, Anthropic) the reply itself is given through ONE forced hand,
+`speak(words, heart[, voice])` (Core `Llm\AnswerShape`; tool_choice `required`/`any`, the last round names
+`speak` instead of `none`). Both come back as `ChatResult.AnswerCalls` → the same `ResolveHeartShift` →
+`ApplyRelationShift`, once per exchange (`HeartTool.Tally`), 0 a full answer (the grey "held" notice
+stands). A reply that looks nothing up is ONE call — probed on Codex sol, Claude Code haiku, OpenAI luna
+and Anthropic haiku: heart present every call, warm +2/+3, hurtful −3…−18, neutral 0. WHY THIS IS NOT THE
+FAILED IDEA: the ♥ tail and the `<relation>±N</relation>` tag (gpt-4o, 2026.07.09) were marks IN THE PROSE
+— the model narrated the number instead of emitting it; then the optional `move_heart` tool went shy, and
+the always-weigh ritual cost a whole extra round every reply. A required schema field is neither prose nor
+optional: it can be filled, not forgotten, and not narrated. `AnswerShape.StripLeakedMeasure` still lifts
+a stray "heart: 2" line out of the words (defence, not the channel; never a number read OUT of prose).
+Two rails learned in the probe: **self-initiated beats** (her own letter, her first word) carry "when I
+speak first and nothing new has passed between us, it is 0" — guaranteed, the field otherwise crept +2 on
+every spontaneous beat; and the **voice line** dies inside a JSON argument (luna 3/3), so `speak` gets a
+required `voice` parameter exactly when the sheet asks for `[voice: …]`, folded back as the last line.
+FALLBACK: an answer without a readable measure (a local server that will not be forced to a tool — asked
+once, then `_forcedChoiceRefused` — or a garbled number) counts as unweighed, and `ExecutePlayerTurnAsync`
+asks the **isolated feeling call** (`PromptBuilder.BuildFeelingQuery` → `FeelingParser.ParseShift`, not
+told where the standing rests). `ChangeRelationAction` folds shifts into the real relation (clamped
+−100..100, no ±cap like ChatAi); the coloured line shows the FELT shift even when pinned at ±100 (Anton,
+2026.07.09). Toggles: `EnableRelationshipChanges` (master), `RelationshipChangesViaTool` (name kept for
+old configs; true = the answer field, false = always the feeling call).
 
 **Every visit is a recorded beat** (2026.07.10, Anton's ask): the opening recap greeting is no longer
 ephemeral — her own mind marks the arrival (`PromptBuilder.ArrivalLine`, first person, first-meeting vs

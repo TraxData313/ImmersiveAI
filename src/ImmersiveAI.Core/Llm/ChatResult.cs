@@ -12,12 +12,19 @@ namespace ImmersiveAI.Core.Llm
         public string Text { get; }
         public IReadOnlyList<ToolCall> ToolCalls { get; }
 
+        /// <summary>The answer-field hands that came INSIDE the answer (the heart's measure set down
+        /// beside the words — see <see cref="ToolDefinition.AnswerField"/>). They are part of the
+        /// answer, not reaches: never fed back, never a reason for another round. The loop resolves
+        /// them with the words they came beside.</summary>
+        public IReadOnlyList<ToolCall> AnswerCalls { get; }
+
         public bool WantsTools => ToolCalls.Count > 0;
 
-        public ChatResult(string text, IReadOnlyList<ToolCall>? toolCalls = null)
+        public ChatResult(string text, IReadOnlyList<ToolCall>? toolCalls = null, IReadOnlyList<ToolCall>? answerCalls = null)
         {
             Text = text ?? string.Empty;
             ToolCalls = toolCalls ?? Array.Empty<ToolCall>();
+            AnswerCalls = answerCalls ?? Array.Empty<ToolCall>();
         }
     }
 }

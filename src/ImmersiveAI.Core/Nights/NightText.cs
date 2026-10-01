@@ -105,8 +105,13 @@ namespace ImmersiveAI.Core.Nights
         /// marriage of grand nights simply keeps fewer of them in full than a marriage of small
         /// ones. The freshest is ALWAYS told whole, whatever it costs; a night she cannot
         /// remember at all is worse than an expensive one.
+        /// <para>2600 → 1500 on 2026.10.01 (token diet round 2, measured on Ira's real fortnight:
+        /// three nights told whole were ~730 tokens, the heaviest block of her sheet). The two
+        /// privileged nights — the freshest and the dearest — are told whole whatever this says;
+        /// the room beneath them now holds about one more ordinary night, and the rest keep the
+        /// names she gave them. Their accounts stay whole in the ledger and nights.txt.</para>
         /// </summary>
-        public const int DefaultFullAccountBudget = 2600;
+        public const int DefaultFullAccountBudget = 1500;
 
         /// <summary>
         /// HOW MUCH A NIGHT IS WORTH REMEMBERING WHOLE (2026.08.11, Anton's ask — "искам най-
@@ -228,8 +233,14 @@ namespace ImmersiveAI.Core.Nights
             sb.AppendLine(RollHeader);
             foreach (var line in kept) sb.AppendLine("· " + line);
 
-            // And under them, the month she can no longer recite (2026.08.11).
-            var reckoning = BuildReckoning(marks, today);
+            // And under them, the month she can no longer recite (2026.08.11) — when there IS some she
+            // can no longer recite (2026.10.01, token diet round 2): while every night of the month
+            // still stands in the roll above, the sum only counts the lines she has just read. The
+            // talk of his other nights is the exception and always kept — how loud it was, and its
+            // name, are the reckoning's own and no line of the roll carries them.
+            var reckoning = NothingBeyondTheRoll(marks, ordered[0].GameDay, today)
+                ? string.Empty
+                : BuildReckoning(marks, today);
             if (!string.IsNullOrWhiteSpace(reckoning))
             {
                 sb.AppendLine();
@@ -354,6 +365,21 @@ namespace ImmersiveAI.Core.Nights
 
         /// <summary>How far back the reckoning counts, in days.</summary>
         public const int ReckoningDays = 30;
+
+        /// <summary>True when the reckoning would add nothing to the roll: every night of its window
+        /// falls on or after the roll's first night, and none of them was spent elsewhere.</summary>
+        public static bool NothingBeyondTheRoll(IReadOnlyList<NightMark>? marks, double rollFrom, double today,
+            int days = ReckoningDays)
+        {
+            if (marks == null) return true;
+            foreach (var m in marks)
+            {
+                if (m == null || m.GameDay <= today - days) continue;
+                if (m.Kind == NightKind.Elsewhere) return false;
+                if (m.GameDay < rollFrom - 0.01) return false;
+            }
+            return true;
+        }
 
         /// <summary>
         /// THE RECKONING OF A MONTH (2026.08.11, Anton's design). Under the roll of the nights she

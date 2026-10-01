@@ -5,6 +5,14 @@ namespace ImmersiveAI.Core.Tests;
 public class TidingsFormatterTests
 {
     [Fact]
+    public void StripMarkup_RemovesDialogueAnimationCues()
+    {
+        Assert.Equal("We don't know enough about the enemy, where they are strong.",
+            TidingsFormatter.StripMarkup("We don't know enough about the enemy, [ib:closed][if:convo_thinking]where they are strong."));
+        Assert.Equal("A [plain] bracket stays.", TidingsFormatter.StripMarkup("A [plain] bracket stays."));
+    }
+
+    [Fact]
     public void StripMarkup_RemovesLinkTagsAndSmoothsWhitespace()
     {
         Assert.Equal(

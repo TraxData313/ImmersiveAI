@@ -21,6 +21,9 @@ namespace ImmersiveAI.Core.Prompts
         {
             if (string.IsNullOrWhiteSpace(text)) return string.Empty;
             var bare = Regex.Replace(text, "<[^>]*>", string.Empty);
+            // And the dialogue animation cues quest givers' lines carry ([ib:closed][if:convo_thinking],
+            // [rb:…], [rf:…]) — stage directions for the game's own talk, noise in a soul's mind.
+            bare = Regex.Replace(bare, @"\[(?:ib|if|rb|rf):[^\]\r\n]*\]", string.Empty);
             return Regex.Replace(bare, @"\s+", " ").Trim();
         }
 

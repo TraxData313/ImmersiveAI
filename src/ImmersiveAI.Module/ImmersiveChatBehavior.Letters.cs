@@ -285,11 +285,11 @@ namespace ImmersiveAI
                 // The letter is written with everything they are — and the writing is itself a remembered
                 // moment (the compose line and the letter, as an inner turn).
                 // One in the player's own service is invited to make it a field report of their charge.
-                var composeCtx = BuildContext(npc, situation);
+                var composeCtx = BuildContext(npc, situation, onPaper: true);
                 var composeLine = PromptBuilder.ComposeLetterLine(composeCtx.PlayerName, InPlayersService(npc));
                 var composeMsgs = _promptBuilder.BuildInnerPrompt(
                     composeCtx.Persona, composeCtx.Memory, composeCtx.Scene, composeCtx.PlayerName, composeLine, _config.SystemVoiceName);
-                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc).ConfigureAwait(false);
+                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc, OneWeighing()).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
                 if (body.Length == 0) { _letterWorkInFlight = false; return; }
 
@@ -325,7 +325,9 @@ namespace ImmersiveAI
         // Models sometimes hand a letter back wrapped in quotes or a stage direction; keep only the page.
         private static string CleanLetterBody(string? raw)
         {
-            var body = (raw ?? string.Empty).Trim();
+            // A voice key never belongs on paper; the sheet no longer asks for one in a letter,
+            // and this is the second line for a soul whose own history still carries the habit.
+            var body = ImmersiveAI.Core.Voices.VoiceLine.Strip(raw).Trim();
             if (body.Length >= 2 && (body[0] == '"' && body[body.Length - 1] == '"'
                                   || body[0] == '“' && body[body.Length - 1] == '”'))
                 body = body.Substring(1, body.Length - 2).Trim();
@@ -694,7 +696,7 @@ namespace ImmersiveAI
                 await EnsurePersonaSparkAsync(npc, canAsk: false).ConfigureAwait(false);
 
                 var situation = SafeBuildApartSituation(npc);
-                var ctx = BuildContext(npc, situation);
+                var ctx = BuildContext(npc, situation, onPaper: true);
 
                 var readLine = PromptBuilder.AnswerLetterDesireLine(ctx.PlayerName, letter.Body);
                 var readMsgs = _promptBuilder.BuildInnerPrompt(
@@ -753,11 +755,12 @@ namespace ImmersiveAI
 
                 var replyCtx = BuildContext(npc, situation, bargainRides: bargain != null,
                     trothRides: trothRides, blessBride: bless?.Bride,
-                    loverRides: loverRides, ransom: bless?.IsRansom ?? false, doorRides: door != null);
+                    loverRides: loverRides, ransom: bless?.IsRansom ?? false, doorRides: door != null,
+                    onPaper: true);
                 var composeLine = PromptBuilder.ComposeReplyLine(ctx.PlayerName);
                 var composeMsgs = _promptBuilder.BuildInnerPrompt(
                     replyCtx.Persona, replyCtx.Memory, replyCtx.Scene, ctx.PlayerName, composeLine, _config.SystemVoiceName);
-                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc, null, replyCtx.Memory, bargain, troth, bless, door).ConfigureAwait(false);
+                var bodyRaw = await CompleteSpokenAsync(composeMsgs, npc, OneWeighing(), replyCtx.Memory, bargain, troth, bless, door).ConfigureAwait(false);
                 var body = CleanLetterBody(bodyRaw);
 
                 // An invited answer, not an outreach — but it still rests them (no spontaneous letter

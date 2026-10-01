@@ -8,6 +8,23 @@ namespace ImmersiveAI.Core.Tests
     public class CodexAppServerShapeTests
     {
         [Fact]
+        public void QuietContext_SwitchesOffEveryVerifiedSideDoor()
+        {
+            var keys = new HashSet<string>();
+            foreach (var kv in CodexAppServerShape.QuietContextOverrides)
+            {
+                Assert.False(kv.Value);
+                keys.Add(kv.Key);
+            }
+            // The key is features.hooks, NOT codex_hooks (an unknown key is ignored silently).
+            Assert.Contains("features.hooks", keys);
+            Assert.Contains("include_permissions_instructions", keys);
+            Assert.Contains("include_environment_context", keys);
+            Assert.DoesNotContain("features.codex_hooks", keys);
+            Assert.Contains("AGENTS.md", CodexAppServerShape.ForeignInstructionsNeutralizer);
+        }
+
+        [Fact]
         public void StrictSchemaSealsOptionalToolArgumentsAsNullableAndRequired()
         {
             var tool = new ToolDefinition("recall_market", "Recall the market.", new[]

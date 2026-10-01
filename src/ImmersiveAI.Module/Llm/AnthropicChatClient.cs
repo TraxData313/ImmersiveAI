@@ -27,6 +27,15 @@ namespace ImmersiveAI.Llm
         private readonly string _model;
         private readonly int _maxTokens;
 
+        // Set the first time a forced tool choice is refused (a 400 naming tool_choice — Anthropic
+        // will not force a tool while the model thinks). From then on the speak hand is only offered.
+        private bool _forcedChoiceRefused;
+
+        // Fable/Mythos always think, and thinking cannot be combined with a forced tool choice.
+        private bool ThinksAlways =>
+            _model.IndexOf("fable", StringComparison.OrdinalIgnoreCase) >= 0
+            || _model.IndexOf("mythos", StringComparison.OrdinalIgnoreCase) >= 0;
+
         static AnthropicChatClient()
         {
             // .NET Framework needs an explicit opt-in to TLS 1.2 on some systems
@@ -93,14 +102,73 @@ namespace ImmersiveAI.Llm
                 && _model.IndexOf("mythos", StringComparison.OrdinalIgnoreCase) < 0)
                 payload["thinking"] = new JObject { ["type"] = "disabled" };
 
+            // THE ANSWER FIELDS (2026.10.01 — the heart beside every reply): the reply is given
+            // through one hand, speak(words, heart), and the choice is FORCED ("any" — a reach or the
+            // answer; the last round names speak itself), so the measure comes with the words in one
+            // call. See AnswerShape.
+            bool speaking = AnswerShape.HasFields(tools);
             if (tools != null && tools.Count > 0)
             {
-                payload["tools"] = BuildTools(tools);
+                payload["tools"] = BuildTools(AnswerShape.NativeOffer(tools, messages));
                 // The definitions must always ride along (a history holding tool_use blocks is rejected
                 // without them); "none" is how a final, spoken-answer-only round is enforced.
-                if (!allowToolUse) payload["tool_choice"] = new JObject { ["type"] = "none" };
+                if (speaking && !_forcedChoiceRefused && !ThinksAlways)
+                    payload["tool_choice"] = allowToolUse
+                        ? new JObject { ["type"] = "any" }
+                        : new JObject { ["type"] = "tool", ["name"] = AnswerShape.SpeakTool };
+                else if (!allowToolUse && !speaking) payload["tool_choice"] = new JObject { ["type"] = "none" };
             }
 
+            var (status, body) = await PostOnceAsync(payload, cancellationToken).ConfigureAwait(false);
+            if (status == 400 && speaking && payload["tool_choice"] != null
+                && body.IndexOf("tool_choice", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                payload.Remove("tool_choice");
+                _forcedChoiceRefused = true;
+                ModLog.Warn($"Anthropic: '{_model}' refused a forced tool choice — the reply is offered the speak hand without forcing it.");
+                (status, body) = await PostOnceAsync(payload, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (status < 200 || status >= 300)
+            {
+                LlmGate.ReportFailure(status, "Anthropic", body);
+                throw new InvalidOperationException($"Anthropic request failed ({status}): {Truncate(body, 400)}");
+            }
+
+            var json = JObject.Parse(body);
+
+            // The API measures its own tokens — hand them to the ledger, and tell the
+            // gate the road is open again.
+            UsageLedger.RecordCall(_model,
+                (int?)json.SelectToken("usage.input_tokens") ?? 0,
+                (int?)json.SelectToken("usage.output_tokens") ?? 0);
+            LlmGate.ReportSuccess();
+
+            var stopReason = (string?)json["stop_reason"];
+            if (stopReason == "refusal")
+                throw new InvalidOperationException("The model declined to answer this request.");
+
+            var blocks = json["content"] as JArray ?? new JArray();
+
+            var text = string.Concat(blocks
+                .Where(b => (string?)b["type"] == "text")
+                .Select(b => (string?)b["text"] ?? ""));
+
+            var calls = blocks
+                .Where(b => (string?)b["type"] == "tool_use")
+                .Select(b => new ToolCall(
+                    (string?)b["id"] ?? "",
+                    (string?)b["name"] ?? "",
+                    b["input"]?.ToString(Formatting.None) ?? "{}"))
+                .ToList();
+
+            return AnswerShape.FromNative(text.Trim(), calls, tools);
+        }
+
+        /// <summary>One POST: status + body, never throwing on an API error status (the caller
+        /// decides about the one retry). A failed CONNECTION still throws, after telling the gate.</summary>
+        private async Task<(int Status, string Body)> PostOnceAsync(JObject payload, CancellationToken cancellationToken)
+        {
             using (var request = new HttpRequestMessage(HttpMethod.Post, Endpoint))
             {
                 request.Headers.Add("x-api-key", _apiKey);
@@ -121,40 +189,7 @@ namespace ImmersiveAI.Llm
                 using (response)
                 {
                     var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        LlmGate.ReportFailure((int)response.StatusCode, "Anthropic", body);
-                        throw new InvalidOperationException($"Anthropic request failed ({(int)response.StatusCode}): {Truncate(body, 400)}");
-                    }
-
-                    var json = JObject.Parse(body);
-
-                    // The API measures its own tokens — hand them to the ledger, and tell the
-                    // gate the road is open again.
-                    UsageLedger.RecordCall(_model,
-                        (int?)json.SelectToken("usage.input_tokens") ?? 0,
-                        (int?)json.SelectToken("usage.output_tokens") ?? 0);
-                    LlmGate.ReportSuccess();
-
-                    var stopReason = (string?)json["stop_reason"];
-                    if (stopReason == "refusal")
-                        throw new InvalidOperationException("The model declined to answer this request.");
-
-                    var blocks = json["content"] as JArray ?? new JArray();
-
-                    var text = string.Concat(blocks
-                        .Where(b => (string?)b["type"] == "text")
-                        .Select(b => (string?)b["text"] ?? ""));
-
-                    var calls = blocks
-                        .Where(b => (string?)b["type"] == "tool_use")
-                        .Select(b => new ToolCall(
-                            (string?)b["id"] ?? "",
-                            (string?)b["name"] ?? "",
-                            b["input"]?.ToString(Formatting.None) ?? "{}"))
-                        .ToList();
-
-                    return new ChatResult(text.Trim(), calls);
+                    return ((int)response.StatusCode, body);
                 }
             }
         }
@@ -228,7 +263,7 @@ namespace ImmersiveAI.Llm
                 var required = new JArray();
                 foreach (var p in tool.Parameters)
                 {
-                    var schema = new JObject { ["type"] = "string", ["description"] = p.Description };
+                    var schema = new JObject { ["type"] = p.JsonType, ["description"] = p.Description };
                     // A closed vocabulary belongs in the schema, not only in the prose (see
                     // ToolParameter.AllowedValues — the silent-synonym bug of 2026.08.09).
                     if (p.AllowedValues != null)

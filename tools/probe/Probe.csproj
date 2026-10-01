@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The simulation harness (2026-10-01 review). Not part of ImmersiveAI.sln and never shipped.
+       It references the REAL Core (PromptBuilder, ClaudeCliShape, CodexAppServerShape, ToolLoopRunner)
+       and links the Module's HeartTool (pure Core code); the other tool definitions are copied by
+       extract_tools.py. See README.txt beside it. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>ImmersiveAI.Probe</RootNamespace>
+    <AssemblyName>probe</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ImmersiveAI.Core\ImmersiveAI.Core.csproj" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Compile Include="..\..\src\ImmersiveAI.Module\Tools\HeartTool.cs" Link="Linked\HeartTool.cs" />
+  </ItemGroup>
+
+</Project>

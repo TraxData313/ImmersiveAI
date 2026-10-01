@@ -40,6 +40,7 @@ namespace ImmersiveAI.Personas
                 var settlement = speaker.CurrentSettlement ?? Settlement.CurrentSettlement;
                 var tidings = new List<Candidate>();
                 var rumors = new List<Candidate>();
+                var ownershipTold = new HashSet<Settlement>();
 
                 int stop = Math.Max(0, logs.Count - MaxEntriesScanned);
                 for (int i = logs.Count - 1; i >= stop; i--)
@@ -52,6 +53,13 @@ namespace ImmersiveAI.Personas
                     if (age > MaxAgeDays) break; // the log is chronological — everything before is older still
 
                     try { if (!entry.IsValid()) continue; } catch { continue; }
+
+                    // A place that changed hands twice is told once, by its NEWEST owner (2026.10.01):
+                    // "New owner of Husn Fulq is Rhagaea" beside "…is Renaud" the same week is one
+                    // stale tiding and a contradiction. The scan runs newest first, so the first seen wins.
+                    if (entry is ChangeSettlementOwnerLogEntry handover && handover.Settlement != null
+                        && !ownershipTold.Add(handover.Settlement))
+                        continue;
 
                     if (maxTidings > 0 && !(entry is PlayerMeetLordLogEntry)) // "you met X" logs spam importance for every clan
                     {

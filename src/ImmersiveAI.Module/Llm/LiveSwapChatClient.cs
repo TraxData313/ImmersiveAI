@@ -15,7 +15,7 @@ namespace ImmersiveAI.Llm
     /// <c>_client</c> field never changes, only the inner client behind it does. A call already in
     /// flight on the old inner client simply finishes there; nothing is torn down under it.
     /// </summary>
-    public sealed class LiveSwapChatClient : IToolChatClient
+    public sealed class LiveSwapChatClient : IToolChatClient, IToolOfferPolicy
     {
         private readonly ModConfig _config;
         private readonly Func<int?> _maxTokensOverride;
@@ -35,6 +35,9 @@ namespace ImmersiveAI.Llm
 
         public Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
             => Inner().CompleteAsync(messages, cancellationToken);
+
+        /// <summary>Asked of whichever backend speaks right now — the loop reads it once per turn.</summary>
+        public bool OfferMayNarrowMidTurn => Inner() is IToolOfferPolicy policy && policy.OfferMayNarrowMidTurn;
 
         public Task<ChatResult> CompleteWithToolsAsync(
             IReadOnlyList<ChatMessage> messages,

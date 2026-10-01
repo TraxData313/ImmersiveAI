@@ -42,6 +42,22 @@ namespace ImmersiveAI.Core.Tests
             Assert.Contains("reaching for nothing more", wordsOnly);
         }
 
+        [Fact]
+        public void SilentHandsAreToldToRideBesideTheWords()
+        {
+            var messages = new List<ChatMessage> { ChatMessage.System("I am Rhia."), ChatMessage.User("hello") };
+            var silentHeart = new ToolDefinition("move_heart", "My regard.",
+                new[] { new ToolParameter("shift", "A number.") }, silent: true);
+
+            var armed = ClaudeCliShape.BuildSystem(messages, new[] { silentHeart, Misgivings() }, allowToolUse: true);
+            Assert.Contains("move_heart needs no answer from the world: I name it beside my whole reply", armed);
+            Assert.DoesNotContain("weigh_misgivings needs no answer", armed);
+
+            // No silent hand, no such line.
+            var loud = ClaudeCliShape.BuildSystem(messages, new[] { Heart() }, allowToolUse: true);
+            Assert.DoesNotContain("needs no answer from the world", loud);
+        }
+
         // ── the transcript ──────────────────────────────────────────────────────
 
         [Fact]
@@ -109,6 +125,25 @@ namespace ImmersiveAI.Core.Tests
             var mis = (JObject)shapes[1];
             var actEnum = (JArray)mis["properties"]["arguments"]["properties"]["act"]["enum"];
             Assert.Contains("settle", actEnum.ToObject<string[]>());
+        }
+
+        [Fact]
+        public void ToolDescriptionRidesOnce_InTheSheet_NeverAgainInTheSchema()
+        {
+            // Token diet round 2 (2026.10.01): the sheet names every hand WITH its description
+            // (the probed requirement); the schema carries shape, parameter words and enums only.
+            var messages = new List<ChatMessage> { ChatMessage.System("I am Rhia."), ChatMessage.User("hello") };
+            var tools = new[] { Heart(), Misgivings() };
+            var sheet = ClaudeCliShape.BuildSystem(messages, tools, allowToolUse: true);
+            var schemaText = ClaudeCliShape.BuildSchema(tools, allowToolUse: true);
+            var strict = CodexAppServerShape.BuildStrictSchema(tools, allowToolUse: true);
+
+            Assert.Contains("How this exchange moved my regard.", sheet);
+            Assert.DoesNotContain("How this exchange moved my regard.", schemaText);
+            Assert.DoesNotContain("My own written doubts.", strict);
+            // …while the parameter words, which live nowhere else, stay.
+            Assert.Contains("A whole number from -20 to 20.", schemaText);
+            Assert.Contains("What I do with one.", strict);
         }
 
         [Fact]

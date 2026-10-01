@@ -604,9 +604,10 @@ namespace ImmersiveAI.UI.TalkScreen
                         {
                             // Her own mind at work — an arrival met, an approach made, a bargain
                             // lived; the words she actually spoke stand as a spoken card below.
+                            var within = LeadInWithoutItsColon(turn.PlayerLine, turn.NpcLine);
                             messages.Add(Voiced(new ChatMessageVM(string.Empty,
-                                WithStamp(stamp, $"({npcName}, within: {turn.PlayerLine})"),
-                                isNarration: true, Colors.White), false, turn.PlayerLine));
+                                WithStamp(stamp, $"({npcName}, within: {within})"),
+                                isNarration: true, Colors.White), false, within));
                         }
                     }
                     else
@@ -820,6 +821,23 @@ namespace ImmersiveAI.UI.TalkScreen
             if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
             if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
             return parts.Count == 0 ? string.Empty : string.Join(", ", parts);
+        }
+
+        /// <summary>
+        /// A recorded beat that INTRODUCES her words ("…I crossed to Renaud and spoke first. My
+        /// words:") drawn as a closed "(… My words:)" read as a thought that trailed off with
+        /// nothing after it — the words stood apart, under a gesture line, and looked missing
+        /// (2026.10.01). The lead-in is the prompt's marker and stays in memory word for word; on
+        /// screen alone it is cut back to its last whole sentence, so the beat and the spoken card
+        /// beneath read as one moment.
+        /// </summary>
+        internal static string LeadInWithoutItsColon(string line, string? words)
+        {
+            var text = (line ?? string.Empty).TrimEnd();
+            if (!text.EndsWith(":") || string.IsNullOrWhiteSpace(words)) return text;
+            int cut = Math.Max(text.LastIndexOf(". ", StringComparison.Ordinal),
+                Math.Max(text.LastIndexOf("! ", StringComparison.Ordinal), text.LastIndexOf("? ", StringComparison.Ordinal)));
+            return cut > 0 ? text.Substring(0, cut + 1) : text.Substring(0, text.Length - 1).TrimEnd() + "…";
         }
 
         private static string WithStamp(string stamp, string text) =>

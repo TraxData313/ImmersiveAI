@@ -32,7 +32,9 @@ namespace ImmersiveAI.Core.Llm
             var system = string.Join("\n\n", messages.Where(m => m.Role == ChatRole.System).Select(m => m.Content));
             var length = LengthLine(maxTokens);
 
-            if (tools == null || tools.Count == 0)
+            var hands = AnswerShape.HandsOf(tools);
+            var fields = AnswerShape.FieldsOf(tools);
+            if (hands.Count == 0 && fields.Count == 0)
                 return length.Length == 0 ? system : (system.Length == 0 ? length : system + "\n\n" + length);
 
             var sb = new StringBuilder(system);
@@ -42,14 +44,14 @@ namespace ImmersiveAI.Core.Llm
                 sb.Append(length);
             }
             if (sb.Length > 0) sb.Append("\n\n");
-            if (allowToolUse)
+            if (allowToolUse && hands.Count > 0)
             {
                 // The hands live in the SHEET, not only in the schema — probed 2026.08.28: with
                 // the descriptions carried by the schema alone the model answered around its hands
                 // instead of reaching; named in the sheet it reached on the first try. The schema
                 // keeps enforcing the shapes and vocabularies; this is where they become known.
                 sb.Append("These hands are mine to reach with, named in \"tool_calls\":\n");
-                foreach (var tool in tools)
+                foreach (var tool in hands)
                 {
                     sb.Append("- ").Append(tool.Name).Append('(');
                     sb.Append(string.Join(", ", tool.Parameters.Select(ParameterSketch)));
@@ -62,11 +64,27 @@ namespace ImmersiveAI.Core.Llm
                     + "I name it in \"tool_calls\" and leave \"reply\" empty — the world answers, and "
                     + "then I speak. I may reach for more than one at once. When I have nothing to "
                     + "reach for, \"tool_calls\" stays empty.");
+                // Silent hands ride WITH the words (2026.10.01): their answer changes nothing that
+                // is said, so the reply and the hand are one answer and the turn ends there.
+                var silent = hands.Where(t => t.Silent).Select(t => t.Name).ToList();
+                if (silent.Count > 0)
+                    sb.Append(" " + string.Join(", ", silent) + (silent.Count == 1 ? " needs" : " need")
+                        + " no answer from the world: I name it beside my whole reply, in the same answer.");
             }
-            else
+            else if (hands.Count > 0)
             {
                 sb.Append("How I answer now: in my own spoken words, in \"reply\", reaching for nothing more.");
             }
+            else
+            {
+                sb.Append("How I answer: my spoken words go in \"reply\".");
+            }
+            // The answer fields (2026.10.01 — the heart): part of EVERY answer, the forced last round
+            // included, so they are said here whatever the hands are doing. The calibration lives in
+            // this one place on this road — the sheet is where the road's hands are explained too.
+            foreach (var f in fields)
+                sb.Append("\nBeside every reply I also set down \"").Append(f.AnswerField).Append("\": ")
+                  .Append(f.Description);
             return sb.ToString();
         }
 
@@ -94,9 +112,9 @@ namespace ImmersiveAI.Core.Llm
             // (non-ASCII costs ~1.6x) — so the figure is deliberately given as a soft ceiling in
             // words rather than a promise about sentences.
             var words = Math.Max(30, maxTokens * 3 / 5);
-            return "The outermost bound of my speech is about " + words + " words — that is a WALL, "
-                 + "never a target, and almost every honest answer stops far short of it. How long I "
-                 + "actually speak is settled above, by how I speak.";
+            // Working words only (2026.10.01, token diet round 2): "how long I speak" already rides
+            // the sheet, so this says the one thing only it knows — where the wall stands.
+            return "The outermost bound of my speech is about " + words + " words — a WALL, never a target.";
         }
 
         private static string ParameterSketch(ToolParameter p)
@@ -162,19 +180,30 @@ namespace ImmersiveAI.Core.Llm
         /// </summary>
         public static string BuildSchema(IReadOnlyList<ToolDefinition>? tools, bool allowToolUse)
         {
+            var properties = new JObject
+            {
+                ["reply"] = new JObject
+                {
+                    ["type"] = "string",
+                    ["description"] = "My spoken words. Empty only while a reach in tool_calls is still unanswered.",
+                },
+                ["tool_calls"] = ToolCallsSchema(AnswerShape.HandsOf(tools), allowToolUse),
+            };
+            var required = new JArray("reply", "tool_calls");
+            // An answer field is a REQUIRED property beside "reply" (2026.10.01): the heart's measure
+            // can be filled, never forgotten and never narrated into the words. It rides the forced
+            // last round too — allowToolUse governs reaches, not the answer.
+            foreach (var f in AnswerShape.FieldsOf(tools))
+            {
+                var p = f.Parameters[0];
+                properties[f.AnswerField!] = new JObject { ["type"] = p.JsonType, ["description"] = p.Description };
+                required.Add(f.AnswerField!);
+            }
             var schema = new JObject
             {
                 ["type"] = "object",
-                ["properties"] = new JObject
-                {
-                    ["reply"] = new JObject
-                    {
-                        ["type"] = "string",
-                        ["description"] = "My spoken words. Empty only while a reach in tool_calls is still unanswered.",
-                    },
-                    ["tool_calls"] = ToolCallsSchema(tools, allowToolUse),
-                },
-                ["required"] = new JArray("reply", "tool_calls"),
+                ["properties"] = properties,
+                ["required"] = required,
                 ["additionalProperties"] = false,
             };
             return schema.ToString(Formatting.None);
@@ -192,16 +221,20 @@ namespace ImmersiveAI.Core.Llm
                 var required = new JArray();
                 foreach (var p in tool.Parameters)
                 {
-                    var prop = new JObject { ["type"] = "string" };
+                    var prop = new JObject { ["type"] = p.JsonType };
                     if (!string.IsNullOrWhiteSpace(p.Description)) prop["description"] = p.Description;
                     if (p.AllowedValues != null) prop["enum"] = new JArray(p.AllowedValues.ToArray());
                     props[p.Name] = prop;
                     if (p.Required) required.Add(p.Name);
                 }
+                // NO tool description here (2026.10.01, token diet round 2): BuildSystem already
+                // names every hand WITH its description in the sheet — the one place the 2026.08.28
+                // probe showed it must live — so a second copy here was the largest single piece
+                // of every call on this road (~3.5k chars for a wife's fourteen hands). The schema
+                // keeps what only it can carry: the shape, the parameter descriptions, the enums.
                 var shape = new JObject
                 {
                     ["type"] = "object",
-                    ["description"] = tool.Description,
                     ["properties"] = new JObject
                     {
                         // A one-value enum, not "const": same meaning, older validators all know it.
@@ -233,23 +266,26 @@ namespace ImmersiveAI.Core.Llm
         /// result treated as spoken words, whole — an answer that arrived malformed is still an
         /// answer.
         /// </summary>
-        public static ChatResult ParseToolResult(string resultText)
+        public static ChatResult ParseToolResult(string resultText, IReadOnlyList<ToolDefinition>? tools = null)
         {
             var cleaned = StripWrappers(resultText ?? string.Empty);
+            var fields = AnswerShape.FieldsOf(tools);
 
-            var parsed = TryParseEnvelope(cleaned);
+            var parsed = TryParseEnvelope(cleaned, fields);
             if (parsed == null)
             {
                 // Trailing chatter after the object (or a partial wrapper) — take the outermost
                 // braces the text carries and try once more.
                 int open = cleaned.IndexOf('{'), close = cleaned.LastIndexOf('}');
                 if (open >= 0 && close > open)
-                    parsed = TryParseEnvelope(cleaned.Substring(open, close - open + 1));
+                    parsed = TryParseEnvelope(cleaned.Substring(open, close - open + 1), fields);
             }
-            return parsed ?? new ChatResult(cleaned.Trim(), null);
+            // Prose with no envelope: the words stand, and no measure is read out of them — a number
+            // found in speech is exactly the in-prose mark this road exists not to rely on.
+            return parsed ?? new ChatResult(AnswerShape.StripLeakedMeasure(cleaned.Trim(), fields).Trim(), null);
         }
 
-        private static ChatResult? TryParseEnvelope(string text)
+        private static ChatResult? TryParseEnvelope(string text, IReadOnlyList<ToolDefinition>? fields = null)
         {
             try
             {
@@ -269,7 +305,10 @@ namespace ImmersiveAI.Core.Llm
                             item["arguments"]?.ToString(Formatting.None) ?? "{}"));
                     }
                 }
-                return new ChatResult(reply.Trim(), calls);
+                if (fields == null || fields.Count == 0)
+                    return new ChatResult(reply.Trim(), calls);
+                return new ChatResult(AnswerShape.StripLeakedMeasure(reply, fields).Trim(), calls,
+                    AnswerShape.FromEnvelope(obj, fields));
             }
             catch (JsonException)
             {

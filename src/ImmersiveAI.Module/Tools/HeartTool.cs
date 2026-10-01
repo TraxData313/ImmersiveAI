@@ -5,16 +5,20 @@ using Newtonsoft.Json.Linq;
 namespace ImmersiveAI.Tools
 {
     /// <summary>
-    /// The heart's own hand: a tool the NPC may call mid-reply to let their regard for the one
-    /// they speak with truly shift, in the same breath as the words that moved it — replacing the
-    /// second, isolated "feeling" call on tool-capable backends (and letting greetings, letters,
-    /// and reachings-out move the heart too, which the after-the-reply question never covered).
+    /// The heart's measure — set down beside EVERY spoken answer, 0 included (2026.10.01, Anton:
+    /// "output it with their answer always … not another go that takes time"). It is an ANSWER
+    /// FIELD (<see cref="ToolDefinition.AnswerField"/> "heart"): on the flattened roads (Codex,
+    /// Claude Code) a required property of the JSON answer beside "reply"; on the native-tool roads
+    /// (OpenAI-compatible, Anthropic) a required parameter of the one "speak" hand the reply is
+    /// given through. Either way it arrives with the words in the same call and is applied by
+    /// <c>ResolveHeartShift</c> exactly as the old reach was.
     ///
-    /// This is NOT the in-message-mark pattern that failed twice on gpt-4o (a ♥ tail-mark, then a
-    /// &lt;relation&gt; tag — both narrated in prose, never emitted): native tool calling is a
-    /// first-class API channel on both backends, the same one the recalls ride reliably. If a
-    /// backend proves shy of reaching for it, RelationshipChangesViaTool=false restores the
-    /// separate feeling call without a redeploy.
+    /// The history it ends: an in-prose mark failed twice on gpt-4o (a ♥ tail, then a
+    /// &lt;relation&gt; tag — the number was narrated, never emitted); then an OPTIONAL tool that
+    /// models went shy of, then the always-weigh ritual whose extra tool round cost seconds on every
+    /// reply. A required schema field is neither prose nor optional. If a backend cannot shape its
+    /// answer this way, the field is missing, the turn counts as unweighed, and the player turn
+    /// falls back to the separate feeling call (RelationshipChangesViaTool=false forces that road).
     /// </summary>
     public static class HeartTool
     {
@@ -32,29 +36,38 @@ namespace ImmersiveAI.Tools
             public bool Weighed;
         }
 
+        /// <summary>The answer field's name — what the model fills beside "reply" / "words".</summary>
+        public const string Field = "heart";
+
+        // The calibration is said ONCE per road (token diet): the description below rides the sheet
+        // on the flattened roads and the speak hand's "heart" parameter on the native ones; the
+        // parameter's own short line is only the schema's reminder of the range.
         public static readonly ToolDefinition Tool = new ToolDefinition(MoveHeart,
-            "Every reply, without exception: weigh how what just passed moved my regard for the one I " +
-            "speak with, and set the honest measure here. 0 is a full answer — a heart that held. A " +
-            "kind word sways it a little (1 to 3), a slight likewise away (-1 to -3); only what shakes " +
-            "the soul moves it greatly. It measures the moment, not the room left on a scale — a heart " +
-            "given wholly can still be warmed. It must agree with my words: warmth spoken and a 0 set " +
-            "down cannot both be true. I never speak the measure aloud.",
+            "how what just passed moved my regard for the one I speak with — a whole number, set every " +
+            "reply. 0 is a full answer: my heart held. A kind word warms it a little (+1 to +3), a slight " +
+            "cools it likewise (-1 to -3); only what shakes the soul moves it far (up to ±100). It " +
+            "measures the moment, not the room left on a scale — a heart given wholly can still be " +
+            "warmed. When I speak first and nothing new has passed between us, it is 0. It agrees with my " +
+            "words, and it is never spoken aloud.",
             new[]
             {
                 new ToolParameter("shift",
-                    "The honest measure, a whole number: 0 when the heart held; positive toward them " +
-                    "(+1 a small warmth, +3 a true kindness, more only for what shakes me), negative " +
-                    "away from them (-1 to -100)."),
-            });
+                    "A whole number from -100 to 100: 0 when my heart held, positive toward them, negative away.",
+                    jsonType: "integer"),
+            },
+            silent: true,
+            answerField: Field);
 
-        /// <summary>What the tool answers when the shift was felt — steering her back to words.</summary>
+        /// <summary>What the tool answers when the shift was felt — steering her back to words.
+        /// It is only ever read when the measure came WITHOUT words (words beside it end the turn),
+        /// so it asks for the reply itself, never for "more" after one (the coda, 2026.10.01).</summary>
         public const string Felt =
             "It is felt, and it is mine — my heart has moved. I let it show only in my words and " +
-            "bearing; I speak no number aloud, and speak on.";
+            "bearing; I speak no number aloud. Now I give my answer.";
 
         /// <summary>What the tool answers when no readable number came — an honest stillness.</summary>
         public const string Held =
-            "I look within, and my heart holds where it stood. I speak on.";
+            "I look within, and my heart holds where it stood. Now I give my answer.";
 
         /// <summary>
         /// What a SECOND weighing in the same exchange is answered with (2026.08.28, Anton's
@@ -66,7 +79,7 @@ namespace ImmersiveAI.Tools
         /// </summary>
         public const string AlreadyWeighed =
             "I have already weighed my heart in this exchange, and what I set down stands — this is " +
-            "the same breath, not a new one. I do not weigh it twice. I speak on.";
+            "the same breath, not a new one. I do not weigh it twice; now I give my answer.";
 
         /// <summary>The shift the NPC chose, clamped to -100..100, or null when none can be read.
         /// Lenient like the feeling call's parser: a bare number, "+2", or a number wrapped in a

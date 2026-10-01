@@ -1713,3 +1713,27 @@ first three change how the whole road behaves.
       Step 4 (2026.09.30): build clean, 722 Core tests green; deploy FAILED — the game held
       ImmersiveAI.dll locked, so redeploy with the game closed. CHANGELOG pill + CLAUDE.md
       breadcrumb written. Item 11 (±2 wording) left open in TASKS_TODO. (2026.09.30 19.26.40)
+
+- [x] IRA & RHAGAEA "CRAZY AND SLOW" — FULL PIPELINE REVIEW (Anton, 2026.10.01: the wife and the
+      empress act strange in the latest save, replies are slow, "how many tokens per turn now?").
+      Diagnosed by rebuilding the real prompt and replaying it live through a new probe harness
+      (`tools\probe\`, README.txt) on Codex sol, Claude Code haiku, and a handful of BILLED OpenAI /
+      Anthropic calls. ROOT CAUSES: (1) THE CODA BUG — ToolLoopRunner threw away a reply that came
+      beside `move_heart`, fed the heart back and recorded the model's afterthought: 3-4 calls,
+      35-54k tokens, 20-34 s and a stranger answer, where the fixed loop is 1 call, ~10k, 5-9 s;
+      (2) outside the player turn the heart was never tallied, so it was offered every round;
+      (3) Codex injects the player's own `~/.codex/AGENTS.md` (Anton's Neya persona) + its own
+      permission/env blocks into every call — present, but not the cause of the strangeness.
+      FIXED: silent hands + draft rule in ToolLoopRunner, IToolOfferPolicy narrowing on the CLI roads;
+      THE HEART IS A REQUIRED ANSWER FIELD of every spoken reply (schema `heart` on Codex/Claude
+      Code, one forced `speak(words, heart[, voice])` hand on the API roads — Core AnswerShape), with
+      the "I speak first → 0" rail against creep; Codex quiet-context overrides + AGENTS.md
+      neutralizer + scratch-dir sweep; letters drop the voice line and get "How I write"; TOKEN DIET
+      round 2 (−23% Ira / −24% Rhagaea's letter: schema no longer repeats tool prose, stale battles
+      fold, nights budget 1500, same-stamp turns unstamped, voice keys only on the newest 3, the
+      shipped roleplay line not sent twice); config mojibake ("â€”") repaired before the exact-match
+      migrations so the retired roleplay bullet finally retires; a twice-taken castle told once.
+      800/800 Core tests green, deployed. DEFERRED for Anton: scrubbing the bad stored turns from
+      Ira's and Rhagaea's memories (backup first), Ira's third-person custom prompt, and three
+      token proposals — history window 40→30, one `recall(kind, name)` hand, gating
+      EraNorm. UNPLAYTESTED in game. (2026.10.01 12.56.31)

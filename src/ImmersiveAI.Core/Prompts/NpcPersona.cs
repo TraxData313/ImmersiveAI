@@ -85,6 +85,13 @@ namespace ImmersiveAI.Core.Prompts
         /// them (see <see cref="PromptBuilder.VoiceGuidance"/>).</summary>
         public IList<string> VoiceSounds { get; set; } = new List<string>();
 
+        /// <summary>True when the words being made are a LETTER (compose, reply, and the reading of
+        /// one) — the sheet then says how she writes instead of how she speaks: the spoken-length,
+        /// plain-speech, acting-out and voice lines all describe talk held face to face, and on a
+        /// page they were both wrong and paid for (token diet round 2, 2026.10.01). See
+        /// <see cref="PromptBuilder.PaperGuidance"/>.</summary>
+        public bool OnPaper { get; set; }
+
         /// <summary>True when the engine speaking for them follows a mood for the whole line.</summary>
         public bool VoiceTakesMood { get; set; }
 

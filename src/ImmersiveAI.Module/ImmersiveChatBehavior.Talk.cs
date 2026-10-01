@@ -251,7 +251,11 @@ namespace ImmersiveAI
                         parameters.Add(line);
                     }
                 }
-                tools.Add(new PreviewTool(tool.Name, tool.Description, parameters));
+                // An answer field (the heart) is no reach: it is set down beside every reply, and the
+                // preview says so rather than listing it as a hand she may or may not use.
+                tools.Add(new PreviewTool(
+                    tool.IsAnswerField ? "\"" + tool.AnswerField + "\" — beside every reply" : tool.Name,
+                    tool.Description, parameters));
             }
 
             return new PromptPreview(sheet, tools, BuildPromptWeights(sheet, ctx, tools));

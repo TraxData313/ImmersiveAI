@@ -586,7 +586,8 @@ namespace ImmersiveAI
                 if (shared.Count == 0) return string.Empty;
 
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
-                return BattleText.SituationBlock(shared, playerName, mentionRecall: CanRecallChronicle(speaker));
+                return BattleText.SituationBlock(shared, playerName, mentionRecall: CanRecallChronicle(speaker),
+                    today: CampaignTime.Now.ToDays);
             }
             catch { return string.Empty; }
         }

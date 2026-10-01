@@ -117,6 +117,68 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void PastLetterBeats_ReplaySettled_TheLettersWordForWord_TheRecordUntouched()
+    {
+        // Token diet round 2 (2026.10.01): a past beat's working rubric is replayed as a short note;
+        // the letters themselves stay whole, and the live line is never shortened.
+        var received = PromptBuilder.AnswerLetterDesireLine("Vulgrim", "Come to Varcheg before the snows.");
+        var memory = new NpcMemory();
+        memory.AddTurn(new ConversationTurn { Speaker = ConversationTurn.InnerSpeaker,
+            PlayerLine = received, NpcLine = "Yes." });
+        memory.AddTurn(new ConversationTurn { Speaker = ConversationTurn.InnerSpeaker,
+            PlayerLine = PromptBuilder.ComposeReplyLine("Vulgrim"), NpcLine = "Vulgrim, I will come. Gafnir" });
+        memory.AddTurn(new ConversationTurn { Speaker = ConversationTurn.InnerSpeaker,
+            PlayerLine = PromptBuilder.ComposeLetterLine("Vulgrim", inService: true), NpcLine = "The snows are early. Gafnir" });
+
+        var live = PromptBuilder.ComposeLetterLine("Vulgrim");
+        var messages = new PromptBuilder().BuildInnerPrompt(Persona(), memory, "In the tavern.", "Vulgrim", live);
+        var history = string.Join("\n", messages.Skip(1).Take(messages.Count - 2).Select(m => m.Content));
+
+        Assert.Contains("Come to Varcheg before the snows.", history);            // the letter read, whole
+        Assert.Contains("Do I wish to write back to Vulgrim?", history);          // the question it answered
+        Assert.DoesNotContain("I answer in a single word", history);              // …not its rubric
+        Assert.DoesNotContain("I do not tell about the letter", history);
+        Assert.DoesNotContain("as a captain reports home", history);
+        Assert.Contains("Vulgrim, I will come. Gafnir", history);                 // the letters written, whole
+        Assert.Contains("The snows are early. Gafnir", history);
+        // The live line keeps every word.
+        Assert.Contains("I do not tell about the letter; I write it.", messages[messages.Count - 1].Content);
+        // The record is untouched, and a settled note is still recognised as what it was.
+        Assert.Equal(received, memory.RecentTurns[0].PlayerLine);
+        Assert.True(PromptBuilder.IsComposeLetterBeat(PromptBuilder.SettleLetterBeat(PromptBuilder.ComposeLetterLine("Vulgrim"))));
+        Assert.True(PromptBuilder.IsComposeLetterBeat(PromptBuilder.SettleLetterBeat(PromptBuilder.ComposeReplyLine("Vulgrim"))));
+        Assert.True(PromptBuilder.TryExtractReceivedLetter(PromptBuilder.SettleLetterBeat(received), out var body));
+        Assert.Equal("Come to Varcheg before the snows.", body);
+        // Anything else passes through unchanged.
+        Assert.Equal("Hail, Gafnir", PromptBuilder.SettleLetterBeat("Hail, Gafnir"));
+    }
+
+    [Fact]
+    public void OnPaper_TheSheetSaysHowTheyWrite_NotHowTheySpeak()
+    {
+        var persona = Persona();
+        persona.EncourageActingOut = true;
+        persona.VoiceTakesMood = true;
+        persona.OnPaper = true;
+        var sheet = new PromptBuilder().BuildInnerPrompt(persona, new NpcMemory(), "In the tavern.", "Vulgrim",
+            PromptBuilder.ComposeLetterLine("Vulgrim"))[0].Content;
+
+        Assert.Contains("How I write:", sheet);
+        Assert.Contains(PromptBuilder.PaperGuidance, sheet);
+        Assert.Contains(PromptBuilder.OldWorldToneGuidance, sheet);
+        Assert.DoesNotContain(PromptBuilder.NoLengthDriftGuidance, sheet);   // "not set on a page" — to one writing a page
+        Assert.DoesNotContain(PromptBuilder.ActingOutGuidance, sheet);
+        Assert.DoesNotContain("[voice:", sheet);
+
+        persona.OnPaper = false;
+        var spoken = new PromptBuilder().Build(persona, new NpcMemory(), "In the tavern.", "Vulgrim", "Hail")[0].Content;
+        Assert.Contains("How I speak:", spoken);
+        Assert.Contains(PromptBuilder.NoLengthDriftGuidance, spoken);
+        Assert.Contains(PromptBuilder.ActingOutGuidance, spoken);
+        Assert.DoesNotContain(PromptBuilder.PaperGuidance, spoken);
+    }
+
+    [Fact]
     public void BuildInnerPrompt_FramesTheLineAsTheNpcsOwnMind_NoVoiceSpeaking()
     {
         var memory = new NpcMemory();

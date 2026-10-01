@@ -307,7 +307,7 @@ namespace ImmersiveAI.Personas
                 // arrival on the twentieth turn of one conversation — and a mind told someone has
                 // just walked in answers with greeting-energy again and again. A heading instead:
                 // what follows is simply what I know of the one I am speaking with.
-                sb.AppendLine($"About {them}{appos}:");
+                sb.AppendLine($"About {them}{(kin == null ? string.Empty : ", " + kin)}:");
 
             // Man and wife stand closer than any courtesy: the marriage bed, the children, and the
             // grand designs of the house are all one conversation between them.

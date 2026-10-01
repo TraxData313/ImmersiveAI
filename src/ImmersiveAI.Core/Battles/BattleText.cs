@@ -306,7 +306,13 @@ namespace ImmersiveAI.Core.Battles
         /// file keeps, and the situation carries for the freshest shared battle. Shared "we" voice;
         /// every number the game's own. Sections that hold nothing are simply absent.
         /// </summary>
-        public static string FullAccount(BattleRecord r)
+        public static string FullAccount(BattleRecord r) => FullAccount(r, itemizedSpoils: true);
+
+        /// <summary>The same account; with <paramref name="itemizedSpoils"/> false the spoils keep
+        /// their worth and their kinds but drop the itemized richest/most-numerous lists — the
+        /// shape the SITUATION carries (token diet round 2, 2026.10.01: those two lists were a third
+        /// of every block and the recall tool, which answers with the itemized account, holds them).</summary>
+        public static string FullAccount(BattleRecord r, bool itemizedSpoils)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"'{r.Title}' — {r.DateText}{(string.IsNullOrWhiteSpace(r.TimeOfDay) ? "" : ", " + r.TimeOfDay)}.");
@@ -331,7 +337,7 @@ namespace ImmersiveAI.Core.Battles
             var deeds = DeedsLine(r);
             if (deeds.Length > 0) sb.AppendLine(deeds);
 
-            var spoils = SpoilsLine(r.Loot);
+            var spoils = SpoilsLine(r.Loot, itemizedSpoils);
             if (spoils.Length > 0) sb.AppendLine(spoils);
 
             var purse = new List<string>();
@@ -381,7 +387,9 @@ namespace ImmersiveAI.Core.Battles
 
         /// <summary>The spoils in one breath: total worth, the kinds, the richest and the most
         /// numerous pieces. Empty string when the day yielded nothing.</summary>
-        public static string SpoilsLine(BattleLoot loot)
+        public static string SpoilsLine(BattleLoot loot) => SpoilsLine(loot, itemized: true);
+
+        public static string SpoilsLine(BattleLoot loot, bool itemized)
         {
             if (loot == null || loot.IsEmpty) return string.Empty;
 
@@ -390,6 +398,7 @@ namespace ImmersiveAI.Core.Battles
             if (loot.Categories.Count > 0)
                 sb.Append(" — " + string.Join(", ", loot.Categories.Select(c => $"{c.Count} {c.Category}")));
             sb.Append('.');
+            if (!itemized) return sb.ToString();
 
             if (loot.TopValued.Count > 0)
                 sb.Append(" Richest: " + string.Join(", ", loot.TopValued.Select(
@@ -418,7 +427,14 @@ namespace ImmersiveAI.Core.Battles
         /// her reach for it, the same law the beat fade keeps.
         /// </para>
         /// </summary>
-        public static string SituationBlock(IReadOnlyList<BattleRecord> shared, string playerName, bool mentionRecall)
+        /// <summary>How many days the last battle stays "still fresh" and is told whole in the
+        /// situation (2026.10.01). Past it the last battle folds to its roll line like the others —
+        /// a year-old storming told in full on every reply, "still fresh in my mind", was neither
+        /// true nor cheap — and the recall tool still answers it whole by name.</summary>
+        public const double FreshTaleDays = 30;
+
+        public static string SituationBlock(IReadOnlyList<BattleRecord> shared, string playerName, bool mentionRecall,
+            double today = -1)
         {
             if (shared == null || shared.Count == 0) return string.Empty;
 
@@ -440,8 +456,16 @@ namespace ImmersiveAI.Core.Battles
                     : $"- {older.Count} battles stand in it before this last one; the hardest of them was {RollEntry(hardest)}");
             }
 
+            if (today >= 0 && today - latest.GameDay > FreshTaleDays)
+            {
+                sb.AppendLine($"- The last of them, some while past now: {RollEntry(latest)}");
+                if (mentionRecall)
+                    sb.AppendLine("Any of them I may call back whole, by its name, when talk turns to it.");
+                return sb.ToString().TrimEnd();
+            }
+
             sb.AppendLine($"Of the last of them, the full tale still fresh in my mind:");
-            sb.AppendLine(FullAccount(latest));
+            sb.AppendLine(FullAccount(latest, itemizedSpoils: false));
             if (mentionRecall && shared.Count > 1)
                 sb.AppendLine("Any of the others I may call back whole, by its name, when talk turns to it.");
             return sb.ToString().TrimEnd();

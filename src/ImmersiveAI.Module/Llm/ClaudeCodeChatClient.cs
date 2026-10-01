@@ -22,8 +22,12 @@ namespace ImmersiveAI.Llm
     /// structured output (see Core's ClaudeCliShape) — probed live before any of this was written:
     /// recall, and move_heart beside the spoken words, all first try.
     /// </summary>
-    public sealed class ClaudeCodeChatClient : IToolChatClient
+    public sealed class ClaudeCodeChatClient : IToolChatClient, IToolOfferPolicy
     {
+        /// <summary>One flattened script per call and a schema rebuilt every time, so a silent
+        /// hand already used this turn may leave the offer (see ToolLoopRunner).</summary>
+        public bool OfferMayNarrowMidTurn => true;
+
         // Long enough for a slow opus turn with reaches, short enough that a hung process is not
         // mistaken for a patient one. (living-abby gives her 600s; NPC replies are far shorter.)
         private const int TimeoutSeconds = 300;
@@ -58,7 +62,7 @@ namespace ImmersiveAI.Llm
             CancellationToken cancellationToken = default)
         {
             var env = await RunAsync(messages, tools, allowToolUse, cancellationToken).ConfigureAwait(false);
-            return ClaudeCliShape.ParseToolResult(env.ResultText ?? "");
+            return ClaudeCliShape.ParseToolResult(env.ResultText ?? "", tools);
         }
 
         private async Task<ClaudeCliShape.Envelope> RunAsync(

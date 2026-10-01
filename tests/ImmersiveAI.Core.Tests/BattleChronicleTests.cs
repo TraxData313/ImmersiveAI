@@ -197,6 +197,48 @@ public class BattleChronicleTests
     }
 
     [Fact]
+    public void SituationBlock_KeepsTheSpoilsWorth_ButNotTheItemizedLists()
+    {
+        // Token diet round 2 (2026.10.01): the situation tells what the day yielded; the itemized
+        // richest/most-numerous lists stay with the recall tool's full account.
+        var latest = Ortysia();
+        latest.Title = BattleText.ForgeTitle(latest);
+        latest.Loot = BattleLoot.Summarize(new[]
+        {
+            new BattleLootItem("Fine Steel Sword", 2, 1200, "weapons"),
+            new BattleLootItem("Hardwood", 18, 15, "goods"),
+        });
+
+        var block = BattleText.SituationBlock(new[] { latest }, "Vulgrim", mentionRecall: true, today: latest.GameDay + 1);
+        Assert.Contains("Spoils worth some", block);
+        Assert.Contains("weapons", block);
+        Assert.DoesNotContain("Richest:", block);
+        Assert.DoesNotContain("Most numerous:", block);
+        Assert.Contains("Fine Steel Sword (1,200 each, ×2)", BattleText.FullAccount(latest));
+    }
+
+    [Fact]
+    public void SituationBlock_ALongPastLastBattle_FoldsToItsName()
+    {
+        var latest = Ortysia();
+        latest.Title = BattleText.ForgeTitle(latest);
+        latest.ShortTale = BattleText.ShortTale(latest);
+
+        var stale = BattleText.SituationBlock(new[] { latest }, "Vulgrim", mentionRecall: true,
+            today: latest.GameDay + BattleText.FreshTaleDays + 5);
+        Assert.Contains(latest.Title, stale);
+        Assert.DoesNotContain("full tale still fresh", stale);
+        Assert.DoesNotContain("The cost — ours", stale);
+        Assert.Contains("call back whole, by its name", stale);
+
+        // Fresh, or with no clock given (old callers), it is told whole as before.
+        var fresh = BattleText.SituationBlock(new[] { latest }, "Vulgrim", mentionRecall: true,
+            today: latest.GameDay + 2);
+        Assert.Contains("full tale still fresh", fresh);
+        Assert.Contains("full tale still fresh", BattleText.SituationBlock(new[] { latest }, "Vulgrim", mentionRecall: true));
+    }
+
+    [Fact]
     public void SituationBlock_FoldsAllOlderBattlesIntoOneLine_NamingTheHardest()
     {
         // Nine look-alike victories must fold into a count naming the hardest-fought — a roll of

@@ -134,7 +134,8 @@ namespace ImmersiveAI
         /// Developer tab), Ollama's is http://localhost:11434/v1. <see cref="LocalModel"/> must be
         /// the exact id the server serves. Honest expectations: the NPCs' full abilities lean on
         /// native tool calling, which small local models are shaky at — prefer a tool-capable
-        /// instruct model (Qwen3-class MoE, Mistral Small); if hearts never move, set
+        /// instruct model (Qwen3-class MoE, Mistral Small). A server that will not be forced to a
+        /// tool is asked once, then merely offered the speak hand; if hearts still never move, set
         /// <see cref="RelationshipChangesViaTool"/> false to fall back to the separate feeling call.</summary>
         public string LocalEndpoint { get; set; } = DefaultLocalEndpoint;
 
@@ -315,13 +316,14 @@ namespace ImmersiveAI
         /// feeling is gathered is shaped by <see cref="RelationshipChangesViaTool"/>.</summary>
         public bool EnableRelationshipChanges { get; set; } = true;
 
-        /// <summary>When true (and the backend can carry tools), the NPC moves their own standing
-        /// mid-reply through the same native tool channel the recalls ride (move_heart) — one call
-        /// per exchange instead of two, and a greeting, a reaching-out, or a letter can move the
-        /// heart too; reaching for nothing leaves it where it stood. Set false to keep the second,
-        /// isolated feeling call after each spoken reply (one number, weighed within their own mind; also the
-        /// automatic fallback whenever the backend cannot carry tools). Does nothing while
-        /// <see cref="EnableRelationshipChanges"/> is off.</summary>
+        /// <summary>When true (and the backend can carry tools), the heart's measure is a REQUIRED
+        /// field of every spoken answer, set down beside the words in the same call (2026.10.01):
+        /// "heart" next to "reply" on the Codex/Claude Code roads, the speak(words, heart) hand on
+        /// the API roads — 0 included, no extra round, and greetings, reach-outs and letters carry it
+        /// too. The name is kept for old config files: it once meant the move_heart tool. Set false
+        /// to use the second, isolated feeling call after each player reply instead (one number,
+        /// weighed within their own mind; also the automatic fallback whenever an answer arrives
+        /// without its measure). Does nothing while <see cref="EnableRelationshipChanges"/> is off.</summary>
         public bool RelationshipChangesViaTool { get; set; } = true;
 
         // The defaults these two carried before the first-person prompt rework (2026.07.11). A config
@@ -344,8 +346,19 @@ namespace ImmersiveAI
         /// heed it, so play stays free). Written in the NPC's own first person, like the rest of the sheet,
         /// and kept short — long rules make every soul speak the same. Folded into the closing "How should
         /// I speak" whisper. Supports <c>{name}</c>. Leave blank to add none.</summary>
-        public string RoleplayGuidance { get; set; } =
+        public string RoleplayGuidance { get; set; } = ShippedRoleplayGuidance;
+
+        /// <summary>The shipped one-line default. The SPOKEN sheet leaves it out (2026.10.01, token
+        /// diet round 2): it says what the sheet's own tone line (PromptBuilder.OldWorldToneGuidance)
+        /// already says two lines above it. The chronicler prompts — weddings, births, nights,
+        /// betrothals — carry no tone line of their own and keep reading it. A hand-edited guidance
+        /// rides every sheet exactly as written.</summary>
+        public const string ShippedRoleplayGuidance =
             "- My words carry the feel of these old feudal days — a light medieval colour, at times a cadence of the old tongue — but lightly, never thick with poetry.";
+
+        /// <summary>True when this guidance is the shipped default line, untouched.</summary>
+        public static bool IsShippedRoleplayGuidance(string? guidance) =>
+            string.Equals((guidance ?? string.Empty).Trim(), ShippedRoleplayGuidance, System.StringComparison.Ordinal);
 
         /// <summary>The two-bullet first-person default that stood from 2026.07.11 until 2026.08.14.
         /// Its second bullet ("Above all, I live here, and I am glad of it…") was cut on Anton's ask:
@@ -1349,6 +1362,10 @@ namespace ImmersiveAI
             // so the prompt falls back to its built-in default. Guidance may legitimately be blank (none).
             if (AtmosphereLine == null) AtmosphereLine = string.Empty;
             if (RoleplayGuidance == null) RoleplayGuidance = string.Empty;
+            // Mangled punctuation first (2026.10.01, Anton's own config: "â€”" for every em dash),
+            // or the exact-match migrations below never recognise the default they are looking for.
+            AtmosphereLine = Core.Text.Mojibake.Repair(AtmosphereLine);
+            RoleplayGuidance = Core.Text.Mojibake.Repair(RoleplayGuidance);
 
             // Configs still carrying the pre-first-person defaults verbatim follow the sheet into the
             // new voice; a hand-edited line is honored as it stands.

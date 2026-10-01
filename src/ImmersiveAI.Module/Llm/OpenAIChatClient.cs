@@ -51,6 +51,12 @@ namespace ImmersiveAI.Llm
         private readonly bool _isLocal;
         private readonly OpenAiDialect _dialect;
 
+        // Set the first time this service refuses a FORCED tool choice (a 400 naming tool_choice —
+        // some local servers and older routes know only "auto"/"none"). From then on the speak hand
+        // is merely offered: a model that talks plainly instead still speaks, only unmeasured, and
+        // the player turn's feeling call covers the heart.
+        private bool _forcedChoiceRefused;
+
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
@@ -160,12 +166,25 @@ namespace ImmersiveAI.Llm
                 // ones 400 on it — there, thinking is governed by which model the user loads.
                 payload["reasoning"] = new JObject { ["enabled"] = false };
 
+            // THE ANSWER FIELDS (2026.10.01 — the heart beside every reply): when one rides, the reply
+            // itself is given through one required hand, speak(words, heart), offered beside the
+            // recalls with the choice FORCED — every round is a reach or the finished answer with its
+            // measure, in one call; the last round forces speak itself instead of "none".
+            bool speaking = AnswerShape.HasFields(tools);
             if (tools != null && tools.Count > 0)
             {
-                payload["tools"] = BuildTools(tools);
+                payload["tools"] = BuildTools(AnswerShape.NativeOffer(tools, messages));
                 // Definitions always ride along (a history holding tool calls needs them to validate);
                 // "none" is how a final, spoken-answer-only round is enforced.
-                if (!allowToolUse) payload["tool_choice"] = "none";
+                if (speaking && !_forcedChoiceRefused)
+                    payload["tool_choice"] = allowToolUse
+                        ? (JToken)"required"
+                        : new JObject
+                        {
+                            ["type"] = "function",
+                            ["function"] = new JObject { ["name"] = AnswerShape.SpeakTool },
+                        };
+                else if (!allowToolUse && !speaking) payload["tool_choice"] = "none";
             }
 
             var payloadText = payload.ToString(Formatting.None);
@@ -200,6 +219,18 @@ namespace ImmersiveAI.Llm
                     ModLog.Warn($"{_label}: '{_model}' refused '{dropped}' — retrying and letting it think as it must.");
                     (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
                 }
+            }
+
+            // A service that will not be FORCED to a tool answers 400 naming tool_choice: ask again
+            // with the speak hand merely offered, and remember, so the next reply does not pay twice.
+            if (status == 400 && speaking && payload["tool_choice"] != null
+                && body.IndexOf("tool_choice", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                payload.Remove("tool_choice");
+                _forcedChoiceRefused = true;
+                payloadText = payload.ToString(Formatting.None);
+                ModLog.Warn($"{_label}: '{_model}' refused a forced tool choice — the reply is offered the speak hand without forcing it.");
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
             }
 
             // OpenAI's "insufficient permissions" 401 shows up INTERMITTENTLY for a while after
@@ -286,7 +317,9 @@ namespace ImmersiveAI.Llm
                     + "(MaxTokens in " + ModConfig.ConfigFilePath + "), or pick a gemini-2.5 model, whose thinking CAN be switched off.");
             }
 
-            return new ChatResult(text, calls);
+            // The speak hand back into words + the heart's measure; with no answer field riding this
+            // is the plain result, unchanged.
+            return AnswerShape.FromNative(text, calls, tools);
         }
 
         /// <summary>One POST to the chat endpoint: status + body, never throwing on an API error
@@ -396,7 +429,7 @@ namespace ImmersiveAI.Llm
                 var required = new JArray();
                 foreach (var p in tool.Parameters)
                 {
-                    var schema = new JObject { ["type"] = "string", ["description"] = p.Description };
+                    var schema = new JObject { ["type"] = p.JsonType, ["description"] = p.Description };
                     // A closed vocabulary belongs in the schema, not only in the prose: a word
                     // explained in the description alone comes back as the model's own synonym.
                     if (p.AllowedValues != null)

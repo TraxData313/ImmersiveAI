@@ -19,6 +19,13 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Developer mode: the talk screen's Dev panel can step a character's traits (mercy, valor, honor, generosity, calculating) — they feel it on their next reply.
 - Fixed: a letter to someone who has since joined you is now handed over when you open the talk screen by its hotkey too, instead of staying "days out" at their side.
 - Fixed: a reply that came back as only its voice note (no words) now keeps the words they spoke a moment earlier, instead of showing an empty answer.
+- Fixed: when a character weighed their feelings mid-reply, their real answer was thrown away and a stray afterthought was kept — the answer you get is the one they meant.
+- Their feelings are weighed together with every answer in one go — no extra wait, and no more drifting warmer with every letter they write unprompted.
+- Lighter prompts: about a quarter fewer words sent with every reply — faster answers, cheaper on paid keys.
+- The ChatGPT-plan road no longer slips your own Codex instructions to the characters.
+- Letters no longer carry the spoken voice note, and read like letters again.
+- Your world-tone setting no longer repeats itself — and an old setting that was meant to retire now does.
+- News of a castle that changed hands twice is told once.
 
 ## v3.4.0 — 2026.09.25
 

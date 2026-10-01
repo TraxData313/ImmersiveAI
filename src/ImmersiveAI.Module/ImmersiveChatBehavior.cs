@@ -232,6 +232,13 @@ namespace ImmersiveAI
             return tools;
         }
 
+        /// <summary>A fresh heart tally for a spoken flow nobody else keeps one for (greetings,
+        /// approaches, first words, letters). Without it the once-per-exchange guard never tripped:
+        /// she weighed her heart in EVERY round and each shift was applied again (2026.10.01 — the
+        /// empress pinned at 100). The shift itself is applied by the resolver; the tally only
+        /// holds the one-weighing law.</summary>
+        private static Tools.HeartTool.Tally OneWeighing() => new Tools.HeartTool.Tally();
+
         private Task<string> CompleteSpokenAsync(IReadOnlyList<ChatMessage> messages, Hero npc,
             Tools.HeartTool.Tally? heart = null, NpcMemory? liveMemory = null,
             Tools.BargainTool.Tally? bargain = null, Tools.TrothTool.Tally? troth = null,
@@ -667,8 +674,9 @@ namespace ImmersiveAI
         private bool CanSeekWisdom() =>
             _config.EnableWebSearch && _config.MaxRecallsPerReply > 0 && _client is IToolChatClient;
 
-        // The heart's own hand (move_heart) rides the same channel; when the backend cannot carry
-        // tools — or this shape is turned off — the second, isolated feeling call remains the way.
+        // The heart's measure rides every spoken answer as a required field (HeartTool / AnswerShape);
+        // when the backend cannot carry tools — or this shape is turned off — the second, isolated
+        // feeling call remains the way.
         private bool CanMoveHeart() =>
             _config.EnableRelationshipChanges && _config.RelationshipChangesViaTool && _client is IToolChatClient;
 
@@ -1523,7 +1531,7 @@ namespace ImmersiveAI
                 var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
 
-                var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+                var rawReply = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
                 var greeting = (rawReply ?? string.Empty).Trim();
                 if (greeting.Length == 0)
                 {
@@ -1643,7 +1651,7 @@ namespace ImmersiveAI
                     ctx.PlayerName, firstMeeting: !PromptBuilder.HasRememberedHistory(ctx.Memory));
                 var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
-                var rawReply = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+                var rawReply = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
                 var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
                 AppendRecordedTurn(npc, arrivalLine, greeting);
@@ -2006,14 +2014,14 @@ namespace ImmersiveAI
             var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless, door).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
 
-            // How the exchange moved her heart. In the tool shape she moves it herself mid-reply
-            // (move_heart, already applied) — but only a call that actually CAME counts as weighed:
-            // when the model never reached for the tool (gpt-4o goes shy of volunteering it — every
-            // warm exchange landing 0, re-observed 2026.07.12), the separate feeling question asks
-            // after the reply instead, exactly as in the no-tool shape. An honest mid-reply 0 is
-            // respected and asks nothing twice. Isolating the question is what chatty models answer
-            // reliably (an in-message <relation> tag was tried and reverted on 2026.07.09).
-            // Best-effort either way: if she cannot weigh it now, her standing simply holds.
+            // How the exchange moved her heart. Since 2026.10.01 the measure is a REQUIRED field of
+            // the answer itself ("heart", beside the words, same call — already applied by the
+            // resolver when it came). Only a readable measure counts as weighed: an answer that
+            // arrived without one (a local server that would not be forced to the speak hand, a
+            // garbled number) falls back to the separate feeling question, exactly as the no-tool
+            // shape does — rare now, where it used to be every shy reply. An honest 0 is a full
+            // answer and asks nothing twice. Best-effort either way: if she cannot weigh it now,
+            // her standing simply holds.
             int feltShift = 0;
             bool feltShiftApplied = false;
             if (heart != null && heart.Weighed)
@@ -3076,7 +3084,7 @@ namespace ImmersiveAI
                 var approachLine = PromptBuilder.ApproachLine(ctx.PlayerName, welcomed);
                 var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, approachLine, _config.SystemVoiceName);
-                var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+                var raw = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
                 var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
 
                 AppendRecordedTurn(npc, PromptBuilder.ApproachNote(ctx.PlayerName, welcomed), npcLine,
@@ -3773,7 +3781,7 @@ namespace ImmersiveAI
                 var firstWordLine = PromptBuilder.FirstWordLine(ctx.PlayerName, stranger);
                 var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, firstWordLine, _config.SystemVoiceName);
-                var raw = await CompleteSpokenAsync(messages, npc).ConfigureAwait(false);
+                var raw = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
 
                 // Nothing came. Nobody is waiting on this one — no offer was accepted, no popup stands
                 // open — so the hour simply passes quietly: no beat, no toast, no knock. This is where
@@ -3944,7 +3952,7 @@ namespace ImmersiveAI
         // rather than falling back to the cached-or-rebuilt one used by an open chat.
         private ChatContext BuildContext(Hero npc, string? sceneOverride = null, bool bargainRides = false,
             bool trothRides = false, Hero? blessBride = null, bool loverRides = false, bool ransom = false,
-            bool doorRides = false)
+            bool doorRides = false, bool onPaper = false)
         {
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
@@ -3964,7 +3972,11 @@ namespace ImmersiveAI
             // The player-configurable atmosphere line and roleplay guidance (tokens resolved here), and the
             // NPC's kin and house — all folded into the prompt so the world's feel and their family carry.
             persona.AtmosphereLine = ApplyTokens(_config.AtmosphereLine, npcName);
-            persona.RoleplayGuidance = ApplyTokens(_config.RoleplayGuidance, npcName);
+            // The shipped default guidance only restates the sheet's own tone line, so the spoken
+            // sheet leaves it out; a player's own guidance rides as written (see ShippedRoleplayGuidance).
+            persona.RoleplayGuidance = ModConfig.IsShippedRoleplayGuidance(_config.RoleplayGuidance)
+                ? string.Empty
+                : ApplyTokens(_config.RoleplayGuidance, npcName);
             persona.FamilyKnowledge = FamilyBuilder.Build(npc);
             // What their hands and wits are honestly good at — from their real skills, so a wanderer
             // asked what they would be good at answers from truth.
@@ -4017,10 +4029,18 @@ namespace ImmersiveAI
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;
             persona.ReplyLength = ReplyLengthOf(_config);
-            // What her voice can do, from the engine speaking NOW — offered only while it is really so.
-            var (voiceSounds, voiceMood) = Voice.VoiceService.WhatTheVoiceCanDo();
-            if (voiceSounds != null) persona.VoiceSounds = voiceSounds;
-            persona.VoiceTakesMood = voiceMood;
+            // A letter is written, not spoken: the sheet says how she WRITES (PromptBuilder.PaperGuidance).
+            persona.OnPaper = onPaper;
+            // What her voice can do, from the engine speaking NOW — offered only while it is really so,
+            // and NEVER on paper (2026.10.01): the guidance's own "never in a letter" was read as one
+            // more line of a sheet that ordered "every reply ENDS with [voice: …]", and the key rode
+            // into the letters themselves. A letter is read, not heard — so it is simply not asked.
+            if (!onPaper)
+            {
+                var (voiceSounds, voiceMood) = Voice.VoiceService.WhatTheVoiceCanDo();
+                if (voiceSounds != null) persona.VoiceSounds = voiceSounds;
+                persona.VoiceTakesMood = voiceMood;
+            }
 
             // Prefer an explicit override (the situation a background flow captured); else reuse the
             // snapshot captured when the chat opened; else rebuild it (e.g. inspecting the prompt directly).

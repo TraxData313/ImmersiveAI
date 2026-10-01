@@ -33,7 +33,7 @@ namespace ImmersiveAI.Core.Prompts
             // Every beat of the shared story — the player's visits (arrival + greeting), the NPC's own
             // reaching-out, letters — lives in the remembered stream as real turns, so nothing needs to
             // be woven in here: the history above already carries the whole of it.
-            var carried = AppendRememberedTurns(messages, memory, voice);
+            var carried = AppendRememberedTurns(messages, memory, voice, VoiceKeysThatRide(persona));
 
             messages.Add(ChatMessage.User(carried + playerInput));
             return messages;
@@ -52,11 +52,23 @@ namespace ImmersiveAI.Core.Prompts
         // alternate. Their incoming lines fold into the NEXT user message instead, so the story still
         // reads in order; whatever remains past the last spoken turn is returned for the caller to carry
         // into the live incoming line.
-        private static string AppendRememberedTurns(List<ChatMessage> messages, NpcMemory memory, string voice)
+        private static string AppendRememberedTurns(List<ChatMessage> messages, NpcMemory memory, string voice,
+            int voiceKeysKept = int.MaxValue)
         {
             var pending = new StringBuilder();
             int total = memory.RecentTurns.Count;
             var carries = BeatsThatStillRide(memory);
+
+            // Which spoken replies keep their [voice: …] key (see VoiceKeysThatRide): the newest few.
+            var keepsVoiceKey = new bool[total];
+            for (int at = total - 1, kept = 0; at >= 0 && kept < voiceKeysKept; at--)
+            {
+                if (!carries[at] || string.IsNullOrWhiteSpace(memory.RecentTurns[at].NpcLine)) continue;
+                keepsVoiceKey[at] = true;
+                kept++;
+            }
+
+            string? lastStamp = null;
             for (int at = 0; at < total; at++)
             {
                 var turn = memory.RecentTurns[at];
@@ -65,7 +77,10 @@ namespace ImmersiveAI.Core.Prompts
                 // opening, then only the day itself. The record is untouched — this is what the
                 // PROMPT carries — and the recall tools read the ledgers, so she can still tell the
                 // whole of it at any distance.
-                var incoming = FormatRememberedIncomingLine(turn, voice, total - 1 - at);
+                var stamp = StampOf(turn);
+                var incoming = FormatRememberedIncomingLine(turn, voice, total - 1 - at,
+                    withStamp: !string.Equals(stamp, lastStamp, StringComparison.Ordinal));
+                if (stamp.Length > 0) lastStamp = stamp;
                 if (string.IsNullOrWhiteSpace(turn.NpcLine))
                 {
                     pending.AppendLine(incoming);
@@ -74,10 +89,25 @@ namespace ImmersiveAI.Core.Prompts
                 }
                 messages.Add(ChatMessage.User(pending.Length == 0 ? incoming : pending.ToString() + incoming));
                 pending.Clear();
-                messages.Add(ChatMessage.Assistant(turn.NpcLine));
+                messages.Add(ChatMessage.Assistant(keepsVoiceKey[at]
+                    ? turn.NpcLine
+                    : Voices.VoiceLine.Strip(turn.NpcLine)));
             }
             return pending.ToString();
         }
+
+        /// <summary>How many of her newest spoken replies carry their [voice: …] key into the prompt
+        /// (2026.10.01, token diet round 2). The key stays in every RECORDED reply — that is how her
+        /// own past words teach her the form — but a few teach it as well as forty: the newest
+        /// <see cref="VoiceKeysTaught"/> keep it, older ones replay without it. Where the key is not
+        /// asked at all — on paper, or with no voice that follows a mood — none rides, or a
+        /// letter-writer's spoken past would teach her to sign a letter with one.</summary>
+        public const int VoiceKeysTaught = 3;
+
+        private static int VoiceKeysThatRide(NpcPersona persona) =>
+            persona.OnPaper || VoiceGuidance(persona.VoiceSounds, persona.VoiceTakesMood).IndexOf("[voice:", StringComparison.Ordinal) < 0
+                ? 0
+                : VoiceKeysTaught;
 
         /// <summary>
         /// THE BOOKKEEPING DOES NOT GET TO HOLD THE PROMPT (2026.08.27, Anton's screenshot: a thread
@@ -120,10 +150,18 @@ namespace ImmersiveAI.Core.Prompts
             return carries;
         }
 
+        // withStamp false (2026.10.01, token diet round 2): a turn recorded at the very same place
+        // and minute as the one replayed before it is not stamped again. One evening's talk of a
+        // dozen lines carried "[Danustica, 1085.03.10 19.41 (Autumn 10, Year 1085)]" a dozen times;
+        // an unstamped line reads as the same moment, which is exactly what it was, and every real
+        // gap — a minute, a day — still shows, because only an identical stamp is left out.
         private static string FormatRememberedIncomingLine(ConversationTurn turn, string voice,
-            int turnsBack = 0)
+            int turnsBack = 0, bool withStamp = true)
         {
             var recorded = BeatFade.Fade(turn.PlayerLine, turnsBack);
+            // A past letter beat replays as a short note; its working rubric did its work at the
+            // moment (see SettleLetterBeat). Inner beats only — that is where letters are recorded.
+            if (turn.IsInnerThought) recorded = SettleLetterBeat(recorded);
 
             // Angel turns carry the same "[place, time]" tag as player lines, so the NPC can see WHEN
             // she was reached for, wrote a letter, or was come to — the full picture of her own story.
@@ -131,10 +169,8 @@ namespace ImmersiveAI.Core.Prompts
                 : turn.IsInnerThought ? InnerFrame(recorded.Trim())
                 : recorded;
 
-            var parts = new List<string>();
-            if (!string.IsNullOrWhiteSpace(turn.Place)) parts.Add(turn.Place.Trim());
-            if (!string.IsNullOrWhiteSpace(turn.CalradiaTime)) parts.Add(turn.CalradiaTime.Trim());
-            return parts.Count == 0 ? line : "[" + string.Join(", ", parts) + "] " + line;
+            var stamp = withStamp ? StampOf(turn) : string.Empty;
+            return stamp + line;   // StampOf carries its own trailing space
         }
 
         // LEGACY REPLAY ONLY (the Angel narrator retired 2026.08.07): how a recorded Angel turn from an
@@ -170,7 +206,7 @@ namespace ImmersiveAI.Core.Prompts
                 ChatMessage.System(StripSections(BuildSystemPrompt(persona, memory, sceneContext, playerName)))
             };
 
-            var carried = AppendRememberedTurns(messages, memory, voice);
+            var carried = AppendRememberedTurns(messages, memory, voice, VoiceKeysThatRide(persona));
             messages.Add(ChatMessage.User(carried + InnerFrame(innerLine)));
             return messages;
         }
@@ -412,6 +448,41 @@ namespace ImmersiveAI.Core.Prompts
         private const string ReadLetterOpenMarkOwn = "I break the seal and read:";
         private const string ReadLetterCloseMarkOwn = "Do I wish to write back";
 
+        // ------------------------------ letter beats settle when replayed ------------------------------
+        // A recorded letter beat carries the whole WORKING instruction it was born with — "What I set
+        // down now is only the letter itself… I do not tell about the letter; I write it", "I answer in
+        // a single word — yes or no…" — and every one of them was replayed whole on every later call:
+        // ~2.4k characters of a letter-writer's history, measured on Rhagaea (token diet round 2,
+        // 2026.10.01). Those instructions did their work at the moment; replayed, the letter that
+        // answered them says all there is. So at RENDER time a past beat settles to a short note that
+        // still opens with its own marker (the view and the parsers keep recognising it), the letter
+        // bodies stay word for word, and memories.json is never touched — the BeatFade law.
+        // First-person beats only; the legacy Angel fragments replay exactly as they were.
+
+        private const string SettledComposeNote = ComposeLetterMarkOwn + " — a letter, carried to them by courier.";
+        private const string SettledReplyNote = ComposeReplyMarkOwn + " I send back.";
+
+        /// <summary>The short form a PAST letter beat is replayed in (see the note above). Anything
+        /// that is not a first-person letter beat comes back unchanged.</summary>
+        public static string SettleLetterBeat(string? recordedLine)
+        {
+            var line = recordedLine ?? string.Empty;
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith(ComposeLetterMarkOwn, StringComparison.Ordinal)) return SettledComposeNote;
+            if (trimmed.StartsWith(ComposeReplyMarkOwn, StringComparison.Ordinal)) return SettledReplyNote;
+
+            int open = line.IndexOf(ReadLetterOpenMarkOwn, StringComparison.Ordinal);
+            int close = line.LastIndexOf(ReadLetterCloseMarkOwn, StringComparison.Ordinal);
+            if (open >= 0 && close > open)
+            {
+                // Keep the question itself ("Do I wish to write back to Renaud?") — the yes or no
+                // recorded after it still answers something — and let the working rubric go.
+                int ask = line.IndexOf('?', close);
+                return ask > close ? line.Substring(0, ask + 1) : line;
+            }
+            return line;
+        }
+
         /// <summary>True when this recorded line is the NPC sitting down to write a letter (first
         /// word or reply) — the turn's spoken side IS the letter that went to the player.</summary>
         public static bool IsComposeLetterBeat(string? recordedLine)
@@ -558,14 +629,15 @@ namespace ImmersiveAI.Core.Prompts
         /// waiting their turn. A soul who understands that governs herself, which is the only kind
         /// of governing available here anyway.</para>
         /// </summary>
+        // Cut to working words on 2026.10.01 (token diet round 2): the WHY still leads, and both
+        // halves stand — speech is heard once by someone waiting to answer, and the size of the last
+        // turn is no evidence about this one's.
         public const string NoLengthDriftGuidance =
-            "- What I say is SPOKEN, into the air, to someone standing in front of me — not set on a " +
-            "page they may read twice at their leisure. Past a certain size a thing said aloud stops " +
-            "being heard at all: they are waiting to answer me, and I am talking over the answer. So " +
-            "how long I spoke last is no measure of how long I speak now — a full answer once does " +
-            "not ask a fuller one after it. Each turn finds its own size from what the moment holds, " +
-            "and most moments are small. I let a talk breathe in and out: long only where it is truly " +
-            "earned, and short again straight after.";
+            "- What I say is SPOKEN, into the air, to someone waiting to answer me — not set on a page " +
+            "to be read twice; past a certain size, a thing said aloud stops being heard. So how long " +
+            "I spoke last is no measure of how long I speak now: each turn finds its own size from what " +
+            "the moment holds, and most moments are small — long only where truly earned, and short " +
+            "again straight after.";
 
         public static string BrevityFor(ReplyLength length)
         {
@@ -586,6 +658,17 @@ namespace ImmersiveAI.Core.Prompts
                     return BrevityGuidance;
             }
         }
+
+        /// <summary>How a soul WRITES (2026.10.01) — the letter's whole "how I speak", in place of the
+        /// five spoken lines. Short on purpose: the compose line itself already says what the page
+        /// is for. No acts on paper, because the page reaches the player as the letter itself, and
+        /// an *I set pen to paper* rode into it whole. No worked example (named wording comes back
+        /// verbatim).</summary>
+        public const string PaperGuidance =
+            "- A letter of mine is read, not heard: words on a page, in my own hand, for one far from me. " +
+            "Its plain shape is all it needs — no other marks of the pen, and no acts between asterisks; " +
+            "only what the page itself holds. I write what I truly have to say, most often a few lines, " +
+            "and stop there.";
 
         /// <summary>The tone rule: a light savor of the old world, for atmosphere, never laid on thick.</summary>
         public const string OldWorldToneGuidance =
@@ -942,17 +1025,29 @@ namespace ImmersiveAI.Core.Prompts
 
             sb.AppendLine();
             sb.AppendLine(Section(Sections.HowTheySpeak));
-            sb.AppendLine("How I speak:");
-            sb.AppendLine(BrevityFor(persona.ReplyLength));
-            sb.AppendLine(NoLengthDriftGuidance);
-            sb.AppendLine(OldWorldToneGuidance);
-            sb.AppendLine(PlainSpeechGuidance);
-            // Immediately after the plain-speech rule, because it IS that rule's one exception.
-            if (persona.EncourageActingOut)
-                sb.AppendLine(ActingOutGuidance);
-            var voice = VoiceGuidance(persona.VoiceSounds, persona.VoiceTakesMood);
-            if (voice.Length > 0)
-                sb.AppendLine(voice);
+            if (persona.OnPaper)
+            {
+                // A letter is written, not spoken: the spoken-length, plain-speech, acting-out and
+                // voice lines below all describe talk face to face, and on a page they said the
+                // opposite of the compose line ("not set on a page" — to a soul writing one).
+                sb.AppendLine("How I write:");
+                sb.AppendLine(PaperGuidance);
+                sb.AppendLine(OldWorldToneGuidance);
+            }
+            else
+            {
+                sb.AppendLine("How I speak:");
+                sb.AppendLine(BrevityFor(persona.ReplyLength));
+                sb.AppendLine(NoLengthDriftGuidance);
+                sb.AppendLine(OldWorldToneGuidance);
+                sb.AppendLine(PlainSpeechGuidance);
+                // Immediately after the plain-speech rule, because it IS that rule's one exception.
+                if (persona.EncourageActingOut)
+                    sb.AppendLine(ActingOutGuidance);
+                var voice = VoiceGuidance(persona.VoiceSounds, persona.VoiceTakesMood);
+                if (voice.Length > 0)
+                    sb.AppendLine(voice);
+            }
 
             // The eight per-tool whisper paragraphs that used to stand here moved INTO the tool
             // definitions themselves on 2026.08.14 (Anton: the section had grown "too big and too
