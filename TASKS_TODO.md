@@ -1,24 +1,27 @@
-﻿WHERE THINGS STAND (2026.09.25 — **v3.4.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
+﻿WHERE THINGS STAND (2026.10.02 — **v3.5.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
 
-  ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.4.0 (five minutes, and only you can do it)
-      Steam is done (uploaded 2026.09.25 17:23, "Uploading done!", item 3764210301 — public, not
-      banned, 2,381 subscribers). Nexus still has V3.3.0 as main file AND mod version. The zip is
-      48 MB — far past the browser bridge's 10 MB cap, so it cannot go up from here:
-
-      Mod 12119 -> Manage -> Files -> the "Update" button on the ImmersiveAI V3.3.0 row.
-        - The zip: dist\ImmersiveAI_v3.4.0.zip (also latest-release\ on GitHub)
-        - Tick ARCHIVE EXISTING FILE, then SET THE DISPLAY NAME BACK to `ImmersiveAI V3.4.0`.
-        - Paste the fenced block under v3.4.0 in CHANGELOG.md into BOTH the file Description and
-          Add changelog (251 of the 255 cap).
-        - The file's own Version field: V3.4.0 — and on the General step the MOD version V3.4.0
+  ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.5.0 (five minutes; the 48 MB zip is past the browser
+      bridge's 10 MB cap, so it cannot go up from here)
+      Steam is done (uploaded 2026.10.02 ~20:25, "Uploading done!", item 3764210301).
+      Mod 12119 -> Manage -> Files -> "Update" on the current main file row.
+        - The zip: dist\ImmersiveAI_v3.5.0.zip (also latest-release\ on GitHub)
+        - Tick ARCHIVE EXISTING FILE, then SET THE DISPLAY NAME BACK to `ImmersiveAI V3.5.0`.
+        - Paste the fenced block under v3.5.0 in CHANGELOG.md into BOTH the file Description and
+          Add changelog (229 of the 255 cap).
+        - The file's own Version field: V3.5.0 — and on the General step the MOD version V3.5.0
           too (the one Vortex compares).
-        - Come back an hour later: done means the scan is GREEN. This is the first upload with no
-          exe in it, so it should pass clean.
-      BOTH store descriptions changed (hosted voices gone from "Looking for…?", the ChatGPT /
-      claude.ai plans added, the quarantine block and the setup-window steps gone, the spark line
-      made true): paste docs\steam-page-final.bbcode.txt (7824 of 8000 bytes) into the Workshop
-      description, docs\nexus-page.bbcode.txt into Nexus, and the voices + "Is it free?" answers of
-      docs\steam-faq.bbcode.txt into the pinned FAQ thread.
+        - Come back an hour later: done means the scan is GREEN.
+      Store descriptions changed by ONE word (gpt-5.6-luna -> gpt-6-luna): repaste
+      docs\steam-page-final.bbcode.txt (7822 of 8000 bytes), docs
+exus-page.bbcode.txt, and the
+      "Which model / Is it free?" answers of docs\steam-faq.bbcode.txt — whenever convenient.
+
+  ** CODEX SIGN-IN IS DEAD ON THIS PC: the refresh token "was already used", so the Codex road
+      (Anton's own Backend) answers "not a ChatGPT login" until `codex login` is run again. After
+      that, probe gpt-6.1-sol once: `dotnet run --project tools\probe -c Release -- run --case
+      ira_reply --model gpt-6.1-sol` — it shipped as the Codex default UNPROBED on that road
+      (OpenRouter road probed fine). His config.json still says CodexModel gpt-6-sol (defaults
+      never migrate) — switch it by hand if he wants 6.1.
 
   ** OPEN (claude-voice): game-run quiet installs leave NO setup.log lines and NO Settings > Apps
       entry; the same exe with the same args from a shell leaves both. The status file carries

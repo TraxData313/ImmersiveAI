@@ -13,7 +13,7 @@ as you scroll — **read only as far as you need.**
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best play, denars no object** | OpenRouter + `openai/gpt-5.6-terra` (or `anthropic/claude-sonnet-5`) | openrouter.ai |
-| **A ChatGPT plan you already pay for** | Codex + `gpt-6-sol` — through the Codex app, no API key | ChatGPT |
+| **A ChatGPT plan you already pay for** | Codex + `gpt-6.1-sol` — through the Codex app, no API key | ChatGPT |
 | **A Claude plan you already pay for** | ClaudeCode — your claude.ai Pro/Max, through the Claude Code app, no key | — |
 | **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
 

@@ -36,7 +36,7 @@ namespace ImmersiveAI.Llm
 
         public CodexAppServerChatClient(string model, string configuredPath, int maxTokens = 0)
         {
-            _model = string.IsNullOrWhiteSpace(model) ? "gpt-6-sol" : model.Trim();
+            _model = string.IsNullOrWhiteSpace(model) ? "gpt-6.1-sol" : model.Trim();
             _configuredPath = (configuredPath ?? string.Empty).Trim();
             _maxTokens = maxTokens;
         }
@@ -247,8 +247,13 @@ namespace ImmersiveAI.Llm
         private static void RequireChatGptLogin(AppServerSession session)
         {
             // False means "read the managed session". True FORCES a refresh, and must never be
-            // paired with disposable credentials (the original first-call-only bug).
+            // paired with disposable credentials (the original first-call-only bug). But once the
+            // access token lapses (~10 days, 2026.10.02) false answers "no account" rather than
+            // renewing it — so a null account is asked once more WITH the refresh. Safe: the real
+            // CODEX_HOME is used, so the renewed token is kept, as Codex itself would keep it.
             var accountResult = session.Request("account/read", new JObject { ["refreshToken"] = false });
+            if (accountResult.SelectToken("account")?.Type is null or JTokenType.Null)
+                accountResult = session.Request("account/read", new JObject { ["refreshToken"] = true });
             var type = (string?)accountResult.SelectToken("account.type");
             if (!string.Equals(type, "chatgpt", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(

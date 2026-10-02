@@ -57,6 +57,15 @@ namespace ImmersiveAI.Llm
         // the player turn's feeling call covers the heart.
         private bool _forcedChoiceRefused;
 
+        // Set the first time a model refuses reasoning_effort "none" (gpt-6.1-sol, 2026.10.02:
+        // "low, medium, high, xhigh" only). From then on it is asked for "low", its floor — live,
+        // that still spent zero reasoning tokens on a short reply.
+        private bool _noneEffortRefused;
+
+        // The routed twin: set once a router answers "Reasoning is mandatory", after which the
+        // model is asked for effort "low" up front instead of paying the refused call every reply.
+        private bool _routedReasoningMandatory;
+
         static OpenAIChatClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
@@ -102,6 +111,7 @@ namespace ImmersiveAI.Llm
         // classic shape. Getting this wrong is a hard 400, so it keys off the model id.
         private bool IsReasoningFamily =>
             _model.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase)
+            || _model.StartsWith("gpt-6", StringComparison.OrdinalIgnoreCase)   // max_tokens is a 400 here too
             || _model.StartsWith("o1", StringComparison.OrdinalIgnoreCase)
             || _model.StartsWith("o3", StringComparison.OrdinalIgnoreCase)
             || _model.StartsWith("o4", StringComparison.OrdinalIgnoreCase);
@@ -157,14 +167,16 @@ namespace ImmersiveAI.Llm
                 // the same shape of answer.
                 payload["thinking"] = new JObject { ["type"] = "disabled" };
             else if (reasoningFamily)
-                payload["reasoning_effort"] = "none";
+                payload["reasoning_effort"] = _noneEffortRefused ? "low" : "none";
             else if (IsRoutedModel && !_isLocal)
                 // The routers' own unified reasoning switch (documented as ignored by models that
                 // cannot reason) — without it, a routed gpt-5.x thinks at its default effort and
                 // spends the spoken budget on silence, the very "..." bug of 2026.07.13. Local
                 // servers (whose LM Studio ids are slashed too) know no such field and the strict
                 // ones 400 on it — there, thinking is governed by which model the user loads.
-                payload["reasoning"] = new JObject { ["enabled"] = false };
+                payload["reasoning"] = _routedReasoningMandatory
+                    ? new JObject { ["effort"] = "low" }
+                    : new JObject { ["enabled"] = false };
 
             // THE ANSWER FIELDS (2026.10.01 — the heart beside every reply): when one rides, the reply
             // itself is given through one required hand, speak(words, heart), offered beside the
@@ -195,8 +207,19 @@ namespace ImmersiveAI.Llm
             // gemini-3.5 all answer 400 "Reasoning is mandatory for this endpoint" (verified live
             // 2026.07.16). Drop the reasoning field and let such a model think as it must: better
             // a thoughtful reply than a refused one, and no per-model list to keep.
-            if (status == 400 && payload["reasoning"] != null
+            // 2026.10.02: ask for the LOWEST effort first — openai/gpt-6.1-sol thought 51 hidden
+            // tokens with the field dropped and 0 at effort "low"; dropping stays the last resort.
+            var lowTried = false;
+            if (status == 400 && payload["reasoning"] != null && !_routedReasoningMandatory
                 && body.IndexOf("Reasoning is mandatory", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                _routedReasoningMandatory = lowTried = true;
+                payload["reasoning"] = new JObject { ["effort"] = "low" };
+                payloadText = payload.ToString(Formatting.None);
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
+            if (status == 400 && payload["reasoning"] != null
+                && (lowTried || _routedReasoningMandatory || body.IndexOf("Reasoning is mandatory", StringComparison.OrdinalIgnoreCase) >= 0))
             {
                 payload.Remove("reasoning");
                 payloadText = payload.ToString(Formatting.None);
@@ -208,6 +231,15 @@ namespace ImmersiveAI.Llm
             // (Google has already moved once, from a thinking budget to a level), and a model that
             // must think is still worth hearing — so a 400 that names our quieting field drops it and
             // asks again, rather than leaving the NPC mute over a parameter.
+            if (status == 400 && reasoningFamily && !_noneEffortRefused && MentionsThinkingField(body))
+            {
+                _noneEffortRefused = true;
+                payload["reasoning_effort"] = "low";
+                payloadText = payload.ToString(Formatting.None);
+                ModLog.Warn($"{_label}: '{_model}' cannot think at 'none' — asking for 'low', its floor, from now on.");
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
+
             if (status == 400 && MentionsThinkingField(body))
             {
                 var dropped = _dialect == OpenAiDialect.Gemini ? "reasoning_effort"

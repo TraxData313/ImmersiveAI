@@ -15,17 +15,41 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-- OpenAI's GPT-6 is in: the default is now `gpt-6-luna` (half the price of 5.6 Luna), Codex defaults to `gpt-6-sol`, and Astra joins the lists. Your chosen model is kept.
-- Developer mode: the talk screen's Dev panel can step a character's traits (mercy, valor, honor, generosity, calculating) — they feel it on their next reply.
-- Fixed: a letter to someone who has since joined you is now handed over when you open the talk screen by its hotkey too, instead of staying "days out" at their side.
-- Fixed: a reply that came back as only its voice note (no words) now keeps the words they spoke a moment earlier, instead of showing an empty answer.
+## v3.5.0 — 2026.10.02
+
+Their real answer, every time — weighed with their heart in one breath, on lighter prompts and the
+new GPT-6 models.
+
+**The Nexus changelog (255 max — copy this verbatim):**
+
+```
+* Their real answer is kept - a stray afterthought no longer replaces it
+* Feelings weighed with every reply, no extra wait
+* About a quarter lighter prompts: faster, cheaper
+* GPT-6: Luna default, Sol 6.1 on Codex and OpenRouter
+```
+
+### Truer, lighter replies
+
 - Fixed: when a character weighed their feelings mid-reply, their real answer was thrown away and a stray afterthought was kept — the answer you get is the one they meant.
 - Their feelings are weighed together with every answer in one go — no extra wait, and no more drifting warmer with every letter they write unprompted.
 - Lighter prompts: about a quarter fewer words sent with every reply — faster answers, cheaper on paid keys.
-- The ChatGPT-plan road no longer slips your own Codex instructions to the characters.
+- Fixed: a reply that came back as only its voice note (no words) now keeps the words they spoke a moment earlier, instead of showing an empty answer.
 - Letters no longer carry the spoken voice note, and read like letters again.
 - Your world-tone setting no longer repeats itself — and an old setting that was meant to retire now does.
 - News of a castle that changed hands twice is told once.
+
+### Models
+
+- OpenAI's GPT-6 is in: the default is now `gpt-6-luna` (half the price of 5.6 Luna), Codex defaults to the new `gpt-6.1-sol` (OpenRouter offers it too, same price), and Astra joins the lists. Your chosen model is kept.
+- Fixed: a model that insists on thinking a little is now asked for its lightest setting instead of being turned away or left to think at length.
+- The ChatGPT-plan road no longer slips your own Codex instructions to the characters.
+- The ChatGPT-plan road renews an expired sign-in by itself instead of going quiet every ten days or so.
+
+### Also
+
+- Fixed: a letter to someone who has since joined you is now handed over when you open the talk screen by its hotkey too, instead of staying "days out" at their side.
+- Developer mode: the talk screen's Dev panel can step a character's traits (mercy, valor, honor, generosity, calculating) — they feel it on their next reply.
 
 ## v3.4.0 — 2026.09.25
 

@@ -147,7 +147,7 @@ Bring **your own account or API key**. Pick a row:
 | If you want… | Pick | Account/key from |
 |---|---|---|
 | **It to just work** | OpenRouter + `openai/gpt-6-luna` — the default | openrouter.ai |
-| **A ChatGPT plan you already pay for** | Codex + `gpt-6-sol` — through the installed Codex app, no API key | ChatGPT |
+| **A ChatGPT plan you already pay for** | Codex + `gpt-6.1-sol` — through the installed Codex app, no API key | ChatGPT |
 | **A Claude plan you already pay for** | ClaudeCode — through the installed Claude Code app, no API key | claude.ai |
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |

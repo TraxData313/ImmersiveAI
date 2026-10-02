@@ -47,7 +47,7 @@ namespace ImmersiveAI
         /// pay-as-you-go fallback: the client verifies that the active Codex account is a ChatGPT
         /// login before a model turn begins. Each call is ephemeral and model-only; Codex tools,
         /// plugins, MCP servers, skills and filesystem access stay disabled.</summary>
-        public string CodexModel { get; set; } = "gpt-6-sol";
+        public string CodexModel { get; set; } = "gpt-6.1-sol";
 
         /// <summary>Where codex.exe lives, only when the finder cannot see it on PATH or inside the
         /// desktop app's versioned bin folder. Blank = find it.</summary>
@@ -1087,6 +1087,7 @@ namespace ImmersiveAI
                 ["claude-haiku"] = new ModelPrice(1, 5),
                 ["claude-fable-5"] = new ModelPrice(10, 50),
                 // OpenAI — the GPT-6 line (2026.09.28): Sol and Luna moved up to 6, Terra stays on 5.6.
+                ["gpt-6.1-sol"] = new ModelPrice(2, 10),     // 2026.10.02, same price as 6 Sol
                 ["gpt-6-sol"] = new ModelPrice(2, 10),
                 ["gpt-6-astra"] = new ModelPrice(10, 50),
                 ["gpt-6-luna"] = new ModelPrice(0.1, 0.5),

@@ -53,7 +53,7 @@ Ask anyone anything about the game — they quietly search the web mid-reply and
 
 Bring [b]your own API key[/b], or a plan. Pick a row:
 [list]
-[*][b]Just works[/b] — OpenRouter + openai/gpt-5.6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
+[*][b]Just works[/b] — OpenRouter + openai/gpt-6-luna, the default the mod is tuned against. [b]openrouter.ai[/b]
 [*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Catches: Google trains on it, and it's slow.
 [*][b]Cheapest paid[/b] — DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
 [*][b]No key[/b] — ChatGPT or claude.ai plan? Pick Codex or Claude Code; the plan carries them.

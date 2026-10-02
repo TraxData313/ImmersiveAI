@@ -1,6 +1,6 @@
 # Download Immersive AI
 
-The current version is **v3.4.0**. Everything the mod needs is inside that one file.
+The current version is **v3.5.0**. Everything the mod needs is inside that one file.
 
 ---
 
@@ -8,7 +8,7 @@ The current version is **v3.4.0**. Everything the mod needs is inside that one f
 
 **1. Download**
 
-Click **[ImmersiveAI_v3.4.0.zip](ImmersiveAI_v3.4.0.zip)** above, then press the **Download**
+Click **[ImmersiveAI_v3.5.0.zip](ImmersiveAI_v3.5.0.zip)** above, then press the **Download**
 button on the page that opens. (It is 48 MB — most of it is the voices of Calradia.)
 
 **2. Find your Bannerlord `Modules` folder**
@@ -79,8 +79,8 @@ PC. Qwen reads every language (NVIDIA, 4 GB), Breeze laughs and whispers (Englis
 16 GB), Pocket runs on any PC. More: [Hearing them speak](../docs/voiceover-setup.md).
 
 **Can I keep my old version?**
-Yes. The previous release, `ImmersiveAI_v3.3.0.zip`, is kept in this folder as a fallback.
-Only download it if v3.4.0 gives you trouble.
+Yes. The previous release, `ImmersiveAI_v3.4.0.zip`, is kept in this folder as a fallback.
+Only download it if v3.5.0 gives you trouble.
 
 **Updating from an older version?**
 Delete the old `Modules\ImmersiveAI` folder first, then unzip the new one. Your settings

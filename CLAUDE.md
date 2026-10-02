@@ -477,7 +477,7 @@ TaleWorlds API usage patterns, never copy from it.
   (all object properties required; optional args nullable), folds streamed final-answer/usage events,
   and formats rate windows. `CodexPlanGauge` asks `account/rateLimits/read` inside the already-
   authenticated process and keeps only the percentages; the ledger records exact tokens without
-  inventing API-dollar spend. Default model is `gpt-6-sol` (was `gpt-5.6-sol` until 2026.09.28 — GPT-6 moved Sol and Luna up, Terra
+  inventing API-dollar spend. Default model is `gpt-6.1-sol` (2026.10.02; `gpt-6-sol` before, `gpt-5.6-sol` until 2026.09.28 — GPT-6 moved Sol and Luna up, Terra
   stays on 5.6); dropdown also offers Astra, Terra and
   Luna. LIVE-PROVED through the built client on Anton's ChatGPT login: Sol plain reply `OK`; Astra
   returned `recall_person({"name":"Rhagaea"})`. Sol also surfaced a genuine temporary capacity
@@ -646,7 +646,7 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   keyless; model dropdown haiku-4-5 (default) / sonnet-5 / opus-5 / fable-5 + custom; path blank =
   find claude.exe on PATH then the Claude apps' folders; cost notices carry the plan gauge),
   `CodexModel` + `CodexPath` (2026.09.18 — `Backend: "Codex"`, the ChatGPT-subscription road:
-  installed Codex app/CLI + one `codex login`, keyless; default `gpt-6-sol`, with Astra/Terra/Luna
+  installed Codex app/CLI + one `codex login`, keyless; default `gpt-6.1-sol`, with Astra/Terra/Luna
   + custom in MCM; path blank = PATH then the desktop app's versioned bin folders; no API-key
   fallback, and cost notices carry the app-server's 5h/weekly plan gauge),
   `GeminiApiKey` + `GeminiModel` (2026.08.02 — `Backend: "Gemini"`, the FREE road: the same

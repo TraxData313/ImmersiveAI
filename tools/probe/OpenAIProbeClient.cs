@@ -29,6 +29,19 @@ namespace ImmersiveAI.Probe
         public async Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken ct = default) =>
             (await CompleteWithToolsAsync(messages, Array.Empty<ToolDefinition>(), false, ct)).Text;
 
+        private bool _noneRefused;
+
+        private async Task<(HttpResponseMessage, string)> PostAsync(JObject payload, CancellationToken ct)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, _endpoint)
+            {
+                Content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json"),
+            };
+            req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _key);
+            var resp = await Http.SendAsync(req, ct);
+            return (resp, await resp.Content.ReadAsStringAsync(ct));
+        }
+
         public async Task<ChatResult> CompleteWithToolsAsync(IReadOnlyList<ChatMessage> messages,
             IReadOnlyList<ToolDefinition> tools, bool allowToolUse = true, CancellationToken ct = default)
         {
@@ -37,7 +50,7 @@ namespace ImmersiveAI.Probe
                 ["model"] = _model,
                 ["messages"] = BuildTurns(messages),
                 ["max_completion_tokens"] = _maxTokens,
-                ["reasoning_effort"] = "none",
+                ["reasoning_effort"] = _noneRefused ? "low" : "none",
             };
             // Mirrors OpenAIChatClient (2026.10.01): answer fields fold into one forced speak hand.
             bool speaking = AnswerShape.HasFields(tools);
@@ -53,13 +66,14 @@ namespace ImmersiveAI.Probe
             var rec = new CallRecord { Round = Calls.Count + 1, Model = _model, AllowToolUse = allowToolUse };
             Calls.Add(rec);
             var sw = Stopwatch.StartNew();
-            using var req = new HttpRequestMessage(HttpMethod.Post, _endpoint)
+            var (resp, body) = await PostAsync(payload, ct);
+            // Mirrors OpenAIChatClient (2026.10.02): a model refusing "none" is asked for "low", its floor.
+            if ((int)resp.StatusCode == 400 && !_noneRefused && body.Contains("reasoning_effort"))
             {
-                Content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json"),
-            };
-            req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + _key);
-            using var resp = await Http.SendAsync(req, ct);
-            var body = await resp.Content.ReadAsStringAsync(ct);
+                _noneRefused = true;
+                payload["reasoning_effort"] = "low";
+                (resp, body) = await PostAsync(payload, ct);
+            }
             rec.TotalMs = Math.Round(sw.Elapsed.TotalMilliseconds);
             if (!resp.IsSuccessStatusCode)
             {

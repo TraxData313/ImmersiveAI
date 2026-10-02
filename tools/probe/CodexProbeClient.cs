@@ -16,7 +16,7 @@ namespace ImmersiveAI.Probe
     /// (src/ImmersiveAI.Module/Llm/CodexAppServerChatClient.cs as of 2026-10-01).</summary>
     public sealed class CodexOptions
     {
-        public string Model = "gpt-6-sol";
+        public string Model = "gpt-6.1-sol";
         public string Effort = "low";
         public bool Ephemeral = true;
         /// <summary>Extra thread/start config overrides, merged over the mod's own.</summary>
@@ -147,6 +147,8 @@ namespace ImmersiveAI.Probe
                 session.Initialize();
                 Stage("initialized");
                 var account = session.Request("account/read", new JObject { ["refreshToken"] = false });
+                if (account.SelectToken("account")?.Type is null or JTokenType.Null)
+                    account = session.Request("account/read", new JObject { ["refreshToken"] = true });
                 if (!string.Equals((string?)account.SelectToken("account.type"), "chatgpt", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("not a ChatGPT login");
                 Stage("account_read");

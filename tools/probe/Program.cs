@@ -183,7 +183,7 @@ namespace ImmersiveAI.Probe
         {
             var opt = new CodexOptions
             {
-                Model = Get(a, "model", "gpt-6-sol"),
+                Model = Get(a, "model", "gpt-6.1-sol"),
                 Effort = Get(a, "effort", "low"),
                 Ephemeral = Get(a, "ephemeral", "true") != "false",
                 CodexHome = a.TryGetValue("codex-home", out var h) ? h : null,

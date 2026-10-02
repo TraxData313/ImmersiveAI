@@ -1737,3 +1737,19 @@ first three change how the whole road behaves.
       Ira's and Rhagaea's memories (backup first), Ira's third-person custom prompt, and three
       token proposals — history window 40→30, one `recall(kind, name)` hand, gating
       EraNorm. UNPLAYTESTED in game. (2026.10.01 12.56.31)
+
+  v3.5.0 SHIPPED TO STEAM + GPT-6.1 SOL. Sol moved to gpt-6.1-sol on the Codex (default) and
+      OpenRouter lists, renamed in place, price 2/10 added. NOT on the direct OpenAI list: on
+      /v1/chat/completions 6.1-sol refuses reasoning_effort "none" and allows function tools ONLY
+      at "none" — it cannot carry the hands there without the Responses API (probed live).
+      THE PROBE CAUGHT A SHIP-STOPPER: OpenAIChatClient.IsReasoningFamily knew only gpt-5/o-series,
+      so the new default gpt-6-luna went out with classic max_tokens -> a hard 400 on the direct
+      OpenAI road (the probe had always sent the gpt-5 shape, so it never saw this). Fixed: gpt-6
+      counts; a model refusing "none" is asked for "low" (its floor, 0 reasoning tokens live) and
+      remembered; routed "Reasoning is mandatory" now tries reasoning {effort:"low"} before dropping
+      the field (6.1-sol: 51 hidden tokens dropped vs 0 at low), also remembered. Codex: account/read
+      with refreshToken:false answers account:null once the access token lapses (~10 days), so a
+      null account is asked once more WITH the refresh. Anton's own login turned out unrecoverable
+      (refresh token already used) — re-login is his hand. Version v3.5.0, three note tiers (Nexus
+      229 chars), store pages gpt-5.6-luna -> gpt-6-luna, packaged, latest-release refreshed,
+      Workshop "Uploading done!". Nexus file left for Anton (48 MB > bridge cap). (2026.10.02 20.30.00)
