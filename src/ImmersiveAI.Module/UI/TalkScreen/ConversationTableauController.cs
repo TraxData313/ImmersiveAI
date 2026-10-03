@@ -38,6 +38,11 @@ namespace ImmersiveAI.UI.TalkScreen
         /// ONLY place that names the game's conversation types.</summary>
         internal static object? TableauData { get; private set; }
 
+        /// <summary>The data the SEA stage draws (2026.10.03) — set instead of <see cref="TableauData"/>
+        /// whenever the chosen one is out on the water, because the land tableau has no sea in it
+        /// (see <see cref="SeaStage"/>). At most one of the two is ever non-null.</summary>
+        internal static object? SeaStageData { get; private set; }
+
         /// <summary>Puts a soul before the player. Null simply empties the stage — someone dead has
         /// no face to show — WITHOUT striking it: see <see cref="Hide"/>.</summary>
         internal static void Show(Hero? hero)
@@ -53,6 +58,18 @@ namespace ImmersiveAI.UI.TalkScreen
 
             try
             {
+                // Out on the water the deck, not the meadow — unless this build has proven it cannot
+                // raise the deck, in which case the land stage carries it as before.
+                if (!SeaStage.Failed && ConversationSceneBuilder.IsAtSea(hero))
+                {
+                    TableauData = null;
+                    SeaStageData = new SeaStageData(hero, ConversationSceneBuilder.TimeOfDayNow());
+                    _builtSet = _chosenSet;
+                    _shown = hero;
+                    return;
+                }
+                SeaStageData = null;
+
                 var data = ConversationSceneBuilder.BuildFor(hero, _chosenSet);
                 _builtSet = _chosenSet;
                 TableauData = data;
@@ -118,6 +135,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 var data = ConversationSceneBuilder.BuildFor(hero, setId);
                 if (data == null) { _chosenSet = was; return false; }
                 TableauData = data;
+                SeaStageData = null;
                 _builtSet = setId;
                 _shown = hero;
                 return true;
@@ -137,7 +155,15 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             if (hero == null || _unavailable) return false;
             if (!ReferenceEquals(_shown, hero)) return false;   // not the one being looked at
-            try { return ConversationSceneBuilder.ShiftStance(hero); }
+            try
+            {
+                if (SeaStageData != null)
+                {
+                    var stance = ConversationSceneBuilder.NextStanceFor(hero);
+                    return SeaStage.Current?.PlayStance(hero, stance.Idle, stance.Face) ?? false;
+                }
+                return ConversationSceneBuilder.ShiftStance(hero);
+            }
             catch (Exception ex)
             {
                 // Never worth a crash, and never worth losing the face over either — so this does
@@ -161,6 +187,7 @@ namespace ImmersiveAI.UI.TalkScreen
             _builtSet = null;
             _chosenSet = null;
             TableauData = null;
+            SeaStageData = null;
         }
 
         /// <summary>Strikes the stage — called when the screen closes, so the shared scene is never
@@ -176,8 +203,20 @@ namespace ImmersiveAI.UI.TalkScreen
             _builtSet = null;
             _chosenSet = null;
             TableauData = null;
+            SeaStageData = null;
             try { ConversationSceneBuilder.Release(); }
             catch { /* best-effort */ }
+        }
+
+        /// <summary>The deck could not be raised (the throw is already logged): put whoever was on it
+        /// back on the land stage, and have the screen pick the change up. Game thread.</summary>
+        internal static void OnSeaStageFailed()
+        {
+            var hero = _shown;
+            SeaStageData = null;
+            _shown = null;
+            if (hero != null) Show(hero);
+            TalkScreenManager.RefreshStage();
         }
 
         // Latched ONLY by a real throw — this game build cannot raise these visuals at all, and
@@ -187,6 +226,7 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             _unavailable = true;
             TableauData = null;
+            SeaStageData = null;
             _shown = null;
             _builtSet = null;
             _chosenSet = null;

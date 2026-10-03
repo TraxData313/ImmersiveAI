@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
@@ -95,6 +95,16 @@
     </Reference>
     <Reference Include="TaleWorlds.Engine.GauntletUI">
       <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\TaleWorlds.Engine.GauntletUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- The sea stage's texture provider hands the screen a 2D texture of its own (SeaStage). -->
+    <Reference Include="TaleWorlds.TwoDimension">
+      <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\TaleWorlds.TwoDimension.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Widget.OnPropertyChanged has a Vector2 overload, so the sea stage's widget needs it to compile. -->
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>$(GameFolder)\bin\Win64_Shipping_Client\System.Numerics.Vectors.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="TaleWorlds.ScreenSystem">

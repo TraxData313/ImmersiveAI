@@ -265,6 +265,8 @@ namespace ImmersiveAI.UI.TalkScreen
                 RefreshThread();
                 TalkScreenManager.ShowCharacter(null);
                 OnPropertyChanged("TableauData");
+                OnPropertyChanged("SeaStageData");
+                OnPropertyChanged("HasSeaStage");
                 OnPropertyChanged("HasFace");
                 OnPropertyChanged("EmptyHint");
             }
@@ -312,6 +314,8 @@ namespace ImmersiveAI.UI.TalkScreen
 
             TalkScreenManager.ShowCharacter(contact.Hero);
             OnPropertyChanged("TableauData");
+            OnPropertyChanged("SeaStageData");
+            OnPropertyChanged("HasSeaStage");
             OnPropertyChanged("HasFace");
             OnPropertyChanged("EmptyHint");
 
@@ -2630,7 +2634,27 @@ namespace ImmersiveAI.UI.TalkScreen
 
         /// <summary>Whether there is a face on stage to look at.</summary>
         [DataSourceProperty]
-        public bool HasFace => HasSelection && ConversationTableauController.TableauData != null;
+        public bool HasFace => HasSelection
+                               && (ConversationTableauController.TableauData != null
+                                   || ConversationTableauController.SeaStageData != null);
+
+        /// <summary>The chosen one on a ship's deck — set instead of <see cref="TableauData"/> while
+        /// they are out on the water (the land tableau has no sea; see SeaStage).</summary>
+        [DataSourceProperty]
+        public object? SeaStageData => ConversationTableauController.SeaStageData;
+
+        [DataSourceProperty]
+        public bool HasSeaStage => HasSelection && ConversationTableauController.SeaStageData != null;
+
+        /// <summary>Re-reads whichever stage is up — after the deck fell back to land, for one.</summary>
+        internal void RefreshStage()
+        {
+            OnPropertyChanged("TableauData");
+            OnPropertyChanged("SeaStageData");
+            OnPropertyChanged("HasSeaStage");
+            OnPropertyChanged("HasFace");
+            OnPropertyChanged("EmptyHint");
+        }
 
         /// <summary>The one button, named for what it will actually do to these words. Keyed to
         /// DISTANCE, not to whether the road happens to be open: someone across the map is written
@@ -3084,6 +3108,8 @@ namespace ImmersiveAI.UI.TalkScreen
                 // last: without this the picture is the old room's, with a new name over it.
                 OnPropertyChanged("SetButtonText");
                 OnPropertyChanged("TableauData");
+                OnPropertyChanged("SeaStageData");
+                OnPropertyChanged("HasSeaStage");
                 OnPropertyChanged("HasFace");
             }
             catch (Exception ex) { ModLog.Error("moving the talk to another set", ex); }

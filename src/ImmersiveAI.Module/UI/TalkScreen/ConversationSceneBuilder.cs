@@ -63,8 +63,7 @@ namespace ImmersiveAI.UI.TalkScreen
             var terrain = Campaign.Current.MapSceneWrapper.GetTerrainTypeAtPosition(position);
             var weather = Campaign.Current.Models.MapWeatherModel.GetWeatherEventInPosition(position.ToVec2());
 
-            // Vanilla's own conversion of the campaign hour into the tableau's clock.
-            float timeOfDay = CampaignTime.Now.CurrentHourInDay * (24 / CampaignTime.HoursInDay);
+            float timeOfDay = TimeOfDayNow();
 
             bool underSnow = weather == MapWeatherModel.WeatherEvent.Snowy
                              || weather == MapWeatherModel.WeatherEvent.Blizzard;
@@ -187,7 +186,7 @@ namespace ImmersiveAI.UI.TalkScreen
         private static readonly Dictionary<string, int> _stanceStep =
             new Dictionary<string, int>(StringComparer.Ordinal);
 
-        private static (string Idle, string Face) NextStanceFor(Hero hero)
+        internal static (string Idle, string Face) NextStanceFor(Hero hero)
         {
             int relation = 0;
             try { relation = ImmersiveChatBehavior.RelationValue(hero); }
@@ -262,6 +261,22 @@ namespace ImmersiveAI.UI.TalkScreen
             if (ReferenceEquals(CampaignMission.Current, _stub))
                 CampaignMission.Current = null;
         }
+
+        /// <summary>Whether they stand on a deck right now — their own band out on the water and not
+        /// lodged in any port. The same question vanilla asks before it opens its deck mission
+        /// (PlayerEncounter: <c>MobileParty.IsCurrentlyAtSea</c>).</summary>
+        internal static bool IsAtSea(Hero hero)
+        {
+            try
+            {
+                if (hero.CurrentSettlement != null) return false;
+                return hero.PartyBelongedTo?.IsCurrentlyAtSea == true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>Vanilla's own conversion of the campaign hour into a scene's clock.</summary>
+        internal static float TimeOfDayNow() => CampaignTime.Now.CurrentHourInDay * (24 / CampaignTime.HoursInDay);
 
         // Someone of the player's own company — they need no escort drawn at their back.
         private static bool RidesWithPlayer(Hero hero)

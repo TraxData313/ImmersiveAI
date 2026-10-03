@@ -42,6 +42,17 @@ You usually only need to open:
   the `UI\TalkUI.cs` façade — notices fan out to all shapes, opening goes to the chosen one — so
   retiring the old windows later is a ONE-FILE change. The old windows are kept whole behind
   `UseClassicChatWindow` (default false) and an automatic session fallback.
+- **THE SEA STAGE** (2026.10.03) → `UI\TalkScreen\SeaStage.cs`. The land tableau has NO sea (its
+  scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
+  never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
+  `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it
+  in a small tableau of our own (`ImmersiveSeaStageWidget` → `ImmersiveSeaStageTextureProvider`, found
+  by type NAME → `SeaStageTableau`): the soul on `opponent_infantry_spawn`, the eye through
+  `custom_camera_level`. Chosen by `ConversationSceneBuilder.IsAtSea` (own band `IsCurrentlyAtSea`,
+  no settlement); `SeaStageData` replaces `TableauData`, never both. Any throw latches `SeaStage.Failed`
+  and puts the soul back on land for the session. The scene is read once and kept for the campaign
+  (released at `OnGameEnd`), and NOT ticked per frame — vanilla's tableau never does, and native
+  crashes cannot be caught. If the sea ever looks frozen, per-frame `Scene.Tick` is the knob to try.
 - **The old chat window** (fallback only) → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **"Think" (the player's own next line)** → Core `Prompts\PlayerThought` (the aside + the answer-taming) + `Prompts\ConversationPresets` (the presets file model) + the `ImmersiveChatBehavior.Thoughts.cs` partial + both windows' VMs/prefabs.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).

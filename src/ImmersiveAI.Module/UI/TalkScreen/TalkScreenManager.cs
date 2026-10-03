@@ -255,6 +255,13 @@ namespace ImmersiveAI.UI.TalkScreen
             catch { /* the words are the point; the face is the grace */ }
         }
 
+        /// <summary>Has the screen re-read which stage is up (the deck fell back to land). Game thread.</summary>
+        internal static void RefreshStage()
+        {
+            try { _vm?.RefreshStage(); }
+            catch { /* the face is the grace */ }
+        }
+
         /// <summary>A small shift of weight as your words reach them — the ONE moment anybody moves
         /// (see the note in ConversationSceneBuilder: this was once three, and three was too many).
         /// Must run on the game thread.</summary>

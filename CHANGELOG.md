@@ -15,6 +15,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+- At sea, the talk screen now shows them on a ship's deck with the open water behind, instead of a meadow.
+
 ## v3.5.0 — 2026.10.02
 
 Their real answer, every time — weighed with their heart in one breath, on lighter prompts and the

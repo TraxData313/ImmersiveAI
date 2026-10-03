@@ -96,6 +96,8 @@ namespace ImmersiveAI
             // of the GAME (VoiceService's process-exit hook), and only if the game opened it.
             try { Voice.VoiceService.Stop(); }
             catch (Exception ex) { ModLog.Error("voice: stopping", ex); }
+            // The ship's deck is kept for the campaign, as vanilla keeps its own conversation scene.
+            UI.TalkScreen.SeaStage.ReleaseScene();
             base.OnGameEnd(game);
         }
 
