@@ -370,7 +370,8 @@ namespace ImmersiveAI.Core.Memory
             if (selfIdx >= 0)
             {
                 var start = selfIdx + "SELF:".Length;
-                var end = NextSection(start, response.Length, bitesIdx, factsIdx, goalsIdx);
+                // Models may put SELF before SUMMARY; neither section may absorb the other.
+                var end = NextSection(start, response.Length, summaryIdx, bitesIdx, factsIdx, goalsIdx);
                 var block = response.Substring(start, end - start).Trim();
                 if (block.Length > 0) self = block;
             }
