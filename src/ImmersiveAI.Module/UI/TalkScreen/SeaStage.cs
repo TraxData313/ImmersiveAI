@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using Helpers;
 using TaleWorlds.CampaignSystem;
@@ -36,8 +37,11 @@ namespace ImmersiveAI.UI.TalkScreen
     /// sea off for the session and puts the soul back on the land stage (<see cref="Failed"/> →
     /// <see cref="ConversationTableauController.OnSeaStageFailed"/>). A NATIVE crash cannot be caught
     /// from here, which is why the engine sequence below copies vanilla's order call for call and
-    /// adds nothing of its own — in particular the scene is NOT ticked every frame (vanilla's tableau
-    /// never does; the map's water-wake lesson of 2026.08.14 is why we do not experiment there).
+    /// adds nothing of its own. The model is NOT the land tableau but War Sails' own sea cutscene
+    /// (GauntletSceneNotification), the one place vanilla shows a water scene outside a mission:
+    /// physics on, and the water's CPU simulation waited on before every tick, spawn and release.
+    /// The first cut followed the land tableau instead and crashed the game at sea (2026.10.03).
+    /// A native crash is remembered by <see cref="CrashGuard"/>, so the same build never repeats it.
     /// </para>
     /// <para>
     /// The scene is read ONCE and kept for the campaign, exactly as vanilla keeps its own: reading
@@ -61,9 +65,12 @@ namespace ImmersiveAI.UI.TalkScreen
     {
         internal const string SceneName = "conversation_scene_sea";
 
+        private static bool _failed;
+
         /// <summary>Latched by the first throw: this build cannot raise the deck, so the land stage
-        /// carries every talk at sea for the rest of the session.</summary>
-        internal static bool Failed { get; private set; }
+        /// carries every talk at sea for the rest of the session. Also true from the start when this
+        /// very build died raising the deck in an earlier run (see <see cref="CrashGuard"/>).</summary>
+        internal static bool Failed => _failed || CrashGuard.DiedHereBefore;
 
         /// <summary>The tableau drawing right now, so a stance can reach it. One widget, one tableau.</summary>
         internal static SeaStageTableau? Current { get; set; }
@@ -72,6 +79,14 @@ namespace ImmersiveAI.UI.TalkScreen
         private static Scene? _scene;
         private static MBAgentRendererSceneController? _agentRenderer;
 
+        /// <summary>
+        /// The deck is raised EXACTLY as War Sails raises its own sea cutscene outside a mission
+        /// (GauntletSceneNotification.OpenScene with NavalDeathSceneNotificationItem's properties):
+        /// physics on, async physx before the read, fixed tick after. The first cut read it with no
+        /// physics world and crashed the game natively at sea (2026.10.03, an encounter menu, Y) —
+        /// a water scene is not a meadow, and its water and ship prefabs expect the world vanilla
+        /// always gives them.
+        /// </summary>
         internal static Scene AcquireScene()
         {
             if (_scene != null) return _scene;
@@ -79,19 +94,32 @@ namespace ImmersiveAI.UI.TalkScreen
             // Unlike vanilla's tableau scene, the deck keeps the sky it was authored with: vanilla
             // turns the skybox off at read only because it picks an atmosphere by name right after,
             // and the deck has just the one of its own ("scene_atmosphere").
+            var scene = Scene.CreateNewScene(true, true, DecalAtlasGroup.Battle);
+            scene.SetName("ImmersiveSeaStage");
+            scene.SetUsesDeleteLaterSystem(true);
             var init = new SceneInitializationData(true)
             {
-                InitPhysicsWorld = false,
+                InitPhysicsWorld = true,
             };
-            var scene = Scene.CreateNewScene(true, false);
-            scene.SetName("ImmersiveSeaStage");
-            scene.DisableStaticShadows(true);
+            scene.EnableInclusiveAsyncPhysx();
             scene.Read(SceneName, ref init);
+            scene.EnableFixedTick();
+            scene.SetFixedTickCallbackActive(true);
+            scene.DisableStaticShadows(true);
+            scene.SetClothSimulationState(true);
             scene.SetShadow(true);
             _agentRenderer = MBAgentRendererSceneController.CreateNewAgentRendererSceneController(scene);
             _scene = scene;
             return scene;
         }
+
+        /// <summary>
+        /// THE WATER RULE: every engine call that touches a water scene — a tick, a spawn, a pose,
+        /// a release — first waits for the water renderer's CPU simulation, which runs on a thread
+        /// of its own. Vanilla does it before every tick of its sea cutscene and before every agent
+        /// a mission spawns; skipping it is a race in native code, which no try/catch can see.
+        /// </summary>
+        internal static void WaitForTheWater(Scene? scene) => scene?.WaitWaterRendererCPUSimulation();
 
         /// <summary>Lets the deck go — at campaign end, when no screen can be drawing it.</summary>
         internal static void ReleaseScene()
@@ -101,6 +129,7 @@ namespace ImmersiveAI.UI.TalkScreen
             if (scene == null) return;
             try
             {
+                WaitForTheWater(scene);
                 if (_agentRenderer != null)
                     MBAgentRendererSceneController.DestructAgentRendererSceneController(scene, _agentRenderer, false);
             }
@@ -116,8 +145,9 @@ namespace ImmersiveAI.UI.TalkScreen
 
         internal static void Fail(Exception ex)
         {
-            if (Failed) return;
-            Failed = true;
+            if (_failed) return;
+            _failed = true;
+            CrashGuard.Survived();
             ModLog.Error("raising the ship's deck on the talk screen (the land stage carries on instead)", ex);
             // Out of the widget's tick: swapping the stage means re-binding the screen, which must
             // not happen from inside the very property propagation that is drawing it.
@@ -126,6 +156,67 @@ namespace ImmersiveAI.UI.TalkScreen
                 try { ConversationTableauController.OnSeaStageFailed(); }
                 catch (Exception e) { ModLog.Error("sea stage: falling back to land", e); }
             });
+        }
+    }
+
+    /// <summary>
+    /// A native crash cannot be caught, but it can be REMEMBERED. A marker file is written just
+    /// before the deck is raised and removed once it has been drawn for a while (or the raising threw
+    /// a managed exception the fallback handled). Finding it at the next start means the game died
+    /// right there — so that same build never tries the deck again and talks at sea go to the land
+    /// stage. The marker carries the build's own identity: a NEW build gets one fresh chance, which
+    /// is how a fix is ever tried at all.
+    /// </summary>
+    internal static class CrashGuard
+    {
+        private static string MarkerPath => System.IO.Path.Combine(ModConfig.ConfigDirectory, "sea_stage_raising.txt");
+        private static string Build => typeof(CrashGuard).Assembly.ManifestModule.ModuleVersionId.ToString();
+
+        private static bool? _diedHereBefore;
+        private static bool _armed;
+
+        internal static bool DiedHereBefore
+        {
+            get
+            {
+                if (_diedHereBefore.HasValue) return _diedHereBefore.Value;
+                bool died = false;
+                try
+                {
+                    if (File.Exists(MarkerPath))
+                    {
+                        if (File.ReadAllText(MarkerPath).Trim() == Build)
+                        {
+                            died = true;
+                            ModLog.Info("sea stage: this build crashed the game raising the ship's deck once already — talks at sea stay on the land stage.");
+                        }
+                        else File.Delete(MarkerPath);
+                    }
+                }
+                catch (Exception ex) { ModLog.Error("sea stage: reading the crash marker", ex); }
+                _diedHereBefore = died;
+                return died;
+            }
+        }
+
+        internal static void Arm()
+        {
+            if (_armed) return;
+            try
+            {
+                Directory.CreateDirectory(ModConfig.ConfigDirectory);
+                File.WriteAllText(MarkerPath, Build);
+                _armed = true;
+            }
+            catch (Exception ex) { ModLog.Error("sea stage: writing the crash marker", ex); }
+        }
+
+        internal static void Survived()
+        {
+            if (!_armed) return;
+            _armed = false;
+            try { if (File.Exists(MarkerPath)) File.Delete(MarkerPath); }
+            catch (Exception ex) { ModLog.Error("sea stage: clearing the crash marker", ex); }
         }
     }
 
@@ -227,12 +318,26 @@ namespace ImmersiveAI.UI.TalkScreen
                 if (_camera == null) _camera = Camera.CreateCamera();
                 view.SetDoNotRenderThisFrame(false);
             }
+            if (_initialized && _scene != null)
+            {
+                // Vanilla's sea cutscene, call for call: wait on the water, then tick the scene.
+                SeaStage.WaitForTheWater(_scene);
+                _scene.Tick(dt);
+                if (++_framesDrawn == FramesUntilTrusted) CrashGuard.Survived();
+            }
             _visual?.TickVisuals();
         }
+
+        // About two seconds of the deck drawn and ticked: past the raising, past the first renders.
+        private const int FramesUntilTrusted = 120;
+        private int _framesDrawn;
 
         internal void OnFinalize()
         {
             if (ReferenceEquals(SeaStage.Current, this)) SeaStage.Current = null;
+            // Closed cleanly before the frame count was reached: the deck still did not kill us.
+            if (_initialized) CrashGuard.Survived();
+            SeaStage.WaitForTheWater(_scene);
             View?.SetEnable(false);
             _camera?.ReleaseCameraEntity();
             _camera = null;
@@ -249,6 +354,7 @@ namespace ImmersiveAI.UI.TalkScreen
         private void DropVisual()
         {
             _initialized = false;
+            SeaStage.WaitForTheWater(_scene);
             _visual?.Reset();
             _visual = null;
         }
@@ -259,8 +365,11 @@ namespace ImmersiveAI.UI.TalkScreen
             var character = data.Hero.CharacterObject
                             ?? throw new InvalidOperationException("no character to stand on the deck");
 
+            CrashGuard.Arm();
             if (_scene == null) _scene = SeaStage.AcquireScene();
+            SeaStage.WaitForTheWater(_scene);
             _scene.TimeOfDay = data.TimeOfDay;
+            _framesDrawn = 0;
 
             var spawn = _scene.FindEntityWithTag("opponent_infantry_spawn")
                         ?? throw new InvalidOperationException("the deck has no place for them to stand");
@@ -286,6 +395,7 @@ namespace ImmersiveAI.UI.TalkScreen
             SetTargetSize((int)Screen.RealScreenResolutionWidth, (int)Screen.RealScreenResolutionHeight);
             _cameraRatio = Screen.RealScreenResolutionWidth / Screen.RealScreenResolutionHeight;
             View?.SetPostfxConfigParams(unchecked((int)(uint.MaxValue & 0xFFFFFBFFu)));
+            SeaStage.WaitForTheWater(_scene);
             _scene.Tick(3f);
             View?.SetEnable(true);
             _initialized = true;
@@ -355,6 +465,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 return false;
 
             var action = ActionIndexCache.Create(anim.IdleAnimStart);
+            SeaStage.WaitForTheWater(_scene);
             if (!_visual.DoesActionContinueWithCurrentAction(in action))
                 _visual.SetAction(in action, 0f, false);
             if (!string.IsNullOrEmpty(faceId))

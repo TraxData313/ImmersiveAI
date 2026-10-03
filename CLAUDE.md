@@ -51,8 +51,17 @@ You usually only need to open:
   `custom_camera_level`. Chosen by `ConversationSceneBuilder.IsAtSea` (own band `IsCurrentlyAtSea`,
   no settlement); `SeaStageData` replaces `TableauData`, never both. Any throw latches `SeaStage.Failed`
   and puts the soul back on land for the session. The scene is read once and kept for the campaign
-  (released at `OnGameEnd`), and NOT ticked per frame — vanilla's tableau never does, and native
-  crashes cannot be caught. If the sea ever looks frozen, per-frame `Scene.Tick` is the knob to try.
+  (released at `OnGameEnd`). **ITS MODEL IS WAR SAILS' SEA CUTSCENE, NOT THE LAND TABLEAU**
+  (2026.10.03, the first cut CRASHED the game natively the first time Y was pressed at sea):
+  `GauntletSceneNotification.OpenScene` with `NavalDeathSceneNotificationItem`'s properties is the
+  one place vanilla shows a water scene outside a mission — physics ON (`EnableInclusiveAsyncPhysx`
+  before `Read`, `EnableFixedTick` after), and `WaitWaterRendererCPUSimulation()` before EVERY tick,
+  spawn, pose change and release (a mission does it before every `SpawnAgent` too). The water
+  simulates on its own thread; touching the scene without waiting is a native race. The deck is
+  ticked per frame, as the cutscene is. `CrashGuard` remembers a native crash: a marker file
+  (`sea_stage_raising.txt` beside config.json, holding the assembly MVID) is written before the
+  raise and cleared after 120 drawn frames; finding it with the SAME build latches the land stage,
+  a new build gets one fresh try.
 - **The old chat window** (fallback only) → `UI\ChatWindow\` (VM + manager) + `module\GUI\Prefabs\ImmersiveChatWindow.xml`; its quick-turn plumbing is the chat-window region in `ImmersiveChatBehavior`.
 - **"Think" (the player's own next line)** → Core `Prompts\PlayerThought` (the aside + the answer-taming) + `Prompts\ConversationPresets` (the presets file model) + the `ImmersiveChatBehavior.Thoughts.cs` partial + both windows' VMs/prefabs.
 - **Per-NPC files, paths, migration** → `NpcPaths` (Module).
