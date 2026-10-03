@@ -37,10 +37,11 @@ namespace ImmersiveAI.UI.TalkScreen
     /// sea off for the session and puts the soul back on the land stage (<see cref="Failed"/> →
     /// <see cref="ConversationTableauController.OnSeaStageFailed"/>). A NATIVE crash cannot be caught
     /// from here, which is why the engine sequence below copies vanilla's order call for call and
-    /// adds nothing of its own. The model is NOT the land tableau but War Sails' own sea cutscene
-    /// (GauntletSceneNotification), the one place vanilla shows a water scene outside a mission:
-    /// physics on, and the water's CPU simulation waited on before every tick, spawn and release.
-    /// The first cut followed the land tableau instead and crashed the game at sea (2026.10.03).
+    /// adds nothing of its own. The model is NOT the land tableau but War Sails' PORT SCREEN
+    /// (GauntletPortScreen), which puts ships on live water outside a mission in every campaign:
+    /// advanced water on before the read, the campaign's weather on the waves, nothing placed until
+    /// the view is ready to draw, and the water's CPU simulation waited on before every tick, spawn
+    /// and release. Two cuts modelled on anything else crashed the game at sea (2026.10.03).
     /// A native crash is remembered by <see cref="CrashGuard"/>, so the same build never repeats it.
     /// </para>
     /// <para>
@@ -80,37 +81,44 @@ namespace ImmersiveAI.UI.TalkScreen
         private static MBAgentRendererSceneController? _agentRenderer;
 
         /// <summary>
-        /// The deck is raised EXACTLY as War Sails raises its own sea cutscene outside a mission
-        /// (GauntletSceneNotification.OpenScene with NavalDeathSceneNotificationItem's properties):
-        /// physics on, async physx before the read, fixed tick after. The first cut read it with no
-        /// physics world and crashed the game natively at sea (2026.10.03, an encounter menu, Y) —
-        /// a water scene is not a meadow, and its water and ship prefabs expect the world vanilla
-        /// always gives them.
+        /// The deck is raised EXACTLY as War Sails raises its PORT SCREEN — GauntletPortScreen.
+        /// CreateScene, the one place the game puts ships on live water outside a mission, every day
+        /// in every campaign: advanced water rendering switched on BEFORE the read, a lean init (physics
+        /// and flora, nothing else), then fixed tick, cloth, async physx. Two earlier cuts crashed the
+        /// game natively inside the read itself, right as the water prefabs loaded (2026.10.03): the
+        /// first modelled on the land tableau, the second on the sea death cutscene — neither switched
+        /// the advanced water on, and both read with every default flag raised.
         /// </summary>
         internal static Scene AcquireScene()
         {
             if (_scene != null) return _scene;
 
-            // Unlike vanilla's tableau scene, the deck keeps the sky it was authored with: vanilla
-            // turns the skybox off at read only because it picks an atmosphere by name right after,
-            // and the deck has just the one of its own ("scene_atmosphere").
-            var scene = Scene.CreateNewScene(true, true, DecalAtlasGroup.Battle);
+            var scene = Scene.CreateNewScene(true, false);
             scene.SetName("ImmersiveSeaStage");
-            scene.SetUsesDeleteLaterSystem(true);
-            var init = new SceneInitializationData(true)
-            {
-                InitPhysicsWorld = true,
-            };
-            scene.EnableInclusiveAsyncPhysx();
+            scene.SetUseAdvancedWaterRendering(true);
+            var init = default(SceneInitializationData);
+            init.InitPhysicsWorld = true;
+            init.InitFloraNodes = true;
             scene.Read(SceneName, ref init);
             scene.EnableFixedTick();
-            scene.SetFixedTickCallbackActive(true);
-            scene.DisableStaticShadows(true);
             scene.SetClothSimulationState(true);
-            scene.SetShadow(true);
+            scene.EnableInclusiveAsyncPhysx();
             _agentRenderer = MBAgentRendererSceneController.CreateNewAgentRendererSceneController(scene);
             _scene = scene;
             return scene;
+        }
+
+        /// <summary>The sea's weather where the player is, set as the port screen sets it: the wind
+        /// from the campaign's own weather model drives the waves, and the light follows the hour.</summary>
+        internal static void SetTheWeather(Scene scene)
+        {
+            var at = Campaign.Current.MainParty.Position;
+            var atmosphere = Campaign.Current.Models.MapWeatherModel.GetAtmosphereModel(at);
+            float wind = MathF.Max(4f, atmosphere.NauticalInfo.WindVector.Length);
+            scene.SetWaterStrength(MathF.Max(2f, wind / 4f));
+            var windVector = wind * Vec2.Forward;
+            scene.SetGlobalWindVelocity(in windVector);
+            scene.SetPhotoAtmosphereViaTod(atmosphere.TimeInfo.TimeOfDay, wind > 20f);
         }
 
         /// <summary>
@@ -320,13 +328,25 @@ namespace ImmersiveAI.UI.TalkScreen
             }
             if (_initialized && _scene != null)
             {
-                // Vanilla's sea cutscene, call for call: wait on the water, then tick the scene.
+                // The port screen's frame tick, call for call: nothing touches the water until the
+                // view says the scene is ready to draw; then wait on the water, place what stands on
+                // it, and from there wait-then-tick every frame.
+                if (!_soulOnDeck)
+                {
+                    if (view == null || !view.ReadyToRender() || !view.CheckSceneReadyToRender()) return;
+                    SeaStage.WaitForTheWater(_scene);
+                    SpawnSoul(_data!.Hero.CharacterObject, _spawn!);
+                    _soulOnDeck = true;
+                }
                 SeaStage.WaitForTheWater(_scene);
                 _scene.Tick(dt);
                 if (++_framesDrawn == FramesUntilTrusted) CrashGuard.Survived();
             }
             _visual?.TickVisuals();
         }
+
+        private bool _soulOnDeck;
+        private GameEntity? _spawn;
 
         // About two seconds of the deck drawn and ticked: past the raising, past the first renders.
         private const int FramesUntilTrusted = 120;
@@ -354,6 +374,7 @@ namespace ImmersiveAI.UI.TalkScreen
         private void DropVisual()
         {
             _initialized = false;
+            _soulOnDeck = false;
             SeaStage.WaitForTheWater(_scene);
             _visual?.Reset();
             _visual = null;
@@ -367,12 +388,14 @@ namespace ImmersiveAI.UI.TalkScreen
 
             CrashGuard.Arm();
             if (_scene == null) _scene = SeaStage.AcquireScene();
-            SeaStage.WaitForTheWater(_scene);
-            _scene.TimeOfDay = data.TimeOfDay;
+            // A deck kept from an earlier talk may still have its water simulating; a fresh one has none yet.
+            else SeaStage.WaitForTheWater(_scene);
+            SeaStage.SetTheWeather(_scene);
             _framesDrawn = 0;
+            _soulOnDeck = false;
 
-            var spawn = _scene.FindEntityWithTag("opponent_infantry_spawn")
-                        ?? throw new InvalidOperationException("the deck has no place for them to stand");
+            _spawn = _scene.FindEntityWithTag("opponent_infantry_spawn")
+                     ?? throw new InvalidOperationException("the deck has no place for them to stand");
 
             if (_cameraEntity == null || _baseCameraFov < 0f)
             {
@@ -385,9 +408,9 @@ namespace ImmersiveAI.UI.TalkScreen
                 _baseCameraFov = _camera.HorizontalFov;
             }
 
-            SpawnSoul(character, spawn);
+            // The soul is NOT placed here: like the port screen's ships, they are set on the deck in
+            // OnTick once the view reports the scene ready to draw (see there).
 
-            _scene.ForceLoadResources(true);
             // A texture made before the deck existed was made around NO scene, and its render
             // function retires it on the first frame. Forget the size so this one is made anew.
             _sizeX = 0;
@@ -395,8 +418,6 @@ namespace ImmersiveAI.UI.TalkScreen
             SetTargetSize((int)Screen.RealScreenResolutionWidth, (int)Screen.RealScreenResolutionHeight);
             _cameraRatio = Screen.RealScreenResolutionWidth / Screen.RealScreenResolutionHeight;
             View?.SetPostfxConfigParams(unchecked((int)(uint.MaxValue & 0xFFFFFBFFu)));
-            SeaStage.WaitForTheWater(_scene);
-            _scene.Tick(3f);
             View?.SetEnable(true);
             _initialized = true;
         }
