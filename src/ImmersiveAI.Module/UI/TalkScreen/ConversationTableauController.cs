@@ -58,9 +58,9 @@ namespace ImmersiveAI.UI.TalkScreen
 
             try
             {
-                // Out on the water the deck, not the meadow — unless this build has proven it cannot
-                // raise the deck, in which case the land stage carries it as before.
-                if (!SeaStage.Failed && ConversationSceneBuilder.IsAtSea(hero))
+                // Out on the water the deck, not the meadow — only when the player switched the
+                // experiment on, and never once this build has proven it cannot raise the deck.
+                if (TalkScreenManager.SeaStageWanted && !SeaStage.Failed && ConversationSceneBuilder.IsAtSea(hero))
                 {
                     TableauData = null;
                     SeaStageData = new SeaStageData(hero, ConversationSceneBuilder.TimeOfDayNow());

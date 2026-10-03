@@ -240,6 +240,13 @@ namespace ImmersiveAI
         /// clamped to the range the game itself allows (30..360).</summary>
         public int TalkScreenFpsLimit { get; set; } = 60;
 
+        /// <summary>EXPERIMENTAL, default false: out on the water the talk screen draws War Sails'
+        /// ship deck instead of the land stage's meadow. Three cuts of it crashed the game natively on
+        /// 2026.10.03 the instant the deck was read (see <c>UI\TalkScreen\SeaStage.cs</c>), so it rides
+        /// behind this switch until a cut survives. A build that crashes raising it never tries again
+        /// (its crash marker), so turning this on can cost at most one restart per build.</summary>
+        public bool EnableSeaStage { get; set; } = false;
+
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
         /// compression: the rolling memory of a person, and her sense of self). Kept apart from
         /// <see cref="MaxTokens"/> — which paces spoken replies — so deep memory has room to be rich:

@@ -42,7 +42,15 @@ You usually only need to open:
   the `UI\TalkUI.cs` façade — notices fan out to all shapes, opening goes to the chosen one — so
   retiring the old windows later is a ONE-FILE change. The old windows are kept whole behind
   `UseClassicChatWindow` (default false) and an automatic session fallback.
-- **THE SEA STAGE** (2026.10.03) → `UI\TalkScreen\SeaStage.cs`. The land tableau has NO sea (its
+- **THE SEA STAGE** (2026.10.03) → `UI\TalkScreen\SeaStage.cs`. **OFF BY DEFAULT behind
+  `EnableSeaStage`** — THREE cuts crashed the game natively inside `Scene.Read` of the deck the
+  same day (see below). The live theory for cut 4: we read a water scene while the MAP is still
+  drawing underneath with its own water simulating, which vanilla never does (the port screen and
+  the conversation mission are screens of their own). Cut 4 waits on the map's water before the
+  read, logs every engine step to log.txt BEFORE taking it ("sea stage: …" — the last line names
+  the call that died) and logs any managed first-chance exception during the read (a deck script
+  throwing inside native code). If the theory holds and waiting is not enough, the next shape is
+  to read the deck while the map is NOT drawing — e.g. at campaign load, before the map screen. The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

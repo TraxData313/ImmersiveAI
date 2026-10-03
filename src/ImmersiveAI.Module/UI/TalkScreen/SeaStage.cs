@@ -93,19 +93,48 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             if (_scene != null) return _scene;
 
+            // BREADCRUMBS: a native crash leaves no trace of ours, so each step is written to the log
+            // (synchronously) before it is taken — the last line standing names the call that died.
+            Step("creating the scene");
             var scene = Scene.CreateNewScene(true, false);
             scene.SetName("ImmersiveSeaStage");
             scene.SetUseAdvancedWaterRendering(true);
             var init = default(SceneInitializationData);
             init.InitPhysicsWorld = true;
             init.InitFloraNodes = true;
-            scene.Read(SceneName, ref init);
+
+            // The theory after three crashes inside this very read: vanilla only ever reads a sea
+            // scene from a screen of its OWN, while the map is not drawing — we read it with the map
+            // live underneath, its own water simulating on another thread. So the map's water is
+            // waited on first, the same wait vanilla puts before every touch of a water scene.
+            Step("waiting on the map's own water");
+            SandBox.View.Map.MapScreen.Instance?.MapScene?.WaitWaterRendererCPUSimulation();
+
+            // A script on the deck that throws during the read would crash the process from inside
+            // native code, unseen. Listen for any managed exception while the read runs.
+            Step("reading " + SceneName);
+            AppDomain.CurrentDomain.FirstChanceException += LogDuringRead;
+            try { scene.Read(SceneName, ref init); }
+            finally { AppDomain.CurrentDomain.FirstChanceException -= LogDuringRead; }
+
+            Step("fixed tick, cloth, async physx");
             scene.EnableFixedTick();
             scene.SetClothSimulationState(true);
             scene.EnableInclusiveAsyncPhysx();
+            Step("agent renderer");
             _agentRenderer = MBAgentRendererSceneController.CreateNewAgentRendererSceneController(scene);
             _scene = scene;
+            Step("the deck is raised");
             return scene;
+        }
+
+        internal static void Step(string what) => ModLog.Info("sea stage: " + what);
+
+        private static void LogDuringRead(object sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+        {
+            var ex = e.Exception;
+            ModLog.Warn("sea stage: during the read — " + ex.GetType().FullName + ": " + ex.Message
+                        + " @ " + (ex.StackTrace ?? new System.Diagnostics.StackTrace(1, false).ToString()));
         }
 
         /// <summary>The sea's weather where the player is, set as the port screen sets it: the wind
@@ -334,13 +363,19 @@ namespace ImmersiveAI.UI.TalkScreen
                 if (!_soulOnDeck)
                 {
                     if (view == null || !view.ReadyToRender() || !view.CheckSceneReadyToRender()) return;
+                    SeaStage.Step("the view is ready — placing them on the deck");
                     SeaStage.WaitForTheWater(_scene);
                     SpawnSoul(_data!.Hero.CharacterObject, _spawn!);
                     _soulOnDeck = true;
+                    SeaStage.Step("first tick");
                 }
                 SeaStage.WaitForTheWater(_scene);
                 _scene.Tick(dt);
-                if (++_framesDrawn == FramesUntilTrusted) CrashGuard.Survived();
+                if (++_framesDrawn == FramesUntilTrusted)
+                {
+                    CrashGuard.Survived();
+                    SeaStage.Step("drawn and ticked for " + FramesUntilTrusted + " frames — trusted");
+                }
             }
             _visual?.TickVisuals();
         }

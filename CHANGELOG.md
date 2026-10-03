@@ -15,7 +15,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
-- At sea, the talk screen now shows them on a ship's deck with the open water behind, instead of a meadow.
+- Experimental, off by default: at sea, the talk screen can show them on a ship's deck instead of a meadow (`EnableSeaStage` in config.json). It can crash the game on some setups; if it does, it switches itself off.
 
 ## v3.5.0 — 2026.10.02
 
