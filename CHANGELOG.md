@@ -16,6 +16,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ## [Unreleased]
 
 - Experimental, off by default: at sea, the talk screen can show them on a ship's deck instead of a meadow (`EnableSeaStage` in config.json). It can crash the game on some setups; if it does, it switches itself off.
+- A child's feast you close in a place too poor for it (a camp, a ship) is asked again in a worthier place, as promised.
+- Newborns no longer show up in the letters list, and cannot be written to.
 
 ## v3.5.0 — 2026.10.02
 

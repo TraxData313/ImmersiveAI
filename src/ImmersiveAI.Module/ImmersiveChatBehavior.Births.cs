@@ -550,6 +550,18 @@ namespace ImmersiveAI
                 var settlement = BirthPlace(mother);
                 var venue = VenueOf(settlement, out bool ownTown);
 
+                // Put off from a poorer place: ask again only somewhere that opens a rung it did not.
+                if (record.FeastDeferredFromVenue >= 0
+                    && (int)venue <= record.FeastDeferredFromVenue
+                    && !(ownTown && !record.FeastDeferredFromOwnTown && venue == WeddingVenue.Town))
+                    return false;
+
+                // A rung the purse could carry but this place cannot hold. When one stands, a "no"
+                // here is "not HERE", and the question waits for a worthier roof — that is what the
+                // hints below promise, and the promise must be kept by the code, not the wording.
+                bool roomForMore = !mustOwnIt && BirthTiers.All.Any(t =>
+                    !t.FitsIn(venue, ownTown) && (player?.Gold ?? 0) >= t.Price);
+
                 // Blood is the game's and untouched; what is asked here is HONOR — whether he will
                 // say out loud, where people can hear it, that this child is his. Feast it, own it
                 // quietly, or say nothing. For a child of the marriage no such question exists and
@@ -582,7 +594,10 @@ namespace ImmersiveAI
                         .Append("counted his, whatever the whole town privately knows. Say nothing and the child is ")
                         .Append("still yours by blood, and grows up in its mother's shadow.");
                 body.Append("\n\nWhat you spend decides who is called, and everyone who stands there will carry this day for the rest of their life. ")
-                    .Append("A child welcomed with nothing is welcomed all the same — the hour itself is already written down.\n\n")
+                    .Append("A child welcomed with nothing is welcomed all the same — the hour itself is already written down.\n\n");
+                if (roomForMore)
+                    body.Append("Not here? Close this, and you will be asked again in a worthier place while the child is new.\n\n");
+                body
                     .Append($"You hold {player?.Gold ?? 0} denars.");
 
                 var data = new MultiSelectionInquiryData(
@@ -613,7 +628,13 @@ namespace ImmersiveAI
                     // decline that was never a choice must not quietly make a liar of that.
                     // A decline ALWAYS settles it. Anything else re-asks a world-pausing question
                     // on the next hourly tick, and the next, and the next.
-                    _ => DeclineTheFeast(record, askedTheOwning: mustOwnIt));
+                    // EXCEPT where a greater feast was barred only by the place: then it is put off,
+                    // not refused, and asked again under a worthier roof (2026.10.05, born at sea).
+                    _ =>
+                    {
+                        if (roomForMore) PutOffTheFeast(record, venue, ownTown);
+                        else DeclineTheFeast(record, askedTheOwning: mustOwnIt);
+                    });
 
                 MBInformationManager.ShowMultiSelectionInquiry(data, true);
                 return true;
@@ -862,6 +883,19 @@ namespace ImmersiveAI
                 _birthLedger?.Save(record);
             }
             catch { }
+        }
+
+        private void PutOffTheFeast(BirthRecord record, WeddingVenue venue, bool ownTown)
+        {
+            try
+            {
+                record.FeastDeferredFromVenue = (int)venue;
+                record.FeastDeferredFromOwnTown = ownTown;
+                _birthLedger?.Save(record);
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"❧ The feast for {record.ChildNames()} waits for a worthier place — you will be asked again there.", SealGrey));
+            }
+            catch (Exception ex) { ModLog.Error("putting off the child's feast", ex); }
         }
 
         // No feast, then. The day is complete as soon as the hour is written — so if it already is,

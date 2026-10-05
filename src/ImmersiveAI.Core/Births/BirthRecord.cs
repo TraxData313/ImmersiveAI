@@ -114,6 +114,16 @@ namespace ImmersiveAI.Core.Births
         /// father who said no is not asked again every hour he stands beside her.</summary>
         public bool FeastOffered { get; set; }
 
+        /// <summary>The place the feast was put off from because it held no hall for the greater
+        /// tiers (2026.10.05: a child born at sea, the father closed the question, and the "you will
+        /// be asked again" the popup promised never came). Held as a <c>WeddingVenue</c> number; -1
+        /// = nothing put off. The question comes back only somewhere WORTHIER than this, so a
+        /// decline in a camp is never re-asked every hour in that same camp.</summary>
+        public int FeastDeferredFromVenue { get; set; } = -1;
+        /// <summary>Whether that place was a town of the player's own — a town they do NOT hold
+        /// does not count as worthier, the half-million rung needs their own gates.</summary>
+        public bool FeastDeferredFromOwnTown { get; set; }
+
         /// <summary>The day the feast was actually kept, in the world's own words. It is often NOT
         /// the day of the birth — a father away at war keeps it when he rides in — and the
         /// chronicler must be told the day it happened, not the day the child came.</summary>

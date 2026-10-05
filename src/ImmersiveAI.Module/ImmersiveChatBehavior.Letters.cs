@@ -143,6 +143,17 @@ namespace ImmersiveAI
             }
 
             var toNpc = due.FirstOrDefault(l => !l.ToPlayer);
+            // A letter already on its way to a child (sent before children were barred) is laid by
+            // for them, unread — kept in letters.txt, never answered by a cradle.
+            if (toNpc != null && (FindAliveHero(toNpc.NpcId)?.IsChild ?? false))
+            {
+                _letterBag.Remove(toNpc.Id);
+                SaveLetterBag();
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"✉ Your letter reached {toNpc.NpcName}, who is far too young to read it. It is kept for them."));
+                return;
+            }
+
             if (toNpc != null && !_letterWorkInFlight)
             {
                 _letterBag.Remove(toNpc.Id);
@@ -1035,6 +1046,11 @@ namespace ImmersiveAI
                     var hero = string.IsNullOrWhiteSpace(npcId)
                         ? Hero.AllAliveHeroes.FirstOrDefault(h => string.Equals(NpcPaths.NpcFolder(h), folder, StringComparison.OrdinalIgnoreCase))
                         : FindAliveHero(npcId);
+                    // A child is no correspondent, however much is already in their memory: the
+                    // birth beat alone gave a newborn "history", and the player found a cradle in
+                    // the letter list (2026.10.05). They join it on coming of age.
+                    if (hero != null && hero.IsChild) continue;
+
                     var name = hero?.Name?.ToString() ?? memory?.NpcName ?? Path.GetFileName(folder);
 
                     string detail;
@@ -1163,6 +1179,7 @@ namespace ImmersiveAI
 
             if (self == null || !self._config.EnableLetters) { reason = "The couriers are not riding."; return false; }
             if (hero == null || !hero.IsAlive) { reason = "The hand that wrote these is gone from this world."; return false; }
+            if (hero.IsChild) { reason = $"{hero.Name} is too young to read a letter."; return false; }
             if (IsCoLocated(hero)) { reason = $"{hero.Name} is here with you — go and speak instead."; return false; }
             if (self._letterBag != null && self._letterBag.HasInFlightWith(hero.StringId))
             { reason = $"A courier already rides between you and {hero.Name}; wait for word."; return false; }
