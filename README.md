@@ -189,6 +189,8 @@ it is *their* policy — notably, **Google's free Gemini tier trains on what it 
 Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
 
 - `global_prompt.txt` — a few sentences that color every mind in the world.
+- `prompts.txt` — the words behind the deep memory and the backstories, as they ship, yours to
+  reword. Delete an entry to bring its shipped words back.
 - `NPCs\campaign_*\<character>\custom_instructions.txt` — per-character secrets and quirks, written
   in their own voice ("I stutter when I am nervous"); this is also where their generated starting
   personality lands.

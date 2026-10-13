@@ -18,6 +18,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Experimental, off by default: at sea, the talk screen can show them on a ship's deck instead of a meadow (`EnableSeaStage` in config.json). It can crash the game on some setups; if it does, it switches itself off.
 - A child's feast you close in a place too poor for it (a camp, a ship) is asked again in a worthier place, as promised.
 - Newborns no longer show up in the letters list, and cannot be written to.
+- More of the prompt is yours to reword: the deep memory (its heading, and everything a character is told when they gather and settle it) and the backstories (how a noble's story is framed, what they had heard of you before meeting). It all sits in the new prompts.txt beside the world prompt; delete an entry to bring back the shipped words.
 
 ## v3.5.0 — 2026.10.02
 

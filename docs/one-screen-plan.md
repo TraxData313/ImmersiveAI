@@ -255,3 +255,9 @@ Deliverable: every editable NPC-visible string external, hot-reloaded; Anton edi
   try/catch would have hidden the throw and the gestures would have silently never fired.
   (`ConversationAgents` is safe: the backing list is initialised at its declaration, never null.)
 - NEXT: Anton's second playtest, then Phase 3 (prompts.txt).
+- 2026.10.13 — **Phase 3 begun, small**: a player on Steam asked to edit more of the prompt, and
+  was told the deep memory and the backstories were next. `Core\Prompts\PromptTexts` is the
+  registry (key, default, comment, slots, `previously`), 20 keys, and `PromptFiles.LoadPromptTexts`
+  owns `Configs\ImmersiveAI\prompts.txt` (written whole on first run, missing keys appended, nothing
+  rewritten, nothing appended while a line is broken). The sweep of the other ~510 keys is still
+  to do; the SELF block of a reflection stays compiled in (it carries the `unchanged` marker).

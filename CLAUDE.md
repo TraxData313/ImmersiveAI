@@ -201,6 +201,14 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
                           never costs more than itself (the compiled-in default stands), an EMPTIED
                           key stays empty (that is the off switch), unknown keys are kept not dropped,
                           render->parse round-trips. The registry over it is Phase 3, not yet built
+  Prompts/PromptTexts.cs  (2026.10.13) the registry's FIRST 20 keys, live: the deep memory (sheet
+                          heading + every word of the gather/reflect prompts except the SELF block
+                          and the SUMMARY:/SELF: labels) and the backstory (world-story frame + the
+                          three renown hearsay tiers). `Entry.Text`/`Fill` read the ambient
+                          `PromptTexts.Pack`, which `PromptFiles.LoadPromptTexts` refreshes by mtime
+                          (session launch, persona build, before compress/reflect). CHANGING A
+                          DEFAULT: move the old words into `previously:` or every existing file keeps
+                          them. Tests that set the Pack live in the non-parallel collection.
   Letters/                Letter, LetterBag (queue + JSON persistence), LetterCourier (travel math)
   Battles/                BattleRecord (+side stats/participants/loot summary), BattleLedger (JSON
                           per battle + loose find-by-name), BattleText (titles/tales/beats/accounts)

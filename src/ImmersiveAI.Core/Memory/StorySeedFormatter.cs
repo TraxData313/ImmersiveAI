@@ -47,7 +47,7 @@ namespace ImmersiveAI.Core.Memory
         {
             var clean = TidingsFormatter.StripMarkup(story);
             if (clean.Length == 0) return string.Empty;
-            return "So runs my story, as the world tells it: " + clean;
+            return PromptTexts.BackstoryWorldStory.Fill("story", clean).Trim();
         }
 
         /// <summary>
@@ -63,12 +63,9 @@ namespace ImmersiveAI.Core.Memory
         {
             var name = (playerName ?? string.Empty).Trim();
             if (name.Length == 0) return string.Empty;
-            if (renown >= 900f)
-                return $"Of {name}, before ever we spoke, the world had long been telling: a name famed across all Calradia, whose deeds are recounted at many fires.";
-            if (renown >= 300f)
-                return $"Of {name}, before ever we spoke, the world had already told me much: a name carried far across the land, with no small tale of deeds behind it.";
-            if (renown >= 150f)
-                return $"Of {name}, before ever we spoke, some word had already reached me: a name with deeds beginning to travel behind it.";
+            if (renown >= 900f) return PromptTexts.BackstoryFameFamed.Fill("player", name).Trim();
+            if (renown >= 300f) return PromptTexts.BackstoryFameKnown.Fill("player", name).Trim();
+            if (renown >= 150f) return PromptTexts.BackstoryFameHeard.Fill("player", name).Trim();
             return string.Empty;
         }
     }

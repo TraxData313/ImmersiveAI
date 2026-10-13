@@ -126,6 +126,64 @@ $@"# Immersive AI - Custom instructions for {npcName}
             WriteKeepingComments(GlobalPromptPath, text);
         }
 
+        // ── prompts.txt: the words behind the prompt (Core PromptTexts / PromptPack) ─────────
+        // The deep memory's and the backstory's own words, editable since 2026.10.13 (asked for
+        // on Steam). Written whole on first run with every shipped default, so the player sees
+        // what they are changing; a key a newer build adds is APPENDED, and nothing the player
+        // wrote is ever rewritten. Re-read only when the file has changed, so the callers can
+        // ask for it before every context build and memory pass at the cost of one stat.
+
+        public static string PromptTextsPath => Path.Combine(RootDirectory, "prompts.txt");
+
+        private static readonly object PromptTextsGate = new object();
+        private static DateTime _promptTextsReadAt = DateTime.MinValue;
+
+        /// <summary>Brings <see cref="PromptTexts.Pack"/> up to date with prompts.txt, creating the
+        /// file on first run and appending any key this build added. Never throws: on any trouble
+        /// the words last read (at worst the shipped ones) stand, and the log says why.</summary>
+        public static void LoadPromptTexts()
+        {
+            try
+            {
+                lock (PromptTextsGate)
+                {
+                    Directory.CreateDirectory(RootDirectory);
+                    var path = PromptTextsPath;
+                    if (!File.Exists(path))
+                        File.WriteAllText(path, PromptTexts.RenderFile());
+
+                    var stamp = File.GetLastWriteTimeUtc(path);
+                    if (stamp == _promptTextsReadAt) return;
+
+                    var raw = File.ReadAllText(path);
+                    var pack = PromptPack.Parse(raw, PromptTexts.Keys);
+                    // Nothing is added to a file with a broken line in it: an unclosed """ block
+                    // swallows every entry after it, and appending those again on each save would
+                    // pile copies up under the very block the player is still typing.
+                    var missing = pack.Complaints.Count == 0 ? PromptTexts.RenderMissing(pack) : string.Empty;
+                    if (missing.Length > 0)
+                    {
+                        var gap = raw.Length == 0 || raw.EndsWith("\n") ? "\n" : "\n\n";
+                        File.AppendAllText(path, gap + missing);
+                        stamp = File.GetLastWriteTimeUtc(path);
+                    }
+
+                    foreach (var complaint in pack.Complaints)
+                        ModLog.Warn("prompts.txt " + complaint + " - that line is skipped, its shipped words stand");
+                    if (pack.UnknownKeys.Count > 0)
+                        ModLog.Info("prompts.txt has entries this version does not use (kept as written): "
+                                    + string.Join(", ", pack.UnknownKeys));
+
+                    PromptTexts.Pack = pack;
+                    _promptTextsReadAt = stamp;
+                }
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("prompts.txt could not be read; the words last read stand", ex);
+            }
+        }
+
         // ── The player's own presets ("Let me think…") ─────────────────────────────────
         // Not a prompt anyone reads: the standing wishes the think-menu offers ("romantic",
         // "ender"), which only ever steer the PLAYER's own next line. Same #-comment convention as

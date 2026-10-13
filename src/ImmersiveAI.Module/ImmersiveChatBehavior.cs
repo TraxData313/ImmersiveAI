@@ -1137,6 +1137,8 @@ namespace ImmersiveAI
                 Clan.PlayerClan?.Name?.ToString() ?? "(unknown)",
                 CampaignTime.Now.ToString());
             NpcPaths.EnsureRuntimeReadme();
+            // Writes prompts.txt on first run, so it is there to find before anyone is spoken to.
+            PromptFiles.LoadPromptTexts();
 
             // The campaign's folder is known now, so the letters still on the road can be picked up —
             // and the book of battles and the road journal beside them.
@@ -1717,6 +1719,7 @@ namespace ImmersiveAI
                 // Always reflect (rewrite the rolling memory whole), even when nothing is old enough to
                 // fold away; only the oldest turns beyond the keep window are dropped, the rest stay.
                 SetMemoryWriteRoomFor(memory);
+                PromptFiles.LoadPromptTexts();
                 var didReflect = await _compressor.ReflectAsync(memory, keepMostRecent, _config.SystemVoiceName, self)
                     .ConfigureAwait(false);
 
@@ -2072,6 +2075,7 @@ namespace ImmersiveAI
                     // the closing notice lands. The player is owed the reason while they wait.
                     NotifyMemoryRefactorBegins(npc);
                     SetMemoryWriteRoomFor(memory);
+                    PromptFiles.LoadPromptTexts();
                     if (await _compressor.CompressAsync(memory, keepMostRecent, _config.SystemVoiceName).ConfigureAwait(false))
                     {
                         memory.SummaryAsOf = SituationBuilder.Timestamp();
@@ -3956,6 +3960,8 @@ namespace ImmersiveAI
         {
             var npcName = npc.Name?.ToString() ?? "Unknown";
 
+            // Before the memory: a soul met for the first time is seeded with their backstory there.
+            PromptFiles.LoadPromptTexts();
             var memory = LoadMemory(npc);
             memory.NpcName = npcName;
 

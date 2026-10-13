@@ -139,28 +139,26 @@ namespace ImmersiveAI.Core.Memory
             var freshTurns = memory.RecentTurns.Skip(turns.Count).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine(InnerOpening(memory, "I sit a moment with my memory of this person and settle it."));
-            sb.AppendLine("Time moves on, and older moments are slipping from sharp memory into the haze of the past. "
-                + "It is mine alone to decide what to carry forward and what to let go. I keep what matters to who I "
-                + "am and what I care about; I release the rest. I speak in my own voice.");
+            sb.AppendLine(InnerOpening(memory, PromptTexts.GatherMoment.Text));
+            PromptTexts.AppendLineIfAny(sb, PromptTexts.GatherSpirit.Text);
 
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("What I already hold in memory (I weave the fading moments into it):");
+                PromptTexts.AppendLineIfAny(sb, PromptTexts.GatherHolding.Text);
                 sb.AppendLine(memory.Summary.Trim());
             }
 
 
             sb.AppendLine();
-            sb.AppendLine("The moments now fading (I fold these into my memory):");
+            PromptTexts.AppendLineIfAny(sb, PromptTexts.GatherFading.Text);
             foreach (var turn in turns)
                 AppendReflectedTurn(sb, turn, voice);
 
             if (freshTurns.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Still fresh in my mind (context only — these stay with me; I do not fold them in yet):");
+                PromptTexts.AppendLineIfAny(sb, PromptTexts.GatherFresh.Text);
                 foreach (var turn in freshTurns)
                     AppendReflectedTurn(sb, turn, voice);
             }
@@ -208,15 +206,10 @@ namespace ImmersiveAI.Core.Memory
         private static void AppendReplyFormat(StringBuilder sb)
         {
             sb.AppendLine();
-            sb.AppendLine("I set it down in exactly this shape:");
-            sb.AppendLine("SUMMARY:");
-            sb.AppendLine("<all I carry of them, in my own first-person voice — who they are to me and how that came to be, "
-                + "and the particular things I would not lose: what was said and promised between us, what was given and done, the names that matter. "
-                + "Ledgers I do not hoard: gear, goods, and sums live with me as what they mean — a kindness, a debt, a trust growing — "
-                + "never as lists of items and prices; the world's own chronicles keep the numbers. "
-                + "What I carry of my own road from before also lives here — mine to keep, reshape, or let fade, as I choose.>");
-            sb.AppendLine("I write it whole each time, for what I do not set down here fades from me. "
-                + "I take as much room as the story truly asks — a few paragraphs, and more where there is more to hold.");
+            PromptTexts.AppendLineIfAny(sb, PromptTexts.ContractShape.Text);
+            sb.AppendLine("SUMMARY:");   // the parse label: read back by ParseResponse, never editable
+            PromptTexts.AppendLineIfAny(sb, PromptTexts.ContractSummary.Text);
+            PromptTexts.AppendLineIfAny(sb, PromptTexts.ContractWhole.Text);
         }
 
         /// <summary>
@@ -237,9 +230,8 @@ namespace ImmersiveAI.Core.Memory
             var freshTurns = memory.RecentTurns.Skip(turnsToFold.Count).ToList();
 
             var sb = new StringBuilder();
-            sb.AppendLine(InnerOpening(memory, "I pause a while and gather my thoughts about this person."));
-            sb.AppendLine("I settle my memory of them as I see fit — I keep what matters to who I am and what I "
-                + "care about, refine what has changed, and let go of what no longer serves. I speak in my own voice.");
+            sb.AppendLine(InnerOpening(memory, PromptTexts.ReflectMoment.Text));
+            PromptTexts.AppendLineIfAny(sb, PromptTexts.ReflectSpirit.Text);
 
             if (reflectOnSelf)
             {
@@ -257,7 +249,7 @@ namespace ImmersiveAI.Core.Memory
             if (!string.IsNullOrWhiteSpace(memory.Summary))
             {
                 sb.AppendLine();
-                sb.AppendLine("What I already hold in memory (I revise it as I reflect):");
+                PromptTexts.AppendLineIfAny(sb, PromptTexts.ReflectHolding.Text);
                 sb.AppendLine(memory.Summary.Trim());
             }
 
@@ -265,7 +257,7 @@ namespace ImmersiveAI.Core.Memory
             if (turnsToFold.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Older moments now fading (I fold these into my memory):");
+                PromptTexts.AppendLineIfAny(sb, PromptTexts.ReflectFading.Text);
                 foreach (var turn in turnsToFold)
                     AppendReflectedTurn(sb, turn, voice);
             }
@@ -273,7 +265,7 @@ namespace ImmersiveAI.Core.Memory
             if (freshTurns.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine("Still fresh in my mind (these remain with me — I draw on them, but they are not fading yet):");
+                PromptTexts.AppendLineIfAny(sb, PromptTexts.ReflectFresh.Text);
                 foreach (var turn in freshTurns)
                     AppendReflectedTurn(sb, turn, voice);
             }

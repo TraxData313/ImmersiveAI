@@ -945,14 +945,15 @@ namespace ImmersiveAI.Core.Prompts
                     // Nothing lived with this person yet — the deep memory holds only the seeded
                     // story of the road that made me. Headed honestly as my own; the player enters
                     // it only once something is truly lived between us.
-                    sb.AppendLine("The road of my life so far, as I carry it in memory:");
+                    PromptTexts.AppendLineIfAny(sb, PromptTexts.DeepMemoryOwnStory.Text);
                 }
                 else
                 {
                     var asOf = string.IsNullOrWhiteSpace(memory.SummaryAsOf)
                         ? string.Empty
-                        : $" (as I last gathered my thoughts on {memory.SummaryAsOf.Trim()})";
-                    sb.AppendLine($"What {playerName} is to me{asOf}:");
+                        : PromptTexts.DeepMemoryAsOf.Fill("date", memory.SummaryAsOf.Trim());
+                    PromptTexts.AppendLineIfAny(sb,
+                        PromptTexts.DeepMemoryHeading.Fill("player", playerName, "as_of", asOf));
                 }
                 sb.AppendLine(memory.Summary.Trim());
             }
