@@ -9,4 +9,6 @@
          Steam Workshop id 2859238197. Override in Directory.Build.props.user if yours lives elsewhere. -->
     <McmBinFolder>D:\SteamLibrary\steamapps\workshop\content\261550\2859238197\bin\Win64_Shipping_Client</McmBinFolder>
   </PropertyGroup>
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.props.user"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.props.user')" />
 </Project>

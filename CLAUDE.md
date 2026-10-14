@@ -670,7 +670,9 @@ powershell -ExecutionPolicy Bypass -File tools\deploy.ps1   # build + install in
 manifest (Id `ImmersiveAI.Dev`, name "Immersive AI (dev)") so it can sit beside the Steam Workshop
 copy in the launcher — enable "Immersive AI (dev)" to test local changes, the plain "Immersive AI"
 to test what players get, never both at once (same behaviors, same config folder). The script also
-removes any stale `Modules\ImmersiveAI` from older deploys. `package.ps1` keeps the real
+removes any stale `Modules\ImmersiveAI` from older deploys. It installs into the same game folder
+the build compiles against (`<GameFolder>` from `Directory.Build.props.user`, else
+`Directory.Build.props`; `-GameFolder` overrides both). `package.ps1` keeps the real
 `ImmersiveAI` identity for Workshop uploads.
 
 **Always run `dotnet test` after changing Core.** Game-integration code can't be unit-tested,

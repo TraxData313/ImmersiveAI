@@ -1,12 +1,28 @@
 ﻿# Builds the mod and installs it into the Bannerlord Modules folder.
-# Usage: powershell -ExecutionPolicy Bypass -File tools\deploy.ps1 [-Configuration Release]
+# Usage: powershell -ExecutionPolicy Bypass -File tools\deploy.ps1 [-Configuration Release] [-GameFolder <path>]
 param(
     [string]$Configuration = "Release",
-    [string]$GameFolder = "D:\SteamLibrary\steamapps\common\Mount & Blade II Bannerlord"
+    [string]$GameFolder = ""
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+
+# The game folder is the one the build itself compiles against: Directory.Build.props.user's
+# <GameFolder> when that file sets one (it is per machine and gitignored), else the shared
+# default in Directory.Build.props. Two answers to one question would deploy one place and
+# build against another.
+if (-not $GameFolder) {
+    foreach ($props in @("Directory.Build.props.user", "Directory.Build.props")) {
+        $path = Join-Path $repoRoot $props
+        if (-not (Test-Path $path)) { continue }
+        $node = ([xml](Get-Content $path -Raw)).SelectSingleNode("//GameFolder")
+        if ($node -and $node.InnerText.Trim()) { $GameFolder = $node.InnerText.Trim(); break }
+    }
+}
+if (-not $GameFolder -or -not (Test-Path $GameFolder)) {
+    throw "Bannerlord was not found at '$GameFolder'. Set <GameFolder> in Directory.Build.props.user, or pass -GameFolder."
+}
 # The local deploy wears its own identity - Id "ImmersiveAI.Dev", shown as "Immersive AI (dev)" -
 # so it can sit beside the Steam Workshop copy in the launcher and be picked deliberately.
 # Enable only ONE of the two at a time: same behaviors, same config folder - both at once
