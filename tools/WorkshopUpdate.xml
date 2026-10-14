@@ -9,13 +9,13 @@
         <ItemId Value="3764210301"/>
     </GetItem>
     <UpdateItem>
-        <ModuleFolder Value="C:\Users\Trax\Documents\BannerlordMods\ImmersiveAI\dist\ImmersiveAI"/>
-        <ChangeNotes Value="v3.5.0 - their real answer, every time: weighed with their heart in one breath, on lighter prompts and the new GPT-6 models.&#10;&#10;TRUER, LIGHTER REPLIES&#10;* Fixed: when a character weighed their feelings mid-reply, their real answer was thrown away and a stray afterthought kept - the answer you get is the one they meant&#10;* Feelings are weighed together with every answer in one go - no extra wait, and no more drifting warmer with every letter they write unprompted&#10;* About a quarter fewer words sent with every reply - faster answers, cheaper on paid keys&#10;* A reply that came back as only its voice note keeps the words spoken a moment earlier&#10;* Letters no longer carry the spoken voice note&#10;* The world-tone setting no longer repeats itself; news of a castle that changed hands twice is told once&#10;&#10;MODELS&#10;* GPT-6: the default is now gpt-6-luna (half the price of 5.6 Luna); Codex defaults to the new gpt-6.1-sol, which OpenRouter offers too; Astra joins the lists. Your chosen model is kept&#10;* A model that insists on thinking a little is asked for its lightest setting instead of being turned away&#10;* The ChatGPT-plan road no longer slips your own Codex instructions to the characters, and renews an expired sign-in by itself&#10;&#10;ALSO&#10;* A letter to someone who has since joined you is handed over when you open the talk screen by its hotkey too&#10;* Developer mode: step a character&#x27;s traits from the talk screen&#x27;s Dev panel&#10;&#10;Full history: https://github.com/TraxData313/ImmersiveAI/blob/master/CHANGELOG.md" />
+        <ModuleFolder Value="C:\Users\Asus ROG\Documents\GitHub\ImmersiveAI\dist\ImmersiveAI"/>
+        <ChangeNotes Value="v3.6.0 - Their minds in your hands: rewrite who they are and what they remember of you, right in the game.&#10;&#10;YOURS TO REWRITE&#10;* &quot;Their prompt&quot; on the talk screen has two new tabs: Who they are (rewrite who a character is; save it empty to have the game describe them again) and Deep memory (fix or add to what they remember of you)&#10;* More of the prompt is yours to reword in the new prompts.txt: the deep memory's own words and how backstories are framed. Delete an entry to bring back the shipped words&#10;&#10;MODELS&#10;* The Claude plan road offers the newest models: Haiku 5.5 (the new default), Sonnet 5.5, Opus 5.5 and Fable 5.1&#10;&#10;FIXES&#10;* A child's feast closed in a place too poor for it (a camp, a ship) is asked again in a worthier place&#10;* Newborns no longer show up in the letters list&#10;&#10;EXPERIMENTAL&#10;* Off by default: at sea, the talk screen can show them on a ship's deck (EnableSeaStage in config.json). It can crash on some setups; if it does, it switches itself off"/>
         <Tags>
             <Tag Value="Utility" />
             <Tag Value="Native" />
             <Tag Value="Singleplayer" />
-            <Tag Value="v1.4.7" />
+            <Tag Value="v1.4.8" />
         </Tags>
     </UpdateItem>
 </Tasks>

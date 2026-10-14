@@ -1,20 +1,16 @@
-﻿WHERE THINGS STAND (2026.10.02 — **v3.5.0 IS ON STEAM; THE NEXUS FILE IS THE ONE THING LEFT**)
+﻿WHERE THINGS STAND (2026.10.14 — **v3.6.0 IS ON STEAM; NEXUS WAITS ON PURPOSE**)
 
-  ** LEFT FOR ANTON — THE NEXUS FILE FOR v3.5.0 (five minutes; the 48 MB zip is past the browser
-      bridge's 10 MB cap, so it cannot go up from here)
-      Steam is done (uploaded 2026.10.02 ~20:25, "Uploading done!", item 3764210301).
-      Mod 12119 -> Manage -> Files -> "Update" on the current main file row.
-        - The zip: dist\ImmersiveAI_v3.5.0.zip (also latest-release\ on GitHub)
-        - Tick ARCHIVE EXISTING FILE, then SET THE DISPLAY NAME BACK to `ImmersiveAI V3.5.0`.
-        - Paste the fenced block under v3.5.0 in CHANGELOG.md into BOTH the file Description and
-          Add changelog (229 of the 255 cap).
-        - The file's own Version field: V3.5.0 — and on the General step the MOD version V3.5.0
-          too (the one Vortex compares).
-        - Come back an hour later: done means the scan is GREEN.
-      Store descriptions changed by ONE word (gpt-5.6-luna -> gpt-6-luna): repaste
-      docs\steam-page-final.bbcode.txt (7822 of 8000 bytes), docs
-exus-page.bbcode.txt, and the
-      "Which model / Is it free?" answers of docs\steam-faq.bbcode.txt — whenever convenient.
+  ** NEXUS IS HELD BACK BY ANTON'S CALL (2026.10.14: "only on steam, nexus will wait a few
+      updates"). Steam has v3.6.0 (uploaded 2026.10.14 ~11:25, "Uploading done!", item 3764210301).
+      When Nexus does go up, it carries every version since its last file at once: write ONE
+      255-char block that covers them all (each version's fenced block in CHANGELOG.md is the
+      material), and set the MOD version too (the one Vortex compares). The zip is
+      latest-release\ImmersiveAI_v3.6.0.zip (or whatever is newest by then).
+
+  ** LEFT FOR ANTON — the Steam description (Owner Controls): repaste
+      docs\steam-page-final.bbcode.txt. Two changes: the memory line in "Looking for…?" now says
+      it is yours to read and rewrite in game, and Bannerlord v1.4.7 -> v1.4.8. 7907 bytes with
+      CRLF, under the 8000 cap. (docs\nexus-page.bbcode.txt carries the same two edits, for later.)
 
   ** CODEX SIGN-IN IS DEAD ON THIS PC: the refresh token "was already used", so the Codex road
       (Anton's own Backend) answers "not a ChatGPT login" until `codex login` is run again. After

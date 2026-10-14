@@ -1753,3 +1753,10 @@ first three change how the whole road behaves.
       (refresh token already used) — re-login is his hand. Version v3.5.0, three note tiers (Nexus
       229 chars), store pages gpt-5.6-luna -> gpt-6-luna, packaged, latest-release refreshed,
       Workshop "Uploading done!". Nexus file left for Anton (48 MB > bridge cap). (2026.10.02 20.30.00)
+- [x] v3.6.0 SHIPPED TO STEAM ONLY (Nexus held back by Anton's call). In-game editing of who a
+      character is and of their deep memory ("Their prompt" tabs + dev levers), romance dev levers
+      for women only, prompts.txt (deep memory + backstory words), Claude 5.5 models on the plan road.
+      Version v3.6.0, three note tiers (Nexus 241 chars, written for later), store pages: memory hook
+      + v1.4.8; Workshop tag v1.4.8; WorkshopUpdate.xml's ModuleFolder moved off the old Trax path;
+      packaged (no executables), latest-release refreshed (v3.6.0 + v3.5.0 fallback), Workshop
+      "Uploading done!". (2026.10.14 11.30.00)

@@ -5,7 +5,7 @@ If one of these searches brought you here - yes, this is that mod:
 
 [list]
 [*][b]AI dialogue[/b] in Bannerlord - talk to any NPC through the AI you choose - a [b]free[/b] Gemini key, or the [b]ChatGPT / claude.ai plan[/b] you already pay for
-[*]NPCs with [b]real long-term memory[/b] - they remember you across conversations
+[*]NPCs with [b]real long-term memory[/b] - yours to read and rewrite in game
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story - [b]courted, proposed to and wed[/b] in conversation, companions included
 [*][b]voiced NPCs[/b] - voices of their own people, each line spoken as they direct it, free on your own PC
@@ -98,7 +98,7 @@ You bring [b]your own API key[/b] - or a plan you already pay for. Pick a row:
 
 [b][size=4]Compatibility & shaping[/size][/b]
 [list]
-[*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered - it coexists with overhauls, War Sails, Marry Anyone and Training Battles. MCM optional; without it, everything is in config.json.
+[*]Bannerlord v1.4.8, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered - it coexists with overhauls, War Sails, Marry Anyone and Training Battles. MCM optional; without it, everything is in config.json.
 [*][b]Safe to remove mid-campaign.[/b] Saves load fine without the mod (just the usual "different modules" warning), and memories live outside them - reinstall later and every character remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod - no code copied, fully original source.
 [*]Under Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world, and each character's folder holds their own prompt (in their own voice), memories, battles, nights and letters as readable text.

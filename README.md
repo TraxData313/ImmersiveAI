@@ -18,7 +18,7 @@ a ▶ beside every line.*
 If one of these searches brought you here — yes, this is that mod:
 
 - **AI dialogue** in Bannerlord — talk to any NPC through the AI you choose
-- NPCs with **real long-term memory** — they remember you across conversations and campaigns' worth of talks
+- NPCs with **real long-term memory** — they remember you across conversations, and it is yours to read and rewrite in game
 - NPCs that **approach you** and **write you letters** on their own
 - an **AI wife or companion** that roleplays and never forgets your story — **courted, proposed to
   and wed in conversation**, companions included

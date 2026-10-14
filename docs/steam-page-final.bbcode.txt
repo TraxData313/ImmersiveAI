@@ -4,7 +4,7 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 If one of these searches brought you here — yes, this is that mod:
 [list]
 [*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], your [b]ChatGPT or claude.ai plan[/b], or a local model
-[*]NPCs with [b]real long-term memory[/b] — they remember you across conversations
+[*]NPCs with [b]real long-term memory[/b] — yours to read and rewrite in game
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted, proposed to and wed[/b] in conversation, companions included
 [*][b]voiced NPCs[/b] — voices of their own people, each line spoken as they direct it, free on your PC
@@ -76,7 +76,7 @@ Bring [b]your own API key[/b], or a plan. Pick a row:
 
 [h1]Compatibility & shaping[/h1]
 [list]
-[*]Bannerlord v1.4.7, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional.
+[*]Bannerlord v1.4.8, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered. MCM optional.
 [*]Safe to remove mid-campaign — saves load fine without it, and memories live outside them: reinstall and everyone still remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod — fully original source.
 [/list]
