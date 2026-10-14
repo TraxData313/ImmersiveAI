@@ -41,7 +41,7 @@ namespace ImmersiveAI.Llm
 
         public ClaudeCodeChatClient(string model, string configuredPath, int maxTokens = 0)
         {
-            _model = string.IsNullOrWhiteSpace(model) ? "claude-haiku-4-5" : model.Trim();
+            _model = string.IsNullOrWhiteSpace(model) ? "claude-haiku-5-5" : model.Trim();
             _configuredPath = (configuredPath ?? "").Trim();
             _maxTokens = maxTokens;
         }

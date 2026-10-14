@@ -683,7 +683,8 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   model, `MaxTokens`, memory limits,
   `ClaudeCodeModel` + `ClaudeCodePath` (2026.08.28 — `Backend: "ClaudeCode"`, the subscription
   road: NPCs speak through the player's installed Claude Code app on their claude.ai Pro/Max plan,
-  keyless; model dropdown haiku-4-5 (default) / sonnet-5 / opus-5 / fable-5 + custom; path blank =
+  keyless; model dropdown haiku-5-5 (default) / sonnet-5-5 / opus-5-5 / fable-5-1 + custom — the 5.5
+  family since 2026.10.14, renamed in place; path blank =
   find claude.exe on PATH then the Claude apps' folders; cost notices carry the plan gauge),
   `CodexModel` + `CodexPath` (2026.09.18 — `Backend: "Codex"`, the ChatGPT-subscription road:
   installed Codex app/CLI + one `codex login`, keyless; default `gpt-6.1-sol`, with Astra/Terra/Luna

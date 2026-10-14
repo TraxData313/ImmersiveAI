@@ -36,7 +36,7 @@ namespace ImmersiveAI
         /// figure, because the plan's windows are the real currency there. Replies ride the plan's
         /// 5-hour and weekly limits — an evening of talk fits a Pro plan easily; thinking models
         /// (fable) spend the windows faster.</summary>
-        public string ClaudeCodeModel { get; set; } = "claude-haiku-4-5";
+        public string ClaudeCodeModel { get; set; } = "claude-haiku-5-5";
 
         /// <summary>Where claude.exe lives, only when the finder cannot see it on its own (PATH,
         /// then the Claude apps' own folders). Blank = find it.</summary>
@@ -1072,6 +1072,9 @@ namespace ImmersiveAI
                 ["gpt-6"] = 1050000,         // sol, astra and luna alike
                 ["claude"] = 200000,
                 ["claude-opus-4"] = 1000000,
+                ["claude-opus-5"] = 1000000,      // 5 and 5.5, either spelling
+                ["claude-fable"] = 1000000,
+                ["claude-haiku-5"] = 1000000,     // 5.5; haiku-4-5 stays at 200k
                 ["claude-sonnet-5"] = 1000000,
                 ["claude-sonnet-4-6"] = 1000000,
                 ["gemini"] = 1000000,
@@ -1092,7 +1095,16 @@ namespace ImmersiveAI
                 ["claude-opus-4"] = new ModelPrice(5, 25),
                 ["claude-sonnet"] = new ModelPrice(3, 15),
                 ["claude-haiku"] = new ModelPrice(1, 5),
-                ["claude-fable-5"] = new ModelPrice(10, 50),
+                ["claude-fable-5"] = new ModelPrice(10, 50),  // 5.1 too, same price
+                // The 5.5 family (2026.10.14), explicit in both spellings ("claude-opus-5-5" direct,
+                // "anthropic/claude-opus-5.5" routed) or the shorter keys above would claim them.
+                ["claude-opus-5"] = new ModelPrice(5, 25),
+                ["claude-opus-5-5"] = new ModelPrice(4, 20),
+                ["claude-opus-5.5"] = new ModelPrice(4, 20),
+                ["claude-sonnet-5-5"] = new ModelPrice(2, 10),
+                ["claude-sonnet-5.5"] = new ModelPrice(2, 10),
+                ["claude-haiku-5-5"] = new ModelPrice(0.1, 0.5),  // under 100K prompt tokens
+                ["claude-haiku-5.5"] = new ModelPrice(0.1, 0.5),
                 // OpenAI — the GPT-6 line (2026.09.28): Sol and Luna moved up to 6, Terra stays on 5.6.
                 ["gpt-6.1-sol"] = new ModelPrice(2, 10),     // 2026.10.02, same price as 6 Sol
                 ["gpt-6-sol"] = new ModelPrice(2, 10),

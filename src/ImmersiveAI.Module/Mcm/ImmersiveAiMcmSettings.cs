@@ -126,7 +126,7 @@ namespace ImmersiveAI.Mcm
         public string OpenAIBaseUrl { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Claude Code model", Order = 20, RequireRestart = false,
-            HintText = "When the backend is ClaudeCode: which Claude answers, billed to your claude.ai plan's own 5-hour/weekly windows rather than to a key. haiku-4-5 is fast and light on the windows; sonnet-5 the step-up; opus-5 the strong one; fable-5 always thinks, so it is slow and spends the windows fastest. The cost notice shows the plan gauge after each exchange.")]
+            HintText = "When the backend is ClaudeCode: which Claude answers, billed to your claude.ai plan's own 5-hour/weekly windows rather than to a key. haiku-5-5 is fast and light on the windows; sonnet-5-5 the step-up; opus-5-5 the strong one; fable-5-1 always thinks, so it is slow and spends the windows fastest. The cost notice shows the plan gauge after each exchange.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> ClaudeCodeModel { get; set; } = new Dropdown<string>(McmChoiceLists.ClaudeCodeModels, 0);
 

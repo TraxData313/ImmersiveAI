@@ -22,9 +22,12 @@
 
         /// <summary>The models the Claude Code road offers by name. Whatever the player's plan
         /// carries works — these are the ones worth listing; anything else goes in the custom
-        /// field. Fable thinks always and spends the plan's windows fastest.</summary>
+        /// field. Fable thinks always and spends the plan's windows fastest.
+        /// 2026.10.14: moved up to the 5.5 family (and Fable 5.1), renamed IN PLACE — same family,
+        /// same slot — so an old store file's index keeps meaning the same kind of mind; a config
+        /// still holding an older id simply shows it in the custom field.</summary>
         public static readonly string[] ClaudeCodeModels =
-            { "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5", "claude-fable-5" };
+            { "claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-1" };
 
         /// <summary>Every free-tier Gemini, newest first. The Pro models are paid-only since April
         /// 2026 and deliberately absent: the whole point of this backend is the free road.
