@@ -1261,49 +1261,139 @@ namespace ImmersiveAI.UI.TalkScreen
         // beneath (Gauntlet inputs cannot hold newlines), Save and Discard. Prompts are re-read on
         // every reply, so a saved edit speaks from the very next answer.
 
+        // Since 2026.10.14 "Their prompt" opens on three tabs for the one person — their prompt, who
+        // they are, their deep memory — rather than three more buttons on a bar that is already full.
+        // Each tab keeps its unsaved draft while the editor is open, so looking at another one costs
+        // nothing; Save writes only the tab in front of you.
+
+        private enum PromptEditMode { World, Prompt, WhoTheyAre, DeepMemory }
+
+        /// <summary>The editor input's MaxLength in ImmersiveTalkScreen.xml — keep the two together.</summary>
+        private const int PromptEditMaxLength = 20000;
+
         private Hero? _promptEditNpc;   // null while editing the world's global prompt
+        private PromptEditMode _promptEditMode;
+        private readonly Dictionary<PromptEditMode, string> _promptEditDrafts = new Dictionary<PromptEditMode, string>();
 
         public void ExecuteEditNpcPrompt()
         {
             var npc = _selected?.Hero;
             if (npc == null) return;
             _promptEditNpc = npc;
-            PromptEditTitle = $"Their prompt — {npc.Name} — write it in their own voice: \"I ...\"";
-            PromptEditText = PromptFiles.LoadNpcPromptForEdit(
-                NpcPaths.CustomInstructionsFile(npc), npc.Name?.ToString() ?? "Unknown");
-            IsPromptEditShown = true;
+            _promptEditDrafts.Clear();
+            ShowPromptEdit(PromptEditMode.Prompt);
         }
 
         public void ExecuteEditGlobalPrompt()
         {
             _promptEditNpc = null;
-            PromptEditTitle = "World prompt — what every soul knows of this world";
-            PromptEditText = PromptFiles.LoadGlobalPromptForEdit();
+            _promptEditDrafts.Clear();
+            ShowPromptEdit(PromptEditMode.World);
+        }
+
+        public void ExecuteEditTabPrompt() => SwitchPromptEditTab(PromptEditMode.Prompt);
+        public void ExecuteEditTabWho() => SwitchPromptEditTab(PromptEditMode.WhoTheyAre);
+        public void ExecuteEditTabMemory() => SwitchPromptEditTab(PromptEditMode.DeepMemory);
+
+        private void SwitchPromptEditTab(PromptEditMode mode)
+        {
+            if (_promptEditNpc == null || mode == _promptEditMode) return;
+            _promptEditDrafts[_promptEditMode] = PromptEditText;
+            ShowPromptEdit(mode);
+        }
+
+        private void ShowPromptEdit(PromptEditMode mode)
+        {
+            var npc = _promptEditNpc;
+            var name = npc?.Name?.ToString() ?? "Unknown";
+            // Read before anything changes: a refusal must leave the tab in front of you as it was.
+            var text = _promptEditDrafts.TryGetValue(mode, out var draft) ? draft : LoadPromptEdit(mode, npc, name);
+            if (text.Length >= PromptEditMaxLength)
+            {
+                // The input would cut it at its limit, and Save would write the cut copy back.
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"This is too long to edit in game ({text.Length} letters). Edit it in the files instead."));
+                return;
+            }
+
+            _promptEditMode = mode;
+            switch (mode)
+            {
+                case PromptEditMode.World:
+                    PromptEditTitle = "World prompt — what every soul knows of this world";
+                    break;
+                case PromptEditMode.Prompt:
+                    PromptEditTitle = $"Their prompt — {name} — write it in their own voice: \"I ...\"";
+                    break;
+                case PromptEditMode.WhoTheyAre:
+                    PromptEditTitle = $"Who {name} is — in their own voice: \"I am ...\"";
+                    break;
+                default:
+                    PromptEditTitle = $"{name}'s deep memory of you — in their own voice";
+                    break;
+            }
+            PromptEditText = text;
+            OnPropertyChanged(nameof(PromptEditHint));
+            OnPropertyChanged(nameof(IsPromptEditForNpc));
+            OnPropertyChanged(nameof(PromptTabText));
+            OnPropertyChanged(nameof(WhoTabText));
+            OnPropertyChanged(nameof(MemoryTabText));
             IsPromptEditShown = true;
+        }
+
+        private static string LoadPromptEdit(PromptEditMode mode, Hero? npc, string name)
+        {
+            if (mode == PromptEditMode.World || npc == null) return PromptFiles.LoadGlobalPromptForEdit();
+            if (mode == PromptEditMode.Prompt)
+                return PromptFiles.LoadNpcPromptForEdit(NpcPaths.CustomInstructionsFile(npc), name);
+            if (mode == PromptEditMode.WhoTheyAre) return ImmersiveChatBehavior.WhoTheyAreForEdit(npc);
+            return ImmersiveChatBehavior.DeepMemoryForEdit(npc);
         }
 
         public void ExecutePromptSave()
         {
+            var npc = _promptEditNpc;
+            var name = npc?.Name?.ToString() ?? "Unknown";
             try
             {
-                if (_promptEditNpc != null)
-                    PromptFiles.SaveNpcPromptFromGame(
-                        NpcPaths.CustomInstructionsFile(_promptEditNpc),
-                        _promptEditNpc.Name?.ToString() ?? "Unknown", PromptEditText);
-                else
-                    PromptFiles.SaveGlobalPromptFromGame(PromptEditText);
-                InformationManager.DisplayMessage(new InformationMessage(_promptEditNpc != null
-                    ? $"{_promptEditNpc.Name}'s prompt is set — it speaks from their next reply."
-                    : "The world prompt is set — it speaks from the next reply."));
+                string said;
+                bool close = true;
+                switch (npc == null ? PromptEditMode.World : _promptEditMode)
+                {
+                    case PromptEditMode.World:
+                        PromptFiles.SaveGlobalPromptFromGame(PromptEditText);
+                        said = "The world prompt is set — it speaks from the next reply.";
+                        break;
+                    case PromptEditMode.Prompt:
+                        PromptFiles.SaveNpcPromptFromGame(NpcPaths.CustomInstructionsFile(npc!), name, PromptEditText);
+                        said = $"{name}'s prompt is set — it speaks from their next reply.";
+                        break;
+                    case PromptEditMode.WhoTheyAre:
+                        said = PromptFiles.SaveWhoTheyAreFromGame(NpcPaths.WhoTheyAreFile(npc!), name,
+                                   PromptEditText, ImmersiveChatBehavior.BuiltWhoTheyAre(npc!))
+                            ? $"Who {name} is, in your words, is set — it speaks from their next reply."
+                            : $"Who {name} is follows the game again: their role, traits and skills as they stand.";
+                        break;
+                    default:
+                        close = ImmersiveChatBehavior.SaveDeepMemoryFromGame(npc!, PromptEditText, out said);
+                        break;
+                }
+                InformationManager.DisplayMessage(new InformationMessage(said));
+                if (!close) return;   // a refused save keeps the editor and its words open
             }
             catch (Exception ex)
             {
                 InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + ex.Message));
             }
+            _promptEditDrafts.Remove(_promptEditMode);
             IsPromptEditShown = false;
         }
 
-        public void ExecutePromptCancel() => IsPromptEditShown = false;
+        public void ExecutePromptCancel()
+        {
+            _promptEditDrafts.Clear();
+            IsPromptEditShown = false;
+        }
 
         // ------------------------------ the road, under the name ------------------------------
 
@@ -3626,8 +3716,38 @@ namespace ImmersiveAI.UI.TalkScreen
         }
 
         [DataSourceProperty]
-        public string PromptEditHint =>
-            "One flowing text — write below; the whole of it stays readable here. # comment lines stay in the file, out of sight. Save speaks from the very next reply; Discard (or Escape) changes nothing.";
+        public string PromptEditHint
+        {
+            get
+            {
+                switch (_promptEditMode)
+                {
+                    case PromptEditMode.WhoTheyAre:
+                        return "What the game says of them: role, traits, skills, how they speak. Rewrite any of it; while your words stand, the game no longer updates it. Save it empty (or unchanged) to have the game describe them again. Other tabs keep their drafts.";
+                    case PromptEditMode.DeepMemory:
+                        return "All they carry of you from before the recent talk. Fix a name, add what happened, strike what did not. " + ImmersiveAI.Core.Prompts.EditLine.ParagraphMark + " marks a new paragraph. They keep rewriting it as they gather their thoughts. Other tabs keep their drafts.";
+                    default:
+                        return "One flowing text — write below; the whole of it stays readable here. # comment lines stay in the file, out of sight. Save speaks from the very next reply; Discard (or Escape) changes nothing.";
+                }
+            }
+        }
+
+        /// <summary>The three tabs show only while editing one person, not the world.</summary>
+        [DataSourceProperty]
+        public bool IsPromptEditForNpc => _promptEditNpc != null;
+
+        [DataSourceProperty]
+        public string PromptTabText => TabLabel(PromptEditMode.Prompt, "Their prompt");
+
+        [DataSourceProperty]
+        public string WhoTabText => TabLabel(PromptEditMode.WhoTheyAre, "Who they are");
+
+        [DataSourceProperty]
+        public string MemoryTabText => TabLabel(PromptEditMode.DeepMemory, "Deep memory");
+
+        // The tab in front of you wears a mark, in plain ASCII (the shapes block draws as "?" here).
+        private string TabLabel(PromptEditMode mode, string label) =>
+            _promptEditMode == mode ? "> " + label + " <" : label;
 
         [DataSourceProperty]
         public string InfoButtonText => "?";

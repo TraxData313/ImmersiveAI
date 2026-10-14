@@ -15,6 +15,12 @@ namespace ImmersiveAI.Core.Prompts
         /// whole atmosphere from the config file.</summary>
         public string AtmosphereLine { get; set; } = string.Empty;
 
+        /// <summary>The player's own words for this NPC's "Who they are" block, written in game. When
+        /// set, it stands in place of everything that block is otherwise built from (the atmosphere
+        /// line, role, traits, crafts and manner of speech), so it no longer follows the live game
+        /// until the player clears it again. Empty by default: the block is built as always.</summary>
+        public string WhoTheyAre { get; set; } = string.Empty;
+
         /// <summary>Optional, player-authored guidance on tone and spirit — how the world feels, an invitation
         /// to roleplay and enjoy it — offered gently as freedom, never a command. Folded into the closing
         /// "whisper of guidance". Empty by default (the game layer fills it from config).</summary>

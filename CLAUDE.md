@@ -201,6 +201,13 @@ src/ImmersiveAI.Core/     netstandard2.0 — game-independent logic, fully unit-
                           never costs more than itself (the compiled-in default stands), an EMPTIED
                           key stays empty (that is the off switch), unknown keys are kept not dropped,
                           render->parse round-trips. The registry over it is Phase 3, not yet built
+  Prompts/EditLine.cs     (2026.10.14) the one-line editor's paragraphs: " ¶ " in, blank line out.
+                          Used by the talk screen's "Who they are" and "Deep memory" tabs (the
+                          editor overlay's mode + per-tab drafts live in TalkScreenVM; reads and
+                          saves in ImmersiveChatBehavior.Editing.cs). "Who they are" is BUILT live,
+                          so the player's words go to who_they_are.txt and replace the whole block
+                          via NpcPersona.WhoTheyAre; saving it empty or unchanged deletes the file.
+                          The memory save refuses while an exchange or letter work is in flight.
   Prompts/PromptTexts.cs  (2026.10.13) the registry's FIRST 20 keys, live: the deep memory (sheet
                           heading + every word of the gather/reflect prompts except the SELF block
                           and the SUMMARY:/SELF: labels) and the backstory (world-story frame + the

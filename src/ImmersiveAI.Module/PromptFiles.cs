@@ -126,6 +126,44 @@ $@"# Immersive AI - Custom instructions for {npcName}
             WriteKeepingComments(GlobalPromptPath, text);
         }
 
+        // ── "Who they are", in the player's words (2026.10.14) ─────────────────────────────
+        // Anton: "make Who they are and their deep memory freely editable from the game". The block
+        // is BUILT live (role, traits, skills, manner), so there is nothing to edit in place: the
+        // player's words go in a file of their own and stand in place of the built block while they
+        // hold anything. Saving the built words unchanged, or nothing, removes the file, so the
+        // block goes back to following the game rather than freezing a copy of today's.
+
+        /// <summary>The player's own "Who they are" for this NPC, or empty when they have none.</summary>
+        public static string LoadWhoTheyAre(string path)
+        {
+            try { return File.Exists(path) ? StripComments(File.ReadAllText(path)) : string.Empty; }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>Writes an in-game "Who they are", or removes it when the text is empty or the same
+        /// as the block the game builds. True when the player's own words now stand.</summary>
+        public static bool SaveWhoTheyAreFromGame(string path, string npcName, string text, string built)
+        {
+            var mine = EditLine.FromLine(text);
+            if (mine.Length == 0 || mine == EditLine.FromLine(EditLine.ToLine(built)))
+            {
+                if (File.Exists(path)) File.Delete(path);
+                return false;
+            }
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(path,
+$@"# Immersive AI - who {npcName} is, in your words
+# Written from the talk screen. It stands in place of the role, traits, skills and manner of
+# speech the game describes, so those no longer change by themselves while this file has words
+# in it. Delete this file (or save it empty in game) to have the game describe them again.
+# Lines starting with # or // are ignored.
+
+{mine}
+");
+            return true;
+        }
+
         // ── prompts.txt: the words behind the prompt (Core PromptTexts / PromptPack) ─────────
         // The deep memory's and the backstory's own words, editable since 2026.10.13 (asked for
         // on Steam). Written whole on first run with every shipped default, so the player sees

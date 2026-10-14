@@ -3987,6 +3987,9 @@ namespace ImmersiveAI
             // What their hands and wits are honestly good at — from their real skills, so a wanderer
             // asked what they would be good at answers from truth.
             persona.Crafts = CraftsBuilder.Build(npc);
+            // The player's own "Who they are", written in game, stands in place of all of the above
+            // while it holds words (see ImmersiveChatBehavior.Editing).
+            persona.WhoTheyAre = PromptFiles.LoadWhoTheyAre(NpcPaths.WhoTheyAreFile(npc));
             // The whispers about the gifts are offered only when the tools truly ride along.
             persona.CanRecallWorld = CanRecallWorld();
             persona.CanSeekWisdom = CanSeekWisdom();

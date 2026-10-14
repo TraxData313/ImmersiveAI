@@ -196,7 +196,8 @@ Under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
   personality lands.
 - Each character's folder holds their memories, self-image, and letters as readable text
   — the whole inner life, yours to browse. Changes apply on the next conversation.
-- Both prompt files are editable from inside the game too, from the talk screen's own bar.
+- Both prompt files are editable from inside the game too, from the talk screen's own bar — and
+  "Their prompt" also opens **who they are** and **their deep memory of you**, to rewrite in place.
 - `conversation_presets.txt` — your standing presets for **Think** (Shift+Enter on the talk screen),
   the button that has your own character work out what to say or write next. Starts with three —
   *starter*, *romantic*, *ender* — and is yours to rewrite, from the file or from the menu's own

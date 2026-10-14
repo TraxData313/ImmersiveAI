@@ -1208,9 +1208,31 @@
 
                 <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="46" VerticalAlignment="Bottom" MarginBottom="70" MarginLeft="20" MarginRight="20" Sprite="General\CharacterCreation\name_input_area">
                   <Children>
-                    <EditableTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="12" MarginRight="12" MarginTop="8" MarginBottom="8" Brush="Review.NameInput.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Left" RealText="@PromptEditText" MaxLength="6000" />
+                    <EditableTextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" VerticalAlignment="Center" MarginLeft="12" MarginRight="12" MarginTop="8" MarginBottom="8" Brush="Review.NameInput.Text" Brush.FontSize="16" Brush.TextHorizontalAlignment="Left" RealText="@PromptEditText" MaxLength="20000" />
                   </Children>
                 </Widget>
+
+                <!-- The one person's three tabs (2026.10.14): their prompt, who they are, their deep
+                     memory. Bottom left, across from Save and Discard: the bar outside has no room left. -->
+                <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Bottom" MarginBottom="16" MarginLeft="20" StackLayout.LayoutMethod="HorizontalLeftToRight" IsVisible="@IsPromptEditForNpc">
+                  <Children>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditTabPrompt">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@PromptTabText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditTabWho">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@WhoTabText" />
+                      </Children>
+                    </ButtonWidget>
+                    <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="160" SuggestedHeight="40" MarginRight="8" Brush="Popup.Cancel.Button" Command.Click="ExecuteEditTabMemory">
+                      <Children>
+                        <TextWidget DoNotAcceptEvents="true" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Center" Brush="Popup.Button.Text" Brush.FontSize="15" Brush.TextHorizontalAlignment="Center" Text="@MemoryTabText" />
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </ListPanel>
 
                 <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Bottom" MarginBottom="16" MarginRight="20" StackLayout.LayoutMethod="HorizontalLeftToRight">
                   <Children>

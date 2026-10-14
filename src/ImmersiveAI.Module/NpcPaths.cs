@@ -40,6 +40,7 @@ namespace ImmersiveAI
         public const string CustomInstructionsFileName = "custom_instructions.txt";
         public const string SituationFileName = "current_situation_info.txt";
         public const string SelfFileName = "self.txt";
+        public const string WhoTheyAreFileName = "who_they_are.txt";
         public const string CorrespondenceFileName = "letters.txt";
         public const string LettersFileName = "_letters.json";
 
@@ -158,6 +159,10 @@ namespace ImmersiveAI
         public static string SituationFile(Hero npc) => Path.Combine(NpcFolder(npc), SituationFileName);
 
         public static string SelfFile(Hero npc) => Path.Combine(NpcFolder(npc), SelfFileName);
+
+        /// <summary>The player's own "Who they are" for this NPC, written in game. Absent unless they
+        /// wrote one; while it holds words, it stands in place of the block the game builds.</summary>
+        public static string WhoTheyAreFile(Hero npc) => Path.Combine(NpcFolder(npc), WhoTheyAreFileName);
 
         /// <summary>The human-readable log of every letter carried between this NPC and the player.</summary>
         public static string CorrespondenceFile(Hero npc) => Path.Combine(NpcFolder(npc), CorrespondenceFileName);
@@ -402,6 +407,10 @@ Within a campaign folder, each NPC has one folder, named <stringId>_<FirstName>
                             memory they rewrite, keep, or let fade like any other. Safe to read;
                             edit only if you know the JSON shape. Delete it to make that NPC
                             forget you completely.
+  who_they_are.txt        - only if you wrote one, from the talk screen (""Their prompt"", then
+                            ""Who they are""): your own words for who this NPC is, standing in place
+                            of the role, traits, skills and manner the game describes. Delete it
+                            (or save it empty in game) to have the game describe them again.
   custom_instructions.txt - private instructions for THIS NPC, written in THEIR own first
                             person (""I never forgive an insult"") - they enter the character's
                             mind as their own truths. Lines starting with # or // are ignored.

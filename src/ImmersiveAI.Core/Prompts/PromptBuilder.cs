@@ -870,16 +870,14 @@ namespace ImmersiveAI.Core.Prompts
             NpcPersona persona, NpcMemory memory, string sceneContext, string playerName) =>
             BuildSystemPrompt(persona, memory, sceneContext, playerName);
 
-        private static string BuildSystemPrompt(
-            NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
+        /// <summary>
+        /// The "Who they are" block as the game builds it — what stands on the sheet unless the
+        /// player has written their own (<see cref="NpcPersona.WhoTheyAre"/>), and what the in-game
+        /// editor opens with, so the player starts from the words the NPC is really given.
+        /// </summary>
+        public static string BuiltWhoTheyAre(NpcPersona persona)
         {
             var sb = new StringBuilder();
-
-            // The whole sheet reads as the NPC's OWN mind, in the first person — short and warm, never
-            // a clinical data sheet, never a long narrator talking at them (Anton's ask, 2026.07.11).
-            // No fourth-wall labels: to them, Calradia is simply the world they live in. The opening
-            // atmosphere line is player-configurable (name already substituted).
-            sb.AppendLine(Section(Sections.WhoTheyAre));
             sb.AppendLine(string.IsNullOrWhiteSpace(persona.AtmosphereLine)
                 ? $"I am {persona.Name}, a living soul in the world of Calradia in feudal times."
                 : persona.AtmosphereLine.Trim());
@@ -891,6 +889,22 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine(persona.Crafts.Trim());
             if (!string.IsNullOrWhiteSpace(persona.SpeechStyle))
                 sb.AppendLine("When I speak, it comes out like this: " + persona.SpeechStyle.Trim());
+            return sb.ToString().TrimEnd();
+        }
+
+        private static string BuildSystemPrompt(
+            NpcPersona persona, NpcMemory memory, string sceneContext, string playerName)
+        {
+            var sb = new StringBuilder();
+
+            // The whole sheet reads as the NPC's OWN mind, in the first person — short and warm, never
+            // a clinical data sheet, never a long narrator talking at them (Anton's ask, 2026.07.11).
+            // No fourth-wall labels: to them, Calradia is simply the world they live in. The opening
+            // atmosphere line is player-configurable (name already substituted).
+            sb.AppendLine(Section(Sections.WhoTheyAre));
+            sb.AppendLine(string.IsNullOrWhiteSpace(persona.WhoTheyAre)
+                ? BuiltWhoTheyAre(persona)
+                : persona.WhoTheyAre.Trim());
 
             // Their kin and house — durable identity, so they feel part of a family in this world.
             if (!string.IsNullOrWhiteSpace(persona.FamilyKnowledge))
