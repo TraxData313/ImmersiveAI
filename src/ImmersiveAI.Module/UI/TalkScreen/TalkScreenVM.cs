@@ -951,6 +951,7 @@ namespace ImmersiveAI.UI.TalkScreen
 
             OnPropertyChanged("HasSelection");
             OnPropertyChanged("DevTitleText");
+            OnPropertyChanged(nameof(IsDevRomanceShown));
             // The Voices page names the person it will cast onto. It was computed once and never
             // told to look again, so after switching contacts the button still read the PREVIOUS
             // name while cheerfully casting onto the new one (Anton, 2026.08.15 — the button said
@@ -1275,13 +1276,15 @@ namespace ImmersiveAI.UI.TalkScreen
         private PromptEditMode _promptEditMode;
         private readonly Dictionary<PromptEditMode, string> _promptEditDrafts = new Dictionary<PromptEditMode, string>();
 
-        public void ExecuteEditNpcPrompt()
+        public void ExecuteEditNpcPrompt() => OpenNpcEditor(PromptEditMode.Prompt);
+
+        private void OpenNpcEditor(PromptEditMode mode)
         {
             var npc = _selected?.Hero;
             if (npc == null) return;
             _promptEditNpc = npc;
             _promptEditDrafts.Clear();
-            ShowPromptEdit(PromptEditMode.Prompt);
+            ShowPromptEdit(mode);
         }
 
         public void ExecuteEditGlobalPrompt()
@@ -2608,6 +2611,10 @@ namespace ImmersiveAI.UI.TalkScreen
         }
 
         public void ExecuteDevRevealMind() => RunDev(ImmersiveChatBehavior.DevRevealMind);
+        // The editor's three tabs, opened straight from the levers (Anton looked for them here).
+        public void ExecuteDevEditPrompt() => RunDev(_ => OpenNpcEditor(PromptEditMode.Prompt));
+        public void ExecuteDevEditWho() => RunDev(_ => OpenNpcEditor(PromptEditMode.WhoTheyAre));
+        public void ExecuteDevEditMemory() => RunDev(_ => OpenNpcEditor(PromptEditMode.DeepMemory));
         public void ExecuteDevRevealRoad() => RunDev(ImmersiveChatBehavior.DevRevealCourtship);
         public void ExecuteDevClearMisgivings() => RunDev(npc =>
         {
@@ -3463,6 +3470,11 @@ namespace ImmersiveAI.UI.TalkScreen
 
         [DataSourceProperty]
         public bool HasDevTraits => _devTraits.Count > 0;
+
+        /// <summary>The courtship, child, lover and door levers, only for a woman (Anton, 2026.10.14:
+        /// "clear those dev options from male NPCs" — on a man they act on a road he never walks).</summary>
+        [DataSourceProperty]
+        public bool IsDevRomanceShown => _selected?.Hero?.IsFemale == true;
 
         [DataSourceProperty]
         public string DevTraitsTitle => "Their traits (the sheet reads them on the next reply; saved with the game)";
