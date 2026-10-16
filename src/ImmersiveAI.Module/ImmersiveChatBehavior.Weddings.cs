@@ -556,9 +556,33 @@ namespace ImmersiveAI
             {
                 if (hero == null) return false;
                 if (IsQuickChatBusy(hero)) return true;
-                return Hero.OneToOneConversationHero == hero || _currentNpc == hero;
+                // NOT `_currentNpc == hero`: that field is never cleared, so the last soul spoken
+                // with face to face counted as busy FOREVER — a wedding sealed in a talk parked its
+                // account until her next reply had been written, and it landed after that reply
+                // (Safiya, 2026.10.16). Only a reply truly being made holds a memory instance.
+                return Hero.OneToOneConversationHero == hero || _faceTurnsInFlight.Contains(hero.StringId);
             }
             catch { return false; }
+        }
+
+        // Face-to-face replies being made right now, by soul id. Game thread only.
+        private readonly HashSet<string> _faceTurnsInFlight = new HashSet<string>(StringComparer.Ordinal);
+
+        // Lands this soul's parked great-day beats now, in the order they were made. The caller
+        // vouches that no exchange of theirs holds a memory instance (a turn about to begin).
+        private void LandParkedBeatsFor(Hero hero)
+        {
+            try
+            {
+                if (hero == null) return;
+                if (_pendingWeddingBeats.TryRemove(hero.StringId, out var weddings) && weddings != null)
+                    foreach (var beat in weddings)
+                        if (!string.IsNullOrWhiteSpace(beat)) AppendRecordedTurn(hero, beat, string.Empty);
+                if (_pendingBirthBeats.TryRemove(hero.StringId, out var births) && births != null)
+                    foreach (var beat in births)
+                        if (!string.IsNullOrWhiteSpace(beat)) AppendRecordedTurn(hero, beat, string.Empty);
+            }
+            catch (Exception ex) { ModLog.Error("landing parked beats", ex); }
         }
 
         private void WriteWeddingBeat(Hero hero, string beat, OutreachMark mark)

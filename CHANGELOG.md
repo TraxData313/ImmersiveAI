@@ -15,6 +15,10 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+### Fixes
+
+- Your wedding story (and a child's) now reaches your spouse's memory as soon as it's written, not after their next reply.
+
 ## v3.6.0 — 2026.10.14
 
 Their minds in your hands: rewrite who they are and what they remember of you, right in the game.

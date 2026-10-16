@@ -1875,6 +1875,8 @@ namespace ImmersiveAI
             }
 
             var npc = _currentNpc;
+            LandParkedBeatsFor(npc);
+            _faceTurnsInFlight.Add(npc.StringId);
             // Fire-and-forget; UI updates are marshaled back to the game thread.
             _ = RespondAsync(npc, input.Trim());
         }
@@ -1928,6 +1930,10 @@ namespace ImmersiveAI
                     InformationManager.DisplayMessage(new InformationMessage("Immersive AI: " + message));
                     _responseReady = true;
                 });
+            }
+            finally
+            {
+                MainThreadDispatcher.Enqueue(() => _faceTurnsInFlight.Remove(npc.StringId));
             }
         }
 
@@ -3679,6 +3685,7 @@ namespace ImmersiveAI
             if (self == null || npc == null) return;
             if (self.UsesChatWindowInitiations)
                 self._pendingNotices.Remove(npc.StringId);
+            if (!self.IsExchangeInFlight(npc)) self.LandParkedBeatsFor(npc);
         }
 
         /// <summary>Sends one chat-window line to a co-located NPC. Runs on the game thread (captures the
@@ -3692,6 +3699,9 @@ namespace ImmersiveAI
             if (self._quickChatBusy.Contains(npc.StringId)) return false;
             if (!IsCoLocated(npc)) return false; // they must truly be here for words to reach them
 
+            // A great day written while nothing of theirs was being saved lands NOW, before the
+            // player's line — folded in at the end of the exchange it would sit after her answer.
+            self.LandParkedBeatsFor(npc);
             self._quickChatBusy.Add(npc.StringId);
             var situation = self.SafeBuildSituation(npc);
             PersistSituation(npc, situation);
