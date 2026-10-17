@@ -2212,10 +2212,10 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             var install = Voice.ClaudeVoiceApp.FindInstall();
             if (install == null) return;
-            if (install.IsGitCopy)
+            if (install.IsDevCopy)
             {
                 InformationManager.DisplayMessage(new InformationMessage(
-                    "This voice app is a developer's own copy (a git folder), so it is not removed from here — delete that folder by hand if you mean to.",
+                    "This voice app is a developer's own copy (a git folder, or registered as one), so it is not removed from here — delete that folder by hand if you mean to.",
                     PromptFrameColor));
                 return;
             }

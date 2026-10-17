@@ -116,9 +116,20 @@ You usually only need to open:
   `/voices`, `/speak` with `announce:false` and `unreadable:"refuse"`, `/stop`, `/set-engine`,
   `/voice-roots`, `/panel`, `/quit`; every call off-thread, bounded, null on failure) +
   `Voice\ClaudeVoiceApp` (the snapshot — NotInstalled/Installed/Starting/Running/Installing — polled
-  every 2–4 s only while voices are on or the page is open; finds the install from claude-voice's
-  own `%LOCALAPPDATA%\claude-voice\where.json`; starts it with `voice_cli.py start`; downloads and
-  runs `ClaudeVoiceSetup.exe` from claude-voice's GitHub releases; registers the module's `Voices\`
+  every 2–4 s only while voices are on or the page is open, plus ONE look-only `Look()` at campaign
+  start even with voices off — found/not found and its port, no start, no voices told; finds the
+  install by claude-voice's discovery contract (its `docs/discovery.md`, 2026.10.17; the decisions
+  are Core `VoiceAppLocator`, unit-tested): `HKCU\Software\claude-voice` → `where.json` → Settings→Apps
+  entry → the usual folders; knocks on the port the app SAYS it got (`ClaudeVoiceClient.UsePort`,
+  `ClaudeVoicePort` only when it says nothing); starts it with the registered `Launcher`, else
+  where.json's pythonw, else a PEP 514 Python — NEVER bare `python`; never installs into, runs the
+  setup of, or uninstalls a developer's copy (`Kind=dev` or `.git` — `Install.IsDevCopy`); INSTALLS
+  WITH NO .EXE since claude-voice 2.0 (2026.10.17 — Smart App Control refuses its unsigned
+  ClaudeVoiceSetup.exe): `Voice\ClaudeVoiceInstaller` fetches claude-voice's code (GitHub main zip, or
+  `ClaudeVoiceSetupSource`), then python.org's Python as its `runtime.json` pins it (SHA-256 + an
+  Authenticode check that python.exe/pythonw.exe are signed by the PSF), unpacks it into
+  `<program>\runtime` and runs `installer.py install --no-claude [--quiet]` on it; the decisions are
+  Core `VoiceAppInstall`, unit-tested; registers the module's `Voices\`
   and the player's old shelf with `/voice-roots` once per app PROCESS (by `/health`'s pid — "when it
   comes up" missed every game-run install, whose app answers while the page still says Installing);
   sweeps the old in-mod engine's DLL-only folder once at start (its Qwen model is REUSED by
@@ -141,7 +152,7 @@ You usually only need to open:
   and "Engines & storage" (switch/add engines, `/storage` folders+sizes with Open buttons, the
   stutter tip, Close / Remove). The bar's Voices button is coloured red/amber/green by the state.
   THE INSTALL IS QUIET AND FOLLOWED THROUGH A FILE: `ClaudeVoiceApp.RunSetup(engine, dataDir)` runs
-  `ClaudeVoiceSetup.exe --quiet --engine X --data D:\claude-voice`, which writes
+  claude-voice's `installer.py --quiet --engine X --big-data D:\claude-voice`, which writes
   `%LOCALAPPDATA%\claude-voice\setup-status.json` (state/phase/headline/detail/fractions/error/pid)
   and stops on a `setup-cancel` file; the game polls it every second. A separate process, so quitting
   the game mid-install is fine and the next game picks it up. When an install the GAME started comes
@@ -150,7 +161,10 @@ You usually only need to open:
   at PROCESS exit whenever the game opened it — by starting it OR by installing it, so the graphics
   card is always handed back — never at campaign end (a reload would pay the model load again),
   never an app the player started themselves. **Remove the voice app…** asks in-game, then runs the
-  install's own `uninstall.ps1 -Yes` (a git checkout is refused: that is Anton's own copy).
+  install's own Settings→Apps `QuietUninstallString` — only a 2.0 one (its pythonw + `installer.py
+  uninstall --quiet`, which keeps the player's settings and voices); an older install's entry is
+  Bypass PowerShell, so the game opens Settings→Apps instead (a git checkout is refused: that is
+  Anton's own copy).
   **THE VOICES THAT SHIP WITH THE MOD** live in `module\Voices\<sex>\<culture>\<id>\` (92, tracked in
   git) and are read by claude-voice WHERE THEY LIE — no seeding any more (`VoiceSeeds`/`VoiceLibrary`
   are deleted). Each carries `embedding.json` (Qwen) AND, since 2026.09.24, `breeze-reference.wav` +
@@ -2126,32 +2140,36 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
 - **THE CONTRACT** is claude-voice's `docs/api.md` (its "For a game" section). The routes this mod
   added there: `/voices` (the whole catalogue with sex and people), `/voice-roots` (read a folder of
   voices where it lies), `/panel`, `announce:false` and `unreadable:"refuse"` on `/speak`, `version`
-  on `/health`. claude-voice also writes `%LOCALAPPDATA%\claude-voice\where.json` on every start
-  (root + python) — that is how the game finds it asleep.
+  on `/health`. How the game finds it asleep is claude-voice's `docs/discovery.md`: its registry key
+  `HKCU\Software\claude-voice` (InstallDir, Kind, Launcher, Port — written at install, or by
+  `voice_cli register` for a dev checkout) first, then `%LOCALAPPDATA%\claude-voice\where.json`
+  (every engine start), then the Settings→Apps entry's `InstallLocation`, then the usual folders.
+  Those last two name the PROGRAM folder: a 2.0 install keeps its code in `app\` below it (beside
+  `install.json`) and its Python in `runtime\`, so `VoiceAppLocator.Choose` looks in `app\` too and
+  hands back that folder with `runtime\pythonw.exe` (2026.10.17); a pre-2.0 one is at the root. The port is the chosen record's — the app
+  moves off 8765 when another program holds it — and `ClaudeVoicePort` only when none says.
 - **THREE ENGINES, the app's choice not ours:** Breeze (acts — `(laugh)` `(sigh)` `(cough)`
   `(clears throat)` + moods; English only; 16 GB NVIDIA), Qwen (every alphabet, Bulgarian accented;
   4 GB NVIDIA), Pocket (CPU; English + 5 European). Cyrillic on Breeze/Pocket is REFUSED (422) rather
   than read with claude-voice's spoken "I skipped…" note — the mod shows one notice pointing at Qwen.
   Anton plays in Bulgarian: **Qwen is his engine.**
-- **THE SETUP EXE** is `claude-voice/setup-app` (net48 WinForms, ~430 KB, `asInvoker` manifest — an
-  exe named *setup* is otherwise elevated by Windows' installer detection). It wraps
-  `setup.ps1 -Engine <qwen|pocket|breeze> -NoPanel -NoClaude [-DataDir X] [-Quiet]` (no hooks, no
-  /voice, no CLAUDE.md note, transcript watcher off — a game player may not have Claude Code). The
-  game uses its `--quiet` road (no window over a full-screen game; the Python installer runs
-  `/quiet` too); the window stays for double-clickers and as the page's "Use the setup window"
-  fallback. It installs its OWN release's code (tag `v<version>` stamped by build.ps1; `main` only
-  when the tag is missing), records what IT installed in `installed.json` (incl. the chosen `data`
-  folder) and registers per-user in Settings → Apps. The mod fetches it from
-  `releases/latest/download/ClaudeVoiceSetup.exe` (`ClaudeVoiceSetupUrl` overrides, a local path
-  works for testing) — fetched by the game, so no Mark-of-the-Web and no SmartScreen prompt.
-  **A LOCAL EXE ALONE STILL INSTALLS GITHUB'S CODE** (the setup fetches its own release's tag, `main`
-  when the tag is missing), so a release is tried through the game with BOTH: `ClaudeVoiceSetupUrl`
-  = the locally built exe and `ClaudeVoiceSetupSource` = a folder holding the code (passed as
-  `--source`). Export that folder from `git ls-files --cached --others --exclude-standard`, never
-  point it at a working copy: the setup copies everything but config/logs/.git, which would carry
-  the owner's git-ignored files (Abby's Pocket clips) into an install no release could produce.
-  Clear both keys after the test.
-  **IT MUST BE ATTACHED TO A CLAUDE-VOICE RELEASE** or the Install button 404s.
+- **THE INSTALL HAS NO EXE** (claude-voice 2.0, 2026.10.17). Smart App Control, on by default on a
+  clean Windows 11, refuses any unsigned exe, and Anton will not buy a code-signing certificate — so
+  the old `claude-voice/setup-app` (`ClaudeVoiceSetup.exe`) is retired and is never fetched any more.
+  The program IS python.org's signed Python running claude-voice's `.py` files:
+  `Voice\ClaudeVoiceInstaller` takes the code (GitHub main zip, or `ClaudeVoiceSetupSource` = a folder
+  for testing), the Python that code's `runtime.json` pins (SHA-256 + Authenticode signer = Python
+  Software Foundation, checked by Core `VoiceAppInstall`), unpacks it into
+  `%LOCALAPPDATA%\Programs\claude-voice\runtime`, and runs `installer.py install --no-claude
+  [--quiet] [--engine X] [--big-data D]` on it — no hooks, no /voice, nothing of Claude Code's (a
+  player may not have it). Quiet = no window over a full-screen game; the window road is a visible
+  console. It registers in Settings → Apps with an uninstaller on the same Python, and writes the
+  registry key the locator reads. Qwen under Smart App Control: claude-voice refuses it up front and
+  falls back to Pocket, so the Qwen card must not promise it on such a machine.
+  To try an unreleased claude-voice through the game, set `ClaudeVoiceSetupSource` to a folder exported
+  from `git ls-files --cached --others --exclude-standard` — never a working copy, which would carry
+  the owner's git-ignored files (Abby's Pocket clips) into an install no release could produce — and
+  clear it after the test. `ClaudeVoiceSetupUrl` is unused since 2.0.
 - **SHE IS TOLD WHAT HER VOICE CAN DO** (Anton, same day: Sibylla never set a mood while his Abby,
   told every turn, used them freely — the first cut only TRANSLATED her *laughs* after the fact).
   `PromptBuilder.VoiceGuidance`, right after the acting-out line, offers `(laugh)`-style sounds and —
@@ -2179,8 +2197,8 @@ Everything degrades to silence + one log line; a voice problem never costs a wor
   `voice-shipping-constraint`).
 - Config: `EnableVoice`, `VoiceAutoSpeak`, `VoiceSpeakWhenClosed`, `VoiceSpeakActedParts`,
   `VoiceAutoCast`, `VoicePerformSounds`, `VoiceSpeakReachOuts`, `VoicePanicKey`,
-  `VoiceStartAppWithGame`, `ClaudeVoicePort`, `ClaudeVoiceSetupUrl`, `ClaudeVoiceSetupSource`
-  (testing only), `VoiceHintShown`. Retired
+  `VoiceStartAppWithGame`, `ClaudeVoicePort`, `ClaudeVoiceSetupSource` (testing only),
+  `ClaudeVoiceSetupUrl` (unused since claude-voice 2.0), `VoiceHintShown`. Retired
   (Newtonsoft ignores them in old files): `VoiceEnginePath`/`VoiceModelDir`/`VoiceModelName`,
   `VoiceTemperature`/`VoiceTopP`, `VoiceCacheBudgetMb`, `VoiceSoundEvent`, `VoiceDelivery`,
   `CloudVoice*`. The casting sheet is still `Configs\ImmersiveAI\Voices\assignments.json`, OUTSIDE

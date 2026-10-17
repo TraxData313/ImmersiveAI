@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <Reference Include="System.Net.Http" />
+    <!-- ZipArchive: unpacking python.org's Python and claude-voice's code for its installer -->
+    <Reference Include="System.IO.Compression" />
   </ItemGroup>
 
   <ItemGroup>

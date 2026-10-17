@@ -17,6 +17,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ### Fixes
 
+- The voice app is found wherever it was installed, even with voices off, and on whichever port it chose.
+- Installing the voice app from the game works with Windows' Smart App Control on, and no longer runs hidden scripts.
 - Your wedding story (and a child's) now reaches your spouse's memory as soon as it's written, not after their next reply.
 
 ## v3.6.0 — 2026.10.14

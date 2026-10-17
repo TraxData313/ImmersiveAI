@@ -42,7 +42,7 @@ need to understand any of this to press Install.
 |---|---|---|---|
 | **What it is like** | laughs, sighs and whispers where a character does | warm, natural voices | clear and quick, a little plainer |
 | **Languages** | English | **any** — Bulgarian, Russian, Chinese… | English, French, German, Spanish, Italian, Portuguese |
-| **Needs** | NVIDIA **RTX 30-series or newer, 16 GB** of video memory (12 GB works, slower) | an **NVIDIA** card, about **4 GB** of video memory | **any Windows PC** — no graphics card at all |
+| **Needs** | NVIDIA **RTX 30-series or newer, 16 GB** of video memory (12 GB works, slower) | an **NVIDIA** card, about **4 GB** of video memory, and Windows' **Smart App Control off** | **any Windows PC** — no graphics card at all |
 | **Download** | ~11 GB | ~3 GB | ~1 GB |
 | **Disk space** | ~14 GB | ~3.5 GB | ~1.5 GB |
 | **Graphics card while it runs** | holds ~13 GB | holds ~3.5 GB | not used |
@@ -102,7 +102,8 @@ gets one of their own sex, just not of their own people.
 - **The app** — `%LOCALAPPDATA%\Programs\claude-voice` (about 100 MB).
 - **The voice files** — the folder you picked: `%LOCALAPPDATA%\claude-voice` on your system drive,
   or `X:\claude-voice` on another drive.
-- **Python** — only if your computer had none: a private copy, removed with the app.
+- **Python** — a private copy of python.org's own, signed by the Python Software Foundation, inside
+  the app's folder. It never touches a Python you already have, and goes when the app goes.
 
 The **Engines & storage** tab shows the real folders and sizes, each with an **Open** button.
 
@@ -121,6 +122,10 @@ red again, and installing is one click away if you change your mind.
   first.
 - **Installed, but silent** — the Voices button is red and the page says the app isn't running:
   press **Start the voice app**. The first start takes up to a minute.
+- **Windows says "Part of this app has been blocked"**, or Qwen will not start — that is Windows'
+  **Smart App Control**, on by default on a fresh Windows 11. It refuses Qwen's engine, which is not
+  signed. The voice app checks for it, switches to **Pocket** and says so; nothing else is affected.
+  Pocket runs with it on.
 - **Some lines are silent, others speak** — Breeze and Pocket cannot read Cyrillic, so Bulgarian
   or Russian lines stay quiet (you are told once). Switch to **Qwen**, which reads every language.
 - **A voice rambles or will not stop** — **Backspace**, anywhere.

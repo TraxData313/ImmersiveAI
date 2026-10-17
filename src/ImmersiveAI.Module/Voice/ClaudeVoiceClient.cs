@@ -40,10 +40,21 @@ namespace ImmersiveAI.Voice
             Timeout = System.Threading.Timeout.InfiniteTimeSpan,
         };
 
+        public static int CurrentPort => Port;
+
+        private static int _reportedPort;
+
+        /// <summary>The port claude-voice says it listens on (its registry key or where.json), from each
+        /// look; 0 forgets it. It is the app's own word, so it wins over <c>ClaudeVoicePort</c>, which is
+        /// only what the game asks for when the app has said nothing — an older app, or none yet.</summary>
+        public static void UsePort(int port) => Volatile.Write(ref _reportedPort, port > 0 && port < 65536 ? port : 0);
+
         private static int Port
         {
             get
             {
+                var reported = Volatile.Read(ref _reportedPort);
+                if (reported > 0) return reported;
                 var p = SubModule.Config?.ClaudeVoicePort ?? DefaultPort;
                 return p > 0 && p < 65536 ? p : DefaultPort;
             }

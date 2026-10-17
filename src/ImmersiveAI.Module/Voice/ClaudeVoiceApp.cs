@@ -51,6 +51,8 @@ namespace ImmersiveAI.Voice
             public DateTime CatalogUtc = DateTime.MinValue;
             /// <summary>The last install's own account of itself — running, done, failed, cancelled — or null.</summary>
             public SetupProgress? Setup;
+            /// <summary>Where it was found, and by which source — null when it is not on this computer.</summary>
+            public Install? Install;
 
             public bool Running => State == AppState.Running;
             public string Engine => Health?.Engine ?? string.Empty;
@@ -115,7 +117,18 @@ namespace ImmersiveAI.Voice
         /// <summary>Brings <see cref="Now"/> up to date in the background. Cheap to call every
         /// frame: it does nothing unless the last look is old enough, or <paramref name="force"/>.
         /// While an install runs it looks every second, so the bar moves.</summary>
-        public static void Poll(bool force = false)
+        public static void Poll(bool force = false) => Poll(force, lookOnly: false);
+
+        /// <summary>
+        /// One look that only FINDS it — installed or not, asleep or running, on which port — and
+        /// touches nothing: no start, no voices told, no catalogue read. Made once as a campaign
+        /// loads even with voices off (the default), so the page knows from its first frame whether
+        /// claude-voice is on this computer, and turning voices on later needs no restart.
+        /// Off the game thread, like every look.
+        /// </summary>
+        public static void Look() => Poll(force: true, lookOnly: true);
+
+        private static void Poll(bool force, bool lookOnly)
         {
             var rest = _now.State == AppState.Installing ? TimeSpan.FromSeconds(1)
                      : _now.Running ? TimeSpan.FromSeconds(4) : TimeSpan.FromSeconds(2);
@@ -125,20 +138,33 @@ namespace ImmersiveAI.Voice
 
             Task.Run(async () =>
             {
-                try { await RefreshAsync().ConfigureAwait(false); }
+                try { await RefreshAsync(lookOnly).ConfigureAwait(false); }
                 catch (Exception ex) { ModLog.Error("voice: looking for claude-voice", ex); }
                 finally { Interlocked.Exchange(ref _polling, 0); }
             });
         }
 
-        private static async Task RefreshAsync()
+        private static async Task RefreshAsync(bool lookOnly)
         {
             var was = _now;
+            NoticeDeadSetup();
             var setup = ReadSetupStatus();
             var installing = SetupRunning || (setup != null && setup.IsRunning && PidAlive(setup.Pid));
+            // Found first, so the knock goes to the port the app says it got — not only the one in
+            // our config (claude-voice moves off a taken 8765 and says where it went).
+            var install = FindInstall();
+            var portWas = ClaudeVoiceClient.CurrentPort;
+            ClaudeVoiceClient.UsePort(install?.Port ?? 0);
+            if (ClaudeVoiceClient.CurrentPort != portWas)
+                ModLog.Info($"voice: claude-voice says it listens on port {ClaudeVoiceClient.CurrentPort} (was knocking on {portWas})");
+            if (install != null && !SameInstall(was.Install, install))
+                ModLog.Info($"voice: claude-voice found by {install.Source} in {install.Root}"
+                            + (install.Version.Length > 0 ? " (" + install.Version + ")" : string.Empty)
+                            + (install.IsDevCopy ? " — a developer's copy, never installed into from here" : string.Empty));
             var health = await ClaudeVoiceClient.HealthAsync().ConfigureAwait(false);
             var next = new Snapshot
             {
+                Install = install,
                 Health = health,
                 Voices = was.Voices,
                 CatalogEngine = was.CatalogEngine,
@@ -171,14 +197,15 @@ namespace ImmersiveAI.Voice
                 // page still says Installing, so by the time it counted as running it had long been seen.
                 var rootsDue = health.Pid > 0 ? health.Pid != _rootsToldPid : cameUp;
                 var rootsTold = false;
-                if (rootsDue && DateTime.UtcNow >= _rootsRetryUtc)
+                if (lookOnly) { /* only finding it: the voices and the catalogue wait until somebody wants them */ }
+                else if (rootsDue && DateTime.UtcNow >= _rootsRetryUtc)
                 {
                     rootsTold = await RegisterOurVoicesAsync(health.Pid).ConfigureAwait(false);
                     if (rootsTold) _rootsToldPid = health.Pid;
                     else _rootsRetryUtc = DateTime.UtcNow + TimeSpan.FromSeconds(30);
                 }
 
-                if (cameUp || engineMoved || rootsTold || DateTime.UtcNow - was.CatalogUtc > TimeSpan.FromSeconds(30))
+                if (!lookOnly && (cameUp || engineMoved || rootsTold || DateTime.UtcNow - was.CatalogUtc > TimeSpan.FromSeconds(30)))
                 {
                     var voices = await ClaudeVoiceClient.VoicesAsync().ConfigureAwait(false);
                     if (voices.Count > 0 || cameUp || engineMoved || rootsTold)
@@ -193,7 +220,7 @@ namespace ImmersiveAI.Voice
             else if (_startingSinceUtc != DateTime.MinValue && DateTime.UtcNow - _startingSinceUtc < TimeSpan.FromMinutes(3))
                 next.State = AppState.Starting;
             else
-                next.State = FindInstall() != null ? AppState.Installed : AppState.NotInstalled;
+                next.State = install != null ? AppState.Installed : AppState.NotInstalled;
 
             // An install the game started, now answering: it was the game that opened it, so the game
             // closes it again on the way out — and the player is told it worked.
@@ -210,7 +237,8 @@ namespace ImmersiveAI.Voice
                                || !ReferenceEquals(was.Voices, next.Voices)
                                || was.Engine != next.Engine
                                || was.Health?.EngineLoaded != next.Health?.EngineLoaded
-                               || !SameSetup(was.Setup, next.Setup);
+                               || !SameSetup(was.Setup, next.Setup)
+                               || (was.Install == null) != (next.Install == null);
             if (shapeChanged || justInstalled)
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -227,6 +255,9 @@ namespace ImmersiveAI.Voice
                     }
                 });
         }
+
+        private static bool SameInstall(Install? a, Install? b)
+            => a != null && b != null && a.Source == b.Source && a.Port == b.Port && VoiceAppLocator.SamePath(a.Root, b.Root);
 
         private static bool SameSetup(SetupProgress? a, SetupProgress? b)
         {
@@ -292,13 +323,24 @@ namespace ImmersiveAI.Voice
         private static string StatusPath => Path.Combine(NotesFolder, "setup-status.json");
         private static string CancelPath => Path.Combine(NotesFolder, "setup-cancel");
 
+        /// <summary>The key claude-voice registers itself under (its docs/discovery.md): InstallDir, Kind,
+        /// Version, Launcher, Port, PortHome. Written by its installer, or by <c>voice_cli register</c>
+        /// in a developer's checkout; the engine refreshes the port on every start.</summary>
+        public const string RegistryKey = @"Software\claude-voice";
+
         public sealed class Install
         {
             public string Root = string.Empty;
-            public string Python = string.Empty;
+            /// <summary>Which source found it: registry, where.json, apps or folder.</summary>
+            public string Source = string.Empty;
+            public string Version = string.Empty;
+            /// <summary>The port the app says it listens on; 0 when nothing said.</summary>
+            public int Port;
+            internal VoiceAppRecord Record = new VoiceAppRecord();
 
-            /// <summary>Somebody's own git checkout: never uninstalled from here.</summary>
-            public bool IsGitCopy => Directory.Exists(Path.Combine(Root, ".git"));
+            /// <summary>Somebody's own copy — registered as "dev", or a git checkout. The game never
+            /// installs into it, rewrites it, or uninstalls it.</summary>
+            public bool IsDevCopy => VoiceAppLocator.IsDevCopy(Record, p => Directory.Exists(p) || File.Exists(p));   // a worktree's .git is a file
 
             /// <summary>Where its setup put the big voice files, when a folder was chosen; else empty.</summary>
             public string DataDir
@@ -316,24 +358,17 @@ namespace ImmersiveAI.Voice
         }
 
         /// <summary>
-        /// Where claude-voice is on this machine, or null. The note first; then the places its
-        /// setup and its README put it, so a copy that has never yet been started by its new version
-        /// (and so has written no note) is still found.
+        /// Where claude-voice is on this machine, or null — in the order of its discovery contract
+        /// (Core <see cref="VoiceAppLocator"/>): its registry key; the where.json every running engine
+        /// leaves; its Settings → Apps entry; then the places its setup and README put it. A registry
+        /// read and one small file — cheap enough for every look, so a copy installed, moved or
+        /// registered while the game runs is found at the next one.
         /// </summary>
         public static Install? FindInstall()
         {
-            try
-            {
-                if (File.Exists(WherePath))
-                {
-                    var doc = JObject.Parse(File.ReadAllText(WherePath));
-                    var root = (string?)doc["root"] ?? string.Empty;
-                    if (IsRoot(root))
-                        return new Install { Root = root, Python = Existing((string?)doc["python"]) };
-                }
-            }
-            catch { /* a torn note is no note */ }
-
+            var registry = ReadRegistry();
+            var where = ReadWhere();
+            var candidates = new List<VoiceAppRecord?> { registry, where, ReadAppsEntry() };
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             foreach (var guess in new[]
             {
@@ -341,14 +376,122 @@ namespace ImmersiveAI.Voice
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "claude-voice"),
                 Path.Combine(home, "claude-voice"),
             })
-                if (IsRoot(guess)) return new Install { Root = guess };
-            return null;
+                candidates.Add(new VoiceAppRecord { Source = "folder", Root = guess });
+
+            var chosen = VoiceAppLocator.Choose(candidates, File.Exists);
+            if (chosen == null) return null;
+
+            // The Python a guessed folder never names: where.json's, when the note is about this copy.
+            if (chosen.Python.Length == 0 && where != null && VoiceAppLocator.SamePath(where.Root, chosen.Root))
+                chosen.Python = where.Python;
+            return new Install
+            {
+                Root = chosen.Root,
+                Source = chosen.Source,
+                Version = chosen.Version,
+                Port = VoiceAppLocator.ChoosePort(chosen, new[] { registry, where }, 0, 0),
+                Record = chosen,
+            };
         }
 
-        private static bool IsRoot(string path)
-            => !string.IsNullOrWhiteSpace(path) && File.Exists(Path.Combine(path, "voice_cli.py"));
+        private static VoiceAppRecord? ReadRegistry()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RegistryKey))
+                {
+                    if (key == null) return null;
+                    return new VoiceAppRecord
+                    {
+                        Source = "registry",
+                        Root = key.GetValue("InstallDir") as string ?? string.Empty,
+                        Kind = key.GetValue("Kind") as string ?? string.Empty,
+                        Launcher = key.GetValue("Launcher") as string ?? string.Empty,
+                        Version = key.GetValue("Version") as string ?? string.Empty,
+                        Port = key.GetValue("Port") is int p ? p : 0,
+                    };
+                }
+            }
+            catch { return null; }
+        }
 
-        private static string Existing(string? path) => !string.IsNullOrWhiteSpace(path) && File.Exists(path) ? path! : string.Empty;
+        private static VoiceAppRecord? ReadWhere()
+        {
+            try
+            {
+                if (!File.Exists(WherePath)) return null;
+                var doc = JObject.Parse(File.ReadAllText(WherePath));
+                // pythonw first: a start with no console. Older notes have only "python".
+                var python = (string?)doc["pythonw"] ?? string.Empty;
+                if (python.Length == 0 || !File.Exists(python)) python = (string?)doc["python"] ?? string.Empty;
+                return new VoiceAppRecord
+                {
+                    Source = "where.json",
+                    Root = (string?)doc["root"] ?? string.Empty,
+                    Python = python,
+                    Version = (string?)doc["version"] ?? string.Empty,
+                    // The port it actually got (since claude-voice moved off a taken 8765); none on a failed start.
+                    Port = doc["error"] != null ? 0 : (int?)doc["port"] ?? 0,
+                };
+            }
+            catch { return null; }      // a torn note is no note
+        }
+
+        /// <summary>Its Settings → Apps entry, which its setup has written for every non-git install.</summary>
+        private static VoiceAppRecord? ReadAppsEntry()
+        {
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\claude-voice"))
+                {
+                    var dir = key?.GetValue("InstallLocation") as string;
+                    return string.IsNullOrWhiteSpace(dir) ? null : new VoiceAppRecord { Source = "apps", Root = dir! };
+                }
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// A Python that Windows knows about (PEP 514: <c>Software\Python\PythonCore\&lt;version&gt;\InstallPath</c>,
+        /// the user's first, the newest version), for a copy found with no interpreter of its own.
+        /// Windowed (pythonw) where there is one. Empty when there is none — and then the game does
+        /// not start anything rather than try bare "python".
+        /// </summary>
+        private static string RegisteredPython()
+        {
+            foreach (var hive in new[] { Microsoft.Win32.Registry.CurrentUser, Microsoft.Win32.Registry.LocalMachine })
+            {
+                try
+                {
+                    using (var core = hive.OpenSubKey(@"Software\Python\PythonCore"))
+                    {
+                        if (core == null) continue;
+                        var versions = core.GetSubKeyNames()
+                            .Select(v => (name: v, ver: Version.TryParse(new string(v.TakeWhile(c => char.IsDigit(c) || c == '.').ToArray()), out var parsed) ? parsed : null))
+                            .Where(v => v.ver != null)
+                            .OrderByDescending(v => v.ver);
+                        foreach (var (name, _) in versions)
+                        {
+                            using (var path = core.OpenSubKey(name + @"\InstallPath"))
+                            {
+                                if (path == null) continue;
+                                var dir = path.GetValue(null) as string ?? string.Empty;
+                                foreach (var exe in new[]
+                                {
+                                    path.GetValue("WindowedExecutablePath") as string,
+                                    dir.Length > 0 ? Path.Combine(dir, "pythonw.exe") : null,
+                                    path.GetValue("ExecutablePath") as string,
+                                    dir.Length > 0 ? Path.Combine(dir, "python.exe") : null,
+                                })
+                                    if (!string.IsNullOrWhiteSpace(exe) && File.Exists(exe)) return exe!;
+                            }
+                        }
+                    }
+                }
+                catch { /* a registry we may not read is a registry with no Python in it */ }
+            }
+            return string.Empty;
+        }
 
         // ------------------------------------------------------------------ doing
 
@@ -358,10 +501,19 @@ namespace ImmersiveAI.Voice
         {
             var install = FindInstall();
             if (install == null) return false;
+            // What its registration says starts it; else the Python its last start ran on; else one
+            // Windows knows about. Never bare "python" — a game's PATH predates any Python installed since.
+            var launch = VoiceAppLocator.LaunchCommand(install.Record, File.Exists)
+                         ?? VoiceAppLocator.LaunchCommand(install.Record, File.Exists, RegisteredPython());
+            if (launch == null)
+            {
+                ModLog.Warn("voice: claude-voice is in " + install.Root + " (found by " + install.Source + "), but no Python is known to start it with. "
+                            + "Running 'voice_cli.py register' there, or starting it once by hand, records one.");
+                return false;
+            }
             try
             {
-                var python = install.Python.Length > 0 ? install.Python : "python";
-                Process.Start(new ProcessStartInfo(python, "\"" + Path.Combine(install.Root, "voice_cli.py") + "\" start")
+                Process.Start(new ProcessStartInfo(launch.Value.Exe, launch.Value.Args)
                 {
                     WorkingDirectory = install.Root,
                     UseShellExecute = false,
@@ -369,8 +521,8 @@ namespace ImmersiveAI.Voice
                 });
                 _startingSinceUtc = DateTime.UtcNow;
                 _weStartedIt = true;
-                _now = new Snapshot { State = AppState.Starting, Voices = _now.Voices, CatalogEngine = _now.CatalogEngine, Setup = _now.Setup };
-                ModLog.Info("voice: starting claude-voice in " + install.Root);
+                _now = new Snapshot { State = AppState.Starting, Install = _now.Install, Voices = _now.Voices, CatalogEngine = _now.CatalogEngine, Setup = _now.Setup };
+                ModLog.Info("voice: starting claude-voice in " + install.Root + " (found by " + install.Source + ") with " + launch.Value.Exe);
                 Poll(force: true);
                 return true;
             }
@@ -422,11 +574,15 @@ namespace ImmersiveAI.Voice
         /// <summary>At the start of a session, with voices on: wake it if it is installed and asleep.</summary>
         public static void WakeIfWanted()
         {
-            if (!VoicesOn || !(Config?.VoiceStartAppWithGame ?? true)) { Poll(force: true); return; }
+            if (!VoicesOn) { Look(); return; }
+            if (!(Config?.VoiceStartAppWithGame ?? true) || _now.State == AppState.Starting) { Poll(force: true); return; }
             Task.Run(async () =>
             {
+                // Found before knocking, so the knock goes to the port it says it has.
+                var install = FindInstall();
+                ClaudeVoiceClient.UsePort(install?.Port ?? 0);
                 if (await ClaudeVoiceClient.HealthAsync().ConfigureAwait(false) != null) { Poll(force: true); return; }
-                if (FindInstall() != null) MainThreadDispatcher.Enqueue(() => Start());
+                if (install != null) MainThreadDispatcher.Enqueue(() => Start());
                 else Poll(force: true);
             });
         }
@@ -497,9 +653,6 @@ namespace ImmersiveAI.Voice
 
         // ------------------------------------------------------------------ installing it
 
-        public const string DefaultSetupUrl =
-            "https://github.com/TraxData313/claude-voice/releases/latest/download/ClaudeVoiceSetup.exe";
-
         private static Process? _setup;
         private static int _fetching;
         private static string _setupLine = string.Empty;
@@ -520,10 +673,12 @@ namespace ImmersiveAI.Voice
         /// Installs the voice app with the engine the player chose, its big files where they chose, and
         /// no window of its own: the page follows it through the status file.
         /// <para>
-        /// The setup program is fetched here, from claude-voice's releases, the moment the player
-        /// asks — the mod carries no executable, which is what got it quarantined on Nexus. Fetched
-        /// by the game rather than a browser, Windows does not stamp it as "from the internet", so no
-        /// SmartScreen stands in the doorway: they already said yes, in the game, one click ago.
+        /// Since claude-voice 2.0 (2026.10.17) there is no setup .exe to fetch: Smart App Control, on by
+        /// default on a clean Windows 11, refuses an unsigned executable outright, and the old one also
+        /// ran PowerShell hidden with its execution policy bypassed. <see cref="ClaudeVoiceInstaller"/>
+        /// does what claude-voice's install.ps1 does — python.org's signed Python, checked against the
+        /// hash claude-voice pins, then claude-voice's installer.py on it. The mod still carries no
+        /// executable (what got it quarantined on Nexus); everything is fetched when the player asks.
         /// </para>
         /// </summary>
         public static void RunSetup(string engine, string dataDir) => LaunchSetup(engine, dataDir, quiet: true);
@@ -534,32 +689,51 @@ namespace ImmersiveAI.Voice
         private static void LaunchSetup(string? engine, string? dataDir, bool quiet)
         {
             if (SetupRunning) return;
+            // A developer's own copy is theirs: its setup, run from here, would reinstall packages into
+            // their Python and rewrite what it records about itself (2026.10.16 — the game's quiet
+            // install found Anton's clone through where.json and did both). Said, not done.
+            var existing = FindInstall();
+            if (existing != null && existing.IsDevCopy)
+            {
+                ModLog.Warn("voice: not running claude-voice's setup — " + existing.Root + " is a developer's copy");
+                var why = "The voice app on this computer is a developer's own copy (" + existing.Root + "), so the game does not install "
+                          + "into it. Add engines with its own setup (setup.ps1 there), then come back — the game finds them by itself.";
+                MainThreadDispatcher.Enqueue(() => Notice(why, new Color(0.93f, 0.55f, 0.45f)));
+                // Asleep, the page shows it as a stopped install; running, the notice is enough.
+                if (!_now.Running) WriteOwnFailure(why);
+                Poll(force: true);
+                return;
+            }
             Interlocked.Exchange(ref _fetching, 1);
             _setupLine = "Getting the installer…";
             _weInstalledIt = true;
             TryDelete(CancelPath);
-            _now = new Snapshot { State = AppState.Installing, Voices = _now.Voices, CatalogEngine = _now.CatalogEngine, Health = _now.Health };
+            // A status file from an earlier run would otherwise stand for this one until the
+            // installer writes its own -- and for good, if it dies before it does.
+            TryDelete(StatusPath);
+            _now = new Snapshot { State = AppState.Installing, Install = _now.Install, Voices = _now.Voices, CatalogEngine = _now.CatalogEngine, Health = _now.Health };
             MainThreadDispatcher.Enqueue(() => Changed?.Invoke());
 
             Task.Run(async () =>
             {
                 try
                 {
-                    var exe = await FetchSetupAsync().ConfigureAwait(false);
-                    var args = "--for \"Immersive AI\"";
-                    if (!string.IsNullOrWhiteSpace(engine)) args += " --engine " + engine;
-                    if (!string.IsNullOrWhiteSpace(dataDir)) args += " --data \"" + dataDir!.TrimEnd('\\') + "\"";
                     var codeFrom = (Config?.ClaudeVoiceSetupSource ?? string.Empty).Trim();
-                    if (codeFrom.Length > 0) args += " --source \"" + codeFrom.TrimEnd('\\') + "\"";
-                    if (quiet) args += " --quiet";
-                    _setup = Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = !quiet, CreateNoWindow = quiet });
-                    ModLog.Info($"voice: claude-voice setup started ({(quiet ? "quiet" : "window")}) with {args}");
+                    _setup = await ClaudeVoiceInstaller.StartAsync(engine, dataDir, quiet, codeFrom, CancelPath,
+                                                                  line => _setupLine = line).ConfigureAwait(false);
+                    ModLog.Info($"voice: claude-voice's installer started ({(quiet ? "quiet" : "window")}), engine {engine}");
+                }
+                catch (OperationCanceledException) when (File.Exists(CancelPath))
+                {
+                    _weInstalledIt = false;
+                    WriteOwnFailure("Stopped before anything was installed.", "cancelled");
                 }
                 catch (Exception ex)
                 {
                     _weInstalledIt = false;
-                    ModLog.Error("voice: fetching claude-voice's setup", ex);
-                    WriteOwnFailure("The installer could not be downloaded — check your internet connection and try again.");
+                    ModLog.Error("voice: getting claude-voice's installer ready", ex);
+                    WriteOwnFailure(ex is InvalidOperationException ? ex.Message
+                        : "The installer could not be downloaded — check your internet connection and try again.");
                 }
                 finally
                 {
@@ -567,20 +741,6 @@ namespace ImmersiveAI.Voice
                     Poll(force: true);
                 }
             });
-        }
-
-        private static async Task<string> FetchSetupAsync()
-        {
-            var source = (Config?.ClaudeVoiceSetupUrl ?? string.Empty).Trim();
-            if (source.Length == 0) source = DefaultSetupUrl;
-
-            var dir = Path.Combine(Path.GetTempPath(), "ImmersiveAI");
-            Directory.CreateDirectory(dir);
-            var exe = Path.Combine(dir, "ClaudeVoiceSetup.exe");
-
-            if (File.Exists(source)) File.Copy(source, exe, true);      // a local build — how it is tested before a release
-            else await DownloadAsync(source, exe).ConfigureAwait(false);
-            return exe;
         }
 
         /// <summary>Asks the running install to stop. It stops between two breaths and loses nothing:
@@ -602,7 +762,7 @@ namespace ImmersiveAI.Voice
             var setup = _now.Setup;
             if (setup == null || setup.IsRunning) return;
             TryDelete(StatusPath);
-            _now = new Snapshot { State = _now.State, Health = _now.Health, Voices = _now.Voices, CatalogEngine = _now.CatalogEngine, CatalogUtc = _now.CatalogUtc };
+            _now = new Snapshot { State = _now.State, Install = _now.Install, Health = _now.Health, Voices = _now.Voices, CatalogEngine = _now.CatalogEngine, CatalogUtc = _now.CatalogUtc };
             Poll(force: true);
             try { Changed?.Invoke(); } catch { }
         }
@@ -656,38 +816,44 @@ namespace ImmersiveAI.Voice
             try { return !Process.GetProcessById(pid).HasExited; } catch { return false; }
         }
 
+        /// <summary>Once the installer we started has exited: its downloaded source goes. If it exited with an
+        /// error without saying so in its status file
+        /// (killed, or it failed before writing one): written for it, so the page shows a failure rather
+        /// than an install that never ends or a stale result.</summary>
+        private static void NoticeDeadSetup()
+        {
+            var p = _setup;
+            if (p == null) return;
+            int code;
+            try
+            {
+                if (!p.HasExited) return;
+                code = p.ExitCode;
+            }
+            catch { return; }
+            _setup = null;
+            ClaudeVoiceInstaller.CleanUp();
+            if (code == 0) return;
+            var status = ReadSetupStatus();
+            if (status != null && !status.IsRunning) return;
+            ModLog.Warn("voice: claude-voice's installer exited with code " + code + " and left no result");
+            WriteOwnFailure("The voice app's installer stopped unexpectedly (exit code " + code + "). The setup log may say why.");
+        }
+
         /// <summary>The game's own failure — the installer never ran — written in the installer's own shape.</summary>
-        private static void WriteOwnFailure(string error)
+        private static void WriteOwnFailure(string error, string state = "failed")
         {
             try
             {
                 Directory.CreateDirectory(NotesFolder);
                 var doc = new JObject
                 {
-                    ["state"] = "failed", ["phase"] = "app", ["headline"] = "The install could not start",
+                    ["state"] = state, ["phase"] = "app", ["headline"] = "The install could not start",
                     ["error"] = error, ["updated"] = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
                 };
                 File.WriteAllText(StatusPath, doc.ToString());
             }
             catch { }
-        }
-
-        private static async Task DownloadAsync(string url, string dest)
-        {
-            using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) })
-            {
-                http.DefaultRequestHeaders.UserAgent.ParseAdd("ImmersiveAI");
-                using (var res = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
-                {
-                    res.EnsureSuccessStatusCode();
-                    var part = dest + ".part";
-                    using (var input = await res.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                    using (var output = File.Create(part))
-                        await input.CopyToAsync(output).ConfigureAwait(false);
-                    if (File.Exists(dest)) File.Delete(dest);
-                    File.Move(part, dest);
-                }
-            }
         }
 
         // ------------------------------------------------------------------ taking it away
@@ -708,20 +874,39 @@ namespace ImmersiveAI.Voice
 
         /// <summary>
         /// Takes claude-voice off the computer: its own uninstaller, the same one Settings → Apps runs,
-        /// told not to ask again (the game already asked). It removes only what its setup put there —
-        /// never a Python or a Studio that was here before — and refuses a developer's git checkout.
+        /// told not to ask again (the game already asked). It removes only what its install put there,
+        /// keeps the player's own settings and voices, and refuses a developer's git checkout.
+        /// <para>
+        /// Only a 2.0 install's — its signed pythonw running installer.py (VoiceAppInstall.UninstallCommand).
+        /// An older install's entry runs PowerShell hidden with its execution policy bypassed, which the
+        /// game no longer starts: Settings → Apps opens instead, and the player removes it there.
+        /// </para>
         /// </summary>
         public static bool Uninstall()
         {
             var install = FindInstall();
-            if (install == null || install.IsGitCopy) return false;
-            var script = Path.Combine(install.Root, "uninstall.ps1");
-            if (!File.Exists(script)) return false;
+            if (install == null || install.IsDevCopy) return false;
+            string? quiet = null;
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\claude-voice"))
+                    quiet = key?.GetValue("QuietUninstallString") as string;
+            }
+            catch { }
+            var programRoot = VoiceAppInstall.ProgramRoot(install.Record, Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), File.Exists);
+            var command = VoiceAppInstall.UninstallCommand(quiet, programRoot, File.Exists);
+            if (command == null)
+            {
+                ModLog.Info("voice: claude-voice in " + install.Root + " is an older install; opening Settings → Apps to remove it");
+                try { Process.Start(new ProcessStartInfo("ms-settings:appsfeatures") { UseShellExecute = true }); } catch { }
+                Notice("This voice app is an older install: remove \"claude-voice\" in the Settings window that just opened.",
+                       new Color(0.93f, 0.55f, 0.45f));
+                return false;
+            }
             try
             {
                 _weStartedIt = false;
-                _uninstall = Process.Start(new ProcessStartInfo("powershell.exe",
-                    $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{script}\" -Yes")
+                _uninstall = Process.Start(new ProcessStartInfo(command.Value.Exe, command.Value.Args)
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,

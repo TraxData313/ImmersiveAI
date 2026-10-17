@@ -1039,14 +1039,13 @@ namespace ImmersiveAI
         /// and only if you changed it there ("port" in its config.json).</summary>
         public int ClaudeVoicePort { get; set; } = 8765;
 
-        /// <summary>Where the voice app's one-click setup is fetched from. Empty = claude-voice's own
-        /// latest release. A path to a local ClaudeVoiceSetup.exe works too, for testing a build.</summary>
+        /// <summary>No longer used (claude-voice 2.0 has no setup .exe; the game runs its installer.py on
+        /// python.org's signed Python). Kept so an older settings file still loads.</summary>
         public string ClaudeVoiceSetupUrl { get; set; } = string.Empty;
 
-        /// <summary>Where that setup takes claude-voice's own code from. Empty = the release the setup
-        /// belongs to, which is what every player gets. A folder holding a copy of claude-voice works
-        /// too: beside a local setup above, that is a whole release tried through the game before it
-        /// goes out.</summary>
+        /// <summary>Where the install takes claude-voice's own code from. Empty = GitHub's main, which is
+        /// what every player gets. A folder holding a copy of claude-voice works too: that is a whole
+        /// release tried through the game before it goes out.</summary>
         public string ClaudeVoiceSetupSource { get; set; } = string.Empty;
 
         /// <summary>The once-per-install nudge that the voices exist at all has been shown. Voices

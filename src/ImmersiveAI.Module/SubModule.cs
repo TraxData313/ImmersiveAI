@@ -10,6 +10,7 @@ namespace ImmersiveAI
     public class SubModule : MBSubModuleBase
     {
         private bool _announced;
+        private static bool _voiceWasOn;
 
         // One config for the whole process: loaded once, shared by the behavior, the on-map controls,
         // and the MCM menu, so a change made in any of them is seen by all the others.
@@ -50,9 +51,13 @@ namespace ImmersiveAI
                 UsageLedger.Configure(config);
                 // The voices. They are spoken by claude-voice, a separate app; with voices on, the
                 // game wakes it if it is installed and asleep (VoiceStartAppWithGame), and says in
-                // one line whether it is there. With voices off it is never looked for at all.
+                // one line whether it is there. With voices off it is still LOOKED for, once and off
+                // the game thread — found or not, on which port — and nothing more: no start, no
+                // voices told. So the page knows from its first frame, and turning voices on later
+                // needs no restart.
                 Voice.VoiceService.Configure(config);
-                if (config.EnableVoice) Voice.ClaudeVoiceApp.WakeIfWanted();
+                Voice.ClaudeVoiceApp.WakeIfWanted();
+                _voiceWasOn = config.EnableVoice;
                 // A quiet "are you there?" to the LLM the moment a game is entered, so a missing key,
                 // a wrong key, or a dead connection surfaces as plain guidance now — not as mute NPCs
                 // discovered mid-conversation. Runs once per process, off-thread. On a keyless fresh
@@ -136,8 +141,13 @@ namespace ImmersiveAI
             UI.Socialness.SocialnessManager.Tick();
             // Keeps an eye on the voice app while voices are on, so its coming and going is told
             // once, plainly. A look is a few-millisecond HTTP call off the game thread, at most
-            // every few seconds; with voices off it never looks at all.
-            if (Config?.EnableVoice == true) Voice.ClaudeVoiceApp.Poll();
+            // every few seconds; with voices off it does not keep looking. Voices turned on from
+            // anywhere (MCM included) wake it as a campaign start would — the talk screen's own
+            // switch has already begun the start, and WakeIfWanted sees that and only looks.
+            var voiceOn = Config?.EnableVoice == true;
+            if (voiceOn && !_voiceWasOn && Campaign.Current != null) Voice.ClaudeVoiceApp.WakeIfWanted();
+            _voiceWasOn = voiceOn;
+            if (voiceOn) Voice.ClaudeVoiceApp.Poll();
             // The inventory screen coming up: the moment a soul's gear is about to change, and the
             // only place to stand to find out what it was before.
             TickInventoryWatch();
