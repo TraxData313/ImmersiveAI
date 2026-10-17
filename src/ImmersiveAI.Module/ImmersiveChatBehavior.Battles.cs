@@ -224,6 +224,9 @@ namespace ImmersiveAI
                     IsPlayer = hero == Hero.MainHero,
                     Downs = noTally ? -1 : downs,
                     State = ParticipantStateOf(hero),
+                    // Held back by Keep Out of Battle: in the party (so in the rosters read above) but
+                    // never on the field — they watched the day, and their beat says so.
+                    KeptOut = hero != Hero.MainHero && Battles.KeepOutOfBattleBridge.WasKeptOut(e, hero.StringId),
                 });
             }
 

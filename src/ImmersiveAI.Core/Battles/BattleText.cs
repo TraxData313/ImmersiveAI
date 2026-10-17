@@ -261,7 +261,11 @@ namespace ImmersiveAI.Core.Battles
 
             // My own hand, honestly — and the player's beside it, spoken only when it did something,
             // so silence never shames anyone.
-            if (me != null)
+            if (me != null && me.KeptOut && !me.IsPlayer)
+            {
+                sb.Append($" I was kept back from the fighting at {playerName}'s word and watched it {(r.Kind == BattleRecord.Kinds.Sea ? "from a ship held out of the fray" : "from behind the lines")}.");
+            }
+            else if (me != null)
             {
                 if (me.Downs > 0) sb.Append($" By my own hand I struck down {me.Downs}.");
                 else if (me.Downs == 0) sb.Append(" None fell to my own hand that day — my part lay elsewhere.");
@@ -282,7 +286,8 @@ namespace ImmersiveAI.Core.Battles
                     case BattleParticipant.States.Fell:
                         sb.Append(" I was carried from the field, and my part in such days is ended."); break;
                     default:
-                        sb.Append(" I came through unhurt."); break;
+                        if (!me.KeptOut) sb.Append(" I came through unhurt.");
+                        break;
                 }
             }
 
@@ -370,6 +375,10 @@ namespace ImmersiveAI.Core.Battles
             var fell = r.Participants.Where(p => p != null && p.State == BattleParticipant.States.Fell).Select(p => p.Name).ToList();
             if (fell.Count > 0)
                 sb.Append((sb.Length > 0 ? " " : "") + JoinNames(fell) + $" fell that day.");
+
+            var keptOut = r.Participants.Where(p => p != null && p.KeptOut && !p.IsPlayer).Select(p => p.Name).ToList();
+            if (keptOut.Count > 0)
+                sb.Append((sb.Length > 0 ? " " : "") + JoinNames(keptOut) + $" {(keptOut.Count == 1 ? "was" : "were")} kept back from the fighting.");
 
             var captured = r.Participants.Where(p => p != null && p.State == BattleParticipant.States.Captured).Select(p => p.Name).ToList();
             if (captured.Count > 0)

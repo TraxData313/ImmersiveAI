@@ -157,6 +157,11 @@ namespace ImmersiveAI.Core.Battles
         /// <summary>How they came out of it — one of the <see cref="States"/> constants.</summary>
         public string State { get; set; } = States.Hale;
 
+        /// <summary>Rode with us but was held back from the fighting at the player's word (the Keep Out
+        /// of Battle mod) — a surgeon, a steward, a spouse who is no fighter. They saw the day without
+        /// striking a blow; their fate is still in <see cref="State"/> (a lost field takes them too).</summary>
+        public bool KeptOut { get; set; }
+
         public static class States
         {
             public const string Hale = "hale";

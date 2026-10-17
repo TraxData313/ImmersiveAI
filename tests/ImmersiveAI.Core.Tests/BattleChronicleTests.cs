@@ -124,6 +124,41 @@ public class BattleChronicleTests
     }
 
     [Fact]
+    public void BeatLine_KeptOutHeroWatchedRatherThanFought()
+    {
+        var r = Ortysia();
+        r.Title = BattleText.ForgeTitle(r);
+        r.Participants.Add(new BattleParticipant { HeroId = "spouse_1", Name = "Liena", Downs = 0, KeptOut = true, State = BattleParticipant.States.Hale });
+        var me = r.ParticipantById("spouse_1")!;
+
+        var beat = BattleText.BeatLine(r, me, "Vulgrim");
+        Assert.True(BattleText.IsBattleBeat(beat));
+        Assert.Contains("I was kept back from the fighting at Vulgrim's word and watched it from behind the lines", beat);
+        Assert.DoesNotContain("None fell to my own hand", beat);
+        Assert.DoesNotContain("came through unhurt", beat);
+        Assert.Contains("Vulgrim felled 11", beat);
+
+        r.Kind = BattleRecord.Kinds.Sea;
+        Assert.Contains("from a ship held out of the fray", BattleText.BeatLine(r, me, "Vulgrim"));
+
+        // A lost field still takes them: the fate is told, the fighting is not.
+        r.Outcome = BattleRecord.Outcomes.Defeat;
+        me.State = BattleParticipant.States.Captured;
+        Assert.Contains("a captive", BattleText.BeatLine(r, me, "Vulgrim"));
+    }
+
+    [Fact]
+    public void FullAccount_NamesWhoWasKeptBack()
+    {
+        var r = Ortysia();
+        r.Title = BattleText.ForgeTitle(r);
+        Assert.DoesNotContain("kept back", BattleText.FullAccount(r));
+
+        r.Participants.Add(new BattleParticipant { HeroId = "spouse_1", Name = "Liena", KeptOut = true });
+        Assert.Contains("Liena was kept back from the fighting.", BattleText.FullAccount(r));
+    }
+
+    [Fact]
     public void FullAccount_TellsTheWholeDayCompactly()
     {
         var r = Ortysia();
