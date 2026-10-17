@@ -153,6 +153,16 @@ namespace ImmersiveAI
             return byFolder.Values.ToList();
         }
 
+        /// <summary>How much the player and this soul have lived together (lifetime turns, the same
+        /// count the bond line calls "spoke N times"), read from the cached index — 0 when unknown.</summary>
+        internal static int TalkRichness(Hero? hero)
+        {
+            var self = Current;
+            if (self == null || hero == null) return 0;
+            try { return MemoryIndex.Get(NpcPaths.MemoryFile(hero), self._memoryStore)?.Richness ?? 0; }
+            catch { return 0; }
+        }
+
         /// <summary>A soul's memory folder, healed for identity first — empty when it cannot be
         /// resolved at all (then they simply do not join the list).</summary>
         private static string FolderOf(Hero hero)

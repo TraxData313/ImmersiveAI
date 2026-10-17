@@ -25,7 +25,7 @@ namespace ImmersiveAI.UI.ChatWindow
         public ChatMessageVM(string header, string body, bool isNarration, Color headerColor)
         {
             _header = header ?? string.Empty;
-            _body = HighlightVoiceCues(body ?? string.Empty);
+            _body = HighlightVoiceCues(ImmersiveAI.Core.Text.EscapedBreaks.Heal(body));
             _isNarration = isNarration;
             _headerColor = headerColor;
         }

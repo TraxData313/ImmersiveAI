@@ -236,8 +236,24 @@ namespace ImmersiveAI.UI.TalkScreen
                 circle = circle.Where(i => i.Hero != null && hearth.Contains(i.Hero.StringId));
             }
 
-            foreach (var info in circle
-                         .OrderByDescending(i => ImmersiveChatBehavior.HearthRank(i.Hero))
+            // THE CLOSEST BOND COMES NEXT (Anton, 2026.10.16: "when I pop up the window I want to see
+            // my beautiful Safiya, not the grumpy Gunteric"). Under the wife (and any lover), the ONE
+            // living soul the player has lived the most with is pinned above the rest — the old
+            // tie-break was the freshest entry, and a scout's road diary is always fresher than the
+            // talk that matters. Only one is pinned; the rest keep the old order.
+            var listed = circle.ToList();
+            var closest = listed
+                .Where(i => !i.IsGone && i.Hero != null && ImmersiveChatBehavior.HearthRank(i.Hero) < 2)
+                .Select(i => (Info: i, Richness: ImmersiveChatBehavior.TalkRichness(i.Hero)))
+                .Where(x => x.Richness > 0)
+                .OrderByDescending(x => x.Richness)
+                .Select(x => x.Info)
+                .FirstOrDefault();
+
+            foreach (var info in listed
+                         .OrderByDescending(i => ImmersiveChatBehavior.HearthRank(i.Hero) >= 2
+                                                     ? ImmersiveChatBehavior.HearthRank(i.Hero)
+                                                     : ReferenceEquals(i, closest) ? 1.5 : ImmersiveChatBehavior.HearthRank(i.Hero))
                          .ThenByDescending(i => i.IsHere)
                          .ThenByDescending(i => !i.IsGone)
                          .ThenByDescending(i => i.HasHistory || i.HasLetters)
@@ -1593,6 +1609,9 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             var app = Voice.ClaudeVoiceApp.Now;
             if (Voice.ClaudeVoiceApp.Uninstalling) return VoicePageKind.Removing;
+            // A stranger on the port wins over everything but the running app: no install or engine
+            // choice can fix it, and offering one installed a second copy (2026.10.15).
+            if (app.PortTaken && app.State != Voice.ClaudeVoiceApp.AppState.Installing) return VoicePageKind.Asleep;
             if (_forceChoose && (app.State == Voice.ClaudeVoiceApp.AppState.Installed || app.State == Voice.ClaudeVoiceApp.AppState.NotInstalled
                                  || (app.State == Voice.ClaudeVoiceApp.AppState.Starting && AppCannotLoad(app))))
                 return VoicePageKind.Choose;
@@ -1684,7 +1703,8 @@ namespace ImmersiveAI.UI.TalkScreen
                     SetChip(pct.HasValue ? $"Installing · {Math.Round(pct.Value * 100)}%" : "Installing", VoicePalette.Busy);
                     break;
                 case VoicePageKind.Failed: SetChip(app.Setup?.IsCancelled == true ? "Install stopped" : "Install didn't finish", VoicePalette.Bad); break;
-                case VoicePageKind.Asleep: SetChip("Installed · not running", VoicePalette.Bad); break;
+                case VoicePageKind.Asleep:
+                    SetChip(app.PortTaken ? "Port in use by another program" : "Installed · not running", VoicePalette.Bad); break;
                 case VoicePageKind.Waking: SetChip("Waking up…", VoicePalette.Busy); break;
                 case VoicePageKind.Removing: SetChip("Removing…", VoicePalette.Busy); break;
                 case VoicePageKind.Cast:
@@ -2129,6 +2149,17 @@ namespace ImmersiveAI.UI.TalkScreen
                     _voiceAsleepTitle = "Looking for the voice app…";
                     _voiceAsleepText = string.Empty;
                     _showVoiceStart = false;
+                    break;
+                case VoicePageKind.Asleep when app.PortTaken:
+                    var port = Voice.ClaudeVoiceClient.CurrentPort;
+                    _voiceAsleepTitle = "Another program is using the voice app's port";
+                    _voiceAsleepText = $"Something on this computer already answers on port {port}, where the voice app listens — "
+                                     + "so the voice app cannot start, and installing it again would not help.\n\n"
+                                     + "Close that program and press \"Look again\". Or move the voice app to a free port: "
+                                     + $"set \"port\" in claude-voice's config.json and \"ClaudeVoicePort\" in this mod's config.json to the same number.";
+                    _voiceStartText = "Look again";
+                    _canStartVoice = true;
+                    _showVoiceStart = true;
                     break;
                 default:
                     _voiceAsleepTitle = "The voice app isn't running";

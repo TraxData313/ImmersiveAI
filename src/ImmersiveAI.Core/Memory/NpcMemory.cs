@@ -431,6 +431,8 @@ namespace ImmersiveAI.Core.Memory
                 if (turn == null || string.IsNullOrEmpty(turn.NpcLine)) continue;
                 if (Llm.ClaudeCliShape.TryUnwrapSpokenEnvelope(turn.NpcLine, out var reply))
                     turn.NpcLine = reply;
+                // And line breaks a model escaped twice (2026.10.15) — recorded before the parsers healed them.
+                turn.NpcLine = Text.EscapedBreaks.Heal(turn.NpcLine);
             }
         }
 

@@ -291,7 +291,8 @@ namespace ImmersiveAI.Core.Llm
             {
                 var obj = JObject.Parse(text);
                 if (obj["reply"] == null) return null;   // some other JSON is not our envelope
-                var reply = (string?)obj["reply"] ?? string.Empty;
+                // A model may escape its line breaks twice inside the JSON string (2026.10.15).
+                var reply = Text.EscapedBreaks.Heal((string?)obj["reply"] ?? string.Empty);
                 var calls = new List<ToolCall>();
                 if (obj["tool_calls"] is JArray arr)
                 {

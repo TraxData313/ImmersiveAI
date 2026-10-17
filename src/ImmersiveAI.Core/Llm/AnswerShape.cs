@@ -122,7 +122,7 @@ namespace ImmersiveAI.Core.Llm
                 var args = ParseArgs(call.ArgumentsJson);
                 var spoken = args != null ? Str(args[WordsParameter]) : Salvage(call.ArgumentsJson, WordsParameter);
                 var voice = args != null ? Str(args[VoiceParameter]) : Salvage(call.ArgumentsJson, VoiceParameter);
-                if (!string.IsNullOrWhiteSpace(spoken)) words = WithVoice(spoken!, voice);
+                if (!string.IsNullOrWhiteSpace(spoken)) words = WithVoice(Text.EscapedBreaks.Heal(spoken), voice);
 
                 var fromThisCall = new List<ToolCall>();
                 foreach (var f in fields)

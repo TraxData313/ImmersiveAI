@@ -51,6 +51,8 @@ namespace ImmersiveAI.Voice
             public DateTime CatalogUtc = DateTime.MinValue;
             /// <summary>The last install's own account of itself — running, done, failed, cancelled — or null.</summary>
             public SetupProgress? Setup;
+            /// <summary>Something that is not claude-voice answers on its port, so it cannot start.</summary>
+            public bool PortTaken;
             /// <summary>Where it was found, and by which source — null when it is not on this computer.</summary>
             public Install? Install;
 
@@ -170,7 +172,10 @@ namespace ImmersiveAI.Voice
                 CatalogEngine = was.CatalogEngine,
                 CatalogUtc = was.CatalogUtc,
                 Setup = setup,
+                PortTaken = health == null && ClaudeVoiceClient.PortHeldByOther,
             };
+            if (next.PortTaken && !was.PortTaken)
+                ModLog.Warn("voice: port " + ClaudeVoiceClient.CurrentPort + " answers, but not as claude-voice — another program holds it");
 
             // A quiet install still running from an earlier session was a game's too: follow it as ours.
             if (installing && setup != null && setup.IsRunning && setup.Quiet) _weInstalledIt = true;
@@ -217,7 +222,7 @@ namespace ImmersiveAI.Voice
                 }
                 if (engineMoved || cameUp) _storage = null;
             }
-            else if (_startingSinceUtc != DateTime.MinValue && DateTime.UtcNow - _startingSinceUtc < TimeSpan.FromMinutes(3))
+            else if (!next.PortTaken && _startingSinceUtc != DateTime.MinValue && DateTime.UtcNow - _startingSinceUtc < TimeSpan.FromMinutes(3))
                 next.State = AppState.Starting;
             else
                 next.State = install != null ? AppState.Installed : AppState.NotInstalled;
@@ -281,6 +286,13 @@ namespace ImmersiveAI.Voice
             }
 
             if (!VoicesOn) return;
+
+            if (now.PortTaken && !was.PortTaken)
+            {
+                Notice($"Another program is using the voice app's port ({ClaudeVoiceClient.CurrentPort}), so the voices cannot start. "
+                       + "Close that program, or give claude-voice and the game another port.", new Color(0.93f, 0.55f, 0.45f));
+                return;
+            }
 
             if (now.Running && !_toldRunning)
             {
@@ -501,6 +513,8 @@ namespace ImmersiveAI.Voice
         {
             var install = FindInstall();
             if (install == null) return false;
+            // A stranger on the port: a second start would only fail to bind. Look again instead.
+            if (_now.PortTaken) { Poll(force: true); return true; }
             // What its registration says starts it; else the Python its last start ran on; else one
             // Windows knows about. Never bare "python" — a game's PATH predates any Python installed since.
             var launch = VoiceAppLocator.LaunchCommand(install.Record, File.Exists)
@@ -582,7 +596,7 @@ namespace ImmersiveAI.Voice
                 var install = FindInstall();
                 ClaudeVoiceClient.UsePort(install?.Port ?? 0);
                 if (await ClaudeVoiceClient.HealthAsync().ConfigureAwait(false) != null) { Poll(force: true); return; }
-                if (install != null) MainThreadDispatcher.Enqueue(() => Start());
+                if (install != null && !ClaudeVoiceClient.PortHeldByOther) MainThreadDispatcher.Enqueue(() => Start());
                 else Poll(force: true);
             });
         }

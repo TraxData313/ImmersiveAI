@@ -42,6 +42,11 @@ namespace ImmersiveAI.Voice
 
         public static int CurrentPort => Port;
 
+        /// <summary>The last /health was answered, but not by claude-voice — some other program holds
+        /// the port (2026.10.15: a FaceLab dev server on 8765). Starting or installing cannot help then:
+        /// the app would only fail to bind, and the page used to offer a fresh install instead.</summary>
+        public static bool PortHeldByOther { get; private set; }
+
         private static int _reportedPort;
 
         /// <summary>The port claude-voice says it listens on (its registry key or where.json), from each
@@ -114,7 +119,9 @@ namespace ImmersiveAI.Voice
         public static async Task<Health?> HealthAsync()
         {
             var (health, status) = await PostAsync("/health", null, TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-            if (health == null || status != 200) return null;
+            var ours = health != null && status == 200 && health["ready"] != null;
+            PortHeldByOther = status != 0 && !ours;
+            if (!ours) return null;
 
             var h = new Health
             {

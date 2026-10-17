@@ -15,8 +15,14 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+### New
+
+- With the Keep Out of Battle mod, companions you keep out of a fight remember watching it, not fighting it.
+
 ### Fixes
 
+- Replies no longer show a stray `\n` where a paragraph break belongs; old replies that caught it are mended too.
+- The talk screen now opens on your wife, or else on the person you've talked with the most.
 - The voice app is found wherever it was installed, even with voices off, and on whichever port it chose.
 - Installing the voice app from the game works with Windows' Smart App Control on, and no longer runs hidden scripts.
 - Your wedding story (and a child's) now reaches your spouse's memory as soon as it's written, not after their next reply.
