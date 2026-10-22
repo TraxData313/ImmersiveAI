@@ -445,10 +445,16 @@ namespace ImmersiveAI.UI.TalkScreen
             _spawn = _scene.FindEntityWithTag("opponent_infantry_spawn")
                      ?? throw new InvalidOperationException("the deck has no place for them to stand");
 
-            if (_cameraEntity == null || _baseCameraFov < 0f)
+            // Vanilla's own choice (ConversationMissionLogic.GetNavalConversationCameraTag): one of
+            // the player's own company stands on the SAME deck; anyone else is hailed across from
+            // another ship. "level" for everyone was the wrong ship for a wife at your side
+            // (2026.10.22, Anton's vanilla screenshot beside ours).
+            var eyeTag = SameShip(data.Hero) ? "custom_camera_same_ship" : "custom_camera_level";
+            if (_cameraEntity == null || _baseCameraFov < 0f || _cameraTag != eyeTag)
             {
-                _cameraEntity = _scene.FindEntityWithTag("custom_camera_level")
-                                ?? _scene.FindEntityWithTag("custom_camera_same_ship")
+                _cameraTag = eyeTag;
+                _cameraEntity = _scene.FindEntityWithTag(eyeTag)
+                                ?? _scene.FindEntityWithTag("custom_camera_level")
                                 ?? throw new InvalidOperationException("the deck has no eye to look through");
                 _camera = Camera.CreateCamera();
                 var dof = default(Vec3);
@@ -468,6 +474,18 @@ namespace ImmersiveAI.UI.TalkScreen
             View?.SetPostfxConfigParams(unchecked((int)(uint.MaxValue & 0xFFFFFBFFu)));
             View?.SetEnable(true);
             _initialized = true;
+        }
+
+        private string? _cameraTag;
+
+        private static bool SameShip(Hero hero)
+        {
+            try
+            {
+                var party = hero.PartyBelongedTo;
+                return party == null || party == MobileParty.MainParty;
+            }
+            catch { return true; }
         }
 
         // Vanilla's SpawnOpponentLeader, battle kit (a deck is not a town street) and no banner held.
