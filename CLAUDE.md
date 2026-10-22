@@ -79,9 +79,11 @@ You usually only need to open:
   a hidden TextureWidget is never ticked, yet the re-enabled view drew water nobody ticked. Then
   DESTROYING the view on SetData(null) crashed too. The dump showed the next touch of the scene
   (`SetGlobalWindVelocity` in SetTheWeather) dying on corrupted memory: a water scene does not survive
-  losing the view that drew it. RULE NOW: one SceneView for the deck's life, born disabled, switched
-  OFF while nobody stands on it, and switched ON only from OnTick, where the scene is ticked too.
-  Never destroy it while keeping the scene. The land tableau has NO sea (its
+  losing the view that drew it. Keeping BOTH, the view merely switched off, crashed again at the
+  first address. RULE NOW, the game's own cutscene lifecycle: scene + view + texture live and die AS
+  ONE. Everything is let go (`LetTheDeckGo`) when nobody stands on the deck or the screen closes, and
+  the deck is read fresh for the next soul, just like a first open. The view is born disabled and
+  switched on only from OnTick. (This replaces the old "read once, kept for the campaign".) The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

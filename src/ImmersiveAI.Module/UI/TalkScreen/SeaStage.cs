@@ -47,9 +47,11 @@ namespace ImmersiveAI.UI.TalkScreen
     /// A native crash is remembered by <see cref="CrashGuard"/>, so the same build never repeats it.
     /// </para>
     /// <para>
-    /// The scene is read ONCE and kept for the campaign, exactly as vanilla keeps its own: reading
-    /// and freeing a scene under a texture the engine may still be drawing that frame is the kind of
-    /// teardown that ends in a native crash. It is let go at <c>OnGameEnd</c>.
+    /// The scene and the view that draws it live and die TOGETHER (2026.10.22, after three crashes
+    /// on the way back from an away soul): read when someone first stands on the deck, let go whole
+    /// when nobody does or the screen closes, the way the game's cutscenes keep theirs. Keeping a water
+    /// scene past its view, or a view parked off, both crashed natively. It is also let go at
+    /// <c>OnGameEnd</c>.
     /// </para>
     /// </summary>
     internal sealed class SeaStageData
@@ -357,17 +359,31 @@ namespace ImmersiveAI.UI.TalkScreen
             if (_data != null) DropVisual();
             _data = data as SeaStageData;
             // Nobody on the deck (an away soul is drawn on the LAND stage and this widget hides): the
-            // view is switched OFF and kept. Two wrong turns, both 2026.10.22, both crashes:
-            // switching it back on from here drew water nobody ticked (a hidden widget is never
-            // ticked); and DESTROYING it left the deck's water renderer broken — the next touch of
-            // the scene, setting the wind, died on corrupted memory. A water scene keeps the view
-            // that drew it for as long as the scene lives; only OnTick switches it back on.
-            if (_data == null && _view != null)
+            // WHOLE deck goes — view, texture and scene together — and the next soul at sea gets one
+            // read fresh, exactly as on a first open (which never failed). Three wrong turns, all
+            // 2026.10.22, all crashes on the way back: switching the kept view on from here (water
+            // drawn unticked), destroying the view but keeping the scene (the next wind setting died
+            // on corrupted memory), and keeping both, merely switched off (the same native address
+            // as the first). The game's own cutscenes keep this rule: scene and view live and die as
+            // one (GauntletSceneNotification).
+            if (_data == null && (_view != null || _scene != null))
             {
-                SeaStage.Step("nobody on the deck — the view rests");
-                SeaStage.WaitForTheWater(_scene);
-                _view.SetEnable(false);
+                SeaStage.Step("nobody on the deck — the deck is let go whole");
+                LetTheDeckGo();
             }
+        }
+
+        private void LetTheDeckGo()
+        {
+            DropTexture(now: true);
+            _camera?.ReleaseCameraEntity();
+            _camera = null;
+            _cameraEntity = null;
+            _cameraTag = null;
+            _baseCameraFov = -1f;
+            _spawn = null;
+            _scene = null;
+            SeaStage.ReleaseScene();
         }
 
         internal void SetTargetSize(int width, int height)
@@ -472,13 +488,12 @@ namespace ImmersiveAI.UI.TalkScreen
             // Closed cleanly before the frame count was reached: the deck still did not kill us.
             if (_initialized) CrashGuard.Survived();
             SeaStage.WaitForTheWater(_scene);
-            _camera?.ReleaseCameraEntity();
-            _camera = null;
-            _visual?.ResetNextFrame();
+            // At once, not next frame: the scene goes with it (see SetData — scene and view live
+            // and die as one, so the next open reads a fresh deck).
+            _visual?.Reset();
             _visual = null;
-            DropTexture(now: true);
-            // The scene itself stays: it is the campaign's, not this widget's (see SeaStage).
-            _scene = null;
+            _soulOnDeck = false;
+            LetTheDeckGo();
             _initialized = false;
         }
 
