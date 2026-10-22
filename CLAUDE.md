@@ -50,7 +50,12 @@ You usually only need to open:
   read, logs every engine step to log.txt BEFORE taking it ("sea stage: …" — the last line names
   the call that died) and logs any managed first-chance exception during the read (a deck script
   throwing inside native code). If the theory holds and waiting is not enough, the next shape is
-  to read the deck while the map is NOT drawing — e.g. at campaign load, before the map screen. The land tableau has NO sea (its
+  to read the deck while the map is NOT drawing — e.g. at campaign load, before the map screen.
+  **CUT 4 LIVE (2026.10.22): THE READ HELD** — "the deck is raised" logged and the deck was DRAWN on
+  screen. It crashed ~18 s later, never having said "the view is ready": a TableauView never reports
+  `ReadyToRender`, so the soul was never placed and the water was drawn, never ticked. Cut 5 waits at
+  most 10 frames for readiness, then places and ticks every frame anyway — vanilla's own
+  MapConversationTableau never asks, it places at once. The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

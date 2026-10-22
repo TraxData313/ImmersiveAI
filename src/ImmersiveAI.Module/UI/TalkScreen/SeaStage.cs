@@ -362,8 +362,16 @@ namespace ImmersiveAI.UI.TalkScreen
                 // it, and from there wait-then-tick every frame.
                 if (!_soulOnDeck)
                 {
-                    if (view == null || !view.ReadyToRender() || !view.CheckSceneReadyToRender()) return;
-                    SeaStage.Step("the view is ready — placing them on the deck");
+                    // A TABLEAU never reports ready (2026.10.22, cut 4's first live run: the deck was
+                    // read and DRAWN, the readiness never came, and ~18 s of drawing water nobody
+                    // ticked crashed the game). The port screen asks it of a full-screen SceneView;
+                    // vanilla's own conversation tableau never asks at all — it places at once and
+                    // ticks. So wait a few frames for it, then go on regardless.
+                    bool ready = view != null && view.ReadyToRender() && view.CheckSceneReadyToRender();
+                    if (!ready && ++_framesWaited < FramesToWaitForReady) return;
+                    SeaStage.Step(ready
+                        ? "the view is ready — placing them on the deck"
+                        : "the view never said ready after " + _framesWaited + " frames — placing them on the deck anyway");
                     SeaStage.WaitForTheWater(_scene);
                     SpawnSoul(_data!.Hero.CharacterObject, _spawn!);
                     _soulOnDeck = true;
@@ -382,6 +390,10 @@ namespace ImmersiveAI.UI.TalkScreen
 
         private bool _soulOnDeck;
         private GameEntity? _spawn;
+
+        // The port screen's own count of frames after its view is ready (_framesToWaitAfterInit).
+        private const int FramesToWaitForReady = 10;
+        private int _framesWaited;
 
         // About two seconds of the deck drawn and ticked: past the raising, past the first renders.
         private const int FramesUntilTrusted = 120;
@@ -427,6 +439,7 @@ namespace ImmersiveAI.UI.TalkScreen
             else SeaStage.WaitForTheWater(_scene);
             SeaStage.SetTheWeather(_scene);
             _framesDrawn = 0;
+            _framesWaited = 0;
             _soulOnDeck = false;
 
             _spawn = _scene.FindEntityWithTag("opponent_infantry_spawn")
