@@ -35,9 +35,33 @@ namespace ImmersiveAI.Core.Prompts
             // be woven in here: the history above already carries the whole of it.
             var carried = AppendRememberedTurns(messages, memory, voice, VoiceKeysThatRide(persona));
 
-            messages.Add(ChatMessage.User(carried + playerInput));
+            messages.Add(ChatMessage.User(carried + playerInput + LookItUpNudge(persona, playerInput)));
             return messages;
         }
+
+        /// <summary>
+        /// Asked plainly to research or look a thing up, she reaches (2026.10.22, Safiya: told twice
+        /// to research "Over Fleet Size", she "closed her eyes and turned it over" and answered from
+        /// a guess — the hand's own description saying otherwise was not enough on sonnet). Code
+        /// decides WHEN; the words are her own thought, last before she answers, where they weigh
+        /// most. Never names a hand: "check the men" wants recall_company, not the search.
+        /// </summary>
+        internal static string LookItUpNudge(NpcPersona persona, string playerInput) =>
+            (persona.CanSeekWisdom || persona.CanRecallWorld) && AsksToLookUp(playerInput)
+                ? "\n\n" + InnerFrame(LookItUpThought)
+                : string.Empty;
+
+        public const string LookItUpThought =
+            "they ask me to look into it, so I reach and look before I answer — turning it over in my own head is not looking.";
+
+        private static readonly System.Text.RegularExpressions.Regex LookUpAsk = new System.Text.RegularExpressions.Regex(
+            @"\b(research|google|look\s+(it|that|this|them)?\s*up|look\s+into|search|find\s+out|check)\w*"
+            + @"|(провер|проуч|потърс|гугъл|намери\s+(ми\s+)?(инфо|информация))",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        /// <summary>The player's line plainly asks her to research, look up, check or find out.</summary>
+        public static bool AsksToLookUp(string? playerInput) =>
+            !string.IsNullOrWhiteSpace(playerInput) && LookUpAsk.IsMatch(playerInput);
 
         private static string Voice(string? voiceName) =>
             string.IsNullOrWhiteSpace(voiceName) ? "Angel" : voiceName!.Trim();

@@ -40,7 +40,9 @@ namespace ImmersiveAI.Probe
         public static readonly string Runtime = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "Mount and Blade II Bannerlord", "Configs", "ImmersiveAI");
-        public static readonly string Campaign = Path.Combine(Runtime, "NPCs", "campaign_93b4c442_Eren");
+        public static string Campaign = Path.Combine(Runtime, "NPCs", "campaign_93b4c442_Eren");
+        // The 2026-10-22 research case lives in the newer campaign folder.
+        private static readonly string Legacy = Path.Combine(Runtime, "NPCs", "campaign_legacy");
 
         public static JObject Config()
         {
@@ -320,6 +322,34 @@ namespace ImmersiveAI.Probe
                         Persona = persona, Memory = mem, Scene = scene,
                         Id = id, Npc = "Rhagaea", Flow = "letter", Messages = msgs, Tools = RhagaeaTools(), GameGivesTally = false,
                         Recorded = "(new spontaneous letter — compare with the 09-30 08:00 compose: \"Renaud has become family in truth, not merely by oath…\")",
+                    };
+                }
+                case "safiya_research":
+                {
+                    // 2026-10-22: asked to research "Over Fleet Size", she reached for nothing and
+                    // played at a failing memory instead. Her own folder, the moment before the ask.
+                    Campaign = Legacy;
+                    var mem = LoadMemory("CharacterObject_1854_Safiya", "CharacterObject_1854", "2026-10-22T06:15:23Z", workDir);
+                    var persona = BasePersona(cfg, "Safiya the Spicevendor");
+                    // APPROXIMATED (Module-built from live game state): role, traits, crafts, kin.
+                    persona.RoleDescription = "A commoner of the Aserai, a spice-seller turned quartermaster of her husband's warband — a woman in her twenties.";
+                    persona.PersonalityDescription = "Shrewd, warm, quick-tongued.";
+                    persona.Crafts = "What my hands and wits are honestly good at: able in Trade and Steward; fair in Riding.";
+                    persona.SpeechStyle = SpeechStyleFor("CharacterObject_1854");
+                    persona.FamilyKnowledge = "My kin and house, close to me:\nI am wed to Ingvar, and carry his child.";
+                    persona.CanSurveyField = true;
+                    persona.CanWeighTheDoor = true;
+                    persona.CustomInstructions = ReadCustom("CharacterObject_1854_Safiya");
+                    var scene = ReadSituation("CharacterObject_1854_Safiya");
+                    var msgs = pb.Build(persona, mem, scene, "Ingvar",
+                        line ?? "Are you sure, can you research that to be sure and tell me the exact reason?", "Angel");
+                    var tools = IraTools(true);
+                    tools.Add(CradleTool.Tool);
+                    return new ProbeCase
+                    {
+                        Persona = persona, Memory = mem, Scene = scene,
+                        Id = id, Npc = "Safiya", Flow = "message", Messages = msgs, Tools = tools, GameGivesTally = true,
+                        Recorded = "*I huff, already turning the thought back over.* Fair enough, don't trust me on a guess twice over. … I can't get a clean answer on it right now. My wits keep slipping past it.",
                     };
                 }
                 case "rh_reply":

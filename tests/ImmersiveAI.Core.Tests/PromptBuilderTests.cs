@@ -32,6 +32,37 @@ public class PromptBuilderTests
         Assert.Equal("Will you ride with me?", messages[3].Content);
     }
 
+    [Theory]
+    [InlineData("Are you sure, can you research that to be sure and tell me the exact reason?")]
+    [InlineData("Can you check, my dear, why we are getting debuf \"Over Fleet Size\"?")]
+    [InlineData("Look it up for me")]
+    [InlineData("google it")]
+    [InlineData("Можеш ли да провериш защо сме бавни?")]
+    [InlineData("Потърси какво значи това")]
+    public void AsksToLookUp_HearsAPlainAsk(string line) => Assert.True(PromptBuilder.AsksToLookUp(line));
+
+    [Theory]
+    [InlineData("Will you ride with me?")]
+    [InlineData("I love those names, sweetie!")]
+    [InlineData("")]
+    public void AsksToLookUp_LeavesOrdinaryWordsAlone(string line) => Assert.False(PromptBuilder.AsksToLookUp(line));
+
+    [Fact]
+    public void Build_AskedToResearch_SheReachesInHerOwnThought_OnlyWhenAHandRides()
+    {
+        var withHands = Persona();
+        withHands.CanSeekWisdom = true;
+        var asked = new PromptBuilder().Build(withHands, new NpcMemory(), "scene", "Vulgrim", "Research it, please.");
+        Assert.EndsWith("(Within my own mind: " + PromptBuilder.LookItUpThought + ")", asked[^1].Content);
+        Assert.StartsWith("Research it, please.", asked[^1].Content);
+
+        var plain = new PromptBuilder().Build(withHands, new NpcMemory(), "scene", "Vulgrim", "Will you ride with me?");
+        Assert.Equal("Will you ride with me?", plain[^1].Content);
+
+        var noHands = new PromptBuilder().Build(Persona(), new NpcMemory(), "scene", "Vulgrim", "Research it, please.");
+        Assert.Equal("Research it, please.", noHands[^1].Content);
+    }
+
     [Fact]
     public void Build_NeverSpeaksOfTheRetiredAimsAndTruths()
     {

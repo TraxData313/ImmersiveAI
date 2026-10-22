@@ -69,6 +69,7 @@ namespace ImmersiveAI.Personas
             var settlement = SettlementOf(npc);
             var name = settlement?.Name?.ToString() ?? string.Empty;
             if (name.Trim().Length > 0) return name;
+            if (AtSea(npc)) return "at sea";
             return HasPartyOnMap(npc) ? "the road" : "the open field";
         }
 
@@ -92,13 +93,19 @@ namespace ImmersiveAI.Personas
             catch { return false; }
         }
 
+        // Out on the water with no port about them (2026.10.22: Safiya, asked about "Over Fleet
+        // Size" on a ship's deck, was told she stood "upon the road" — no line here knew the sea).
+        private static bool AtSea(Hero h) => h != null && UI.TalkScreen.ConversationSceneBuilder.IsAtSea(h);
+
         /// <summary>Fuller sentence describing where the conversation happens, with settlement type
         /// and the faction that holds it, for the situation block and the prompt.</summary>
         private static string PlaceDescription(Hero speaker)
         {
             var settlement = SettlementOf(speaker);
             if (settlement == null)
-                return HasPartyOnMap(speaker)
+                return AtSea(speaker)
+                    ? "at sea aboard our ships, out of sight of any port"
+                    : HasPartyOnMap(speaker)
                     ? "upon the road, away from any town or castle"
                     : "out in the open field, away from any town or castle";
 
@@ -600,7 +607,7 @@ namespace ImmersiveAI.Personas
                     foreach (var duty in duties) sentences.Add(DutySentence(duty, h));
                 }
                 else if (h.CurrentSettlement == null)
-                    sentences.Add("I am upon the road.");
+                    sentences.Add(AtSea(h) ? "I am at sea." : "I am upon the road.");
             });
 
             // A gathered army, if their company marches within one.

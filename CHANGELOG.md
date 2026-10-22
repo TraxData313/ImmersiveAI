@@ -22,6 +22,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ### Fixes
 
 - Replies no longer show a stray `\n` where a paragraph break belongs; old replies that caught it are mended too.
+- Ask someone to research, check or look a thing up and they really search now, instead of pretending to think it over.
+- Out on your ships, people know they are at sea — no more "upon the road" in the middle of the water.
 - The talk screen now opens on your wife, or else on the person you've talked with the most.
 - The voice app is found wherever it was installed, even with voices off, and on whichever port it chose.
 - Installing the voice app from the game works with Windows' Smart App Control on, and no longer runs hidden scripts.

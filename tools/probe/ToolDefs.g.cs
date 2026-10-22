@@ -83,9 +83,11 @@ namespace ImmersiveAI.Probe.ToolCopies
     {
         public const string SeekWisdom = "seek_wisdom";
         public static readonly ToolDefinition Tool = new ToolDefinition(SeekWisdom,
-                    "Search all I have read and heard of the world's ways — ships, armies, holding towns, trade, " +
-                    "coin, war, craft, rule. Asked how a thing is done, or for counsel on such matters, I look " +
-                    "BEFORE answering, even when my own wit could half-answer. It reaches past this world's rim " +
+                    "Search all I have read and heard of the world's ways — ships, fleets, armies, holding towns, " +
+                    "trade, coin, war, craft, rule. Asked how or why a thing works, or for counsel on such matters, " +
+                    "I look BEFORE answering, even when my own wit could half-answer. Asked to check, look into or " +
+                    "find out a thing, I reach here every time: turning it over in my own head is NOT this, only " +
+                    "reaching here brings it back. It reaches past this world's rim " +
                     "too, but only if the one before me speaks openly of such. What I learn I say in my own " +
                     "words, in the words of my world.",
                     new[]

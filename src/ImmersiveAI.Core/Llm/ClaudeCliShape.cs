@@ -180,16 +180,20 @@ namespace ImmersiveAI.Core.Llm
         /// </summary>
         public static string BuildSchema(IReadOnlyList<ToolDefinition>? tools, bool allowToolUse)
         {
+            // "tool_calls" FIRST (2026.10.22, Safiya asked to research): the answer is written in
+            // property order, and with "reply" first she had spoken her whole answer — "I close my
+            // eyes and turn it over" — before the reach was ever on the page. Deciding the reach
+            // first is deciding it before the words.
             var properties = new JObject
             {
+                ["tool_calls"] = ToolCallsSchema(AnswerShape.HandsOf(tools), allowToolUse),
                 ["reply"] = new JObject
                 {
                     ["type"] = "string",
                     ["description"] = "My spoken words. Empty only while a reach in tool_calls is still unanswered.",
                 },
-                ["tool_calls"] = ToolCallsSchema(AnswerShape.HandsOf(tools), allowToolUse),
             };
-            var required = new JArray("reply", "tool_calls");
+            var required = new JArray("tool_calls", "reply");
             // An answer field is a REQUIRED property beside "reply" (2026.10.01): the heart's measure
             // can be filled, never forgotten and never narrated into the words. It rides the forced
             // last round too — allowToolUse governs reaches, not the answer.

@@ -1760,3 +1760,16 @@ first three change how the whole road behaves.
       + v1.4.8; Workshop tag v1.4.8; WorkshopUpdate.xml's ModuleFolder moved off the old Trax path;
       packaged (no executables), latest-release refreshed (v3.6.0 + v3.5.0 fallback), Workshop
       "Uploading done!". (2026.10.14 11.30.00)
+- [x] **She researches when asked, and knows the sea** (Anton's F12, 2026.10.22: Safiya, asked twice to "check" /
+      "research" why "Over Fleet Size" slowed them, never reached `seek_wisdom` — she "closed her eyes and turned it
+      over" and answered from a guess; at sea her sheet said "upon the road"). Reproduced with the probe (new case
+      `safiya_research`, Claude Code road, sonnet-5): 0/2 reached. THREE levers, measured together 8/10: (1) the
+      CLI schema now lists `tool_calls` BEFORE `reply` — the answer is written in property order, so with reply
+      first the whole answer was spoken before the reach was on the page (the biggest single lever; Codex shares
+      the schema, unprobed there); (2) `seek_wisdom` fires on "how or WHY a thing works" and on any ask to check /
+      look into / find out, and says plainly that turning it over in her head is not looking; (3) Core
+      `PromptBuilder.AsksToLookUp` (EN + BG verbs) adds her own inner line after such a player line when a hand
+      rides (`LookItUpThought`). A warm line still reaches for nothing (3/3). Sea: `SituationBuilder` asks
+      `ConversationSceneBuilder.IsAtSea` — "at sea aboard our ships", turn stamps "at sea". The talk screen's
+      green meadow at sea is NOT fixed: the ship deck is still behind `EnableSeaStage` (false in Anton's config,
+      cut 4 never tried in game). (2026.10.22 09.40.00)
