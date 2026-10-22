@@ -76,9 +76,12 @@ You usually only need to open:
   the one view lives as long as the screen, and every rebuild and every on/off switch is logged
   ("sea stage: …"). It crashed AGAIN at the SAME native address. The log showed "switched off" and
   "switched back on", then nothing. An away soul is drawn on the LAND stage, the deck widget hides, and
-  a hidden TextureWidget is never ticked, yet the re-enabled view drew water nobody ticked. RULE NOW:
-  the deck's SceneView exists only while someone stands on it (dropped whole in SetData(null)), is born
-  disabled, and is switched ON only from OnTick, where the scene is ticked too. The land tableau has NO sea (its
+  a hidden TextureWidget is never ticked, yet the re-enabled view drew water nobody ticked. Then
+  DESTROYING the view on SetData(null) crashed too. The dump showed the next touch of the scene
+  (`SetGlobalWindVelocity` in SetTheWeather) dying on corrupted memory: a water scene does not survive
+  losing the view that drew it. RULE NOW: one SceneView for the deck's life, born disabled, switched
+  OFF while nobody stands on it, and switched ON only from OnTick, where the scene is ticked too.
+  Never destroy it while keeping the scene. The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

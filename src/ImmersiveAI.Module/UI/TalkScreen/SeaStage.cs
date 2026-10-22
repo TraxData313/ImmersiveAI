@@ -357,14 +357,16 @@ namespace ImmersiveAI.UI.TalkScreen
             if (_data != null) DropVisual();
             _data = data as SeaStageData;
             // Nobody on the deck (an away soul is drawn on the LAND stage and this widget hides): the
-            // view goes WHOLLY, not just switched off. A hidden widget is never ticked, and a view
-            // left to be switched back on drew water nobody ticked — the companion → away soul →
-            // companion crash, twice, at the same native address (2026.10.22). It is made anew in
-            // FirstTimeInit, from inside a tick, exactly as on a fresh open of the screen.
+            // view is switched OFF and kept. Two wrong turns, both 2026.10.22, both crashes:
+            // switching it back on from here drew water nobody ticked (a hidden widget is never
+            // ticked); and DESTROYING it left the deck's water renderer broken — the next touch of
+            // the scene, setting the wind, died on corrupted memory. A water scene keeps the view
+            // that drew it for as long as the scene lives; only OnTick switches it back on.
             if (_data == null && _view != null)
             {
-                SeaStage.Step("nobody on the deck — the view is let go");
-                DropTexture(now: true);
+                SeaStage.Step("nobody on the deck — the view rests");
+                SeaStage.WaitForTheWater(_scene);
+                _view.SetEnable(false);
             }
         }
 
