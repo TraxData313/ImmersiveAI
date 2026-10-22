@@ -598,6 +598,12 @@ namespace ImmersiveAI
         /// unwritten.</summary>
         public bool EnableBirthChronicle { get; set; } = true;
 
+        /// <summary>When true, a child born to one of them is named by its MOTHER rather than by the
+        /// game's lot: she keeps a name she already spoke aloud for it, or chooses one as her people
+        /// would. One short call at the birth. Only when the mother is not you — your own children
+        /// keep the name the world gives them. Set false to keep the game's names.</summary>
+        public bool MotherNamesTheChild { get; set; } = true;
+
         // ------------------------------ the lover's road ------------------------------
 
         /// <summary>

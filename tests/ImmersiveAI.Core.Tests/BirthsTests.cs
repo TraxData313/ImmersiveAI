@@ -563,4 +563,48 @@ public class BirthsTests
         Assert.False(BirthText.LooksLikeAnAccount(null));
         Assert.True(BirthText.LooksLikeAnAccount(new string('щ', 130)));
     }
+
+    // ------------------------- the name she gives (2026.10.18) -------------------------
+
+    [Fact]
+    public void NamingPrompt_CarriesHerWords_AndAsksForOneLinePerChild()
+    {
+        var prompt = BirthText.BuildNamingPrompt(new BirthText.NamingFacts
+        {
+            MotherName = "Safiya",
+            FatherName = "Ingvar",
+            MotherCulture = "Aserai",
+            SpokenWords = "Safiya: If she's a girl, I fancy Nasrin. If he's a boy... maybe Zahir.",
+            ChildIsFemale = { true, false },
+        });
+
+        Assert.Contains("I am Safiya", prompt);
+        Assert.Contains("I fancy Nasrin", prompt);
+        Assert.Contains("I keep my word", prompt);
+        Assert.Contains("the first, a daughter", prompt);
+        Assert.Contains("the second, a son", prompt);
+        Assert.Contains("2 lines", prompt);
+    }
+
+    [Fact]
+    public void ChosenNames_AreRead_FromTheLabelledLines()
+    {
+        Assert.Equal(new[] { "Nasrin" }, BirthText.ParseChosenNames("NAME: Nasrin", 1));
+        Assert.Equal(new[] { "Nasrin", "Zahir" },
+            BirthText.ParseChosenNames("Here they are:\n- NAME: \"Nasrin\"\nName: Zahir.", 2));
+        Assert.Equal(new[] { "Ира" }, BirthText.ParseChosenNames("NAME: Ира", 1));
+        Assert.Equal(new[] { "Anne-Marie" }, BirthText.ParseChosenNames("NAME: Anne-Marie", 1));
+    }
+
+    [Fact]
+    public void ChosenNames_ThatCannotBeTrusted_LeaveTheWorldsNamesStanding()
+    {
+        Assert.Null(BirthText.ParseChosenNames(null, 1));
+        Assert.Null(BirthText.ParseChosenNames("Nasrin", 1));                         // no label
+        Assert.Null(BirthText.ParseChosenNames("NAME: Nasrin", 2));                   // too few
+        Assert.Null(BirthText.ParseChosenNames("NAME: Nasrin\nNAME: nasrin", 2));     // twins alike
+        Assert.Null(BirthText.ParseChosenNames("NAME: I think I would call her Nasrin", 1));
+        Assert.Null(BirthText.ParseChosenNames("NAME: <the name>", 1));
+        Assert.Null(BirthText.ParseChosenNames("NAME: Child 2", 1));
+    }
 }

@@ -122,14 +122,177 @@ namespace ImmersiveAI
                     return;
                 }
 
-                NotifyBirth($"❧ {record.MotherName} has borne {record.ChildWords()} — {record.ChildNames()}.");
-                var facts = GatherBirthFacts(mother, father, record);
-                BeginBirthHour(record, facts);
+                // The mother names the child before anything is written or asked, so the hour, the
+                // feast question and every beat carry HER name and not the game's lot.
+                if (!record.MotherIsPlayer && _config.MotherNamesTheChild
+                    && BeginTheNaming(mother, father, newborns, record))
+                {
+                    NotifyBirth($"❧ {record.MotherName} has borne {record.ChildWords()}.");
+                    return;
+                }
 
-                // And the feast, once the world has finished settling this instant.
-                MainThreadDispatcher.Enqueue(() => TryOfferTheFeast(record));
+                NotifyBirth($"❧ {record.MotherName} has borne {record.ChildWords()} — {record.ChildNames()}.");
+                BeginTheChronicleOfTheBirth(mother, father, record);
             }
             catch (Exception ex) { ModLog.Error("beginning the birth chronicle", ex); }
+        }
+
+        // The hour, and the feast once the world has finished settling this instant.
+        private void BeginTheChronicleOfTheBirth(Hero mother, Hero? father, BirthRecord record)
+        {
+            var facts = GatherBirthFacts(mother, father, record);
+            BeginBirthHour(record, facts);
+            MainThreadDispatcher.Enqueue(() => TryOfferTheFeast(record));
+        }
+
+        // ------------------------------ the name she gives (2026.10.18) ------------------------------
+
+        // The game names a newborn by lot (HeroCreator → NameGenerator). Anton's Safiya had turned
+        // names over aloud for months — "If she's a girl, I fancy Nasrin" — and the world would have
+        // called the girl something else. So the mother is asked, with her words in front of her.
+        // A failed or untrustworthy answer leaves the game's names standing: never a guessed name.
+        // While the call is out the record is held in _birthsWriting, which keeps the hourly hand
+        // from writing the hour or asking the feast under the old name; a reload mid-call simply
+        // lets the world's names stand.
+        private bool BeginTheNaming(Hero mother, Hero? father, List<Hero> newborns, BirthRecord record)
+        {
+            try
+            {
+                if (newborns.Count == 0 || newborns.Count != record.Children.Count) return false;
+                if (!_birthsWriting.Add(record.Id + ":name")) return false;
+
+                var facts = new BirthText.NamingFacts
+                {
+                    MotherName = record.MotherName,
+                    FatherName = string.IsNullOrWhiteSpace(record.FatherName) ? PlayerName() : record.FatherName,
+                    MotherCulture = Safe(() => mother.Culture?.Name?.ToString() ?? string.Empty, string.Empty),
+                    ChildIsFemale = record.Children.Select(c => c.IsFemale).ToList(),
+                };
+                try
+                {
+                    var persona = PersonaBuilder.Build(mother, _config);
+                    facts.MotherTraits = persona?.PersonalityDescription ?? string.Empty;
+                    facts.MotherSelfText = PromptFiles.LoadNpcPrompt(
+                        NpcPaths.CustomInstructionsFile(mother), record.MotherName);
+                }
+                catch { }
+                try
+                {
+                    var memory = LoadMemory(mother);
+                    facts.SharedStory = memory.DeepMemoryText();
+                    facts.SpokenWords = AllSpokenWords(memory, PlayerName(), record.MotherName);
+                }
+                catch { }
+
+                _ = ChooseTheNamesAsync(mother, father, newborns, record, facts);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("asking a mother for her child's name", ex);
+                _birthsWriting.Remove(record.Id + ":name");
+                return false;
+            }
+        }
+
+        private async Task ChooseTheNamesAsync(Hero mother, Hero? father, List<Hero> newborns,
+            BirthRecord record, BirthText.NamingFacts facts)
+        {
+            List<string>? names = null;
+            using (UsageLedger.BeginInteraction("the birth chronicle", record.MotherName))
+            {
+                try
+                {
+                    var raw = await _storyClient.CompleteAsync(new List<ChatMessage>
+                    {
+                        ChatMessage.User(BirthText.BuildNamingPrompt(facts)),
+                    }).ConfigureAwait(false);
+                    names = BirthText.ParseChosenNames(raw, newborns.Count);
+                    if (names == null)
+                        ModLog.Info($"the birth chronicle: {record.MotherName}'s answer held no usable name; the world's names stand. ({Squeeze(raw ?? string.Empty, 200)})");
+                }
+                catch (Exception ex) { ModLog.Error("choosing a child's name", ex); }
+            }
+            MainThreadDispatcher.Enqueue(() => FinishTheNaming(mother, father, newborns, record, names));
+        }
+
+        private void FinishTheNaming(Hero mother, Hero? father, List<Hero> newborns, BirthRecord record,
+            List<string>? names)
+        {
+            _birthsWriting.Remove(record.Id + ":name");
+            try
+            {
+                if (!StillOurCampaign()) return;
+                if (names != null && names.Count == newborns.Count)
+                {
+                    var before = record.ChildNames();
+                    for (int i = 0; i < newborns.Count; i++)
+                    {
+                        if (!GiveTheName(newborns[i], names[i])) continue;
+                        record.Children[i].Name = names[i];
+                    }
+                    _birthLedger?.Save(record);
+                    ModLog.Info($"the birth chronicle: {record.MotherName} named {record.ChildWords()} {record.ChildNames()} (the world had said {before}).");
+                    NotifyBirth(record.Children.Count == 1
+                        ? $"❧ {record.MotherName} names {(record.Children[0].IsFemale ? "her" : "him")} {record.ChildNames()}."
+                        : $"❧ {record.MotherName} names them {record.ChildNames()}.");
+                }
+                else
+                {
+                    NotifyBirth(record.Children.Count == 1
+                        ? $"❧ The child is called {record.ChildNames()}."
+                        : $"❧ The children are called {record.ChildNames()}.");
+                }
+                BeginTheChronicleOfTheBirth(mother, father, record);
+            }
+            catch (Exception ex) { ModLog.Error("finishing a child's naming", ex); }
+        }
+
+        // The game's own SetName, so it lives in the save. A full name built on a template — "{FIRSTNAME}
+        // of the {CLAN_NAME}" while the clan rides under a mercenary contract — keeps its template and
+        // takes the new first name inside it.
+        private static bool GiveTheName(Hero child, string first)
+        {
+            try
+            {
+                if (child == null || string.IsNullOrWhiteSpace(first)) return false;
+                var firstText = new TextObject(first);
+                TextObject full = firstText;
+                var oldFirst = child.FirstName?.ToString() ?? string.Empty;
+                var oldFull = child.Name;
+                var oldFullText = oldFull?.ToString() ?? string.Empty;
+                if (oldFull != null && oldFirst.Length > 0 && oldFullText != oldFirst && oldFullText.Contains(oldFirst))
+                {
+                    var templated = oldFull.CopyTextObject();
+                    templated.SetTextVariable("FIRSTNAME", first);
+                    if (templated.ToString().Contains(first)) full = templated;
+                }
+                child.SetName(full, firstText);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("giving a child its mother's name", ex);
+                return false;
+            }
+        }
+
+        // Every word still held verbatim between them, oldest first. The wedding's RecentSpokenWords
+        // keeps only the last ten lines for the tongue; a name is often said far earlier than that.
+        private static string AllSpokenWords(NpcMemory memory, string playerName, string motherName)
+        {
+            try
+            {
+                var lines = new List<string>();
+                foreach (var turn in memory.RecentTurns)
+                {
+                    if (turn == null || turn.IsInnerThought || turn.IsFromAngel) continue;
+                    if (!string.IsNullOrWhiteSpace(turn.PlayerLine)) lines.Add($"{playerName}: {Squeeze(turn.PlayerLine, 600)}");
+                    if (!string.IsNullOrWhiteSpace(turn.NpcLine)) lines.Add($"{motherName}: {Squeeze(turn.NpcLine, 600)}");
+                }
+                return string.Join("\n", lines);
+            }
+            catch { return string.Empty; }
         }
 
         // A father the newborn does not name (an odd save, another mod's hand): fall back to whom
@@ -522,6 +685,7 @@ namespace ImmersiveAI
             {
                 if (!BirthsOn || record == null || !record.AnyLived) return false;
                 if (record.FeastOffered || record.Scale != BirthScale.Unfeasted) return false;
+                if (_birthsWriting.Contains(record.Id + ":name")) return false;     // she is naming it still
 
                 var mother = record.MotherIsPlayer ? Hero.MainHero : FindAliveHero(record.MotherId);
                 if (mother == null || !mother.IsAlive) return false;

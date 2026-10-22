@@ -18,6 +18,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ### New
 
 - With the Keep Out of Battle mod, companions you keep out of a fight remember watching it, not fighting it.
+- A mother now names her own newborn — the name she spoke of before the birth, or one of her people's — instead of the game picking one.
 
 ### Fixes
 

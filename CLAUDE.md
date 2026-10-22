@@ -84,7 +84,10 @@ You usually only need to open:
   `BirthTiers` — the wedding's own ladder at a third of its renown, `BirthText` — the two prompts, the
   permanent marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Births.cs` partial (hooks
   `OnGivenBirthEvent`, captures BEFORE vanilla's death-in-labour roll, the hour written at once and the
-  feast whenever it is bought) + `Tools\CradleTool` (`recall_birth`; the hour is refused to anyone but
+  feast whenever it is bought; since 2026.10.18 an NPC MOTHER NAMES THE CHILD first — `BirthText.BuildNamingPrompt`/
+  `ParseChosenNames`, one call with all her verbatim words so a name she said aloud is kept, `Hero.SetName`
+  keeping a templated full name, hour + feast held under `_birthsWriting` "<id>:name" until she answers,
+  any bad answer leaves the game's names; `MotherNamesTheChild`) + `Tools\CradleTool` (`recall_birth`; the hour is refused to anyone but
   the two parents). Witness gathering is SHARED with the wedding — Core `Celebrations\GuestRules` +
   `ImmersiveChatBehavior.Celebrations.cs`.
 - **The wedding chronicle** → Core `Weddings\` (`WeddingRecord`/`WeddingLedger` JSON-per-wedding + `weddings.txt`, `WeddingText` — the two chronicler prompts, the permanent beat marks, the accounts; unit-tested) + the `ImmersiveChatBehavior.Weddings.cs` partial (hooks `BeforeHeroesMarried`, captures the day BEFORE the clan change scatters it, two story calls off-thread, beats to the spouse + every witness) + `Tools\NuptialTool` (`recall_wedding`; the night is refused to anyone but the spouse).

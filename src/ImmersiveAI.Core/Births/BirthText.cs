@@ -682,6 +682,132 @@ namespace ImmersiveAI.Core.Births
             sb.AppendLine("Write your whole account in the SAME TONGUE as those words — whatever tongue it is, match it exactly, and do not translate it into another. Take from them how these two speak to one another; take nothing else from them. Write the names of people and places in the LETTERS OF THAT TONGUE and spell each one the same way throughout — never half in one alphabet and half in another.");
         }
 
+        // ------------------------- the name she gives (2026.10.18) -------------------------
+
+        /// <summary>What the mother is told when she chooses the name. The game names a newborn by
+        /// lot; a soul who has turned names over in her head for months, out loud, to the father,
+        /// should not have the world pick one for her.</summary>
+        public sealed class NamingFacts
+        {
+            public string MotherName = string.Empty;
+            public string FatherName = string.Empty;
+            /// <summary>Her people ("Aserai"), whose names she would reach for first.</summary>
+            public string MotherCulture = string.Empty;
+            public string MotherTraits = string.Empty;
+            public string MotherSelfText = string.Empty;
+            /// <summary>Her deep memory of the two of them.</summary>
+            public string SharedStory = string.Empty;
+            /// <summary>Everything still said word for word between them, oldest first — where a
+            /// name spoken aloud months ago is most likely to be found.</summary>
+            public string SpokenWords = string.Empty;
+            /// <summary>One entry per living newborn, in birth order.</summary>
+            public List<bool> ChildIsFemale = new List<bool>();
+        }
+
+        /// <summary>The label each chosen name is written after. The parser reads only these lines.</summary>
+        public const string NameLabel = "NAME:";
+
+        /// <summary>
+        /// The mother's own mind choosing the name. Plain first person, no chronicler: this is a
+        /// decision, not an account. If she already said a name aloud for this child she keeps her
+        /// word — that is the whole point — and otherwise she chooses as her people and her own
+        /// heart would. The answer is one <see cref="NameLabel"/> line per child.
+        /// </summary>
+        public static string BuildNamingPrompt(NamingFacts facts)
+        {
+            if (facts == null) throw new ArgumentNullException(nameof(facts));
+            int count = Math.Max(1, facts.ChildIsFemale?.Count ?? 0);
+            var sb = new StringBuilder();
+            sb.AppendLine($"I am {Name(facts.MotherName)}, and my child has just been born. The name is mine to give.");
+            sb.AppendLine();
+
+            var who = new List<string>();
+            for (int i = 0; i < count; i++)
+            {
+                bool female = facts.ChildIsFemale != null && i < facts.ChildIsFemale.Count && facts.ChildIsFemale[i];
+                who.Add(count == 1
+                    ? (female ? "a daughter" : "a son")
+                    : $"the {Ordinal(i)}, {(female ? "a daughter" : "a son")}");
+            }
+            sb.AppendLine(count == 1
+                ? $"- What came: {who[0]}."
+                : $"- What came: {count} children at once — {string.Join("; ", who)}.");
+            sb.AppendLine($"- The father: {Name(facts.FatherName)}.");
+            if (!string.IsNullOrWhiteSpace(facts.MotherCulture))
+                sb.AppendLine($"- My people: {facts.MotherCulture.Trim().TrimEnd('.')}.");
+            if (!string.IsNullOrWhiteSpace(facts.MotherTraits))
+                sb.AppendLine($"- My cast of mind: {facts.MotherTraits.Trim().TrimEnd('.')}.");
+            if (!string.IsNullOrWhiteSpace(facts.MotherSelfText))
+                sb.AppendLine($"- What I hold true of myself: \"{Squeeze(facts.MotherSelfText, 600)}\"");
+            if (!string.IsNullOrWhiteSpace(facts.SharedStory))
+                sb.AppendLine($"- What I remember of the two of us: \"{Squeeze(facts.SharedStory, 2500)}\"");
+            if (!string.IsNullOrWhiteSpace(facts.SpokenWords))
+            {
+                sb.AppendLine("- The words still fresh between us, oldest first:");
+                sb.AppendLine("\"\"\"");
+                sb.AppendLine(Tail(facts.SpokenWords, 5000));
+                sb.AppendLine("\"\"\"");
+            }
+            sb.AppendLine();
+            sb.AppendLine("If I already spoke a name aloud for a child like this one — to him, or to myself — I keep my word and give that name. "
+                        + "If I spoke none, I choose one now, as my people name their children and as my own heart would. "
+                        + (count > 1 ? "Each child gets a name of its own. " : string.Empty)
+                        + "I write the name in the same letters our words above are written in.");
+            sb.AppendLine();
+            sb.AppendLine(count == 1
+                ? $"I answer with one line and nothing else: {NameLabel} <the name>"
+                : $"I answer with {count} lines and nothing else, one per child in the order above: {NameLabel} <the name>");
+            return sb.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// The names out of her answer, one per child, or null when the answer cannot be trusted —
+        /// too few, a duplicate between twins, or something that is not a name (a sentence, a
+        /// number, a bracket). Null means the world's own names stand; a wrong name is worse than
+        /// the lot's, because it is written into the save for good.
+        /// </summary>
+        public static List<string>? ParseChosenNames(string? raw, int count)
+        {
+            if (string.IsNullOrWhiteSpace(raw) || count < 1) return null;
+            var names = new List<string>();
+            foreach (var line in raw!.Replace("\r", string.Empty).Split('\n'))
+            {
+                var t = line.Trim().TrimStart('-', '*', '•', ' ').Trim();
+                int at = t.IndexOf(NameLabel, StringComparison.OrdinalIgnoreCase);
+                if (at < 0) continue;
+                var name = CleanName(t.Substring(at + NameLabel.Length));
+                if (name == null) return null;
+                names.Add(name);
+                if (names.Count == count) break;
+            }
+            if (names.Count != count) return null;
+            if (names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count) return null;
+            return names;
+        }
+
+        // A given name: one to three words of letters, joined by spaces, hyphens or apostrophes.
+        private static string? CleanName(string? text)
+        {
+            var t = (text ?? string.Empty).Trim().Trim('"', '\'', '“', '”', '«', '»', '*', '.', ',', ';', '!').Trim();
+            if (t.Length < 2 || t.Length > 30) return null;
+            var words = t.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length > 3) return null;
+            foreach (var ch in t)
+                if (!char.IsLetter(ch) && ch != ' ' && ch != '-' && ch != '\'' && ch != '’') return null;
+            if (!char.IsLetter(t[0])) return null;
+            return string.Join(" ", words);
+        }
+
+        private static string Ordinal(int i) =>
+            i switch { 0 => "first", 1 => "second", 2 => "third", _ => $"{i + 1}th" };
+
+        // The END of a long text — the freshest words are the ones a name was most likely said in.
+        private static string Tail(string? text, int max)
+        {
+            var t = (text ?? string.Empty).Replace("\r", string.Empty).Trim();
+            return t.Length <= max ? t : "…" + t.Substring(t.Length - max).TrimStart();
+        }
+
         // ------------------------- taming what comes back -------------------------
 
         /// <summary>Tames the chronicler's answer. The wedding's tamer does the work — code fences,
