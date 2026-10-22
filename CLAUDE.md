@@ -74,7 +74,11 @@ You usually only need to open:
   companion crashed natively in TaleWorlds.Native.dll, with no managed stack. A hidden widget reports
   size 0, and the view was rebuilt for that and again on the way back. Size 0 is now ignored, so
   the one view lives as long as the screen, and every rebuild and every on/off switch is logged
-  ("sea stage: …"). The land tableau has NO sea (its
+  ("sea stage: …"). It crashed AGAIN at the SAME native address. The log showed "switched off" and
+  "switched back on", then nothing. An away soul is drawn on the LAND stage, the deck widget hides, and
+  a hidden TextureWidget is never ticked, yet the re-enabled view drew water nobody ticked. RULE NOW:
+  the deck's SceneView exists only while someone stands on it (dropped whole in SetData(null)), is born
+  disabled, and is switched ON only from OnTick, where the scene is ticked too. The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

@@ -297,8 +297,13 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             if (_isEnabled == enabled) return;
             _isEnabled = enabled;
-            if (_view != null) SeaStage.Step(enabled ? "the view is switched back on" : "the view is switched off");
-            _view?.SetEnable(enabled && _scene != null);
+            // Switching OFF is safe from anywhere; switching ON only from a tick (FirstTimeInit /
+            // OnTick), where the scene is ticked in the same breath.
+            if (!enabled && _view != null)
+            {
+                SeaStage.Step("the view is switched off");
+                _view.SetEnable(false);
+            }
         }
 
         private void CreateTexture()
@@ -311,7 +316,8 @@ namespace ImmersiveAI.UI.TalkScreen
             _view.SetAutoDepthTargetCreation(true);
             _view.SetSceneUsesSkybox(true);
             _view.SetClearColor(4278190080u);
-            _view.SetEnable(_isEnabled);
+            // Born OFF: only a tick switches it on (see OnTick), so it never draws unticked water.
+            _view.SetEnable(false);
         }
 
         // Lets the view and its texture go. While the screen lives the texture is only RETIRED — the
@@ -350,6 +356,16 @@ namespace ImmersiveAI.UI.TalkScreen
             if (ReferenceEquals(_data, data)) return;
             if (_data != null) DropVisual();
             _data = data as SeaStageData;
+            // Nobody on the deck (an away soul is drawn on the LAND stage and this widget hides): the
+            // view goes WHOLLY, not just switched off. A hidden widget is never ticked, and a view
+            // left to be switched back on drew water nobody ticked — the companion → away soul →
+            // companion crash, twice, at the same native address (2026.10.22). It is made anew in
+            // FirstTimeInit, from inside a tick, exactly as on a fresh open of the screen.
+            if (_data == null && _view != null)
+            {
+                SeaStage.Step("nobody on the deck — the view is let go");
+                DropTexture(now: true);
+            }
         }
 
         internal void SetTargetSize(int width, int height)
@@ -389,7 +405,11 @@ namespace ImmersiveAI.UI.TalkScreen
             }
 
             var view = _view;
-            if (view != null && _scene != null) ApplyRenderSettings(view, _scene);
+            if (view != null && _scene != null)
+            {
+                ApplyRenderSettings(view, _scene);
+                view.SetEnable(true);
+            }
             if (_initialized && _scene != null)
             {
                 // The port screen's frame tick, call for call: nothing touches the water until the
@@ -476,6 +496,7 @@ namespace ImmersiveAI.UI.TalkScreen
                             ?? throw new InvalidOperationException("no character to stand on the deck");
 
             CrashGuard.Arm();
+            if (_scene != null) SeaStage.Step("someone new steps onto the deck" + (_view == null ? " — the view is made anew" : ""));
             if (_scene == null) _scene = SeaStage.AcquireScene();
             // A deck kept from an earlier talk may still have its water simulating; a fresh one has none yet.
             else SeaStage.WaitForTheWater(_scene);
