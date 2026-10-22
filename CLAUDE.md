@@ -734,7 +734,10 @@ so it is verified by the user playtesting; write Core logic to be testable and k
 - The DEPLOYED `ImmersiveAI.dll` itself, which the game then cannot load. After every deploy, check the
   installed pair with `[Reflection.Assembly]::LoadFile(...)` under Windows PowerShell. The SDK stamps the
   commit into the build, so a new commit gives a new hash. If a DLL is refused, commit, deploy and check
-  again. Never change Windows security settings.
+  again. Never change Windows security settings. Rebuilding the same commit with
+  `-p:SourceRevisionId=<commit>.<n>` gives a new hash without a new commit. The verdict is a coin flip
+  PER FILE, so when one stamp passes for Core and another for the module, deploy that PAIR: the builds
+  are deterministic and the two files find each other by name and version.
 
 ## User-editable runtime files (NOT in the repo)
 
