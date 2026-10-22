@@ -313,14 +313,35 @@ namespace ImmersiveAI.UI.TalkScreen
             _view.SetEnable(_isEnabled);
         }
 
-        private void DropTexture()
+        // Lets the view and its texture go. While the screen lives the texture is only RETIRED — the
+        // UI may still draw it this very frame — and released on the next tick, once the provider
+        // has taken the new one (2026.10.22: switching souls at sea released a texture mid-draw and
+        // the next native call, the new soul's CreateAgentVisuals, died on corrupted memory).
+        private void DropTexture(bool now)
         {
             SeaStage.WaitForTheWater(_scene);
             _view?.SetEnable(false);
             _view?.AddClearTask(false);
             _view = null;
-            Texture?.Release();
+            if (now)
+            {
+                Texture?.Release();
+                ReleaseRetired();
+            }
+            else if (Texture != null)
+            {
+                ReleaseRetired();
+                _retired = Texture;
+            }
             Texture = null;
+        }
+
+        private EngineTexture? _retired;
+
+        private void ReleaseRetired()
+        {
+            _retired?.Release();
+            _retired = null;
         }
 
         internal void SetData(object? data)
@@ -344,12 +365,14 @@ namespace ImmersiveAI.UI.TalkScreen
             _sizeX = x;
             _sizeY = y;
             _cameraRatio = (float)_sizeX / _sizeY;
-            DropTexture();
+            DropTexture(now: false);
             CreateTexture();
         }
 
         internal void OnTick(float dt)
         {
+            // The provider took the new texture before this tick (see its Tick): the old one is free.
+            ReleaseRetired();
             if (!_isEnabled || SeaStage.Failed) return;
 
             if (_data != null && !_initialized)
@@ -377,8 +400,17 @@ namespace ImmersiveAI.UI.TalkScreen
                     // ticked crashed the game). The port screen asks it of a full-screen SceneView;
                     // vanilla's own conversation tableau never asks at all — it places at once and
                     // ticks. So wait a few frames for it, then go on regardless.
+                    // And never in the frame a soul was taken off the deck: a few ticks of the scene
+                    // first, so the old one's visuals are truly gone before the engine builds new
+                    // ones (the switch crash above died inside CreateAgentVisuals).
                     bool ready = view != null && view.ReadyToRender() && view.CheckSceneReadyToRender();
-                    if (!ready && ++_framesWaited < FramesToWaitForReady) return;
+                    ++_framesWaited;
+                    if (ready)
+                    {
+                        SeaStage.WaitForTheWater(_scene);
+                        _scene.Tick(dt);
+                    }
+                    if (_framesWaited < FramesBeforePlacing || (!ready && _framesWaited < FramesToWaitForReady)) return;
                     SeaStage.Step(ready
                         ? "the view is ready — placing them on the deck"
                         : "the view never said ready after " + _framesWaited + " frames — placing them on the deck anyway");
@@ -403,6 +435,7 @@ namespace ImmersiveAI.UI.TalkScreen
 
         // The port screen's own count of frames after its view is ready (_framesToWaitAfterInit).
         private const int FramesToWaitForReady = 10;
+        private const int FramesBeforePlacing = 3;
         private int _framesWaited;
 
         // About two seconds of the deck drawn and ticked: past the raising, past the first renders.
@@ -419,7 +452,7 @@ namespace ImmersiveAI.UI.TalkScreen
             _camera = null;
             _visual?.ResetNextFrame();
             _visual = null;
-            DropTexture();
+            DropTexture(now: true);
             // The scene itself stays: it is the campaign's, not this widget's (see SeaStage).
             _scene = null;
             _initialized = false;
@@ -472,11 +505,15 @@ namespace ImmersiveAI.UI.TalkScreen
             // The soul is NOT placed here: like the port screen's ships, they are set on the deck in
             // OnTick once the view reports the scene ready to draw (see there).
 
-            // A texture asked for before the deck existed had no scene to draw. Forget the size so
-            // the view is made anew around this one.
-            _sizeX = 0;
-            _sizeY = 0;
-            SetTargetSize((int)Screen.RealScreenResolutionWidth, (int)Screen.RealScreenResolutionHeight);
+            // A texture asked for before the deck existed had no scene to draw, so the view is made
+            // here the first time. Switching souls keeps it: the deck and its eye stay, only who
+            // stands there changes.
+            if (_view == null)
+            {
+                _sizeX = 0;
+                _sizeY = 0;
+                SetTargetSize((int)Screen.RealScreenResolutionWidth, (int)Screen.RealScreenResolutionHeight);
+            }
             _cameraRatio = Screen.RealScreenResolutionWidth / Screen.RealScreenResolutionHeight;
             _initialized = true;
         }
