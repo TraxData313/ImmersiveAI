@@ -70,7 +70,11 @@ You usually only need to open:
   crashed with an AccessViolation inside `CreateAgentVisuals`. Each re-init had rebuilt the view and
   RELEASED the texture the UI was still drawing, and placed the new soul in the same frame the old one
   was reset. Now the view is kept across a switch, a replaced texture is retired and released a tick
-  later, and a soul is placed only after `FramesBeforePlacing` (3) ticks. The land tableau has NO sea (its
+  later, and a soul is placed only after `FramesBeforePlacing` (3) ticks. Then companion → AWAY soul →
+  companion crashed natively in TaleWorlds.Native.dll, with no managed stack. A hidden widget reports
+  size 0, and the view was rebuilt for that and again on the way back. Size 0 is now ignored, so
+  the one view lives as long as the screen, and every rebuild and every on/off switch is logged
+  ("sea stage: …"). The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

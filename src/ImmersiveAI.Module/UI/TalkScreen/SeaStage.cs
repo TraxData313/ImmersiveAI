@@ -297,6 +297,7 @@ namespace ImmersiveAI.UI.TalkScreen
         {
             if (_isEnabled == enabled) return;
             _isEnabled = enabled;
+            if (_view != null) SeaStage.Step(enabled ? "the view is switched back on" : "the view is switched off");
             _view?.SetEnable(enabled && _scene != null);
         }
 
@@ -353,15 +354,16 @@ namespace ImmersiveAI.UI.TalkScreen
 
         internal void SetTargetSize(int width, int height)
         {
-            int x, y;
-            if (width <= 0 || height <= 0) { x = 10; y = 10; }
-            else
-            {
-                float scale = NativeOptions.GetConfig(NativeOptions.NativeOptionsType.ResolutionScale) / 100f;
-                x = (int)(width * scale);
-                y = (int)(height * scale);
-            }
+            // A HIDDEN widget reports no size (an away soul chosen at sea hides the deck). Rebuilding
+            // the view for that, and again on the way back, crashed the game natively (2026.10.22:
+            // companion → away soul → companion). The one view lives as long as the screen; only a
+            // real new size makes another.
+            if (width <= 0 || height <= 0) return;
+            float scale = NativeOptions.GetConfig(NativeOptions.NativeOptionsType.ResolutionScale) / 100f;
+            int x = (int)(width * scale);
+            int y = (int)(height * scale);
             if (x == _sizeX && y == _sizeY && _view != null) return;
+            if (_view != null) SeaStage.Step("the view is made anew for " + x + "x" + y);
             _sizeX = x;
             _sizeY = y;
             _cameraRatio = (float)_sizeX / _sizeY;
