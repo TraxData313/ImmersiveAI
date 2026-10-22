@@ -60,7 +60,13 @@ You usually only need to open:
   deck. It was vanilla's LAND tableau standing empty beside it: `MapConversationTableau.OnTick` reads
   `_agentVisuals[0]` unguarded, and a TextureWidget ticks its provider whenever it was drawn the frame
   before. The land widget is now `IsVisible="@HasLandStage"`. An unhandled managed exception shows up
-  as `0xE0434352` in the watchdog log, so read the dump before blaming native code. The land tableau has NO sea (its
+  as `0xE0434352` in the watchdog log, so read the dump before blaming native code. With that fixed,
+  cut 5 RAN: no crash, the soul on the deck, "trusted" after 120 frames. But the water was BLACK and
+  she stood with her back turned. The deck is now drawn the way the game's cutscene popups draw a
+  sea on a UI texture (`SceneTableau`: `SceneView.CreateSceneView` + `SetRenderTarget`, not a
+  TableauView, which never reports ready and skips the water), and she is turned to face the eye
+  (the spawn mark faces the OTHER ship). The camera follows vanilla's rule: `custom_camera_same_ship`
+  for the player's own company. The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

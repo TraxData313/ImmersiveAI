@@ -29,8 +29,10 @@ namespace ImmersiveAI.UI.TalkScreen
     /// own deck, <c>conversation_scene_sea</c>. That deck cannot simply be handed to the game's
     /// tableau either: it lacks the camera mark and the rain/snow entities the tableau reads with no
     /// null check. So this is a small tableau of our own, built on the same public pieces vanilla's
-    /// is (Scene + AgentVisuals + TableauView), reading the deck's OWN marks: the soul stands on
-    /// <c>opponent_infantry_spawn</c>, the eye is the deck's <c>custom_camera_level</c> camera.
+    /// is (Scene + AgentVisuals), drawn by a SceneView into a render target as the cutscene popups
+    /// are, reading the deck's OWN marks: the soul stands on <c>opponent_infantry_spawn</c>, turned to
+    /// the eye, which is <c>custom_camera_same_ship</c> for one's own company and
+    /// <c>custom_camera_level</c> for a soul from another ship (vanilla's own rule).
     /// </para>
     /// <para>
     /// THE FALLBACK IS THE POINT, not an afterthought: any throw while raising the deck latches the
@@ -279,32 +281,46 @@ namespace ImmersiveAI.UI.TalkScreen
 
         internal EngineTexture? Texture { get; private set; }
 
-        private TableauView? View => Texture?.TableauView;
+        // A full SceneView drawing into a render target — the way the game's own cutscene popups put a
+        // sea on a UI texture (SceneTableau, GauntletSceneNotification). NOT a TableauView: on that
+        // lighter path the deck drew but its water came out BLACK, and ReadyToRender never came
+        // (2026.10.22, cut 5 live). A SceneView is the renderer the port screen and the deck mission
+        // use, water and all.
+        private SceneView? _view;
 
         internal SeaStageTableau()
         {
-            View?.SetEnable(_isEnabled);
             SeaStage.Current = this;
         }
 
         internal void SetEnabled(bool enabled)
         {
             if (_isEnabled == enabled) return;
-            if (enabled)
-            {
-                View?.SetEnable(false);
-                View?.AddClearTask(true);
-                Texture?.Release();
-                Texture = TableauView.AddTableau($"ImmersiveSeaStage_{_tableauIndex++}", RenderFunction, _scene, _sizeX, _sizeY);
-                Texture.TableauView.SetSceneUsesContour(false);
-                Texture.TableauView.SetPointlightResolutionMultiplier(0f);
-            }
-            else
-            {
-                View?.SetEnable(false);
-                View?.ClearAll(false, false);
-            }
             _isEnabled = enabled;
+            _view?.SetEnable(enabled && _scene != null);
+        }
+
+        private void CreateTexture()
+        {
+            if (_scene == null || _sizeX <= 0 || _sizeY <= 0) return;
+            Texture = EngineTexture.CreateRenderTarget($"ImmersiveSeaStage_{_tableauIndex++}", _sizeX, _sizeY, true, false, false, false);
+            _view = SceneView.CreateSceneView();
+            _view.SetScene(_scene);
+            _view.SetRenderTarget(Texture);
+            _view.SetAutoDepthTargetCreation(true);
+            _view.SetSceneUsesSkybox(true);
+            _view.SetClearColor(4278190080u);
+            _view.SetEnable(_isEnabled);
+        }
+
+        private void DropTexture()
+        {
+            SeaStage.WaitForTheWater(_scene);
+            _view?.SetEnable(false);
+            _view?.AddClearTask(false);
+            _view = null;
+            Texture?.Release();
+            Texture = null;
         }
 
         internal void SetData(object? data)
@@ -324,14 +340,12 @@ namespace ImmersiveAI.UI.TalkScreen
                 x = (int)(width * scale);
                 y = (int)(height * scale);
             }
-            if (x == _sizeX && y == _sizeY) return;
+            if (x == _sizeX && y == _sizeY && _view != null) return;
             _sizeX = x;
             _sizeY = y;
             _cameraRatio = (float)_sizeX / _sizeY;
-            View?.SetEnable(false);
-            View?.AddClearTask(true);
-            Texture?.Release();
-            Texture = TableauView.AddTableau($"ImmersiveSeaStage_{_tableauIndex++}", RenderFunction, _scene, _sizeX, _sizeY);
+            DropTexture();
+            CreateTexture();
         }
 
         internal void OnTick(float dt)
@@ -349,12 +363,8 @@ namespace ImmersiveAI.UI.TalkScreen
                 }
             }
 
-            var view = View;
-            if (view != null)
-            {
-                if (_camera == null) _camera = Camera.CreateCamera();
-                view.SetDoNotRenderThisFrame(false);
-            }
+            var view = _view;
+            if (view != null && _scene != null) ApplyRenderSettings(view, _scene);
             if (_initialized && _scene != null)
             {
                 // The port screen's frame tick, call for call: nothing touches the water until the
@@ -405,14 +415,11 @@ namespace ImmersiveAI.UI.TalkScreen
             // Closed cleanly before the frame count was reached: the deck still did not kill us.
             if (_initialized) CrashGuard.Survived();
             SeaStage.WaitForTheWater(_scene);
-            View?.SetEnable(false);
             _camera?.ReleaseCameraEntity();
             _camera = null;
             _visual?.ResetNextFrame();
             _visual = null;
-            View?.ClearAll(false, false);
-            Texture?.Release();
-            Texture = null;
+            DropTexture();
             // The scene itself stays: it is the campaign's, not this widget's (see SeaStage).
             _scene = null;
             _initialized = false;
@@ -450,7 +457,7 @@ namespace ImmersiveAI.UI.TalkScreen
             // another ship. "level" for everyone was the wrong ship for a wife at your side
             // (2026.10.22, Anton's vanilla screenshot beside ours).
             var eyeTag = SameShip(data.Hero) ? "custom_camera_same_ship" : "custom_camera_level";
-            if (_cameraEntity == null || _baseCameraFov < 0f || _cameraTag != eyeTag)
+            if (_camera == null || _cameraEntity == null || _baseCameraFov < 0f || _cameraTag != eyeTag)
             {
                 _cameraTag = eyeTag;
                 _cameraEntity = _scene.FindEntityWithTag(eyeTag)
@@ -465,14 +472,12 @@ namespace ImmersiveAI.UI.TalkScreen
             // The soul is NOT placed here: like the port screen's ships, they are set on the deck in
             // OnTick once the view reports the scene ready to draw (see there).
 
-            // A texture made before the deck existed was made around NO scene, and its render
-            // function retires it on the first frame. Forget the size so this one is made anew.
+            // A texture asked for before the deck existed had no scene to draw. Forget the size so
+            // the view is made anew around this one.
             _sizeX = 0;
             _sizeY = 0;
             SetTargetSize((int)Screen.RealScreenResolutionWidth, (int)Screen.RealScreenResolutionHeight);
             _cameraRatio = Screen.RealScreenResolutionWidth / Screen.RealScreenResolutionHeight;
-            View?.SetPostfxConfigParams(unchecked((int)(uint.MaxValue & 0xFFFFFBFFu)));
-            View?.SetEnable(true);
             _initialized = true;
         }
 
@@ -502,6 +507,20 @@ namespace ImmersiveAI.UI.TalkScreen
                 }
             }
 
+            // The spawn mark faces where the OTHER ship would hail from; in the deck mission the two
+            // turn to each other. Here the other is the eye, so she turns to face it, upright —
+            // facing the mark's way she stood with her back to the player (2026.10.22, live).
+            var standAt = spawn.GetGlobalFrame();
+            var toEye = _cameraEntity!.GetGlobalFrame().origin - standAt.origin;
+            toEye.z = 0f;
+            if (toEye.LengthSquared > 0.01f)
+            {
+                standAt.rotation.f = toEye.NormalizedCopy();
+                standAt.rotation.u = Vec3.Up;
+                standAt.rotation.OrthonormalizeAccordingToForwardAndKeepUpAsZAxis();
+            }
+            _frame = standAt;
+
             var party = hero?.PartyBelongedTo?.Party;
             var colors = CharacterHelper.GetDeterministicColorsForCharacter(character, party);
             var monster = TaleWorlds.Core.FaceGen.GetBaseMonsterFromRace(character.Race);
@@ -512,7 +531,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 .Equipment(equipment)
                 .Race(character.Race)
                 .BodyProperties(hero?.BodyProperties ?? character.GetBodyProperties(equipment, -1))
-                .Frame(spawn.GetGlobalFrame())
+                .Frame(standAt)
                 .UseMorphAnims(true)
                 .ActionSet(MBGlobals.GetActionSetWithSuffix(monster, character.IsFemale, "_warrior"))
                 .ActionCode(in action)
@@ -560,46 +579,26 @@ namespace ImmersiveAI.UI.TalkScreen
             return true;
         }
 
-        // Vanilla's continuous render function, call for call.
-        private void RenderFunction(EngineTexture sender, EventArgs e)
+        // Every frame, as the game's cutscene popup sets its view (SceneTableau.
+        // PopupSceneContinuousRenderFunction), framed by vanilla's conversation camera.
+        private void ApplyRenderSettings(SceneView view, Scene scene)
         {
-            var scene = (Scene)sender.UserData;
-            Texture = sender;
-            var view = sender.TableauView;
-            if (scene == null)
-            {
-                view.SetContinuousRendering(false);
-                view.SetDeleteAfterRendering(true);
-                return;
-            }
-
+            scene.SetShadow(true);
             scene.EnsurePostfxSystem();
             scene.SetDofMode(true);
             scene.SetMotionBlurMode(false);
             scene.SetBloom(true);
             scene.SetDynamicShadowmapCascadesRadiusMultiplier(0.31f);
             view.SetRenderWithPostfx(true);
+            view.SetSceneUsesShadows(true);
             view.SetPostfxConfigParams(unchecked((int)(uint.MaxValue & 0xFFFFFBFFu)));
+            view.SetSceneUsesSkybox(true);
+            view.SetFocusedShadowmap(true, ref _frame.origin, 1.55f);
             if (_camera == null) return;
 
             float ratio = _cameraRatio / (16f / 9f);
             _camera.SetFovHorizontal(ratio * _baseCameraFov, _cameraRatio, 0.2f, 1500f);
             view.SetCamera(_camera);
-            view.SetScene(scene);
-            view.SetSceneUsesSkybox(true);
-            view.SetDeleteAfterRendering(false);
-            view.SetContinuousRendering(true);
-            view.SetClearColor(0u);
-            view.SetClearGbuffer(true);
-            view.DoNotClear(false);
-            view.SetFocusedShadowmap(true, ref _frame.origin, 1.55f);
-            scene.ForceLoadResources(true);
-            bool ready;
-            do
-            {
-                ready = _visual == null || _visual.GetVisuals().CheckResources(true);
-            }
-            while (!ready);
         }
     }
 
