@@ -702,6 +702,16 @@ the build compiles against (`<GameFolder>` from `Directory.Build.props.user`, el
 **Always run `dotnet test` after changing Core.** Game-integration code can't be unit-tested,
 so it is verified by the user playtesting; write Core logic to be testable and keep coverage.
 
+**Smart App Control on Anton's PC (2026.10.22)** refuses some fresh unsigned builds BY FILE HASH
+("An Application Control policy has blocked this file", 0x800711C7). Two places it bites:
+- `dotnet test` skips the test DLL. Run the Core tests in memory instead: trax_combat_enhancements'
+  `tools\SmartAppControl\run_tests.fsx` with the assembly names swapped to ImmersiveAI.Core /
+  ImmersiveAI.Core.Tests, plus a guard for null theory rows.
+- The DEPLOYED `ImmersiveAI.dll` itself, which the game then cannot load. After every deploy, check the
+  installed pair with `[Reflection.Assembly]::LoadFile(...)` under Windows PowerShell. The SDK stamps the
+  commit into the build, so a new commit gives a new hash. If a DLL is refused, commit, deploy and check
+  again. Never change Windows security settings.
+
 ## User-editable runtime files (NOT in the repo)
 
 Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\`:
