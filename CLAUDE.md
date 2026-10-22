@@ -55,7 +55,12 @@ You usually only need to open:
   screen. It crashed ~18 s later, never having said "the view is ready": a TableauView never reports
   `ReadyToRender`, so the soul was never placed and the water was drawn, never ticked. Cut 5 waits at
   most 10 frames for readiness, then places and ticks every frame anyway — vanilla's own
-  MapConversationTableau never asks, it places at once. The land tableau has NO sea (its
+  MapConversationTableau never asks, it places at once. CUT 5 crashed the same way, and the crash dump
+  (read with ClrMD: `DataTarget.LoadDump` → each thread's `CurrentException`) showed it was NEVER the
+  deck. It was vanilla's LAND tableau standing empty beside it: `MapConversationTableau.OnTick` reads
+  `_agentVisuals[0]` unguarded, and a TextureWidget ticks its provider whenever it was drawn the frame
+  before. The land widget is now `IsVisible="@HasLandStage"`. An unhandled managed exception shows up
+  as `0xE0434352` in the watchdog log, so read the dump before blaming native code. The land tableau has NO sea (its
   scene carries plains/desert/steppe/forest/snow/halls; every water terrain falls to plains). Vanilla
   never meets it because at sea `PlayerEncounter` opens a conversation MISSION on War Sails' own deck,
   `conversation_scene_sea`. That deck lacks the marks vanilla's tableau reads unguarded, so we host it

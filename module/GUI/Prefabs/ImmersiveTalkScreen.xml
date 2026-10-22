@@ -36,7 +36,7 @@
              it - which is the shape Anton drew in the first place. -->
         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" DoNotAcceptEvents="true" DoNotPassEventsToChildren="true" IsVisible="@HasFace">
           <Children>
-            <MapConversationTableauWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Data="@TableauData" IsEnabled="false" />
+            <MapConversationTableauWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Data="@TableauData" IsEnabled="false" IsVisible="@HasLandStage" />
             <!-- At sea the ship's deck instead (SeaStage): the land tableau has no sea in it. Only one
                  of the two ever holds data; the other draws nothing. -->
             <ImmersiveSeaStageWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Data="@SeaStageData" IsEnabled="false" IsVisible="@HasSeaStage" />

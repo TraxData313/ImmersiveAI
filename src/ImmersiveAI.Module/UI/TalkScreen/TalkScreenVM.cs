@@ -283,6 +283,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 OnPropertyChanged("TableauData");
                 OnPropertyChanged("SeaStageData");
                 OnPropertyChanged("HasSeaStage");
+                OnPropertyChanged("HasLandStage");
                 OnPropertyChanged("HasFace");
                 OnPropertyChanged("EmptyHint");
             }
@@ -332,6 +333,7 @@ namespace ImmersiveAI.UI.TalkScreen
             OnPropertyChanged("TableauData");
             OnPropertyChanged("SeaStageData");
             OnPropertyChanged("HasSeaStage");
+            OnPropertyChanged("HasLandStage");
             OnPropertyChanged("HasFace");
             OnPropertyChanged("EmptyHint");
 
@@ -2774,12 +2776,21 @@ namespace ImmersiveAI.UI.TalkScreen
         [DataSourceProperty]
         public bool HasSeaStage => HasSelection && ConversationTableauController.SeaStageData != null;
 
+        /// <summary>The land tableau is drawn only while it has someone to draw. Vanilla's
+        /// MapConversationTableau.OnTick reads its first agent unguarded, so ticking it EMPTY throws, and
+        /// a TextureWidget ticks its provider whenever it was drawn the frame before. At sea it stands
+        /// empty beside the deck (2026.10.22: ArgumentOutOfRangeException in its OnTick, read from Anton's
+        /// crash dump, killed the game twice with the deck already up). Hidden, it is never ticked.</summary>
+        [DataSourceProperty]
+        public bool HasLandStage => ConversationTableauController.TableauData != null;
+
         /// <summary>Re-reads whichever stage is up — after the deck fell back to land, for one.</summary>
         internal void RefreshStage()
         {
             OnPropertyChanged("TableauData");
             OnPropertyChanged("SeaStageData");
             OnPropertyChanged("HasSeaStage");
+            OnPropertyChanged("HasLandStage");
             OnPropertyChanged("HasFace");
             OnPropertyChanged("EmptyHint");
         }
@@ -3238,6 +3249,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 OnPropertyChanged("TableauData");
                 OnPropertyChanged("SeaStageData");
                 OnPropertyChanged("HasSeaStage");
+                OnPropertyChanged("HasLandStage");
                 OnPropertyChanged("HasFace");
             }
             catch (Exception ex) { ModLog.Error("moving the talk to another set", ex); }
