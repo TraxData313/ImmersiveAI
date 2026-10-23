@@ -240,12 +240,14 @@ namespace ImmersiveAI
         /// clamped to the range the game itself allows (30..360).</summary>
         public int TalkScreenFpsLimit { get; set; } = 60;
 
-        /// <summary>EXPERIMENTAL, default false: out on the water the talk screen draws War Sails'
-        /// ship deck instead of the land stage's meadow. Three cuts of it crashed the game natively on
-        /// 2026.10.03 the instant the deck was read (see <c>UI\TalkScreen\SeaStage.cs</c>), so it rides
-        /// behind this switch until a cut survives. A build that crashes raising it never tries again
-        /// (its crash marker), so turning this on can cost at most one restart per build.</summary>
-        public bool EnableSeaStage { get; set; } = false;
+        /// <summary>Default true since v3.7.0 (Anton's call, 2026.10.23): out on the water the talk
+        /// screen draws War Sails' ship deck instead of the land stage's meadow (see
+        /// <c>UI\TalkScreen\SeaStage.cs</c>). It rode behind this switch, off, from 2026.10.03 until
+        /// cut 8 (scene, view and texture live and die as one) held. A build that crashes raising it
+        /// never tries again (its crash marker), so it can cost at most one restart per build; set
+        /// false to keep the meadow at sea. The V9 migration turns it on for configs that still hold
+        /// the old default.</summary>
+        public bool EnableSeaStage { get; set; } = true;
 
         /// <summary>Token ceiling for the calls in which an NPC WRITES her memory (reflection and
         /// compression: the rolling memory of a person, and her sense of self). Kept apart from
@@ -1312,6 +1314,16 @@ namespace ImmersiveAI
             {
                 HealSupersededPrices();
                 ConfigVersion = 8;
+            }
+
+            // V9 (2026.10.23, v3.7.0): the sea stage leaves its experiment and ships ON. Up to v3.6.0
+            // it shipped off, so a false here is that old default, not a choice — the same move V7
+            // made for the spark. Anyone who wants the meadow at sea sets it false again afterwards,
+            // and the crash marker still latches the land stage on a build that crashes raising it.
+            if (ConfigVersion < 9)
+            {
+                EnableSeaStage = true;
+                ConfigVersion = 9;
             }
 
             if (string.IsNullOrWhiteSpace(SystemVoiceName)) SystemVoiceName = "Angel";

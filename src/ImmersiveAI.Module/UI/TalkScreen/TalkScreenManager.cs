@@ -62,7 +62,7 @@ namespace ImmersiveAI.UI.TalkScreen
         internal static bool IsPreferred =>
             _config != null && _config.EnableChatWindow && !_config.UseClassicChatWindow && !_disabledForSession;
 
-        /// <summary>The experimental ship deck at sea — off unless the player switched it on.</summary>
+        /// <summary>The ship deck at sea — on by default since v3.7.0; the player may switch it off.</summary>
         internal static bool SeaStageWanted => _config?.EnableSeaStage == true;
 
         internal static void Configure(ModConfig config)

@@ -42,8 +42,8 @@ You usually only need to open:
   the `UI\TalkUI.cs` façade — notices fan out to all shapes, opening goes to the chosen one — so
   retiring the old windows later is a ONE-FILE change. The old windows are kept whole behind
   `UseClassicChatWindow` (default false) and an automatic session fallback.
-- **THE SEA STAGE** (2026.10.03) → `UI\TalkScreen\SeaStage.cs`. **OFF BY DEFAULT behind
-  `EnableSeaStage`** — THREE cuts crashed the game natively inside `Scene.Read` of the deck the
+- **THE SEA STAGE** (2026.10.03) → `UI\TalkScreen\SeaStage.cs`. **ON BY DEFAULT since v3.7.0** (`EnableSeaStage`, V9 config
+  migration; it was off behind it until cut 8 held) — THREE cuts crashed the game natively inside `Scene.Read` of the deck the
   same day (see below). The live theory for cut 4: we read a water scene while the MAP is still
   drawing underneath with its own water simulating, which vanilla never does (the port screen and
   the conversation mission are screens of their own). Cut 4 waits on the map's water before the

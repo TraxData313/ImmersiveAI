@@ -15,8 +15,25 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+## v3.7.0 — 2026.10.23
+
+Out on the water they stand on your ship's deck, and a mother names her own child.
+
+**The Nexus changelog (255 max — copy this verbatim; Nexus skipped v3.6.0, so this covers both):**
+
+```
+* At sea they stand on your ship's deck
+* A mother names her own newborn
+* Rewrite who someone is, what they recall
+* They really search when asked to look up
+* Talk opens on your wife
+* Voice app found wherever installed
+* Line breaks in replies fixed
+```
+
 ### New
 
+- At sea (War Sails), the talk screen shows them standing on your ship's deck instead of a meadow. It is on by default now; set `EnableSeaStage` to false in config.json to keep the meadow. It is still young: if it ever crashes the game, it switches itself off.
 - With the Keep Out of Battle mod, companions you keep out of a fight remember watching it, not fighting it.
 - A mother now names her own newborn — the name she spoke of before the birth, or one of her people's — instead of the game picking one.
 
@@ -58,9 +75,9 @@ Their minds in your hands: rewrite who they are and what they remember of you, r
 - A child's feast you close in a place too poor for it (a camp, a ship) is asked again in a worthier place, as promised.
 - Newborns no longer show up in the letters list, and cannot be written to.
 
-### Experimental
+### Also
 
-- Off by default: at sea, the talk screen can show them on a ship's deck instead of a meadow (`EnableSeaStage` in config.json). It can crash the game on some setups; if it does, it switches itself off.
+- Experimental, off by default in this version: at sea, the talk screen could show them on a ship's deck instead of a meadow (`EnableSeaStage` in config.json). It is on by default from v3.7.0.
 
 ## v3.5.0 — 2026.10.02
 
