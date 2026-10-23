@@ -1,4 +1,4 @@
-﻿<Tasks>
+<Tasks>
     <GetItem>
         <!-- Updating the existing Workshop item: fill ItemId (the number in the item's page
              URL) after the first upload, set ChangeNotes below, run package.ps1, then run
