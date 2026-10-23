@@ -1781,3 +1781,5 @@ first three change how the whole road behaves.
       deployed to ImmersiveAI.Dev, latest-release refreshed (v3.7.0 + v3.6.0 fallback). Nexus: file
       V3.7.0 over the archived V3.5.0, mod version V3.7.0, "Safe to use", description repasted.
       GitHub releases v3.6.0 and v3.7.0. (2026.10.23 14.40.00)
+- [x] v3.7.0 uploaded to the Steam Workshop (item 3764210301): "Uploading done!", public API
+      time_updated 2026-10-23 11:44 UTC. (2026.10.23 14.45.00)
