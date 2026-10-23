@@ -1,11 +1,15 @@
-﻿WHERE THINGS STAND (2026.10.14 — **v3.6.0 IS ON STEAM; NEXUS WAITS ON PURPOSE**)
+﻿WHERE THINGS STAND (2026.10.23 — **v3.7.0 IS ON NEXUS AND GITHUB; STEAM WAITS ON THE STEAM CLIENT**)
 
-  ** NEXUS IS HELD BACK BY ANTON'S CALL (2026.10.14: "only on steam, nexus will wait a few
-      updates"). Steam has v3.6.0 (uploaded 2026.10.14 ~11:25, "Uploading done!", item 3764210301).
-      When Nexus does go up, it carries every version since its last file at once: write ONE
-      255-char block that covers them all (each version's fenced block in CHANGELOG.md is the
-      material), and set the MOD version too (the one Vortex compares). The zip is
-      latest-release\ImmersiveAI_v3.6.0.zip (or whatever is newest by then).
+  ** v3.7.0 RELEASED 2026.10.23 (Anton authorized it, unplaytested parts included). The sea stage
+      (EnableSeaStage) is ON by default now, and the V9 config migration turns it on for configs
+      that still held the old false. Nexus: main file "ImmersiveAI V3.7.0" (V3.5.0 archived), one
+      252-char changelog covering v3.6 + v3.7, mod version V3.7.0, scan "Safe to use", description
+      repasted from docs\nexus-page.bbcode.txt (memory hook, gpt-6-luna, v1.4.8). GitHub: tag
+      v3.7.0, releases v3.6.0 (notes + its zip) and v3.7.0 (zip).
+      STEAM IS NOT UPLOADED: the Steam client was not running. Open Steam, then run (from a scratch
+      folder) "C:\Program Files (x86)\Steam\steamapps\common\Mount & Blade II Bannerlord\bin\Win64_Shipping_Client\TaleWorlds.MountAndBlade.SteamWorkshop.exe" with the full path of
+      tools\WorkshopUpdate.xml (its ChangeNotes already say v3.7.0; dist\ImmersiveAI is the v3.7.0
+      build). Success = "Uploading done!". Then playtest the sea stage on the build players get.
 
   ** LEFT FOR ANTON — the Steam description (Owner Controls): repaste
       docs\steam-page-final.bbcode.txt. Two changes: the memory line in "Looking for…?" now says

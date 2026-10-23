@@ -1773,3 +1773,11 @@ first three change how the whole road behaves.
       `ConversationSceneBuilder.IsAtSea` — "at sea aboard our ships", turn stamps "at sea". The talk screen's
       green meadow at sea is NOT fixed: the ship deck is still behind `EnableSeaStage` (false in Anton's config,
       cut 4 never tried in game). (2026.10.22 09.40.00)
+- [x] v3.7.0 RELEASED to Nexus and GitHub (Steam left: client not running). The sea stage ships ON
+      (EnableSeaStage default true + V9 migration for configs holding the old false), baby naming,
+      real web research, "at sea", talk screen opening pick, voice app via registry, Keep Out of
+      Battle bridge, wedding/birth beats at once. 873 Core tests green. Three note tiers (Nexus 252
+      chars covering v3.6 + v3.7), the v3.6.0 Experimental line tidied, packaged (no executables),
+      deployed to ImmersiveAI.Dev, latest-release refreshed (v3.7.0 + v3.6.0 fallback). Nexus: file
+      V3.7.0 over the archived V3.5.0, mod version V3.7.0, "Safe to use", description repasted.
+      GitHub releases v3.6.0 and v3.7.0. (2026.10.23 14.40.00)
