@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -293,7 +293,13 @@ namespace ImmersiveAI.Core.Nights
                         .Where(s => !string.IsNullOrWhiteSpace(s))
                         .Distinct(StringComparer.Ordinal).ToList();
                     if (names.Count == 1)
-                        return $"{span} he was with {names[0]}, and not with me, {howOften}.";
+                    {
+                        var herPlace = run.Select(r => r?.OtherIs ?? OtherWomanIs.Unknown)
+                            .LastOrDefault(k => k != OtherWomanIs.Unknown);
+                        return herPlace == OtherWomanIs.Unknown
+                            ? $"{span} he was with {names[0]}, and not with me, {howOften}."
+                            : $"{span} he was with {OtherWomanPhrase(names[0]!, herPlace)}, {howOften}.";
+                    }
                     if (names.Count > 1)
                         return $"{span} he was with others {howOften} — {JoinNames(names!)}.";
                     return $"{span} he was with another of his wives {howOften}.";
@@ -427,7 +433,13 @@ namespace ImmersiveAI.Core.Nights
                 .GroupBy(m => string.IsNullOrWhiteSpace(m.OtherName) ? "another of his wives" : m.OtherName.Trim())
                 .OrderByDescending(g => g.Count()))
             {
-                sb.Append(" I heard he was with ").Append(group.Key).Append(' ').Append(Times(group.Count()));
+                // Who she is to him rides beside the name when it is known (2026.11.11) — the same
+                // plain fact the roll's own lines carry; an older mark keeps its bare name.
+                var whatSheIs = group.Select(m => m.OtherIs).LastOrDefault(k => k != OtherWomanIs.Unknown);
+                var heardWith = whatSheIs == OtherWomanIs.Unknown || string.IsNullOrWhiteSpace(group.First().OtherName)
+                    ? group.Key
+                    : OtherWomanPhrase(group.Key, whatSheIs) + ",";
+                sb.Append(" I heard he was with ").Append(heardWith).Append(' ').Append(Times(group.Count()));
 
                 // HOW MUCH OF IT REACHED HER SCALES WITH WHAT HE SPENT ON IT (Anton, 2026.08.11 —
                 // "с повече детайли колкото по грандиозна е била"). A jug of wine passes almost
@@ -478,6 +490,39 @@ namespace ImmersiveAI.Core.Nights
         private static string Times(int n) =>
             n == 1 ? "once" : n == 2 ? "twice" : Spell(n) + " times";
 
+        // ------------------------- who the other woman is (2026.11.11) -------------------------
+
+        /// <summary>
+        /// What the other woman is to him, from where the listener stands: both wives, both lovers,
+        /// or one of each. Decided once, when the night is recorded, from two plain facts.
+        /// </summary>
+        public static OtherWomanIs OtherWomanIsFor(bool otherIsWife, bool listenerIsWife)
+        {
+            if (otherIsWife) return listenerIsWife ? OtherWomanIs.HisOtherWife : OtherWomanIs.HisWife;
+            return listenerIsWife ? OtherWomanIs.HisLover : OtherWomanIs.HisOtherLover;
+        }
+
+        /// <summary>
+        /// THE LEAK NAMES WHAT SHE IS (2026.11.11, the owner: "let the info leak between the wives
+        /// where the man slept, but they can make up their own mind if they will be jealous or not").
+        /// The name with the plain fact of her place beside it — "Yasmin, his other lawful wife",
+        /// "Ira, who is his lover, not his wife" — and NOTHING about how to feel. A record from before
+        /// this existed (<see cref="OtherWomanIs.Unknown"/>) keeps its bare name, byte for byte.
+        /// </summary>
+        public static string OtherWomanPhrase(string name, OtherWomanIs otherIs)
+        {
+            var who = (name ?? string.Empty).Trim();
+            if (who.Length == 0) return who;
+            switch (otherIs)
+            {
+                case OtherWomanIs.HisOtherWife: return $"{who}, his other lawful wife";
+                case OtherWomanIs.HisWife: return $"{who}, his lawful wife";
+                case OtherWomanIs.HisLover: return $"{who}, who is his lover, not his wife";
+                case OtherWomanIs.HisOtherLover: return $"{who}, who is his lover as well";
+                default: return who;
+            }
+        }
+
         /// <summary>One night of the roll, in her voice.</summary>
         public static string LineFor(NightRecord night, double today, bool inFull,
             bool isDearest = false)
@@ -511,9 +556,12 @@ namespace ImmersiveAI.Core.Nights
 
                 case NightKind.Elsewhere:
                     var other = string.IsNullOrWhiteSpace(night.OtherName) ? "another of his wives" : night.OtherName.Trim();
+                    bool named = night.OtherIs != OtherWomanIs.Unknown && !string.IsNullOrWhiteSpace(night.OtherName);
                     var told = night.ByHearsay
-                        ? $"{Upper(when)} word reached me that he spent the night with {other}."
-                        : $"{Upper(when)} he went to {other}, and not to me.";
+                        ? $"{Upper(when)} word reached me that he spent the night with {(named ? OtherWomanPhrase(other, night.OtherIs) : other)}."
+                        : named
+                            ? $"{Upper(when)} he went to {OtherWomanPhrase(other, night.OtherIs)}."
+                            : $"{Upper(when)} he went to {other}, and not to me.";
                     // A night he paid for is a night people repeat the name of.
                     if (!string.IsNullOrWhiteSpace(night.OtherNightTitle))
                         told += $" They have a name for that night: \"{night.OtherNightTitle.Trim()}\".";

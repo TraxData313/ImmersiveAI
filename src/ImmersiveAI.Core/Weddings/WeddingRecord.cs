@@ -76,6 +76,11 @@ namespace ImmersiveAI.Core.Weddings
         /// truest material the chronicler has, for these are the doubts the day answered.</summary>
         public List<string> MisgivingsAnswered { get; set; } = new List<string>();
 
+        /// <summary>Whom the player was ALREADY wed to on this day — a further wedding under "More
+        /// than one wife" (2026.11.11). Empty for a first wedding. Captured at the vow, so a retried
+        /// account still tells the day as it was.</summary>
+        public List<string> AlreadyWedTo { get; set; } = new List<string>();
+
         /// <summary>How great a wedding was paid for (2026.08.09) — it decides how far the
         /// invitation reached and therefore who carries the day, and the chronicler is told of it.
         /// <see cref="WeddingScale.Unpaid"/> for a wedding sealed outside our own door.</summary>

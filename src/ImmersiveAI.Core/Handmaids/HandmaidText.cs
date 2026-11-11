@@ -196,11 +196,12 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>
         /// Phrased for the player, finishing "Nothing can be sealed while ...". Vanilla allows one
-        /// wife; only a polygamy mod (Marry Anyone) lifts that, and the road should say so instead
-        /// of letting him court her into a road with no end.
+        /// wife; since 2026.11.11 the mod's own "More than one wife" setting lifts that (no other mod
+        /// is the road any more), and the road should say so instead of letting him court her into a
+        /// road with no end.
         /// </summary>
         public const string MarriedWallForPlayer =
-            "you already have a wife; without a mod such as Marry Anyone the world allows only one";
+            "you already have a wife; turn on \"" + Courtship.SecondWifeText.SettingName + "\" in the mod's settings to wed her";
 
         // ── Notices to the player ──────────────────────────────────────────────────────────
 

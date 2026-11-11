@@ -1336,7 +1336,15 @@ namespace ImmersiveAI
                     // she says, or whether she says anything at all, is entirely hers. Only THIS
                     // kind of night counts: hearing that he slept alone is not an injury, and
                     // never seeing him come in is not news.
-                    if (learned.Kind == NightKind.Elsewhere) MarkFreshWound(wife, now);
+                    //
+                    // BUT NOT A NIGHT WITH HIS OTHER LAWFUL WIFE (2026.11.11, the owner: "they can
+                    // make up their own mind if they will be jealous or not"). The code does not
+                    // decide that for her: she learns the fact, named for what the other woman is,
+                    // and weighs it through her own heart like any other event. A night with a
+                    // LOVER keeps the designed wound.
+                    bool withALawfulWife = visited != null
+                        && Safe(() => FamilyBuilder.AreWed(Hero.MainHero, visited), false);
+                    if (learned.Kind == NightKind.Elsewhere && !withALawfulWife) MarkFreshWound(wife, now);
                 }
 
                 _nightLedger!.SettleNight(now);
@@ -1385,6 +1393,7 @@ namespace ImmersiveAI
                     record.Kind = NightKind.Elsewhere;
                     record.ByHearsay = true;
                     record.OtherName = Safe(() => visited.Name?.ToString() ?? string.Empty, string.Empty);
+                    record.OtherIs = WhatTheOtherWomanIs(visited, wife);
                     return record;
                 }
 
@@ -1399,10 +1408,21 @@ namespace ImmersiveAI
                 {
                     record.Kind = NightKind.Elsewhere;
                     record.OtherName = Safe(() => visited.Name?.ToString() ?? string.Empty, string.Empty);
+                    record.OtherIs = WhatTheOtherWomanIs(visited, wife);
                 }
                 return record;
             }
             catch { return null; }
+        }
+
+        /// <summary>What the woman he went to is to him, as THIS one would name her: his other
+        /// lawful wife, his wife, his lover (2026.11.11). Two plain facts, decided in Core.</summary>
+        private static OtherWomanIs WhatTheOtherWomanIs(Hero visited, Hero listener)
+        {
+            var player = Hero.MainHero;
+            bool otherIsWife = Safe(() => FamilyBuilder.AreWed(player, visited), false);
+            bool listenerIsWife = Safe(() => FamilyBuilder.AreWed(player, listener), false);
+            return NightText.OtherWomanIsFor(otherIsWife, listenerIsWife);
         }
 
         // How likely a wife standing right here is to learn where he spent the night: the place
@@ -1977,9 +1997,12 @@ namespace ImmersiveAI
                     return "the custom of women was upon me, and my door was closed to him";
                 case NightKind.Elsewhere:
                     var other = string.IsNullOrWhiteSpace(night.OtherName) ? "another of his wives" : night.OtherName.Trim();
+                    bool named = night.OtherIs != OtherWomanIs.Unknown && !string.IsNullOrWhiteSpace(night.OtherName);
                     var told = night.ByHearsay
-                        ? $"word reached me that he spent the night with {other}"
-                        : $"he went to {other}, and not to me";
+                        ? $"word reached me that he spent the night with {(named ? NightText.OtherWomanPhrase(other, night.OtherIs) : other)}"
+                        : named
+                            ? $"he went to {NightText.OtherWomanPhrase(other, night.OtherIs)}"
+                            : $"he went to {other}, and not to me";
                     if (!string.IsNullOrWhiteSpace(night.OtherNightTitle))
                         told += $" — they call that night \"{night.OtherNightTitle.Trim()}\"";
                     return told;

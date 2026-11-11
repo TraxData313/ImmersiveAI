@@ -239,6 +239,10 @@ namespace ImmersiveAI.Core.Weddings
             public int PlayerAge;
             /// <summary>The player's standing in the world, in a phrase.</summary>
             public string PlayerStanding = string.Empty;
+            /// <summary>Whom the player is ALREADY wed to on this day (2026.11.11, a further wedding
+            /// under "More than one wife"). Empty for a first wedding, which then reads exactly as
+            /// it always did.</summary>
+            public List<string> AlreadyWedTo = new List<string>();
 
             public string DateText = string.Empty;
             /// <summary>Where the day happened ("the town of Onira"); empty when they wed on the road.</summary>
@@ -407,6 +411,8 @@ namespace ImmersiveAI.Core.Weddings
             if (!string.IsNullOrWhiteSpace(facts.PlayerStanding)) groom.Append(", ").Append(facts.PlayerStanding.Trim().TrimEnd('.'));
             groom.Append(". They are the one being wed this day.");
             sb.AppendLine(groom.ToString());
+            var already = Courtship.SecondWifeText.AlreadyWedFact(Name(facts.PlayerName), facts.AlreadyWedTo);
+            if (!string.IsNullOrWhiteSpace(already)) sb.AppendLine("- " + already);
 
             var when = new StringBuilder("- The day: ");
             when.Append(string.IsNullOrWhiteSpace(facts.DateText) ? "this day" : facts.DateText.Trim());

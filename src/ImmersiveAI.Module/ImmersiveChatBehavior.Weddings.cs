@@ -170,6 +170,13 @@ namespace ImmersiveAI
             foreach (var witness in GatherWitnesses(spouse, settlement, scale))
                 record.Witnesses.Add(witness);
 
+            // A further wedding (2026.11.11): whom he already stands wed to, as a fact of the day.
+            record.AlreadyWedTo = Safe(() => Personas.FamilyBuilder.SpousesOf(player!)
+                .Where(h => h != null && h != spouse)
+                .Select(h => h.Name?.ToString() ?? string.Empty)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .ToList(), new List<string>()) ?? new List<string>();
+
             return record;
         }
 
@@ -264,6 +271,7 @@ namespace ImmersiveAI
                 PlacePhrase = record.PlaceName,
                 CultureName = record.CultureName,
                 MisgivingsAnswered = record.MisgivingsAnswered.ToList(),
+                AlreadyWedTo = (record.AlreadyWedTo ?? new List<string>()).ToList(),
                 Witnesses = record.Witnesses
                     .Where(w => w != null && !string.IsNullOrWhiteSpace(w.Name))
                     .Select(w => string.IsNullOrWhiteSpace(w.Detail) ? w.Name : $"{w.Name}, {w.Detail}")
@@ -876,6 +884,7 @@ namespace ImmersiveAI
                     if (!string.IsNullOrWhiteSpace(existing.PlaceName)) record.PlaceName = existing.PlaceName;
                     if (!string.IsNullOrWhiteSpace(existing.CultureName)) record.CultureName = existing.CultureName;
                     if (existing.Witnesses.Count > 0) record.Witnesses = existing.Witnesses;
+                    record.AlreadyWedTo = existing.AlreadyWedTo ?? new List<string>();
                 }
                 var facts = GatherWeddingFacts(npc, record);
 

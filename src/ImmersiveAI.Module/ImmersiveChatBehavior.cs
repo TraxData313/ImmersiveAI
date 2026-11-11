@@ -974,6 +974,11 @@ namespace ImmersiveAI
             // through vanilla's barter, not only one sealed through our own road.
             CampaignEvents.BeforeHeroesMarried.AddNonSerializedListener(this, OnHeroesMarriedForChronicle);
 
+            // More than one wife (see the SecondWife partial and Household): vanilla raises this
+            // immediately BEFORE `victim.Spouse = null`, whose setter would cascade through a
+            // household of two wives — every such death is settled by field here first.
+            CampaignEvents.HeroKilledEvent.AddNonSerializedListener(this, OnHeroKilledForHousehold);
+
             // The birth chronicle (see the Births partial). OnGivenBirth fires ONCE per birth, after
             // every newborn is fully built and named by the game — and immediately BEFORE vanilla's
             // death-in-labour roll, so the day's facts are captured there, synchronously, while the
@@ -1140,6 +1145,9 @@ namespace ImmersiveAI
 
             // A handmaid already in this save without a road stage begins at warmth.
             SeedHandmaidRoadsAtLoad();
+
+            // Who in this world is wed as a further spouse — read from the slots themselves.
+            Household.Rebuild();
         }
 
         // New campaigns mint a fresh id here (nothing to adopt — a new world starts unremembered);
@@ -1171,6 +1179,11 @@ namespace ImmersiveAI
             // The world's nightly roll steps aside for the player's own marriages only while this
             // hook says so, and only while the feature is truly awake.
             Nights.PregnancyPatch.IsOursToDecide = NightsOwnConceptionFor;
+
+            // More than one wife: the households read from the world, and one honest line if a
+            // polygamy mod we no longer rely on is loaded.
+            Household.Rebuild();
+            TellOfMarryAnyoneOnce();
 
             // And the rescue beside it: a pregnancy in an older save may already have lost its
             // father, and the delivery would crash on the day rather than tell anybody why.
@@ -1326,6 +1339,17 @@ namespace ImmersiveAI
                 starter.AddPlayerLine("immersiveai_test_asks", "immersiveai_input", "close_window",
                     "{=ImmersiveAI_TestAsks}Let us part now. [Immersive AI • test — clear their marriage misgivings]",
                     () => _config.EnableConversationMarriage, () => { OnDebugClearMisgivings(); RequestLeaveFromPartyEncounter(); }, 89);
+                // More than one wife: the REAL further wedding on this very soul, the road skipped,
+                // the setting and the world's law respected — run once the talk has closed.
+                starter.AddPlayerLine("immersiveai_test_wed_further", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestWedFurther}[Immersive AI • test] Wed them now as a further wife",
+                    () => _config.EnableConversationMarriage,
+                    () =>
+                    {
+                        var npc = _currentNpc;
+                        RequestLeaveFromPartyEncounter();
+                        MainThreadDispatcher.Enqueue(() => DevWedAsFurtherWife(npc!));
+                    }, 89);
 
                 // Battle-chronicle lever: forge a plausible battle record with this very soul at
                 // your side — the beat, the JSON, chronicle.txt, the situation block and the

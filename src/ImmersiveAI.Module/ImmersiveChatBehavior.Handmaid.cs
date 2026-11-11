@@ -193,7 +193,10 @@ namespace ImmersiveAI
             {
                 if (hero == null || !hero.IsAlive || !IsHandmaid(hero)) return false;
                 if (_config == null || !_config.EnableConversationMarriage) return false;
-                if (hero.Spouse != null) return false;
+                // Wed to anyone — or to him by any shape (a further wife, or one an older polygamy
+                // mod parked in ExSpouses) — is no road to seed (2026.11.11).
+                if (hero.Spouse != null
+                    || Safe(() => Personas.FamilyBuilder.AreWed(hero, Hero.MainHero), false)) return false;
                 var memory = LoadMemory(hero);
                 if (memory.CourtshipStage != Core.Courtship.CourtshipStage.None)
                 {

@@ -31,6 +31,9 @@ namespace ImmersiveAI.Core.Nights
         /// <summary>Who he was with, for a night she learned he spent elsewhere.</summary>
         public string OtherName { get; set; } = string.Empty;
 
+        /// <summary>What that other woman is to him, as she knows it (2026.11.11).</summary>
+        public OtherWomanIs OtherIs { get; set; } = OtherWomanIs.Unknown;
+
         /// <summary>Whether a child began that night — the one fact no tally should ever lose.</summary>
         public bool Conceived { get; set; }
 
@@ -52,6 +55,7 @@ namespace ImmersiveAI.Core.Nights
                 Title = !string.IsNullOrWhiteSpace(night.Title) ? night.Title.Trim()
                       : (night.OtherNightTitle ?? string.Empty).Trim(),
                 OtherName = (night.OtherName ?? string.Empty).Trim(),
+                OtherIs = night.OtherIs,
                 Conceived = night.Conceived,
                 OtherNightPrice = night.OtherNightPrice,
             };

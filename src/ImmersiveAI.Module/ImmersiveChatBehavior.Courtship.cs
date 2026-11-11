@@ -159,18 +159,20 @@ namespace ImmersiveAI
         {
             None, Gone, NotFree, PromisedElsewhere, TooYoung, NotTheCustom, NotForMarriage,
             CompanionBarred, UnhiredWanderer, NotHere, WarCamp, AtWar, WorldRefuses, BlessingMissing,
+            /// <summary>The PLAYER's own standing marriage, with "More than one wife" off (2026.11.11).
+            /// Her side reads it exactly as NotFree did; the player's side names the setting.</summary>
+            PlayerWed,
         }
 
-        // Marry Anyone compatibility (Anton runs it on his saves): with a polygamy mod loaded, the
-        // player's OWN standing marriage no longer bars a new courtship — the LAW remains the
-        // marriage model, which such mods patch, so the seal still asks the world's (patched) rules;
-        // without one, vanilla's model refuses at the seal, honestly. Her side stays as the world
-        // wills it either way. Detected once by loaded assembly name (module DLLs load before any
-        // campaign), same soft-reflection stance as the MCM bridge.
-        private static bool? _polygamyLoaded;
-        private static bool PolygamyLoose()
+        // MARRY ANYONE IS NO LONGER OUR ROAD (2026.11.11). Until today a loaded MarryAnyone assembly
+        // lifted the player's own marriage as a bar; but 3.3.1 cannot wed the player at all on game
+        // 1.4.8 (its marriage action calls methods that no longer exist — .manager\marry-anyone.md),
+        // and "loaded" never meant "Polygamy on". Our own setting is the whole law now. If the mod
+        // is present it is logged once and the player told once, and nothing relies on it.
+        private static bool? _marryAnyoneLoaded;
+        private static bool MarryAnyoneLoaded()
         {
-            if (_polygamyLoaded.HasValue) return _polygamyLoaded.Value;
+            if (_marryAnyoneLoaded.HasValue) return _marryAnyoneLoaded.Value;
             try
             {
                 foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
@@ -178,14 +180,34 @@ namespace ImmersiveAI
                     var name = asm.GetName()?.Name ?? string.Empty;
                     if (name.IndexOf("MarryAnyone", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        _polygamyLoaded = true;
+                        _marryAnyoneLoaded = true;
                         return true;
                     }
                 }
             }
             catch { }
-            _polygamyLoaded = false;
+            _marryAnyoneLoaded = false;
             return false;
+        }
+
+        private static bool _marryAnyoneTold;
+        private static void TellOfMarryAnyoneOnce()
+        {
+            try
+            {
+                if (_marryAnyoneTold || !MarryAnyoneLoaded()) return;
+                _marryAnyoneTold = true;
+                ModLog.Info("Marry Anyone is loaded; Immersive AI does not rely on it. Second wives follow the mod's own \"More than one wife\" setting.");
+                InformationManager.DisplayMessage(new InformationMessage(Core.Courtship.SecondWifeText.MarryAnyoneNotice, SealGrey));
+            }
+            catch { }
+        }
+
+        /// <summary>Whether the player is wed to anyone living — every spouse, never the one slot.</summary>
+        private static bool PlayerIsWed(Hero player)
+        {
+            try { return player != null && (player.Spouse != null || FamilyBuilder.SpousesOf(player).Count > 0); }
+            catch { return player?.Spouse != null; }
         }
 
         // The world's own law over the pair — vanilla's own suitability where it can speak (nobles),
@@ -206,8 +228,9 @@ namespace ImmersiveAI
                     || npc.IsPrisoner || npc == player) return TrothBlock.Gone;
                 if (npc.IsFemale == player.IsFemale) return TrothBlock.NotTheCustom;
                 if (npc.Spouse != null) return TrothBlock.NotFree;
-                // The player's own marriage bars a new road only in a monogamous world — with a
-                // polygamy mod (Marry Anyone) loaded, the road opens and the model stays the judge.
+                // The player's own marriage bars a new road only while "More than one wife" is off
+                // (2026.11.11 — it was a loaded Marry Anyone until then). On, the road opens and the
+                // marriage law, asked as if he were free, stays the judge at the wedding.
                 //
                 // AND SINCE 2026.08.15 IT BARS ONLY WHAT IS ABOUT MARRIAGE. With the lover's road
                 // open, the trunk — warmth, then love — may be walked by a married man's
@@ -219,11 +242,9 @@ namespace ImmersiveAI
                 // courtship could start, so no heart could reach the fork, so nobody could ever be
                 // offered anything. Gated on the feature, so a game with it turned off behaves
                 // exactly as it did before.
-                if (player.Spouse != null && !PolygamyLoose())
-                {
-                    bool loversOpen = cfg.EnableLoversRoad && cfg.EnableConversationMarriage;
-                    if (forHand || !loversOpen) return TrothBlock.NotFree;
-                }
+                if (SecondWifeLaw.PlayerMarriageBars(PlayerIsWed(player), cfg.AllowMoreThanOneWife, forHand,
+                        cfg.EnableLoversRoad && cfg.EnableConversationMarriage))
+                    return TrothBlock.PlayerWed;
                 if (npc.IsChild || npc.Age < 18f || player.Age < 18f) return TrothBlock.TooYoung;
                 if (npc.IsNotable || npc.IsMinorFactionHero || npc.IsTemplate) return TrothBlock.NotForMarriage;
 
@@ -243,9 +264,11 @@ namespace ImmersiveAI
                             && npc.MapFaction.IsAtWarWith(player.MapFaction)) return TrothBlock.AtWar;
                         // Vanilla's whole verdict — kinship within three generations, vows elsewhere,
                         // quest vetoes, clans — asked directly, so our seal can never outrun the game's law.
+                        // With a wife already at his side the law is asked AS IF he were free — every
+                        // other leg of it still binds (Household.LawAllows; the slot is lent by field).
                         try
                         {
-                            if (!Campaign.Current.Models.MarriageModel.IsCoupleSuitableForMarriage(player, npc))
+                            if (!Household.LawAllows(player, npc))
                                 return TrothBlock.WorldRefuses;
                         }
                         catch { }
@@ -261,7 +284,8 @@ namespace ImmersiveAI
         {
             switch (block)
             {
-                case TrothBlock.NotFree: return "one of us is already bound in marriage; this road is closed while that vow stands.";
+                case TrothBlock.NotFree:
+                case TrothBlock.PlayerWed: return "one of us is already bound in marriage; this road is closed while that vow stands.";
                 case TrothBlock.PromisedElsewhere: return "their word is already promised to another; I will not lay mine beside a standing troth.";
                 case TrothBlock.TooYoung: return "the world does not wed those not yet grown; the years must pass first.";
                 case TrothBlock.NotTheCustom: return "such a match is not the custom of this world, and the world will not seal it.";
@@ -287,6 +311,10 @@ namespace ImmersiveAI
             switch (block)
             {
                 case TrothBlock.NotFree: return "one of you is already married";
+                case TrothBlock.PlayerWed:
+                    return npc != null && IsHandmaid(npc)
+                        ? Core.Handmaids.HandmaidText.MarriedWallForPlayer
+                        : SecondWifeText.PlayerWedWall(Safe(() => Hero.MainHero?.IsFemale ?? false, false));
                 case TrothBlock.PromisedElsewhere: return "your word is already given to another";
                 case TrothBlock.TooYoung: return "the world weds only the grown";
                 case TrothBlock.NotTheCustom: return "the world does not seal such a match";
@@ -394,6 +422,11 @@ namespace ImmersiveAI
                 if (CourtshipMisgivings.OpenCount(memory.CourtshipMisgivings) > 0) return false;
                 if (CourtshipRoad.JudgeForward(RoadFactsOf(npc, memory)) != CourtshipRoad.StepVerdict.Allowed)
                     return false;
+                // Readiness is the first rung of a hand, so the world's wall — his own marriage with
+                // "More than one wife" off among it — binds the computed step exactly as it binds
+                // her own reach for it (2026.11.11: every gate on the road agrees with the setting).
+                if (TrothBlockReason(npc, forWedding: false, _config, forHand: true) != TrothBlock.None)
+                    return false;
 
                 var playerName = Hero.MainHero?.Name?.ToString() ?? "the traveler";
                 memory.CourtshipStage = CourtshipStage.Ready;
@@ -466,7 +499,7 @@ namespace ImmersiveAI
                         // A path drawn over a wall would contradict itself — the wall alone is the truth.
                         return new RoadGuide
                         {
-                            WhatNow = handmaid && wall == TrothBlock.NotFree && npc.Spouse == null
+                            WhatNow = handmaid && wall == TrothBlock.PlayerWed
                                 ? $"No marriage road can open with her — {HandmaidText.MarriedWallForPlayer}."
                                 : $"No marriage road can open with them — {TrothBlockForPlayer(wall, npc)}."
                         };
@@ -523,9 +556,7 @@ namespace ImmersiveAI
                 var block = TrothBlockReason(npc, forWedding: false, self._config,
                     forHand: stage >= CourtshipStage.Devotion || facts.Handmaid);
                 if (block != TrothBlock.None)
-                    facts.WorldBlock = facts.Handmaid && block == TrothBlock.NotFree && npc.Spouse == null
-                        ? HandmaidText.MarriedWallForPlayer
-                        : TrothBlockForPlayer(block, npc);
+                    facts.WorldBlock = TrothBlockForPlayer(block, npc);
 
                 return new RoadGuide
                 {
@@ -604,7 +635,10 @@ namespace ImmersiveAI
                 // Nor does one who took the other branch: this section would go on telling her she
                 // is walking toward a wedding, while her own lover's section says plainly that
                 // there is no wedding in it. One sheet, one truth (2026.08.15).
-                if (memory.LoverBond == LoverBond.Lover) return string.Empty;
+                // With "More than one wife" on (2026.11.11) her road may still end in a wedding, and
+                // she is told so by the road itself; off, nothing changes.
+                if (!SecondWifeLaw.RoadShownForLover(memory.LoverBond == LoverBond.Lover, _config.AllowMoreThanOneWife))
+                    return string.Empty;
 
                 var misgivings = memory.CourtshipMisgivings
                     .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text))
@@ -1249,7 +1283,7 @@ namespace ImmersiveAI
                 // "betrothed" sheet (review find, 2026.08.08).
                 if (memory.CourtshipStage > CourtshipStage.None
                     && memory.CourtshipStage < CourtshipStage.Wed
-                    && npc.Spouse == Hero.MainHero && Hero.MainHero != null)
+                    && Hero.MainHero != null && Safe(() => FamilyBuilder.AreWed(npc, Hero.MainHero), false))
                 {
                     memory.CourtshipStage = CourtshipStage.Wed;
                     memory.CourtshipSeeded = true;
@@ -1663,7 +1697,9 @@ namespace ImmersiveAI
                 {
                     try
                     {
-                        if (!Campaign.Current.Models.MarriageModel.IsCoupleSuitableForMarriage(player, npc))
+                        // As if he were free when a wife already stands beside him (see
+                        // Household.LawAllows) — the rest of the law binds exactly as before.
+                        if (!Household.LawAllows(player!, npc))
                             block = TrothBlock.WorldRefuses;
                     }
                     catch { block = TrothBlock.WorldRefuses; }
@@ -1688,13 +1724,14 @@ namespace ImmersiveAI
 
                 // The REAL game marriage: spouse both ways, relation, the wedding cutscene, the log
                 // entry the world's tidings gossip about, SetHasMet — all vanilla's own listeners.
-                // A broken polygamy mod can THROW here (Marry Anyone 3.3.1 on game 1.4.8 calls
-                // methods that no longer exist). Caught, so the refusal branch below still runs
-                // and gives the feast's coin back.
-                try { MarriageAction.Apply(player, npc); }
+                // A further wife (2026.11.11) is wed by our own step, which runs the same listeners
+                // without ever touching the first wife's slot (see PerformWedding). A broken mod can
+                // THROW here (Marry Anyone 3.3.1 on game 1.4.8 calls methods that no longer exist).
+                // Caught, so the refusal branch below still runs and gives the feast's coin back.
+                try { PerformWedding(player!, npc); }
                 catch (Exception ex) { ModLog.Error("the marriage action itself", ex); }
 
-                if (player.Spouse != npc && !Safe(() => FamilyBuilder.AreWed(player, npc), false))
+                if (player!.Spouse != npc && !Safe(() => FamilyBuilder.AreWed(player, npc), false))
                 {
                     // The action refused after all (it no-ops silently on an unsuitable couple) —
                     // never leave a half-married state behind, and never keep coin for a feast
@@ -1719,7 +1756,10 @@ namespace ImmersiveAI
                 memory.NotePlayerEngaged();
                 NoteRoad(npc, memory, Core.Courtship.RoadNotes.KindSealed,
                     $"This day you and {npc.Name} are wed.");
+                // A lover who is wed is a lover no more — she is his wife (2026.11.11).
+                memory.LoverBond = SecondWifeLaw.BondAfterWedding(memory.LoverBond);
                 SaveMemory(npc, memory);
+                TellTheHouseholdOfTheWedding(npc);
 
                 // What the day added to the house's name — given after the marriage truly landed,
                 // never before, so a refused wedding can never leave renown behind it.
@@ -1739,7 +1779,12 @@ namespace ImmersiveAI
             catch (Exception ex)
             {
                 ModLog.Error("sealing the wedding", ex);
-                try { if (graduated && npc != null && Hero.MainHero?.Spouse != npc) npc.SetNewOccupation(Occupation.Wanderer); }
+                try
+                {
+                    if (graduated && npc != null && Hero.MainHero?.Spouse != npc
+                        && !Safe(() => FamilyBuilder.AreWed(Hero.MainHero!, npc), false))
+                        npc.SetNewOccupation(Occupation.Wanderer);
+                }
                 catch { }
             }
         }

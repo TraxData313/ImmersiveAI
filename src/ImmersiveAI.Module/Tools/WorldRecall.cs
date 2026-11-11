@@ -172,7 +172,7 @@ namespace ImmersiveAI.Tools
         private static int ClosenessTo(Hero h, Hero asker)
         {
             if (asker == null || h == null) return 0;
-            if (Safe(() => h.Spouse == asker || asker.Spouse == h
+            if (Safe(() => Personas.FamilyBuilder.AreWed(h, asker)
                 || h.Father == asker || h.Mother == asker || asker.Father == h || asker.Mother == h)) return 5;
             if (Safe(() => h.PartyBelongedTo != null && h.PartyBelongedTo == asker.PartyBelongedTo)) return 4;
             if (Safe(() => h.CurrentSettlement != null && h.CurrentSettlement == asker.CurrentSettlement)) return 3;
@@ -232,7 +232,11 @@ namespace ImmersiveAI.Tools
             Try(() =>
             {
                 var kin = new List<string>();
-                if (h.Spouse != null) kin.Add($"wed to {h.Spouse.Name}" + (h.Spouse.IsAlive ? "" : " (now passed)"));
+                // Every living spouse, not the one slot: a man with two wives is wed to both, and
+                // the second must not read as unwed (2026.11.11).
+                var wed = Personas.FamilyBuilder.SpousesOf(h);
+                if (wed.Count > 0) kin.Add("wed to " + string.Join(" and ", wed.Select(s => s.Name?.ToString())));
+                else if (h.Spouse != null) kin.Add($"wed to {h.Spouse.Name}" + (h.Spouse.IsAlive ? "" : " (now passed)"));
                 if (h.Father != null) kin.Add($"child of {h.Father.Name}" + (h.Mother != null ? $" and {h.Mother.Name}" : ""));
                 else if (h.Mother != null) kin.Add($"child of {h.Mother.Name}");
                 var children = h.Children?.Where(c => c != null && c.IsAlive).Select(c => c.Name?.ToString()).Where(n => n != null).Take(6).ToList();

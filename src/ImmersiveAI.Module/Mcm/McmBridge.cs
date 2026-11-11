@@ -237,6 +237,7 @@ namespace ImmersiveAI.Mcm
         private static string MenuSignature(ImmersiveAiMcmSettings s)
         {
             return string.Join("",
+                s.AllowMoreThanOneWife,
                 SelectedOf(s.Backend), s.AnthropicApiKey, ChosenModel(s.AnthropicModel, s.AnthropicModelCustom),
                 s.OpenAIApiKey, ChosenModel(s.OpenAIModel, s.OpenAIModelCustom),
                 s.OpenRouterApiKey, ChosenModel(s.OpenRouterModel, s.OpenRouterModelCustom),
@@ -274,6 +275,7 @@ namespace ImmersiveAI.Mcm
         private static string CfgSignature(ModConfig c)
         {
             return string.Join("",
+                c.AllowMoreThanOneWife,
                 c.Backend, c.AnthropicApiKey, c.AnthropicModel,
                 c.OpenAIApiKey, c.OpenAIModel,
                 c.OpenRouterApiKey, c.OpenRouterModel,
@@ -312,6 +314,7 @@ namespace ImmersiveAI.Mcm
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void PushConfigToMenu(ImmersiveAiMcmSettings s, ModConfig c)
         {
+            s.AllowMoreThanOneWife = c.AllowMoreThanOneWife;
             Select(s.Backend, c.Backend);
             s.AnthropicApiKey = c.AnthropicApiKey ?? string.Empty;
             s.AnthropicModelCustom = SelectOrCustom(s.AnthropicModel, c.AnthropicModel);
@@ -421,6 +424,7 @@ namespace ImmersiveAI.Mcm
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void PullMenuToConfig(ImmersiveAiMcmSettings s, ModConfig c)
         {
+            c.AllowMoreThanOneWife = s.AllowMoreThanOneWife;
             c.Backend = SelectedOf(s.Backend) ?? c.Backend;
             c.AnthropicApiKey = s.AnthropicApiKey ?? string.Empty;
             c.AnthropicModel = ChosenModel(s.AnthropicModel, s.AnthropicModelCustom) ?? c.AnthropicModel;

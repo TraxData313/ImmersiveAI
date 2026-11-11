@@ -31,6 +31,26 @@ namespace ImmersiveAI.Core.Nights
     }
 
     /// <summary>
+    /// WHAT THE OTHER WOMAN IS TO HIM, as the one who learned of the night would name her
+    /// (2026.11.11, the owner: "they will see 'he went to his other lawful wife / his lover', so they
+    /// will know"). A plain fact riding the record so her line can say it; never a feeling.
+    /// <see cref="Unknown"/> is every record written before this existed, and its line reads exactly
+    /// as it always did.
+    /// </summary>
+    public enum OtherWomanIs
+    {
+        Unknown = 0,
+        /// <summary>She is his lawful wife, and so am I.</summary>
+        HisOtherWife = 1,
+        /// <summary>She is his lawful wife; I am his lover.</summary>
+        HisWife = 2,
+        /// <summary>She is his lover; I am his wife.</summary>
+        HisLover = 3,
+        /// <summary>She is his lover, and so am I.</summary>
+        HisOtherLover = 4,
+    }
+
+    /// <summary>
     /// One night, as one woman keeps it (2026.08.09). Written for every wife every night the
     /// question arises, so that fourteen of them read back as a fortnight of a marriage: the nights
     /// he came, the nights her door was closed, the nights she learned he was elsewhere, and the
@@ -64,6 +84,10 @@ namespace ImmersiveAI.Core.Nights
 
         /// <summary>For <see cref="NightKind.Elsewhere"/>: whom he was with.</summary>
         public string OtherName { get; set; } = string.Empty;
+
+        /// <summary>For <see cref="NightKind.Elsewhere"/>: what that other woman is to him, as this
+        /// one knows it — his other lawful wife, or his lover (2026.11.11).</summary>
+        public OtherWomanIs OtherIs { get; set; } = OtherWomanIs.Unknown;
 
         /// <summary>For <see cref="NightKind.Elsewhere"/>: the NAME that other night was given, when
         /// it was one he paid for and the word of it carried this far (2026.08.09, Anton — "това ще

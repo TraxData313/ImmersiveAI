@@ -51,6 +51,15 @@ namespace ImmersiveAI.Personas
                     lines.Add($"I am wed to {JoinAnd(spouses.Select(DescribePerson).ToList())} — all joined to me in marriage.");
                 else if (npc.Spouse != null)
                     lines.Add($"I was wed to {NameOf(npc.Spouse)}, now passed.");
+
+                // The household fact, once and plainly, when I am not the only one (2026.11.11):
+                // who else is wed to him. Nothing about what it means to me — that is mine.
+                if (spouses.Count == 1)
+                {
+                    var others = SpousesOf(spouses[0]).Where(o => o != npc).Select(NameOf).ToList();
+                    var line = Core.Courtship.SecondWifeText.OtherSpousesLine(NameOf(spouses[0]), others, npc.IsFemale);
+                    if (!string.IsNullOrEmpty(line)) lines.Add(line);
+                }
             });
 
             // Living children, with their ages so the years show — named WITH their other parent
@@ -172,6 +181,10 @@ namespace ImmersiveAI.Personas
                 if (Safe(() => speaker.Children != null
                         && speaker.Children.Any(c => c != null && (c.Father == other || c.Mother == other))))
                     return other.IsFemale ? "the mother of my children" : "the father of my children";
+                // Two wives of one man are not kinswomen to each other — they are what they are
+                // (2026.11.11: co-wives called each other "my kinswoman" for sharing his clan).
+                if (Safe(() => ShareASpouse(speaker, other)))
+                    return Core.Courtship.SecondWifeText.CoSpouseWord(other.IsFemale);
                 if (closeOnly) return null;
                 if (Safe(() => speaker.Clan != null && speaker.Clan.Leader == other))
                     return "the head of my clan";
@@ -266,14 +279,29 @@ namespace ImmersiveAI.Personas
             return string.Join(" ", sentences);
         }
 
-        /// <summary>Every living spouse — the Spouse slot first, then living "exes", where polygamy
-        /// mods park further wives while both live on wed (a living ex in an unmodded game is next
-        /// to none). Dead spouses are the caller's own story to tell.</summary>
+        /// <summary>Whether two people are both wed to the same third — co-wives (or a woman
+        /// player's co-husbands).</summary>
+        public static bool ShareASpouse(Hero a, Hero b)
+        {
+            if (a == null || b == null || a == b) return false;
+            var theirs = SpousesOf(b);
+            return SpousesOf(a).Any(s => s != a && s != b && theirs.Contains(s));
+        }
+
+        /// <summary>Every living spouse — the Spouse slot first, then every FURTHER spouse whose
+        /// own slot points here (our own second weddings, see <see cref="Household"/>), then living
+        /// "exes", where older polygamy mods parked further wives while both live on wed (a living
+        /// ex in an unmodded game is next to none). Dead spouses are the caller's own story to tell.</summary>
         public static List<Hero> SpousesOf(Hero h)
         {
             var list = new List<Hero>();
             if (h == null) return list;
             Try(() => { if (h.Spouse != null && h.Spouse.IsAlive) list.Add(h.Spouse); });
+            Try(() =>
+            {
+                foreach (var further in Household.FurtherSpousesOf(h))
+                    if (further != null && further.IsAlive && !list.Contains(further)) list.Add(further);
+            });
             Try(() =>
             {
                 if (h.ExSpouses == null) return;

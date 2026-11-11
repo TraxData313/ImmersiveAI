@@ -631,6 +631,16 @@ namespace ImmersiveAI
         /// </summary>
         public bool EnableLoversRoad { get; set; } = true;
 
+        /// <summary>
+        /// MORE THAN ONE WIFE (2026.11.11, the owner's call, reversing the lovers-only decision of
+        /// 2026.08.15). Off: a married man can only take lovers — the road to a wedding stays shut
+        /// while he has a wife, exactly as before. On: a woman he courts while married (a lady, a
+        /// companion, a handmaid, or a woman who is already his lover) can walk the whole road and
+        /// become a lawful second wife, natively, with no other mod. Live, no restart. Turning it
+        /// off later refuses only NEW second weddings; wives already wed stay wives.
+        /// </summary>
+        public bool AllowMoreThanOneWife { get; set; } = false;
+
         /// <summary>How far, in percent, the head of a house will argue about what it costs to take
         /// a woman of his blood out of it. 0 means the figure does not move; the same rail the
         /// hiring handshake and the bride-price already haggle on.</summary>

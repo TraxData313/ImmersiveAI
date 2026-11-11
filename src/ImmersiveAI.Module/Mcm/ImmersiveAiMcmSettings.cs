@@ -25,6 +25,15 @@ namespace ImmersiveAI.Mcm
         public override string FolderName => "ImmersiveAI";
         public override string FormatType => "json2";
 
+        // THE FIRST THING IN THE MENU (2026.11.11, Anton: "make the setting somewhere top in the
+        // MCM so it is visible"): whether a married man may take a second lawful wife. It sits at
+        // the head of the top group, below every other order, because it changes what the whole
+        // courtship road can lead to and a player should meet it before anything else. Live.
+        [SettingPropertyBool("More than one wife", Order = -1, RequireRestart = false,
+            HintText = "Off: a married man can only take lovers. On: a woman he courts while married can become a lawful second wife.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public bool AllowMoreThanOneWife { get; set; } = false;
+
         // ── Connection ──────────────────────────────────────────────────────────────
         // Which service answers, the keys, and the models. The chat client is a live shell
         // (LiveSwapChatClient) that rebuilds itself when any of these change, so every edit here

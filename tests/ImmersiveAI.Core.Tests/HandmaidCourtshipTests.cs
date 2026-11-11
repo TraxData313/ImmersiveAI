@@ -341,7 +341,7 @@ public class HandmaidCourtshipTests
             CourtshipText.WhatNow(f));
 
         f.WorldBlock = HandmaidText.MarriedWallForPlayer;
-        Assert.Equal("Nothing can be sealed while you already have a wife; without a mod such as Marry Anyone the world allows only one.",
+        Assert.Equal("Nothing can be sealed while you already have a wife; turn on \"More than one wife\" in the mod's settings to wed her.",
             CourtshipText.WhatNow(f));
     }
 
