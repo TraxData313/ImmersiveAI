@@ -710,8 +710,8 @@ namespace ImmersiveAI
         /// TWO THINGS IT DOES NOT DO, both deliberate. It does not tell her how to feel — she gets
         /// one flat silent beat with the fact in it, and everything after that is hers. And it does
         /// not write anything on her door: if she wants that written down she will write it herself,
-        /// in her own words, in the talk this leak is about to bring about. That whole loop —
-        /// leak, spike, confrontation, her own hand — is the design, and none of it is scripted.
+        /// in her own words, if a talk comes of it. Since 2026.11.11 it does not push her to come either
+        /// (the fresh-wound spike is gone, at the owner's word): she knows, and the rest is hers.
         /// </summary>
         private void LeakTheBond(Hero her)
         {
@@ -734,9 +734,6 @@ namespace ImmersiveAI
                     // discipline every mid-flight write in this mod follows (self-review, 2026.08.15).
                     WriteNightBeat(other, LoverText.OtherWomanLearnsBeat(playerName, herName, sheIsAWife),
                         OutreachMark.None);
-                    // And for a day and a half it is the loudest thing in her. A stamp lost to a
-                    // race costs only a quieter morning, which is why it does not need parking.
-                    MarkFreshWound(other, CampaignTime.Now.ToDays);
                     UI.TalkUI.OnThreadChanged(other, markUnread: true);
                 }
             }

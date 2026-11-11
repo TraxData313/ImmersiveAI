@@ -182,8 +182,7 @@ You usually only need to open:
   marriage model asked AS IF he were free (`Household.LawAllows`, slot emptied by field for the call).
   **THE LEAK RULE**: a wife learns where he slept as a plain fact naming WHAT the other woman is
   (`NightRecord.OtherIs` → "Yasmin, his other lawful wife" / "Ira, who is his lover, not his wife"); records
-  from before keep their old line byte for byte. A night with a LAWFUL co-wife fires NOTHING automatic (no
-  `MarkFreshWound`); a night with a lover keeps the designed wound. Co-wives call each other "my husband's
+  from before keep their old line byte for byte. NOTHING automatic follows a night elsewhere, lawful wife OR lover (the owner, 2026.11.11: "leave it to her"): the fresh-wound stamp that pushed her to come and speak is no longer set anywhere (`FreshWoundDay`/`WoundSpike` remain only so old saves still spend a stamp they hold). Co-wives call each other "my husband's
   other wife", and each wife's kin block carries the household fact once. Dev lever:
   "[Immersive AI • test] Wed them now as a further wife".
 

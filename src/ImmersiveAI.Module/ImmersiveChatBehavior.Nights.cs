@@ -1331,40 +1331,18 @@ namespace ImmersiveAI
                     }
                     else _nightLedger.Add(learned, _config.MaxNightsRemembered);
 
-                    // AND LEARNING HE WAS ELSEWHERE IS A WOUND (2026.08.15). For a day and a half
-                    // it will move her to come and say something, wherever she stands — and what
-                    // she says, or whether she says anything at all, is entirely hers. Only THIS
-                    // kind of night counts: hearing that he slept alone is not an injury, and
-                    // never seeing him come in is not news.
-                    //
-                    // BUT NOT A NIGHT WITH HIS OTHER LAWFUL WIFE (2026.11.11, the owner: "they can
-                    // make up their own mind if they will be jealous or not"). The code does not
-                    // decide that for her: she learns the fact, named for what the other woman is,
-                    // and weighs it through her own heart like any other event. A night with a
-                    // LOVER keeps the designed wound.
-                    bool withALawfulWife = visited != null
-                        && Safe(() => FamilyBuilder.AreWed(Hero.MainHero, visited), false);
-                    if (learned.Kind == NightKind.Elsewhere && !withALawfulWife) MarkFreshWound(wife, now);
+                    // NOTHING AUTOMATIC FOLLOWS (2026.11.11, the owner: "they can make up their own
+                    // mind if they will be jealous or not", then, asked about lovers too: "leave it
+                    // to her"). Until then learning he was elsewhere stamped a fresh wound that
+                    // pushed her to come and speak within a day and a half. Now she learns the
+                    // fact, named for what the other woman is, and whether she comes, what she
+                    // says and how her heart moves are hers, by the ordinary roads.
                 }
 
                 _nightLedger!.SettleNight(now);
                 SaveNightLedger();
             }
             catch (Exception ex) { ModLog.Error("recording what the night was to the others", ex); }
-        }
-
-        /// <summary>She has just learned something. It stays hot for a day and a half; after that
-        /// the ordinary quiet takes over, which the design record is quite clear is worse.</summary>
-        private void MarkFreshWound(Hero her, double gameDay)
-        {
-            try
-            {
-                if (her == null) return;
-                var memory = LoadMemory(her);
-                memory.FreshWoundDay = gameDay;
-                SaveMemory(her, memory);
-            }
-            catch { /* a wound that fails to register is only a quieter morning */ }
         }
 
         private NightRecord? WhatSheLearned(Hero wife, Hero? visited, bool here, string placeKind,
