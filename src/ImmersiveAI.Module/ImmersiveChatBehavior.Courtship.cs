@@ -1688,9 +1688,13 @@ namespace ImmersiveAI
 
                 // The REAL game marriage: spouse both ways, relation, the wedding cutscene, the log
                 // entry the world's tidings gossip about, SetHasMet — all vanilla's own listeners.
-                MarriageAction.Apply(player, npc);
+                // A broken polygamy mod can THROW here (Marry Anyone 3.3.1 on game 1.4.8 calls
+                // methods that no longer exist). Caught, so the refusal branch below still runs
+                // and gives the feast's coin back.
+                try { MarriageAction.Apply(player, npc); }
+                catch (Exception ex) { ModLog.Error("the marriage action itself", ex); }
 
-                if (player.Spouse != npc)
+                if (player.Spouse != npc && !Safe(() => FamilyBuilder.AreWed(player, npc), false))
                 {
                     // The action refused after all (it no-ops silently on an unsuitable couple) —
                     // never leave a half-married state behind, and never keep coin for a feast

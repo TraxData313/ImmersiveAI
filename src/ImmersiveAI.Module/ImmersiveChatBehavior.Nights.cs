@@ -1172,12 +1172,9 @@ namespace ImmersiveAI
 
                     // vanilla's own door: its announcement, its due date — and, either way, the
                     // father snatched out of mother.Spouse at that very instant.
-                    if (mother != Hero.MainHero && Safe(() => FamilyBuilder.AreWed(Hero.MainHero, wife), false))
-                    {
-                        EnsureFatherSlot(mother);
-                        MakePregnantAction.Apply(mother);
-                    }
-                    else BorrowTheFatherSlot(mother, father, () => MakePregnantAction.Apply(mother));
+                    // ONE road for wife, second wife and lover alike (2026.11.11): the father is
+                    // lent to her slot for the length of the call and nothing else is touched.
+                    BorrowTheFatherSlot(mother, father, () => MakePregnantAction.Apply(mother));
 
                     // Only now is it truly done. An exception on the line above leaves the mark
                     // down and the record waiting, so the next hour tries again.
@@ -1201,24 +1198,6 @@ namespace ImmersiveAI
             }
         }
 
-        // Vanilla records the father as whatever sits in the mother's Spouse slot at the instant of
-        // MakePregnantAction — and a polygamy mod keeps exactly one wife in that slot at a time, so
-        // a second wife's child would be fathered by null and crash at the delivery 36 days later.
-        // Setting it here is the same move Marry Anyone's own daily prefix makes, and it is the one
-        // place in this file that touches the world's family graph.
-        private static void EnsureFatherSlot(Hero mother)
-        {
-            try
-            {
-                var player = Hero.MainHero;
-                if (mother == null || player == null || mother == player) return;
-                if (mother.Spouse == player) return;
-                if (!FamilyBuilder.AreWed(player, mother)) return;
-                mother.Spouse = player;
-            }
-            catch (Exception ex) { ModLog.Error("naming the father before a conception", ex); }
-        }
-
         /// <summary>
         /// THE LOVER'S OWN VERSION OF THE FATHER TRAP (2026.08.15), and it is the same silent killer
         /// wearing different clothes. Decompile-verified: vanilla's <c>ChildConceived</c> listener
@@ -1227,42 +1206,43 @@ namespace ImmersiveAI
         /// spouse, so the child would be fathered by null and the game would crash at the delivery,
         /// more than a month after anything a player could connect it to.
         ///
-        /// A wife's slot is simply SET and left (that is Marry Anyone's own move, and she really is
-        /// his wife). A lover's is BORROWED: the dispatcher is synchronous, so by the time
+        /// The slot is BORROWED, for a lover and (since 2026.11.11) for a wife whose slot does not
+        /// hold him too: the dispatcher is synchronous, so by the time
         /// <c>Apply</c> returns the father has been captured, and the slot goes straight back. It
         /// must go back — leaving it would quietly marry her to him in the world's eyes, which is
         /// precisely the thing this whole road exists not to do.
         /// </summary>
+        /// <para>
+        /// NEVER THROUGH THE SETTER (2026.11.11). <c>Hero.Spouse</c>'s setter cascades: it moves
+        /// the old spouse to ExSpouses and nulls the other side, then the other side's setter does
+        /// the same back. Lending a MARRIED father to a lover that way ended with the player, his
+        /// wife and the lover all holding an empty slot and each other as ex-spouses: the vanilla
+        /// marriage silently dissolved and the child fathered by null after all. The same happened
+        /// to a second wife under a polygamy mod. So the private field is written directly, on the
+        /// mother alone, and put back; nobody else's slot or ExSpouses list is ever touched. If a
+        /// game update hides the field, no child is begun (the caller retries) rather than risk it.
+        /// </para>
+        private static readonly System.Reflection.FieldInfo? SpouseField =
+            typeof(Hero).GetField("_spouse",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
         private static void BorrowTheFatherSlot(Hero mother, Hero father, Action act)
         {
-            Hero? previous = null;
-            bool borrowed = false;
-            try
-            {
-                // A WOMAN PLAYER BORROWS TOO, and that is the half this was missing: she is her own
-                // mother here, her lover is the father, and her spouse slot is empty (or holds a
-                // husband who is not the father of this child). The old guard read mother != player
-                // and simply let her conceive fatherless.
-                if (mother != null && father != null && mother != father && mother.Spouse != father)
-                {
-                    previous = mother.Spouse;
-                    mother.Spouse = father;
-                    borrowed = true;
-                }
-                act();
-            }
+            if (mother == null || father == null || mother == father)
+                throw new InvalidOperationException("no father to lend to the mother's slot");
+            if (mother.Spouse == father) { act(); return; }
+            if (SpouseField == null)
+                throw new InvalidOperationException("Hero._spouse was not found; no child is begun");
+
+            var previous = SpouseField.GetValue(mother);
+            SpouseField.SetValue(mother, father);
+            try { act(); }
             finally
             {
-                // The slot goes back whatever happened — but the FAILURE does not stop here. The
-                // wife's path lets a throw reach the caller's catch, which leaves the conception
-                // unmarked so the next hour tries again; swallowing it here would mark a child
-                // revealed that was never actually applied, and it would never be retried
-                // (self-review, 2026.08.15).
-                if (borrowed)
-                {
-                    try { mother.Spouse = previous; }
-                    catch (Exception ex) { ModLog.Error("giving back the father's slot", ex); }
-                }
+                // The slot goes back whatever happened; a throw still reaches the caller's catch,
+                // which leaves the conception unmarked so the next hour tries again.
+                try { SpouseField.SetValue(mother, previous); }
+                catch (Exception ex) { ModLog.Error("giving back the father's slot", ex); }
             }
         }
 
