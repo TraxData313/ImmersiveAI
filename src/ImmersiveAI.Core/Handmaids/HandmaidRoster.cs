@@ -76,35 +76,40 @@ namespace ImmersiveAI.Core.Handmaids
             "I gathered herbs with my mother by the river. The raiders killed her, and the man I was promised to, and kept me because I can close a wound. All winter I bound up the men who slew them.",
             "I know herbs and wounds, {title}. I can keep your men alive.",
             "My mother. She said a soft answer turns away wrath, and she lived so until the day they killed her.",
-            "My mother");
+            "My mother",
+            "<BodyProperties version='4' age='19' weight='0.35' build='0.3' key='0003BC04930040045777787767858774A8877A646564D78598878866777137230074500207847874000000000000000000000000000000000000000000E00002' />");
 
         public static readonly HandmaidGirl Yasmin = new HandmaidGirl(
             "yasmin", "Yasmin", "aserai", "Aserai", "desert_bandits", "spc_wanderer_aserai_8", "Zawji",
             "My father sold pepper and saffron. They burned our storehouse for a debt he did not owe, and he died in it. I rode with a caravan to my uncle; the caravan never arrived.",
             "I can reckon weights and prices, {title}. No trader will cheat your purse while I watch it.",
             "An old holy man who kept the well by our street. He told me a quiet heart is worth more than my father's whole storehouse.",
-            "The old holy man who kept the well by our street");
+            "The old holy man who kept the well by our street",
+            "<BodyProperties version='4' age='20' weight='0.22' build='0.3' key='0024E00D9400400A83777A77C7A235716DC77B5D7767F7117DA6D86B77A747440074300207F0BD70000000000000000000000000000000000000000000E01002' />");
 
         public static readonly HandmaidGirl Alys = new HandmaidGirl(
             "alys", "Alys", "vlandia", "Vlandia", "forest_bandits", "spc_wanderer_vlandia_9", "Messire",
             "I was born in this camp. My mother was taken; I was only born. She died two winters past, and I do not know what lies beyond these trees.",
             "I can cook for many from little, {title}, and mend, and move through a wood unheard.",
             "My mother. Even here, among them, she never raised her voice, and she taught me to pray while they slept.",
-            "My mother");
+            "My mother",
+            "<BodyProperties version='4' age='18' weight='0.2' build='0.3' key='00099404530040045777787767948772A98779666474E785A9A8C866777127130A7430A208847874000000000000000000000000000000000000000000E04002' />");
 
         public static readonly HandmaidGirl Nessa = new HandmaidGirl(
             "nessa", "Nessa", "battania", "Battania", "mountain_bandits", "spc_wanderer_battania_0", "M'fhear",
             "I was healer to a glen. The hill men brought a wounded chief and said: mend him or the village burns. I mended him. They burned it all the same, and kept me.",
             "I can set a bone and cool a fever, {title}.",
             "The old hermit who taught me my herbs. He said the hand that heals must not be proud.",
-            "The old hermit who taught me my herbs");
+            "The old hermit who taught me my herbs",
+            "<BodyProperties version='4' age='19' weight='0.35' build='0.3' key='0019d8078000400157777875678877748a8779636774c78596a99767775157450074500207866875000000000000000000000000000000000000000000e01002' />");
 
         public static readonly HandmaidGirl Ayla = new HandmaidGirl(
             "ayla", "Ayla", "khuzait", "Khuzait", "steppe_bandits", "spc_wanderer_khuzait_9", "Nökhör mini",
             "My father guarded caravans and I rode beside him, saving for my dowry. They fell on us at a well. He held them long enough for the others. Not for me.",
             "I can ride all day, {title}. I know horses, and the roads the caravans keep.",
             "My grandmother. She said the grass that bends is still standing after the storm.",
-            "My grandmother");
+            "My grandmother",
+            "<BodyProperties version='4' age='22' weight='0.2' build='0.3' key='001BC8049300400A9777777ABBA4877477B77979A768B6577DC7EA7F779777870074300307947978000000000000000000000000000000000000000000E01002' />");
 
         /// <summary>All five, in the order the dev pick list shows them after the den's own girl.</summary>
         public static IReadOnlyList<HandmaidGirl> All { get; } = new[] { Niya, Yasmin, Alys, Nessa, Ayla };

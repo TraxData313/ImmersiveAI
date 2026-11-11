@@ -226,6 +226,21 @@ namespace ImmersiveAI.Core.Handmaids
         public static string PickLabel(HandmaidGirl girl, bool isThisDensOwn) =>
             $"{girl.Name} ({girl.CultureName})" + (isThisDensOwn ? DevOwnMark : string.Empty);
 
+        private static readonly Regex AgeAttribute =
+            new Regex("\\bage\\s*=\\s*['\"]([0-9]+(?:\\.[0-9]+)?)['\"]", RegexOptions.CultureInvariant);
+
+        /// <summary>Her age when found: the age written in her face code (a face is modelled at an
+        /// age), held to 18..40; the common <see cref="Age"/> when she has no code or none is read.</summary>
+        public static int AgeOf(HandmaidGirl girl)
+        {
+            var m = AgeAttribute.Match(girl?.FaceCode ?? string.Empty);
+            if (!m.Success) return Age;
+            if (!double.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var a)) return Age;
+            var n = (int)Math.Round(a);
+            return n < 18 ? 18 : n > 40 ? 40 : n;
+        }
+
         private static readonly Regex KeyAttribute =
             new Regex("key\\s*=\\s*['\"]([0-9A-Fa-f]+)['\"]", RegexOptions.CultureInvariant);
 

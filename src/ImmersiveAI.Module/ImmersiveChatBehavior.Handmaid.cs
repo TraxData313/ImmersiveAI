@@ -417,7 +417,7 @@ namespace ImmersiveAI
                     return;
                 }
 
-                hero = HeroCreator.CreateSpecialHero(template, NearestTownOfCulture(girl.Culture), null, null, HandmaidText.Age);
+                hero = HeroCreator.CreateSpecialHero(template, NearestTownOfCulture(girl.Culture), null, null, HandmaidText.AgeOf(girl));
                 var name = new TextObject(girl.Name);
                 hero.SetName(name, name);
                 ApplyHandmaidFace(hero, girl);

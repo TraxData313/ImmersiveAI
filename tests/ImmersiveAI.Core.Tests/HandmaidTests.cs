@@ -41,7 +41,8 @@ public class HandmaidTests
         Assert.Equal(5, HandmaidRoster.All.Count);
         Assert.Equal(5, HandmaidRoster.All.Select(g => g.Id).Distinct().Count());
         Assert.Equal(5, HandmaidRoster.All.Select(g => g.BanditCulture).Distinct().Count());
-        Assert.All(HandmaidRoster.All, g => Assert.Equal(string.Empty, g.FaceCode));
+        Assert.All(HandmaidRoster.All, g => Assert.True(HandmaidText.LooksLikeFaceCode(g.FaceCode)));
+        Assert.Equal(new[] { 19, 20, 18, 19, 22 }, HandmaidRoster.All.Select(HandmaidText.AgeOf).ToArray());
         Assert.Null(HandmaidRoster.ById("vesna"));
         Assert.Null(HandmaidRoster.ById(null));
     }
