@@ -252,6 +252,7 @@ namespace ImmersiveAI.Mcm
                 s.EnableConversationMarriage, s.AllowCompanionMarriage, s.MarriageNeedsFamilyConsent,
                 s.MarriageDowryHagglePercent, s.CourtshipCharmSlack, s.MinBetrothalDays,
                 s.EnableLoversRoad, s.LoverRansomHagglePercent, s.EnableClosedDoors, s.AllowDutyNights,
+                s.EnableHideoutHandmaid,
                 SelectedOf(s.PersonaSparkMode),
                 s.EnableVoice, s.VoiceAutoSpeak, s.VoiceSpeakWhenClosed, s.VoiceSpeakActedParts, s.VoiceAutoCast,
                 s.VoicePerformSounds,
@@ -288,6 +289,7 @@ namespace ImmersiveAI.Mcm
                 c.EnableConversationMarriage, c.AllowCompanionMarriage, c.MarriageNeedsFamilyConsent,
                 c.MarriageDowryHagglePercent, c.CourtshipCharmSlack, c.MinBetrothalDays,
                 c.EnableLoversRoad, c.LoverRansomHagglePercent, c.EnableClosedDoors, c.AllowDutyNights,
+                c.EnableHideoutHandmaid,
                 c.PersonaSparkMode,
                 c.EnableVoice, c.VoiceAutoSpeak, c.VoiceSpeakWhenClosed, c.VoiceSpeakActedParts, c.VoiceAutoCast, c.VoicePerformSounds,
                 // The castings live in the voices' own sheet, not in config.json — so the signature
@@ -359,6 +361,7 @@ namespace ImmersiveAI.Mcm
             s.LoverRansomHagglePercent = Clamp(c.LoverRansomHagglePercent, 0, 90);
             s.EnableClosedDoors = c.EnableClosedDoors;
             s.AllowDutyNights = c.AllowDutyNights;
+            s.EnableHideoutHandmaid = c.EnableHideoutHandmaid;
             Select(s.PersonaSparkMode, SparkModeLabel(c.PersonaSparkMode));
             s.EnableVoice = c.EnableVoice;
             s.VoiceAutoSpeak = c.VoiceAutoSpeak;
@@ -472,6 +475,7 @@ namespace ImmersiveAI.Mcm
             c.LoverRansomHagglePercent = s.LoverRansomHagglePercent;
             c.EnableClosedDoors = s.EnableClosedDoors;
             c.AllowDutyNights = s.AllowDutyNights;
+            c.EnableHideoutHandmaid = s.EnableHideoutHandmaid;
             c.PersonaSparkMode = SparkModeValue(SelectedOf(s.PersonaSparkMode)) ?? c.PersonaSparkMode;
             c.EnableVoice = s.EnableVoice;
             c.VoiceAutoSpeak = s.VoiceAutoSpeak;

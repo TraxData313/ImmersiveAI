@@ -600,6 +600,13 @@ namespace ImmersiveAI
         /// unwritten.</summary>
         public bool EnableBirthChronicle { get; set; } = true;
 
+        /// <summary>When true, the first bandit hideout the player clears in a campaign yields a
+        /// captive girl: the men's report, then a short scripted talk with her, and if the player
+        /// takes her in she joins his clan as FAMILY (not a companion, no companion slot). Once per
+        /// campaign; with DevMode on it comes at every hideout cleared, with a pick of the girl.
+        /// Set false and hideouts yield no one.</summary>
+        public bool EnableHideoutHandmaid { get; set; } = true;
+
         /// <summary>When true, a child born to one of them is named by its MOTHER rather than by the
         /// game's lot: she keeps a name she already spoke aloud for it, or chooses one as her people
         /// would. One short call at the birth. Only when the mother is not you — your own children

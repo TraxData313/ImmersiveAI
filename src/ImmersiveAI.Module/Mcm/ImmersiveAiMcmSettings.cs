@@ -405,6 +405,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool AllowDutyNights { get; set; } = true;
 
+        [SettingPropertyBool("A captive in the first hideout", Order = 30, RequireRestart = false,
+            HintText = "The first bandit hideout you clear in a campaign, your men find a captive girl. Take her in and she joins your family - no companion slot. Once per campaign. With Developer mode on, it comes at every hideout you clear and you may pick which girl. Off: hideouts yield no one.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public bool EnableHideoutHandmaid { get; set; } = true;
+
         [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]

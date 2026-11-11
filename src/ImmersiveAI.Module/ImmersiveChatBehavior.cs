@@ -986,6 +986,10 @@ namespace ImmersiveAI
             CampaignEvents.OnPrisonerDonatedToSettlementEvent.AddNonSerializedListener(this, OnPrisonerDonatedForJourney);
             CampaignEvents.OnQuestStartedEvent.AddNonSerializedListener(this, OnQuestStartedForJourney);
             CampaignEvents.OnQuestCompletedEvent.AddNonSerializedListener(this, OnQuestCompletedForJourney);
+
+            // The captive in the den (see the Handmaid partial). Registered after ConversationEnded
+            // above, so the meeting-note listener has already stepped past her when ours runs.
+            RegisterHandmaidEvents();
         }
 
         // A conversation just closed. If it never became recorded beats (no free chat, no accepted
@@ -1026,6 +1030,9 @@ namespace ImmersiveAI
                 {
                     var npc = character?.HeroObject;
                     if (npc == null || npc == Hero.MainHero || !npc.IsAlive) continue;
+                    // The captive's scripted meeting leaves no meeting note and no talk stamp: she is
+                    // either taken in (with her own beat) or removed (see the Handmaid partial).
+                    if (IsHandmaidMeetingHero(npc)) continue;
                     // The talk is over, so what was in it now counts as SAID — this is the stamp the
                     // "since we were last alone" line hangs on, and it must land whether or not the
                     // talk left a meeting beat behind (see the Nights partial).
@@ -1080,6 +1087,8 @@ namespace ImmersiveAI
                 _pendingSnapshotToken = _snapshotToken;
             }
             dataStore.SyncData("ImmersiveAI_SnapshotToken", ref _snapshotToken);
+
+            SyncHandmaidData(dataStore);
         }
 
         // A save just finished — with the feature on, photograph this campaign's whole memory folder into the
@@ -1177,6 +1186,9 @@ namespace ImmersiveAI
                 "{=!}{" + RecapVar + "}", () => _pendingInitiation && _recapReady, OnInitiationDelivered, 200);
             starter.AddDialogLine("immersiveai_init_hold", "start", "immersiveai_init_wait",
                 "{=ImmersiveAI_Recall}(gathers their thoughts...)", () => _pendingInitiation && !_recapReady, null, 200);
+
+            // The captive in the den: her scripted meeting, gated on that one talk (Handmaid partial).
+            AddHandmaidDialogs(starter);
             starter.AddPlayerLine("immersiveai_init_holdwait", "immersiveai_init_wait", "start",
                 "{=ImmersiveAI_Wait}(wait for them to answer)", () => _pendingInitiation, null, 200);
 
@@ -1320,6 +1332,13 @@ namespace ImmersiveAI
                     "{=ImmersiveAI_TestBirth}Let us part now. [Immersive AI • test — write a child's day anew]",
                     () => _config.EnableBirthChronicle,
                     () => { DevForgeBirth(_currentNpc); RequestLeaveFromPartyEncounter(); }, 87);
+
+                // Handmaid lever: the captive-in-the-den meeting without a hideout — pick list, then
+                // the men's report — the moment the talk has closed and the map is calm.
+                starter.AddPlayerLine("immersiveai_test_handmaid", "immersiveai_input", "close_window",
+                    "{=ImmersiveAI_TestHandmaid}" + ImmersiveAI.Core.Handmaids.HandmaidText.DevLever,
+                    () => _config.EnableHideoutHandmaid,
+                    () => { OnDebugCallHandmaid(); RequestLeaveFromPartyEncounter(); }, 86);
             }
 
             // Menu option: leave. "close_window" is the engine's token that ends the conversation.

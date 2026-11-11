@@ -132,6 +132,8 @@ namespace ImmersiveAI
             Mcm.McmBridge.TryBind(Config);
             // Drain UI updates queued by background LLM calls.
             MainThreadDispatcher.Drain();
+            // The captive in the den waits for a calm moment; menus hold the campaign tick still.
+            ImmersiveChatBehavior.HandmaidTick();
             // The talk screen's little life — hotkey on the map, Enter/Escape while open — and, in
             // the same breath, the two older windows it replaced (idle unless the player kept them).
             UI.TalkUI.Tick();
