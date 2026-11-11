@@ -147,4 +147,15 @@ public class HandmaidTests
     {
         Assert.Equal(ok, HandmaidText.LooksLikeFaceCode(code));
     }
+
+    [Fact]
+    public void TheLauncherNeutralizerTravelsAsOnePlainArgument()
+    {
+        var n = ImmersiveAI.Core.Llm.ClaudeCliShape.LauncherNeutralizer;
+        Assert.DoesNotContain("'", n);
+        Assert.DoesNotContain("\"", n);
+        Assert.DoesNotContain("\n", n);
+        Assert.Contains("email", n);
+        Assert.Contains("date", n);
+    }
 }

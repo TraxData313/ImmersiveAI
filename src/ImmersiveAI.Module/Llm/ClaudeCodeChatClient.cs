@@ -99,6 +99,9 @@ namespace ImmersiveAI.Llm
                 "--output-format", "stream-json",
                 "--verbose",
                 "--system-prompt-file", sysFile,
+                // The launcher's own additions (email, environment, the real date), told off after
+                // her sheet: see ClaudeCliShape.LauncherNeutralizer.
+                "--append-system-prompt", ClaudeCliShape.LauncherNeutralizer,
                 // The CLI's own workshop stays shut: no local tools, no sessions on disk, no MCP,
                 // no skills, no player customizations — one clean model call, nothing else.
                 "--tools", "",
@@ -140,6 +143,17 @@ namespace ImmersiveAI.Llm
             }
         }
 
+        private static string NeutralRoom()
+        {
+            try
+            {
+                var room = Path.Combine(Path.GetTempPath(), "iai-room");
+                Directory.CreateDirectory(room);
+                return room;
+            }
+            catch { return Path.GetTempPath(); }
+        }
+
         private static ClaudeCliShape.Envelope RunProcess(string exe, List<string> args, string prompt, CancellationToken ct)
         {
             var psi = new ProcessStartInfo
@@ -154,7 +168,9 @@ namespace ImmersiveAI.Llm
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
                 // A neutral home: never a repo, so nothing local can be picked up even in theory.
-                WorkingDirectory = Path.GetDirectoryName(ModConfig.ConfigFilePath) ?? Path.GetTempPath(),
+                // And NOT the config folder (until 2026.11.11): the CLI prints its working directory
+                // into the context, and that path named the game.
+                WorkingDirectory = NeutralRoom(),
             };
             // Thinking OFF, the same law every other backend is held to (2026.07.13) — here it is
             // an env var, because the CLI has no flag for it: --effort's floor is "low", which on

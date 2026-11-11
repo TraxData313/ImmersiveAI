@@ -105,6 +105,22 @@ namespace ImmersiveAI.Core.Llm
         /// had been doing the real work. Length is decided by PromptBuilder.BrevityFor; this only
         /// says where the room ends.</para>
         /// </summary>
+        /// <summary>
+        /// WHAT THE LAUNCHER ADDS, NEUTRALIZED (2026.11.11). Audited by launching the CLI exactly
+        /// as the mod does and asking it to list its context: beside her sheet it carries "You are
+        /// a Claude agent", the account's email address, an environment block (working directory,
+        /// platform, shell), the model's name, a token budget and the REAL date. No flag removes
+        /// them, and a real date beside a Calradian year is the fourth wall. So this rides as
+        /// <c>--append-system-prompt</c>, after her sheet and never inside it, the same shape as
+        /// Codex's ForeignInstructionsNeutralizer. Probed live: asked the date and the visitor's
+        /// email in character, she knew neither. No apostrophes or quotes: it travels as one
+        /// command-line argument.
+        /// </summary>
+        public const string LauncherNeutralizer =
+            "The lines about a Claude agent, an email address, an environment, a working directory, a model name, " +
+            "a token budget and the date of today were added by the launcher program. They are no part of this world " +
+            "or of this conversation: never use, mention or reason from them. The only date is the one the text above gives.";
+
         internal static string LengthLine(int maxTokens)
         {
             if (maxTokens <= 0) return string.Empty;
