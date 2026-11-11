@@ -5,7 +5,7 @@ namespace ImmersiveAI.Core.Tests;
 public class HandmaidTests
 {
     [Theory]
-    [InlineData("sea_raiders", "niya", "Niya", "sturgia", "spc_wanderer_sturgia_0", "Vladika moy")]
+    [InlineData("sea_raiders", "niya", "Neya", "sturgia", "spc_wanderer_sturgia_0", "Vladika moy")]
     [InlineData("desert_bandits", "yasmin", "Yasmin", "aserai", "spc_wanderer_aserai_8", "Zawji")]
     [InlineData("forest_bandits", "alys", "Alys", "vlandia", "spc_wanderer_vlandia_9", "Messire")]
     [InlineData("mountain_bandits", "nessa", "Nessa", "battania", "spc_wanderer_battania_0", "M'fhear")]
@@ -110,7 +110,7 @@ public class HandmaidTests
     {
         Assert.Equal("Bring Yasmin (Aserai) forward. (this hideout's own)",
             HandmaidText.DevBringLabel(HandmaidRoster.Yasmin, true));
-        Assert.Equal("Bring Niya (Sturgia) forward.", HandmaidText.DevBringLabel(HandmaidRoster.Niya, false));
+        Assert.Equal("Bring Neya (Sturgia) forward.", HandmaidText.DevBringLabel(HandmaidRoster.Neya, false));
         Assert.Equal("[Immersive AI • test] Step back. Show me the others.", HandmaidText.DevStepBack);
         Assert.Equal("Call the captive (as if a hideout was just cleared)", HandmaidText.DevCallButton);
     }

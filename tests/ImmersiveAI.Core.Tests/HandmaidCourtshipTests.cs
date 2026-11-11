@@ -333,7 +333,7 @@ public class HandmaidCourtshipTests
         var f = new CourtshipText.NextStepFacts
         {
             Stage = CourtshipStage.Devotion, Verdict = CourtshipRoad.StepVerdict.MisgivingsRemain,
-            NpcName = "Niya", OpenMisgivings = 2,
+            NpcName = "Neya", OpenMisgivings = 2,
         };
         Assert.Contains("Only life answers a doubt", CourtshipText.WhatNow(f));
         f.Handmaid = true;

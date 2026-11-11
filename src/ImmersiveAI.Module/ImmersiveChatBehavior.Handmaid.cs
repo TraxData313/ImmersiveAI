@@ -226,6 +226,15 @@ namespace ImmersiveAI
                     // A girl made before the age fix came out at her wanderer template's age
                     // (Niya was 27). Once per save, put her back at her own age.
                     var girl = HandmaidOf(hero);
+                    // A girl renamed in the roster (Niya became Neya) takes her present name.
+                    var former = HandmaidRoster.FormerNameOf(girl);
+                    if (hero != null && girl != null && former != null
+                        && string.Equals(hero.FirstName?.ToString(), former, StringComparison.Ordinal))
+                    {
+                        var name = new TextObject(girl.Name);
+                        hero.SetName(name, name);
+                        ModLog.Info($"handmaid: {hero.StringId} is named {girl.Name} now.");
+                    }
                     if (!_handmaidAgesHealed && hero != null && girl != null
                         && hero.Age > HandmaidText.AgeOf(girl) + 1.5f)
                         GiveHandmaidHerAge(hero, girl);

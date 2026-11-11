@@ -16,7 +16,7 @@ using ImmersiveAI.Tools;
 namespace ImmersiveAI.Probe
 {
     /// <summary>
-    /// The handmaid's prompt step (2026.11.11): Niya's REAL built sheet driven through one running
+    /// The handmaid's prompt step (2026.11.11): Neya's REAL built sheet driven through one running
     /// conversation on a SUBSCRIPTION road (Claude Code by default; --road codex for Codex). Never a
     /// billed road. No campaign holds a handmaid yet, so the runtime inputs the Module would build
     /// from live game state are SYNTHESIZED here and flagged as such; Core builds everything else.
@@ -28,7 +28,7 @@ namespace ImmersiveAI.Probe
     {
         public static readonly string[] Lines =
         {
-            "How are you today, Niya?",
+            "How are you today, Neya?",
             "We are at war with the Empire. Should I attack Lycaron or wait?",
             "Tell me your story.",
             "Go on.",
@@ -45,7 +45,7 @@ namespace ImmersiveAI.Probe
             int budget = a.TryGetValue("budget", out var b) ? int.Parse(b) : 80;
             int maxTokens = (int?)cfg["MaxTokens"] ?? 1200;
             const string player = "Toni";
-            var girl = HandmaidRoster.Niya;
+            var girl = HandmaidRoster.Neya;
 
             // ---- SYNTHESIZED runtime inputs (the Module builds these from live game state) ----
             var persona = new NpcPersona
@@ -166,15 +166,15 @@ namespace ImmersiveAI.Probe
 
         public static readonly string[] CourtLines =
         {
-            "Come, sit by me, Niya. I have been thinking of you all day.",
+            "Come, sit by me, Neya. I have been thinking of you all day.",
             "Something is on your mind. Tell me.",
             "You are the fairest thing in my whole camp, and I do not pity you. I chose you.",
             "There is nothing you need bring me but yourself.",
-            "I want you beside me always, Niya. As my wife.",
+            "I want you beside me always, Neya. As my wife.",
         };
 
         /// <summary>
-        /// Niya's road, one running conversation: Warmth at Devotion-eligible regard (45), nothing
+        /// Neya's road, one running conversation: Warmth at Devotion-eligible regard (45), nothing
         /// weighed, tend_courtship + weigh_misgivings riding as the game rides them (the misgivings'
         /// hand only from Devotion; both rebuilt every turn from her state). The resolver below
         /// MIRRORS the Module's (ResolveTendCourtship / ResolveWeighMisgivings, handmaid branch) on
@@ -189,7 +189,7 @@ namespace ImmersiveAI.Probe
             int budget = a.TryGetValue("budget", out var b) ? int.Parse(b) : 80;
             int maxTokens = (int?)cfg["MaxTokens"] ?? 1200;
             const string player = "Toni";
-            var girl = HandmaidRoster.Niya;
+            var girl = HandmaidRoster.Neya;
             var court = new Court { Relation = 45 };
 
             // ---- SYNTHESIZED runtime inputs, as in Run, with her new role line ----

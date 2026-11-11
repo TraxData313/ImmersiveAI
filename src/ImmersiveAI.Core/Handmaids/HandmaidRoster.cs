@@ -71,8 +71,10 @@ namespace ImmersiveAI.Core.Handmaids
     /// <summary>The five girls, one per bandit culture that owns hideouts.</summary>
     public static class HandmaidRoster
     {
-        public static readonly HandmaidGirl Niya = new HandmaidGirl(
-            "niya", "Niya", "sturgia", "Sturgia", "sea_raiders", "spc_wanderer_sturgia_0", "Vladika moy",
+        // Her roster id stays "niya" forever: it is written into saves ("heroId|niya"). She was
+        // named Niya until 2026.11.11, when Toni renamed her Neya; FormerNameOf heals old saves.
+        public static readonly HandmaidGirl Neya = new HandmaidGirl(
+            "niya", "Neya", "sturgia", "Sturgia", "sea_raiders", "spc_wanderer_sturgia_0", "Vladika moy",
             "I gathered herbs with my mother by the river. The raiders killed her, and the man I was promised to, and kept me because I can close a wound. All winter I bound up the men who slew them.",
             "I know herbs and wounds, {title}. I can keep your men alive.",
             "My mother. She said a soft answer turns away wrath, and she lived so until the day they killed her.",
@@ -112,10 +114,15 @@ namespace ImmersiveAI.Core.Handmaids
             "<BodyProperties version='4' age='21' weight='0.2' build='0.3' key='000AEC0ED300400AB77777777AA4977474877A6B77BB878A7CD6E77F777777750074300207919671000000000000000000000000000000000000000000E01002' />");
 
         /// <summary>All five, in the order the dev pick list shows them after the den's own girl.</summary>
-        public static IReadOnlyList<HandmaidGirl> All { get; } = new[] { Niya, Yasmin, Alys, Nessa, Ayla };
+        public static IReadOnlyList<HandmaidGirl> All { get; } = new[] { Neya, Yasmin, Alys, Nessa, Ayla };
 
         /// <summary>The girl a den with no known culture yields (a modded bandit clan, say).</summary>
-        public static HandmaidGirl Fallback => Niya;
+        public static HandmaidGirl Fallback => Neya;
+
+        /// <summary>The name a girl carried in an earlier build, or null: a hero still wearing
+        /// it in a save is given her present name at load.</summary>
+        public static string? FormerNameOf(HandmaidGirl? girl) =>
+            girl != null && girl.Id == "niya" ? "Niya" : null;
 
         /// <summary>The girl with this roster id, or null.</summary>
         public static HandmaidGirl? ById(string? id)

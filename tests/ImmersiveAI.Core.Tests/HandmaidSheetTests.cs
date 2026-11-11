@@ -13,7 +13,7 @@ public class HandmaidSheetTests
 
     private static NpcPersona Persona(string spirit = "") => new()
     {
-        Name = "Niya",
+        Name = "Neya",
         RoleDescription = "A Sturgian noble of clan Toni's — a woman of some 20 years.",
         SpeechStyle = "Old and weary; speaks slowly, references the past, gives unasked-for advice.",
         WorldInstructions = "Speak shortly.",
@@ -31,7 +31,7 @@ public class HandmaidSheetTests
     public void TheSection_RidesOnlyForAHandmaid()
     {
         Assert.DoesNotContain(Mark, Sheet(Persona()));
-        var spirit = HandmaidText.SpiritFor(HandmaidRoster.Niya, "Toni", wed: false);
+        var spirit = HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false);
         var sheet = Sheet(Persona(spirit));
         Assert.Contains(Mark, sheet);
         Assert.Contains(spirit, sheet);
@@ -40,7 +40,7 @@ public class HandmaidSheetTests
     [Fact]
     public void TheSection_StandsAfterTheSpeechRules_AndBeforeThePlayersOwnWords()
     {
-        var sheet = Sheet(Persona(HandmaidText.SpiritFor(HandmaidRoster.Niya, "Toni", wed: false)));
+        var sheet = Sheet(Persona(HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false)));
         int speak = sheet.IndexOf(PromptBuilder.Section(PromptBuilder.Sections.HowTheySpeak), StringComparison.Ordinal);
         int era = sheet.IndexOf("So it is held in these days.", StringComparison.Ordinal);
         int hers = sheet.IndexOf(Mark, StringComparison.Ordinal);
@@ -51,7 +51,7 @@ public class HandmaidSheetTests
     [Fact]
     public void NoBuiltMessage_CarriesASectionMark()
     {
-        var p = Persona(HandmaidText.SpiritFor(HandmaidRoster.Niya, "Toni", wed: true));
+        var p = Persona(HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: true));
         var memory = new NpcMemory { Summary = "He found me." };
         var builder = new PromptBuilder();
         foreach (var list in new[]
@@ -106,7 +106,7 @@ public class HandmaidSheetTests
     [Fact]
     public void ATeacherPhraseFitsTheHeadOfHerSentence()
     {
-        Assert.Equal("My mother", HandmaidRoster.Niya.TaughtBy);
+        Assert.Equal("My mother", HandmaidRoster.Neya.TaughtBy);
         Assert.Equal("The old holy man who kept the well by our street", HandmaidRoster.Yasmin.TaughtBy);
         Assert.Equal("My mother", HandmaidRoster.Alys.TaughtBy);
         Assert.Equal("The old hermit who taught me my herbs", HandmaidRoster.Nessa.TaughtBy);
@@ -116,7 +116,7 @@ public class HandmaidSheetTests
     [Fact]
     public void HerSheet_DropsTheAssignedSpeechStyle_AndTheTaleClause()
     {
-        var hers = Sheet(Persona(HandmaidText.SpiritFor(HandmaidRoster.Niya, "Toni", wed: false)));
+        var hers = Sheet(Persona(HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false)));
         var anyone = Sheet(Persona());
 
         Assert.Contains("When I speak, it comes out like this:", anyone);
