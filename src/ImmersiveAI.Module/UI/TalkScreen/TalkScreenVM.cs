@@ -255,6 +255,12 @@ namespace ImmersiveAI.UI.TalkScreen
             foreach (var info in listed
                          .OrderByDescending(i => ImmersiveChatBehavior.HearthRank(i.Hero) >= 2
                                                      ? ImmersiveChatBehavior.HearthRank(i.Hero)
+                                                     // A WOMAN ON THE ROAD TO HIS HAND comes before every companion
+                                                     // (Toni, 2026.11.11: a handmaid at Warmth with 2 exchanges sat
+                                                     // under "those brutes I don't even talk to"): under wife and
+                                                     // lover, above the closest bond, the further along the higher.
+                                                     : !i.IsGone && ImmersiveChatBehavior.RoadStageOf(i.Hero) > 0
+                                                         ? 1.75 + 0.01 * ImmersiveChatBehavior.RoadStageOf(i.Hero)
                                                      : ReferenceEquals(i, closest) ? 1.5 : ImmersiveChatBehavior.HearthRank(i.Hero))
                          .ThenByDescending(i => i.IsHere)
                          .ThenByDescending(i => !i.IsGone)

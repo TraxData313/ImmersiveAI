@@ -163,6 +163,16 @@ namespace ImmersiveAI
             catch { return 0; }
         }
 
+        /// <summary>How far a soul stands on the courtship road with the player (0 = no road), read
+        /// off the cached index for the talk list's order.</summary>
+        internal static int RoadStageOf(Hero? hero)
+        {
+            var self = Current;
+            if (self == null || hero == null) return 0;
+            try { return MemoryIndex.Get(NpcPaths.MemoryFile(hero), self._memoryStore)?.CourtshipStage ?? 0; }
+            catch { return 0; }
+        }
+
         /// <summary>A soul's memory folder, healed for identity first — empty when it cannot be
         /// resolved at all (then they simply do not join the list).</summary>
         private static string FolderOf(Hero hero)
