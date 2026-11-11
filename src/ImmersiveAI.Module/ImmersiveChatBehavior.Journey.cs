@@ -50,6 +50,9 @@ namespace ImmersiveAI
             try
             {
                 if (!JournalOn || party != MobileParty.MainParty || settlement == null) return;
+                // A bandits' den is not a stop: it was written down as "the town of Hideout, where
+                // we only rested and rode on" (2026.11.11). The battle chronicle tells that day.
+                if (settlement.IsHideout) return;
                 var kind = settlement.IsCastle ? JourneyVisit.Kinds.Castle
                     : settlement.IsVillage ? JourneyVisit.Kinds.Village : JourneyVisit.Kinds.Town;
                 _journeyLog!.BeginVisit(settlement.Name?.ToString() ?? string.Empty, kind,

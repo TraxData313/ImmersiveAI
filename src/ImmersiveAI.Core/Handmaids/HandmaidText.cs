@@ -91,7 +91,10 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>Her one silent first-person memory of the day she was taken in.</summary>
         public const string JoinMemory =
-            "{player} cleared the bandits' den where I was held, and when I begged a place near him he took me into his own house as his handmaid. I owe him my life and my freedom.";
+            "{player} and his men stormed the bandits' den where I was held captive, and slew the men who kept me. " +
+            "His men found me chained behind the stores and brought me before him. I knelt and begged a place near him, " +
+            "and he took me into his own house as his handmaid. Until that hour I was the bandits' captive and served only them; " +
+            "all I do in his service begins from here. I owe him my life and my freedom.";
 
         // ── Her own sheet: the quiet spirit (2026.11.11, the prompt step) ───────────────────
         //
@@ -101,11 +104,11 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>Line 1 while she is his handmaid, not yet his wife.</summary>
         public const string SpiritOpeningUnwed =
-            "I am {name}, handmaid of {player}, who took me out of the bandits' den{when} when I had no one. I am his, and glad of it.";
+            "I am {name}, handmaid of {player}, who took me out of the bandits' den{when} when I had no one. I am his, and glad of it. It is {player} himself who speaks with me now.";
 
         /// <summary>Line 1 once she is his wife.</summary>
         public const string SpiritOpeningWed =
-            "I am {name}, wife of {player}, who took me out of the bandits' den{when} when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.";
+            "I am {name}, wife of {player}, who took me out of the bandits' den{when} when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him. It is {player} himself who speaks with me now.";
 
         /// <summary>The middle lines, the same wed or unwed.</summary>
         public const string SpiritBody =
