@@ -20,6 +20,14 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - After you clear a bandit hideout, your men may find a captive girl: take her in and she joins your family, using no companion slot (once a campaign).
 - She is meek and speaks few words, and calls you her lord, sometimes in her own people's tongue.
 - She hopes to be your wife: her road to the wedding is the usual one, only gentler — small doubts a kind word answers, and no rank for your clan to climb.
+- New setting at the top of the menu, "More than one wife" (off by default): turn it on and a woman you court while married can become your lawful second wife, with no other mod needed.
+- With it on, a lady, a companion, the girl from the den, or a woman who is already your lover can walk the whole road to a real wedding; your first wife stays your wife.
+- Your wives learn where you slept, and from whom: "his other lawful wife" or "his lover". How they take it is theirs.
+- Wives of one man now call each other "my husband's other wife", and a look-up of a person names every spouse.
+
+### Fixes
+
+- A married man's wall line now names the mod's own setting instead of pointing at Marry Anyone, which cannot marry the player on this game version.
 
 ## v3.7.0 — 2026.10.23
 

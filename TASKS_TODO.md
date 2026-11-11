@@ -11,12 +11,41 @@
           (watch the frost-blue line), answered by kind words, Ready, "Ask for their hand", the
           wedding (no companion graduation, no clan change, she stays in your party), and her
           sheet afterwards says "wife" in the role line and "my husband" in the kin lines
-      [ ] already married without Marry Anyone: her Between-us page shows the one wall line
+      [ ] already married with "More than one wife" OFF: her Between-us page shows the one wall line,
+          naming the setting
 
-  ** PART 2: MARRY ANYONE. The mod's support was never removed (PolygamyLoose). The Nexus zip in
-      Downloads is v3.0.4 for game 1.0.1, too old. "Marry Anyone Updated" 3.3.1 sits in Modules,
-      switched off. Task: get it loading on 1.4.8, playtest a handmaid as a second wife, then settle
-      the Steam FAQ compatibility claim.
+  ** PLAYTEST NATIVE SECOND WIVES (2026.11.11 — built, never yet played; Marry Anyone is no longer
+      our road, see .manager\marry-anyone.md). BACK UP THE SAVE FIRST. In order of danger:
+      [ ] a save from before this build loads; nothing about the first wife changes
+      [ ] DevMode lever "[Immersive AI • test] Wed them now as a further wife" on a companion (setting
+          ON): the wedding scene shows HER, not the first wife; the log/notice name her; she is in your
+          clan; after it the FIRST wife's encyclopedia still says married to you and yours shows her
+      [ ] save, reload: both still wives (Between us says Married for both, both get the dusk question)
+      [ ] kill the SECOND wife (console/battle): the first marriage survives untouched (Spouse slot,
+          encyclopedia), the second is listed as former; log.txt says nothing alarming
+      [ ] kill the FIRST wife: log says the second "now holds your spouse slot"; the encyclopedia shows
+          her as your spouse; no one else touched
+      [ ] the player dies with two wives (heir takes over): both widowed, no wife left pointing at the dead
+      [ ] a night with wife 2: wife 1's sheet reads "he went to <name>, his other lawful wife" and she
+          does NOT get the day-and-a-half wound pull; a night with a LOVER still gives a wife the wound
+      [ ] a child by wife 2: conception through the nights, father = you, born fine 36 days later;
+          no second roll from vanilla (nights patch "Applied" in log.txt)
+      [ ] setting OFF with two wives: both stay wives, a new courtship walls at readiness with the line
+          naming the setting
+      [ ] the real road, setting ON: a noble lady (blessing, gold, wedding scale), a handmaid, and a
+          woman who is already your lover (her lover section is gone after the wedding)
+      [ ] the wedding chronicle of wife 2: wife 1 among the witnesses when present/invited; she gets
+          the day, never the night; the chronicler is told he is already wed
+      [ ] co-wives' sheets: "my husband's other wife", the household line in the kin block, recall_person
+          lists both wives
+      [ ] the clan screen and vanilla dialogs for wife 2 (vanilla's own "my spouse" lines read only the
+          slot, so wife 2 may be addressed as a clan member there — note what it shows)
+      [ ] with Marry Anyone loaded: one grey line at campaign start, nothing else relies on it
+      [ ] remove the mod on a COPY of a two-wife save: it loads; note what vanilla shows
+  ** BEFORE THE NEXT RELEASE: rewrite the Marry Anyone claims in docs\steam-faq.bbcode.txt:68 and the
+      Nexus page (docs\nexus-page.bbcode.txt:101) — they say Marry Anyone works with us; it cannot wed
+      the player on 1.4.8, and the mod's own "More than one wife" setting is the road now. Byte-limited
+      files: pay for any addition with a cut (see docs\release-dance.md).
 
   ** v3.7.0 RELEASED 2026.10.23 (Anton authorized it, unplaytested parts included). The sea stage
       (EnableSeaStage) is ON by default now, and the V9 config migration turns it on for configs

@@ -150,7 +150,42 @@ You usually only need to open:
   road section, `tend_courtship` (`CourtshipHands.TendForHandmaid`) and the refusals — never a second copy;
   (8) the station gate never binds her (`StepFacts.OfHisHouse`), no kin blessing (her clan is his); every
   other rail is code and stays. Her role line reads "of {player}'s household, his handmaid/wife", not
-  "noble of clan". A married player without Marry Anyone sees one honest wall line on her road from the start.
+  "noble of clan". A married player with "More than one wife" off sees one honest wall line on her road from the start.
+
+- **MORE THAN ONE WIFE** (2026.11.11, the owner's call — reverses the 2026.08.15 "lovers only") → Core
+  `Courtship\SecondWife.cs` (`SecondWifeLaw` every gate as a function of the setting, `SecondWifeText` every
+  word; tested in `SecondWifeTests`) + Module `Household.cs` (the shape, the index, the law-as-if-free, the
+  death guard) + the `ImmersiveChatBehavior.SecondWife.cs` partial (the wedding step, the household beat, the
+  dev lever). Setting `AllowMoreThanOneWife` (default OFF, live, MCM "More than one wife", first item of the
+  top group). OFF = exactly the old lovers-only road (wall `TrothBlock.PlayerWed`, whose player line names
+  the setting); ON = the full road to a wedding for a lady, a companion, a handmaid or a LOVER (her
+  `LoverBond` becomes None at the wedding). **Marry Anyone is no longer our road** (3.3.1 cannot wed the
+  player on 1.4.8, `.manager\marry-anyone.md`): detected only to log it and tell the player once.
+  **THE SHAPE (R1)**: the first wife keeps the game's spouse slot both ways; every further wife's own
+  `_spouse` points at him ONE-SIDED, his stays the first's. Nobody in ExSpouses, nobody unwed in vanilla's
+  eyes (so no NPC marriage lottery, vanilla pregnancy names the right father, encyclopedia says "married").
+  The shape describes itself, so nothing is saved: `Household.Rebuild()` reads it from the world at load;
+  `FamilyBuilder.SpousesOf` adds `Household.FurtherSpousesOf`. Chosen over Marry Anyone's shape (newest in
+  the slot, older ones PARKED with an empty slot) because a parked wife reads as unwed to the whole game.
+  **THE CASCADE LAW: never set `Hero.Spouse` through the setter when anyone involved holds a slot** — it
+  moves the old spouse to ExSpouses and nulls the other side, recursively. Write the private `_spouse`
+  (`Household.SetSlot`). Every vanilla writer traced (1.4.8): `MarriageAction` refuses anyone with a spouse;
+  `Hero.AfterLoad`'s spouse fix is gated to saves older than 1.2.8; the XML read is new-game templates; the
+  ONE live writer is `KillCharacterAction`'s `victim.Spouse = null`, right after it raises HeroKilled — so
+  `Household.OnHeroKilled` settles every death in a multi-spouse household by field first (he dies → the
+  further wives widowed; a further wife dies → she alone; the first wife dies → the next wife takes his
+  slot). **The wedding step** mirrors `MarriageAction` in order with the slot write by field: bond → relation
+  → `OnBeforeHeroesMarried` with his slot LENT to the bride for that instant (the wedding scene reads
+  `groom.Spouse`; our chronicle captures the day; `Household` still reports the first wife meanwhile) →
+  vanilla's private clan move (reflected) → courtships ended EXCEPT his marriages (vanilla's
+  `EndAllCourtships` would mark the first marriage Ended) → romance Marriage. The law at the seal is the
+  marriage model asked AS IF he were free (`Household.LawAllows`, slot emptied by field for the call).
+  **THE LEAK RULE**: a wife learns where he slept as a plain fact naming WHAT the other woman is
+  (`NightRecord.OtherIs` → "Yasmin, his other lawful wife" / "Ira, who is his lover, not his wife"); records
+  from before keep their old line byte for byte. A night with a LAWFUL co-wife fires NOTHING automatic (no
+  `MarkFreshWound`); a night with a lover keeps the designed wound. Co-wives call each other "my husband's
+  other wife", and each wife's kin block carries the household fact once. Dev lever:
+  "[Immersive AI • test] Wed them now as a further wife".
 
 - **THE SECTION MARKS** (2026.08.27, Anton: *"im not able to read good where the deep memory
   starts, where what section starts"*) → Core `PromptBuilder.Section()`/`Sections`/`StripSections`

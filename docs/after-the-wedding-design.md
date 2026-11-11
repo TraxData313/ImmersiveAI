@@ -418,6 +418,33 @@ brother, not a new organism.
 - The existing MA detection/compat rails in courtship stay for the recognized saves; they
   simply stop growing.
 
+### 2026.11.11 — REVERSED BY THE OWNER: lawful second wives, natively
+
+Anton's words: *"If enabled, be able to get a second wife; if disabled, only lovers, so the
+players can choose. Make the setting somewhere top in the MCM so it is visible. Let the info leak
+between the wives where the man slept, but they can make up their own mind if they will be
+jealous or not; they will see 'he went to his other lawful wife / his lover', so they will know."*
+
+So the "lovers only" decision above stands only as the DEFAULT. A new setting, **"More than one
+wife"** (`AllowMoreThanOneWife`, default off, live, the first item of the menu's top group):
+- **Off** — exactly the road this record describes: a married man may take lovers, and the hand
+  stays walled (the wall's player line now names the setting, never Marry Anyone).
+- **On** — the whole road runs to a REAL vanilla marriage for a lady, a companion, a handmaid, or
+  a woman who is already his lover (her lover's bond ends in favour of the marriage). No mod
+  besides ours: Marry Anyone 3.3.1 cannot wed the player on 1.4.8 at all
+  (`.manager\marry-anyone.md`), and is now only detected, logged and named once.
+- **The shape**: the first wife keeps the game's spouse slot both ways; each further wife's own
+  slot points at him one-sided. Nobody is moved to ExSpouses and no wife ever reads as unwed to
+  vanilla. Every death that would cascade through the setter is settled by field first
+  (`Household.OnHeroKilled`); the first wife's death hands his slot to the next wife.
+- **The leak**: each wife learns where he slept as a plain fact that names WHAT the other woman is
+  — "his other lawful wife", or "his lover, not his wife". A night with a lawful co-wife triggers
+  no automatic wound; she weighs it herself. A night with a lover keeps everything designed here.
+- **Turning it off later** refuses only NEW second weddings; wives already wed stay wives.
+
+The "ceremonial promotion" line above is therefore superseded: promoting a lover is a real wedding
+when the setting is on, and impossible (as before) when it is off.
+
 ## Dev levers
 
 In the chat window's Dev panel, acting on the selected soul: **"Make her a lover"**, **"Make
