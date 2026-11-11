@@ -213,7 +213,7 @@ namespace ImmersiveAI.Llm
                     if (detail.IndexOf("log in", StringComparison.OrdinalIgnoreCase) >= 0
                         || detail.IndexOf("authentication", StringComparison.OrdinalIgnoreCase) >= 0
                         || detail.IndexOf("OAuth", StringComparison.OrdinalIgnoreCase) >= 0)
-                        detail = "Claude Code is installed but not signed in — run it once and log in with your claude.ai account. (" + detail + ")";
+                        detail = "Claude Code is installed but not signed in. To fix: open a terminal (Win+R, cmd), run  claude auth login  and sign in with your claude.ai account in the browser page it opens. No game restart needed. (" + detail + ")";
                     throw new InvalidOperationException("Claude Code exited " + proc.ExitCode + ": " + detail);
                 }
 
