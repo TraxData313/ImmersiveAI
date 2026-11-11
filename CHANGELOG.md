@@ -28,6 +28,11 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ### Fixes
 
 - A married man's wall line now names the mod's own setting instead of pointing at Marry Anyone, which cannot marry the player on this game version.
+- A lover conceiving no longer quietly dissolves the player's marriage in the game's own records.
+- A woman you are courting now heads the list of those you know, above your companions.
+- Local models: a thinking model (Gemma and its kin) is told not to think aloud, the startup check gives it room to answer, and its error no longer blames OpenAI.
+- Claude Code backend: your account email, the real-world date and the folder path no longer reach the characters, and a signed-out error now tells you the command to sign in.
+- A bandit hideout is no longer written into the road journal as a town you rested in.
 
 ## v3.7.0 — 2026.10.23
 
