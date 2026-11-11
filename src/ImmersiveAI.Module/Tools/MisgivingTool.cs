@@ -180,6 +180,18 @@ namespace ImmersiveAI.Tools
             catch { return string.Empty; }
         }
 
+        /// <summary>One named string argument, trimmed; empty when absent or unreadable (a
+        /// handmaid's three picks ride as "misgiving", "second", "third").</summary>
+        public static string ParseField(ToolCall call, string name)
+        {
+            try
+            {
+                var v = JObject.Parse(call.ArgumentsJson)[name];
+                return v == null || v.Type == JTokenType.Null ? string.Empty : v.ToString().Trim();
+            }
+            catch { return string.Empty; }
+        }
+
         public static string ParseNote(ToolCall call)
         {
             try

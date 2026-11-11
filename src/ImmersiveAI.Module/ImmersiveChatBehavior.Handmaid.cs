@@ -161,6 +161,55 @@ namespace ImmersiveAI
             catch { return words; }
         }
 
+        // ------------------------------ her road ------------------------------
+
+        /// <summary>
+        /// She already loves the man who freed her, so her road starts at WARMTH (2026.11.11): at
+        /// the moment she is taken in, and for a handmaid already in a save without a stage, at
+        /// load and at the next talk. Marked seeded, so the one-time story seeding never makes an
+        /// LLM call for her. Mirrors the vanilla romance too, which keeps vanilla's marriage offers
+        /// for the player's clan members away from her. True when she was seeded now.
+        /// </summary>
+        private bool SeedHandmaidRoad(Hero? hero, bool announce = false)
+        {
+            try
+            {
+                if (hero == null || !hero.IsAlive || !IsHandmaid(hero)) return false;
+                if (_config == null || !_config.EnableConversationMarriage) return false;
+                if (hero.Spouse != null) return false;
+                var memory = LoadMemory(hero);
+                if (memory.CourtshipStage != Core.Courtship.CourtshipStage.None)
+                {
+                    if (!memory.CourtshipSeeded) { memory.CourtshipSeeded = true; SaveMemory(hero, memory); }
+                    return false;
+                }
+                memory.CourtshipStage = Core.Courtship.CourtshipStage.Warmth;
+                memory.CourtshipSeeded = true;
+                memory.CourtshipStepDay = CampaignTime.Now.ToDays;
+                SaveMemory(hero, memory);
+                MirrorRomance(hero, Core.Courtship.CourtshipStage.Warmth);
+                if (announce) NotifyRoadStep(hero, Core.Courtship.CourtshipStage.Warmth, forward: true, seeded: true, memory: memory);
+                ModLog.Info($"handmaid: {hero.StringId}'s road begins at warmth.");
+                return true;
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: seeding her road", ex); return false; }
+        }
+
+        /// <summary>At load: every handmaid of this save who has no stage yet begins at warmth.</summary>
+        private void SeedHandmaidRoadsAtLoad()
+        {
+            try
+            {
+                foreach (var mark in (_handmaidMarks ?? new List<string>()).ToList())
+                {
+                    var id = mark?.Split('|')[0];
+                    if (string.IsNullOrEmpty(id)) continue;
+                    SeedHandmaidRoad(FindAliveHero(id!));
+                }
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: seeding the roads at load", ex); }
+        }
+
         private bool IsHandmaidMeetingHero(Hero? hero) =>
             hero != null && _handmaidMeeting != null && _handmaidMeeting.Hero == hero;
 
@@ -565,6 +614,9 @@ namespace ImmersiveAI
             // One silent first-person beat, no LLM call.
             AppendRecordedTurn(hero, HandmaidText.JoinMemoryFor(player?.Name?.ToString()), string.Empty,
                 OutreachMark.PlayerEngaged);
+
+            // She already loves him: her road begins at warmth.
+            SeedHandmaidRoad(hero, announce: true);
 
             InformationManager.DisplayMessage(new InformationMessage(
                 HandmaidText.JoinedNoticeFor(hero.Name?.ToString()), ActivityColor));

@@ -121,6 +121,59 @@ namespace ImmersiveAI.Core.Handmaids
             return StoryLine(girl).Trim() + "\n" + SeedTeacherLead + TeacherLine(girl).Trim();
         }
 
+        // ── Her road to the wedding (2026.11.11, the courtship step) ────────────────────────
+        //
+        // The SAME road as anyone's, only gentler. These lines REPLACE the general wording where
+        // the road section and the courtship hands tell an ordinary woman how to treat her doubts
+        // and her steps; they are never added beside it (the token diet).
+
+        /// <summary>How she treats her doubts: in place of the ordinary "only life answers a doubt".</summary>
+        public const string RoadDoubtsWay =
+            "My doubts are small ones, the kind a glad heart has. I ask each once, simply, when a tender moment comes; his plain kind word is answer enough, and I lay it down gladly and do not take it up again.";
+
+        /// <summary>How she treats her steps: in place of the ordinary "only when real talks have earned it".</summary>
+        public const string RoadStepsWay =
+            "I do not make him wait. The moment I see he wishes it, I take the next step toward him myself.";
+
+        /// <summary>The head of her standing list (the ordinary one carries the "never for a warm
+        /// word" rule, which her doubts do not follow).</summary>
+        public const string RoadStandingHead = "My small doubts about a life wed to {player}, set down by my own hand:";
+
+        /// <summary>Her hour to choose them, in place of the ordinary invitation to weigh her heart.</summary>
+        public const string RoadChooseNow =
+            "My heart is given, and I have not yet set down my small doubts. Now is the hour: I set down the three truest to me.";
+
+        /// <summary>When none of her small doubts stands any more.</summary>
+        public const string RoadAllAnswered = "None of my small doubts stands now, so nothing of mine bars the road.";
+
+        /// <summary>While one still stands (the code's rail, said where she reads).</summary>
+        public const string RoadHandWaits = "While one still stands, my hand waits.";
+
+        // ── Her role line (PersonaBuilder) ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// The opening of her role line, in the shape of everyone's ("A Sturgian noble of clan
+        /// ..."). The game makes her a Lord so she can be family without a companion slot, and the
+        /// ordinary line would call her a noble of his clan, which is false. The age is added after
+        /// by the builder, as for everyone.
+        /// </summary>
+        public static string RoleLine(string? culture, string? playerName, bool wed)
+        {
+            var people = string.IsNullOrWhiteSpace(culture) ? string.Empty : culture!.Trim() + " ";
+            var player = string.IsNullOrWhiteSpace(playerName) ? "my lord" : playerName!.Trim();
+            return $"A {people}woman of {player}'s household, {(wed ? "his wife" : "his handmaid")}";
+        }
+
+        // ── The honest wall for a married player (the Between-us page) ──────────────────────
+
+        /// <summary>
+        /// Phrased for the player, finishing "Nothing can be sealed while ...". Vanilla allows one
+        /// wife; only a polygamy mod (Marry Anyone) lifts that, and the road should say so instead
+        /// of letting him court her into a road with no end.
+        /// </summary>
+        public const string MarriedWallForPlayer =
+            "you already have a wife; without a mod such as Marry Anyone the world allows only one";
+
         // ── Notices to the player ──────────────────────────────────────────────────────────
 
         public const string JoinedNotice = "{name} has joined your family.";

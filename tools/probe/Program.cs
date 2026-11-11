@@ -40,6 +40,7 @@ namespace ImmersiveAI.Probe
                     case "openai": await OpenAI(a); return 0;
                     case "anthropic": await Anthropic(a); return 0;
                     case "handmaid": await HandmaidProbe.Run(a, Runs); return 0;
+                    case "handmaid-court": await HandmaidProbe.RunCourtship(a, Runs); return 0;
                     default:
                         Console.WriteLine(File.ReadAllText(Path.Combine(Here, "README.txt")));
                         return 0;

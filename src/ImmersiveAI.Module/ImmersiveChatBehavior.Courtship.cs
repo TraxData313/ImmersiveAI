@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ImmersiveAI.Core.Courtship;
+using ImmersiveAI.Core.Handmaids;
 using ImmersiveAI.Core.Llm;
 using ImmersiveAI.Core.Memory;
 using ImmersiveAI.Personas;
@@ -362,6 +363,8 @@ namespace ImmersiveAI
                 OpenMisgivings = CourtshipMisgivings.OpenCount(memory.CourtshipMisgivings),
                 DaysBetrothed = memory.BetrothedGameDay < 0 ? -1 : now - memory.BetrothedGameDay,
                 MinBetrothalDays = _config.MinBetrothalDays,
+                // A handmaid is of his own house: the station gate never binds her.
+                OfHisHouse = IsHandmaid(npc),
             };
         }
 
@@ -457,11 +460,16 @@ namespace ImmersiveAI
                     int warmth = GetStanding(npc);
                     if (warmth < 10) return null;
 
-                    var wall = TrothBlockReason(npc, forWedding: false, self._config, forHand: false);
+                    bool handmaid = IsHandmaid(npc);
+                    var wall = TrothBlockReason(npc, forWedding: false, self._config, forHand: handmaid);
                     if (wall != TrothBlock.None)
                         // A path drawn over a wall would contradict itself — the wall alone is the truth.
                         return new RoadGuide
-                        { WhatNow = $"No marriage road can open with them — {TrothBlockForPlayer(wall, npc)}." };
+                        {
+                            WhatNow = handmaid && wall == TrothBlock.NotFree && npc.Spouse == null
+                                ? $"No marriage road can open with her — {HandmaidText.MarriedWallForPlayer}."
+                                : $"No marriage road can open with them — {TrothBlockForPlayer(wall, npc)}."
+                        };
                     var unbegun = Core.Courtship.CourtshipRail.Build(CourtshipStage.None);
                     return new RoadGuide
                     {
@@ -505,13 +513,19 @@ namespace ImmersiveAI
                     PlayerClanTier = Safe(() => Clan.PlayerClan?.Tier ?? 0, 0),
                     RequiredTier = CourtshipRoad.RequiredTier(StationTierOf(npc), self._config.CourtshipCharmSlack),
                     Together = Safe(() => IsCoLocated(npc), true),
+                    Handmaid = IsHandmaid(npc),
                 };
 
                 // A wall of the world outranks every rail of the road: no amount of talking moves a
                 // step while the two of them stand at war, or while a promise stands elsewhere.
+                // A handmaid's whole road is toward being his wife, so a married player meets the
+                // hand's wall from her first step (forHand), told in her own honest line.
                 var block = TrothBlockReason(npc, forWedding: false, self._config,
-                    forHand: stage >= CourtshipStage.Devotion);
-                if (block != TrothBlock.None) facts.WorldBlock = TrothBlockForPlayer(block, npc);
+                    forHand: stage >= CourtshipStage.Devotion || facts.Handmaid);
+                if (block != TrothBlock.None)
+                    facts.WorldBlock = facts.Handmaid && block == TrothBlock.NotFree && npc.Spouse == null
+                        ? HandmaidText.MarriedWallForPlayer
+                        : TrothBlockForPlayer(block, npc);
 
                 return new RoadGuide
                 {
@@ -559,6 +573,11 @@ namespace ImmersiveAI
                 if (memory.CourtshipStage < CourtshipStage.Devotion) return null;
                 if (memory.CourtshipStage >= CourtshipStage.Wed) return null;
 
+                // A handmaid's hand: the ten small doubts as the schema's choices while she has
+                // weighed nothing, and only her own chosen lines after (Core HandmaidDoubts).
+                if (IsHandmaid(npc))
+                    return Core.Handmaids.HandmaidDoubts.Hand(memory.CourtshipMisgivings, memory.MisgivingsWeighed);
+
                 var written = memory.CourtshipMisgivings
                     .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)).ToList();
                 return Tools.MisgivingTool.For(
@@ -599,7 +618,8 @@ namespace ImmersiveAI
                     memory.MisgivingsWeighed,
                     BlessingRequired(npc),
                     memory.FamilyBlessingDay >= 0,
-                    npc?.Clan?.Leader?.Name?.ToString() ?? string.Empty);
+                    npc?.Clan?.Leader?.Name?.ToString() ?? string.Empty,
+                    handmaid: IsHandmaid(npc));
             }
             catch { return string.Empty; }
         }
@@ -741,7 +761,7 @@ namespace ImmersiveAI
 
                 var verdict = CourtshipRoad.JudgeForward(RoadFactsOf(npc, memory));
                 if (verdict != CourtshipRoad.StepVerdict.Allowed)
-                    return Refused(CourtshipText.ForwardRefusal(verdict, playerName),
+                    return Refused(CourtshipText.ForwardRefusal(verdict, playerName, handmaid: IsHandmaid(npc)),
                         CourtshipText.ForwardRefusalForPlayer(verdict));
 
                 if (target == CourtshipStage.Betrothed)
@@ -838,6 +858,33 @@ namespace ImmersiveAI
                     return memory.CourtshipStage == CourtshipStage.Ready
                         ? " And my heart already stands ready and waits to be asked: let them speak the word between us and I say yes gladly, and lay my promise before them by my own hand — the sealing of it is theirs alone."
                         : " And nothing of mine bars the road now. If my heart has truly come to the place where I would give my hand were the word spoken, I own that in this same breath and set it down by my own hand — I would not have them ask me blind.";
+                }
+
+                // A HANDMAID'S DOUBTS (2026.11.11): her first set_down picks one to three of the ten
+                // written lines (never "none", never her own words), and after it nothing new is
+                // ever set down; her lines keep their words. Settle, release and reopen run the
+                // common road below, aimed by her own lines in `which`.
+                if (IsHandmaid(npc))
+                {
+                    if (action == Tools.MisgivingTool.ActSetDown)
+                    {
+                        bool weighed = memory.MisgivingsWeighed;
+                        var picks = HandmaidDoubts.PickParameters
+                            .Select(p => Tools.MisgivingTool.ParseField(call, p)).ToList();
+                        var chose = HandmaidDoubts.Choose(list, ref weighed, picks, out var chosen);
+                        if (chose != HandmaidDoubts.Verdict.Chosen)
+                        {
+                            ModLog.Info($"handmaid: {npc.StringId}'s set_down refused ({chose}): {call.ArgumentsJson}");
+                            return HandmaidDoubts.Answer(chose, Open());
+                        }
+                        memory.MisgivingsWeighed = weighed;
+                        SaveMemory(npc, memory);
+                        if (!quiet) NotifyMisgivings(npc,
+                            $"sets down {chosen.Count} small doubt{(chosen.Count == 1 ? string.Empty : "s")} about a life together ({Open()} of {Total()} standing).",
+                            FrostColor, memory, Core.Courtship.RoadNotes.KindFroze);
+                        return HandmaidDoubts.Answer(chose, Open());
+                    }
+                    if (action == Tools.MisgivingTool.ActRevise) return HandmaidDoubts.NoRewording;
                 }
 
                 switch (action)
@@ -1209,6 +1256,9 @@ namespace ImmersiveAI
                     SaveMemory(npc, memory);
                     return;
                 }
+
+                // A handmaid begins at warmth and never needs the story-seeding call.
+                if (SeedHandmaidRoad(npc)) memory = LoadMemory(npc);
 
                 bool needsSeed = !memory.CourtshipSeeded;
                 if (!needsSeed)

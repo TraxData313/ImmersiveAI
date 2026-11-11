@@ -214,7 +214,9 @@ namespace ImmersiveAI
             // marriage, tended by her alone (the retired matchmaker's checkable asks, unrobotted).
             if (troth != null && troth.TrothRides)
             {
-                tools.Add(Tools.TrothTool.Tend);
+                // A handmaid's hand reads her own pace line ("I do not make him wait") in place of
+                // the ordinary "only when real talks have earned it".
+                tools.Add(IsHandmaid(npc) ? Tools.TrothTool.TendForHandmaid : Tools.TrothTool.Tend);
                 // Shaped for this soul, and absent below LOVE — see MisgivingHandFor.
                 var weighing = MisgivingHandFor(npc);
                 if (weighing != null) tools.Add(weighing);
@@ -1135,6 +1137,9 @@ namespace ImmersiveAI
             // restores nothing — it never blanks live memory.)
             if ((_config?.RevertMemoriesWithSaves ?? false) && !string.IsNullOrEmpty(_snapshotToken))
                 MemorySnapshotStore.Restore(NpcPaths.CampaignRoot, _snapshotToken);
+
+            // A handmaid already in this save without a road stage begins at warmth.
+            SeedHandmaidRoadsAtLoad();
         }
 
         // New campaigns mint a fresh id here (nothing to adopt — a new world starts unremembered);

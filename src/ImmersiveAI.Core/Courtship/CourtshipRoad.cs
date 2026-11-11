@@ -90,6 +90,10 @@ namespace ImmersiveAI.Core.Courtship
             /// <summary>Days since the betrothal was sealed; negative when not betrothed.</summary>
             public double DaysBetrothed = -1;
             public int MinBetrothalDays;
+            /// <summary>She is already of his own house (the handmaid from the den, 2026.11.11): no
+            /// station stands between them, so the station gate never binds. Every other rail —
+            /// her regard, her own misgivings, the seasoning days — binds exactly as for anyone.</summary>
+            public bool OfHisHouse;
         }
 
         /// <summary>
@@ -108,7 +112,7 @@ namespace ImmersiveAI.Core.Courtship
             if (f.Stage >= CourtshipStage.Wed) return StepVerdict.NoRoadFurther;
 
             var target = f.Stage + 1;
-            bool gate(int slack) => f.PlayerClanTier >= RequiredTier(f.HerStationTier, slack);
+            bool gate(int slack) => f.OfHisHouse || f.PlayerClanTier >= RequiredTier(f.HerStationTier, slack);
 
             switch (target)
             {

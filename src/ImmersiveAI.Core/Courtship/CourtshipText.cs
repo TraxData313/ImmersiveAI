@@ -37,9 +37,11 @@ namespace ImmersiveAI.Core.Courtship
             bool misgivingsWeighed,
             bool blessingRequired,
             bool blessingGiven,
-            string headOfHouse)
+            string headOfHouse,
+            bool handmaid = false)
         {
             if (stage <= CourtshipStage.None || stage >= CourtshipStage.Wed) return string.Empty;
+            if (handmaid) return HandmaidRoadSection(playerName, stage, misgivings, misgivingsWeighed);
 
             var sb = new StringBuilder();
             sb.Append($"Where my heart stands with {playerName} on the road toward marriage: ");
@@ -135,6 +137,95 @@ namespace ImmersiveAI.Core.Courtship
             return sb.ToString().TrimEnd();
         }
 
+        /// <summary>
+        /// A HANDMAID'S ROAD SECTION (2026.11.11): the same stages and the same rails, with her own
+        /// wording IN PLACE of the general lines that tell a woman how to treat her doubts and her
+        /// steps (Core <see cref="Handmaids.HandmaidText"/>). Never a second copy beside them. No
+        /// kin lines: she is of his own house, and no blessing is ever asked for her.
+        /// </summary>
+        private static string HandmaidRoadSection(
+            string playerName,
+            CourtshipStage stage,
+            IReadOnlyList<MisgivingView>? misgivings,
+            bool misgivingsWeighed)
+        {
+            var sb = new StringBuilder();
+            sb.Append($"Where my heart stands with {playerName} on the road toward marriage: ");
+            switch (stage)
+            {
+                case CourtshipStage.Warmth:
+                    sb.Append("warmth has taken root in me — I like them, and their company draws me.");
+                    break;
+                case CourtshipStage.Devotion:
+                    sb.Append("my heart is truly given — I love them, though no promise binds us yet.");
+                    break;
+                case CourtshipStage.Ready:
+                    sb.Append("no questions remain in me — were the word spoken between us, I would give my hand.");
+                    break;
+                case CourtshipStage.Betrothed:
+                    sb.Append("I am promised to them — betrothed, the wedding day still ahead.");
+                    break;
+            }
+
+            var written = (misgivings ?? new List<MisgivingView>())
+                .Where(m => m != null && !string.IsNullOrWhiteSpace(m.Text)).ToList();
+            var standing = written.Where(m => !m.Settled).ToList();
+            var atRest = written.Where(m => m.Settled).ToList();
+
+            if (written.Count > 0)
+            {
+                sb.AppendLine();
+                if (standing.Count > 0)
+                {
+                    sb.AppendLine(Handmaids.HandmaidText.RoadStandingHead.Replace("{player}", playerName));
+                    foreach (var m in standing)
+                        sb.AppendLine("- " + Ended(m.Text) + " (this still stands in me)");
+                }
+                if (atRest.Count > 0)
+                {
+                    if (standing.Count > 0) sb.AppendLine();
+                    sb.AppendLine("And these I have already answered and set behind me. They are done with; I do not take them up again:");
+                    foreach (var m in atRest)
+                        sb.AppendLine("- " + Ended(m.Text) + " (laid to rest"
+                            + (string.IsNullOrWhiteSpace(m.Note) ? string.Empty : ": " + m.Note.Trim().TrimEnd('.')) + ")");
+                }
+                sb.AppendLine(standing.Count > 0
+                    ? Handmaids.HandmaidText.RoadDoubtsWay + " " + Handmaids.HandmaidText.RoadHandWaits
+                    : Handmaids.HandmaidText.RoadAllAnswered);
+            }
+            else if (misgivingsWeighed)
+            {
+                sb.AppendLine();
+                sb.AppendLine(Handmaids.HandmaidText.RoadAllAnswered);
+            }
+            else if (stage >= CourtshipStage.Devotion && stage < CourtshipStage.Betrothed)
+            {
+                sb.AppendLine();
+                sb.AppendLine(Handmaids.HandmaidText.RoadChooseNow + " " + Handmaids.HandmaidText.RoadDoubtsWay);
+            }
+
+            // Ready with nothing standing: the posture, without the ordinary "I do not press".
+            if (stage == CourtshipStage.Ready && standing.Count == 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"So I wait now to be asked. Let {playerName} speak the word of marriage between us and I say yes gladly — and then I lay my promise before them by my own hand; the sealing of it is theirs alone.");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine(Handmaids.HandmaidText.RoadStepsWay);
+            sb.AppendLine();
+            sb.AppendLine(WordsDoNotWed);
+            return sb.ToString().TrimEnd();
+        }
+
+        // A list line ends in its own mark: "?" and "!" are kept, a bare line gains a period.
+        private static string Ended(string text)
+        {
+            var t = text.Trim();
+            if (t.EndsWith("?") || t.EndsWith("!")) return t;
+            return t.TrimEnd('.') + ".";
+        }
+
         // ------------------------- the sheet: the head of the house -------------------------
 
         /// <summary>
@@ -193,10 +284,16 @@ namespace ImmersiveAI.Core.Courtship
 
         /// <summary>What her own mind answers when a forward step is refused — honest, hers, and
         /// never quoting a rail. The wording leans on what she can truthfully feel.</summary>
-        public static string ForwardRefusal(CourtshipRoad.StepVerdict verdict, string playerName)
+        public static string ForwardRefusal(CourtshipRoad.StepVerdict verdict, string playerName, bool handmaid = false)
         {
             switch (verdict)
             {
+                // A handmaid's doubts are small ones a kind word answers (2026.11.11): the two
+                // refusals that teach the ordinary "only life answers it" are hers instead.
+                case CourtshipRoad.StepVerdict.MisgivingsUnweighed when handmaid:
+                    return "I have not yet set down my small doubts. I set them down now, and then the road goes on.";
+                case CourtshipRoad.StepVerdict.MisgivingsRemain when handmaid:
+                    return "One of my small doubts still stands. I ask it of him simply; his plain kind word is answer enough, and then I lay it down myself.";
                 case CourtshipRoad.StepVerdict.NoRoadFurther:
                     return "We are wed already; this road has no further step, and none back. What we build now, we build within it.";
                 case CourtshipRoad.StepVerdict.HeartNotThere:
@@ -349,6 +446,9 @@ namespace ImmersiveAI.Core.Courtship
             /// <summary>Whether the two truly stand together right now — the asking is done face
             /// to face, so an open door phrased for an absent soul would point at nothing.</summary>
             public bool Together = true;
+            /// <summary>A handmaid: her doubts are small ones that a plain kind word answers, so
+            /// the guide must not tell the player that only life can.</summary>
+            public bool Handmaid;
         }
 
         /// <summary>
@@ -410,8 +510,16 @@ namespace ImmersiveAI.Core.Courtship
                         ? $"Their station asks a suitor of clan tier {f.RequiredTier}; yours is {f.PlayerClanTier}. Raise your clan to open the hand."
                         : "Their house stands above yours — raise your clan's standing to open the hand.";
 
+                case CourtshipRoad.StepVerdict.MisgivingsUnweighed when f.Handmaid:
+                    return $"{them} has not yet named her small doubts. Speak of marriage, and she will.";
+
                 case CourtshipRoad.StepVerdict.MisgivingsUnweighed:
                     return $"{them} has never weighed what marriage to you would ask. Speak of marriage — that weighing is the next step.";
+
+                case CourtshipRoad.StepVerdict.MisgivingsRemain when f.Handmaid:
+                    return f.OpenMisgivings == 1
+                        ? "One small doubt of hers still stands — read it below. A plain kind word from you answers it."
+                        : $"{f.OpenMisgivings} small doubts of hers still stand — read them below. A plain kind word from you answers each.";
 
                 case CourtshipRoad.StepVerdict.MisgivingsRemain:
                     return f.OpenMisgivings == 1

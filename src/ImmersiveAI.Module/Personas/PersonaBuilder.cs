@@ -56,7 +56,16 @@ namespace ImmersiveAI.Personas
         {
             var sb = new StringBuilder();
             var culture = npc.Culture?.Name?.ToString();
-            if (npc.IsLord)
+            // A handmaid from the den is a Lord only so she can be family without a companion
+            // slot: "a noble of clan ..." would be false. Same shape, her own truth.
+            bool handmaid = ImmersiveChatBehavior.IsHandmaid(npc);
+            if (handmaid)
+            {
+                var player = Hero.MainHero;
+                sb.Append(Core.Handmaids.HandmaidText.RoleLine(culture, player?.Name?.ToString(),
+                    wed: player != null && FamilyBuilder.AreWed(npc, player)));
+            }
+            else if (npc.IsLord)
                 sb.Append($"A {culture} noble");
             else if (npc.IsWanderer)
                 sb.Append($"A {culture} wanderer and sellsword");
@@ -65,9 +74,9 @@ namespace ImmersiveAI.Personas
             else
                 sb.Append(OccupationHead(npc, culture));
 
-            if (npc.Clan != null)
+            if (!handmaid && npc.Clan != null)
                 sb.Append($" of clan {npc.Clan.Name}");
-            if (npc.MapFaction != null && npc.Clan?.Kingdom != null)
+            if (!handmaid && npc.MapFaction != null && npc.Clan?.Kingdom != null)
                 sb.Append($", sworn to {npc.Clan.Kingdom.Name}");
 
             // Gender and years belong to the opening thought of who I am (moved up from the situation
