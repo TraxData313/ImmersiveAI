@@ -266,6 +266,18 @@ namespace ImmersiveAI
             public int FramesWaiting { get; set; }
         }
 
+        // The wanderer templates wear caps and hoods; she is found bare-headed (Toni, 2026.11.11:
+        // "they all look silly with them"), so her own face is what the player sees.
+        private static void BareHerHead(Hero hero)
+        {
+            try
+            {
+                foreach (var kit in new[] { hero.BattleEquipment, hero.CivilianEquipment })
+                    if (kit != null) kit[EquipmentIndex.Head] = default(EquipmentElement);
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: baring her head", ex); }
+        }
+
         private bool IsHandmaidMeetingHero(Hero? hero) =>
             hero != null && _handmaidMeeting != null && _handmaidMeeting.Hero == hero;
 
@@ -694,7 +706,11 @@ namespace ImmersiveAI
                 hero.SetName(name, name);
                 GiveHandmaidHerAge(hero, girl);
                 ApplyHandmaidFace(hero, girl);
-                hero.HiddenInEncyclopedia = true;
+                BareHerHead(hero);
+                // Shown, and known, so her name in the talk is a link to her page with her
+                // skills, as a wanderer's is in a tavern. Hidden again if she is sent away.
+                hero.HiddenInEncyclopedia = false;
+                try { hero.IsKnownToPlayer = true; } catch { }
 
                 var meeting = new HandmaidMeeting(hero, girl, den, dev);
                 _handmaidMeeting = meeting;
@@ -934,7 +950,10 @@ namespace ImmersiveAI
             try
             {
                 if (hero != null && hero.IsAlive)
+                {
+                    hero.HiddenInEncyclopedia = true;
                     KillCharacterAction.ApplyByRemove(hero, false, true);
+                }
             }
             catch (Exception ex) { ModLog.Error("handmaid: removing her", ex); }
         }
