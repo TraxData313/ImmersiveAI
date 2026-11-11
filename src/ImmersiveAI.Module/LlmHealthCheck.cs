@@ -59,7 +59,10 @@ namespace ImmersiveAI
                     return;
                 }
 
-                var client = ChatClientFactory.Create(config, maxTokensOverride: 16);
+                // A local model may think before it speaks, and 16 tokens were gone before the
+                // first word (gemma, 2026.11.11: 13 of 16 spent in silence, then "could not be
+                // reached"). A local ping is free, so it gets room to finish the thought.
+                var client = ChatClientFactory.Create(config, maxTokensOverride: config.IsLocalBackend ? 512 : 16);
                 var messages = new[]
                 {
                     ChatMessage.System("Reply with the single word: OK"),
@@ -160,6 +163,12 @@ namespace ImmersiveAI
 
             if (Mentions(msg, "500") || Mentions(msg, "502") || Mentions(msg, "503") || Mentions(msg, "529"))
                 return "the AI service is having trouble right now. Wait a little and restart the game.";
+
+            // The model answered, but only in thought: the server works and config.json is right,
+            // so do not send the player there.
+            if (Mentions(msg, "thinking and never spoke"))
+                return "your local model is reachable, but it only thought and said nothing. Turn thinking off for this model "
+                     + "in your server (LM Studio: the model's settings), or load a non-thinking build. No restart needed.";
 
             // Anything unclassified: surface the raw message so a report can name it, but still guide.
             return "the AI could not be reached — " + Truncate(msg, 200) + " Fix it in " + configPath + " and restart the game.";

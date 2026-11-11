@@ -48,6 +48,8 @@ namespace ImmersiveAI.Llm
         private readonly int _maxTokens;
         private readonly string _endpoint;
         private readonly string _label;
+        // Set when an empty answer was all silent thinking; read once by CompleteAsync.
+        private volatile string? _emptyBecauseThinking;
         private readonly bool _isLocal;
         private readonly OpenAiDialect _dialect;
 
@@ -116,11 +118,23 @@ namespace ImmersiveAI.Llm
             || _model.StartsWith("o3", StringComparison.OrdinalIgnoreCase)
             || _model.StartsWith("o4", StringComparison.OrdinalIgnoreCase);
 
+        internal const string ThinkingOnlyMessage =
+            "Local AI: the model spent its whole answer thinking and never spoke. " +
+            "Disable the model's thinking in your server (LM Studio has a per-model toggle) " +
+            "or load a non-thinking 'instruct' build.";
+
         public async Task<string> CompleteAsync(IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken = default)
         {
             var result = await SendAsync(messages, null, allowToolUse: false, cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(result.Text))
-                throw new InvalidOperationException("OpenAI returned an empty response.");
+            {
+                // Name the real backend (it said "OpenAI" for a local server), and when the answer
+                // was empty because the model only thought, say THAT: it is the one thing the
+                // player can fix, and it used to be told to log.txt alone.
+                var why = _emptyBecauseThinking;
+                _emptyBecauseThinking = null;
+                throw new InvalidOperationException(why ?? (_label + " returned an empty response."));
+            }
             return result.Text;
         }
 
@@ -335,9 +349,10 @@ namespace ImmersiveAI.Llm
                 {
                     var reasoning = ((string?)message?["reasoning_content"] ?? (string?)message?["reasoning"] ?? "").Trim();
                     if (reasoning.Length > 0 || beforeStrip.Length > 0)
-                        ModLog.Warn("Local AI: the model spent its whole answer thinking and never spoke. " +
-                            "Disable the model's thinking in your server (LM Studio has a per-model toggle) " +
-                            "or load a non-thinking 'instruct' build.");
+                    {
+                        _emptyBecauseThinking = ThinkingOnlyMessage;
+                        ModLog.Warn(ThinkingOnlyMessage);
+                    }
                 }
             }
             else if (_dialect == OpenAiDialect.Gemini && text.Length == 0 && calls.Count == 0)
