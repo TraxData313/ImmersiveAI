@@ -101,11 +101,11 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>Line 1 while she is his handmaid, not yet his wife.</summary>
         public const string SpiritOpeningUnwed =
-            "I am {name}, handmaid of {player}, who took me out of the bandits' den when I had no one. I am his, and glad of it.";
+            "I am {name}, handmaid of {player}, who took me out of the bandits' den{when} when I had no one. I am his, and glad of it.";
 
         /// <summary>Line 1 once she is his wife.</summary>
         public const string SpiritOpeningWed =
-            "I am {name}, wife of {player}, who took me out of the bandits' den when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.";
+            "I am {name}, wife of {player}, who took me out of the bandits' den{when} when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.";
 
         /// <summary>The middle lines, the same wed or unwed.</summary>
         public const string SpiritBody =
@@ -123,19 +123,43 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>The whole section, every slot filled. A blank player name reads "my lord", a
         /// blank teacher "My mother", so no raw brace ever reaches her sheet.</summary>
-        public static string SpiritFor(HandmaidGirl girl, string? playerName, bool wed)
+        public static string SpiritFor(HandmaidGirl girl, string? playerName, bool wed,
+            string? ownName = null, double daysSinceTaken = -1)
         {
             if (girl == null) return string.Empty;
+            // The name she carries NOW (the player may rename her), not the roster's.
+            var name = string.IsNullOrWhiteSpace(ownName) ? girl.Name : ownName!.Trim();
             var text = (wed ? SpiritOpeningWed : SpiritOpeningUnwed) + "\n" + SpiritBody + "\n"
                        + (wed ? SpiritClosingWed : SpiritClosingUnwed);
             var player = string.IsNullOrWhiteSpace(playerName) ? ScriptedTitle : playerName!.Trim();
             var teacher = string.IsNullOrWhiteSpace(girl.TaughtBy) ? "My mother" : girl.TaughtBy.Trim();
             var native = string.IsNullOrWhiteSpace(girl.NativeTitle) ? ScriptedTitle : girl.NativeTitle.Trim();
             return text
-                .Replace("{name}", girl.Name)
+                .Replace("{name}", name)
+                .Replace("{when}", SinceTaken(daysSinceTaken))
                 .Replace("{player}", player)
                 .Replace("{teacher}", teacher)
                 .Replace("{native}", native);
+        }
+
+        /// <summary>The length of a Calradian year in days (4 seasons of 21).</summary>
+        public const int DaysInYear = 84;
+
+        /// <summary>
+        /// HOW LONG AGO he took her from the den, as the clause that follows "the bandits' den"
+        /// in her opening line (2026.11.11: freed minutes before, she answered "near three years
+        /// since you broke that den": nothing on her sheet said when, and the rest of it read as
+        /// a settled life). Empty when the day is unknown, so an old save reads as it did.
+        /// </summary>
+        public static string SinceTaken(double days)
+        {
+            if (days < 0 || double.IsNaN(days)) return string.Empty;
+            if (days < 1) return " this very day,";
+            if (days < 2) return " only yesterday,";
+            if (days < 21) return $" {(int)days} days ago,";
+            if (days < DaysInYear) return $" some {(int)(days / 7)} weeks ago,";
+            int years = (int)(days / DaysInYear);
+            return years <= 1 ? " a year ago," : $" some {years} years ago,";
         }
 
         /// <summary>The label before her teacher's words in her seeded deep memory.</summary>

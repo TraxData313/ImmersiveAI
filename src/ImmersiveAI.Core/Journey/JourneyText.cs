@@ -22,6 +22,22 @@ namespace ImmersiveAI.Core.Journey
 
         /// <summary>The whole block: the road behind us, then the tasks. Empty when the journal
         /// holds nothing worth a word.</summary>
+        public static string SituationBlock(JourneyLog log, double nowDay, double witnessSinceDay)
+        {
+            if (log == null) return string.Empty;
+            if (witnessSinceDay < 0) return SituationBlock(log, nowDay);
+            // A soul who joined the company on a known day saw nothing of the road before it
+            // (2026.11.11: a girl freed that morning was handed a week of "the road we have
+            // ridden, as I saw it myself" and spoke as if she had ridden with him for years).
+            var seen = new JourneyLog
+            {
+                Visits = log.Visits.Where(v => v != null && v.ArriveDay >= witnessSinceDay).ToList(),
+                Quests = log.Quests.Where(q => q != null
+                    && (q.TakenDay >= witnessSinceDay || q.ResolvedDay < 0 || q.ResolvedDay >= witnessSinceDay)).ToList(),
+            };
+            return SituationBlock(seen, nowDay);
+        }
+
         public static string SituationBlock(JourneyLog log, double nowDay)
         {
             if (log == null) return string.Empty;

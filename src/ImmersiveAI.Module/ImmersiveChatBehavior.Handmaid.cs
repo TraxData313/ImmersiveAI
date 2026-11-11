@@ -103,7 +103,8 @@ namespace ImmersiveAI
                 if (hero == null || marks == null) return null;
                 var prefix = hero.StringId + "|";
                 var mark = marks.FirstOrDefault(m => m != null && m.StartsWith(prefix, StringComparison.Ordinal));
-                return mark == null ? null : HandmaidRoster.ById(mark.Substring(prefix.Length));
+                // "heroId|girlId" or, since 2026.11.11, "heroId|girlId|dayTaken".
+                return mark == null ? null : HandmaidRoster.ById(mark.Split('|').ElementAtOrDefault(1));
             }
             catch { return null; }
         }
@@ -116,7 +117,42 @@ namespace ImmersiveAI
             if (_handmaidMarks == null) _handmaidMarks = new List<string>();
             var prefix = hero.StringId + "|";
             _handmaidMarks.RemoveAll(m => m == null || m.StartsWith(prefix, StringComparison.Ordinal));
-            _handmaidMarks.Add(prefix + girl.Id);
+            _handmaidMarks.Add(prefix + girl.Id + "|" + TakenDayText(CampaignTime.Now.ToDays));
+        }
+
+        private static string TakenDayText(double day) =>
+            day.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>The campaign day she was taken in, or -1 when the save does not hold it.</summary>
+        internal static double HandmaidTakenDay(Hero? hero)
+        {
+            try
+            {
+                var marks = Current?._handmaidMarks;
+                if (hero == null || marks == null) return -1;
+                var prefix = hero.StringId + "|";
+                var mark = marks.FirstOrDefault(m => m != null && m.StartsWith(prefix, StringComparison.Ordinal));
+                var part = mark?.Split('|').ElementAtOrDefault(2);
+                return double.TryParse(part, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var day) ? day : -1;
+            }
+            catch { return -1; }
+        }
+
+        // A girl taken in before the day was written down: her first recorded beat is the join
+        // itself, so its day is put into her mark once, while that beat still stands.
+        private void HealHandmaidTakenDay(Hero hero, HandmaidGirl girl)
+        {
+            try
+            {
+                if (HandmaidTakenDay(hero) >= 0) return;
+                var first = LoadMemory(hero)?.RecentTurns?.FirstOrDefault();
+                if (first == null || first.GameDay <= 0) return;
+                var prefix = hero.StringId + "|";
+                _handmaidMarks.RemoveAll(m => m == null || m.StartsWith(prefix, StringComparison.Ordinal));
+                _handmaidMarks.Add(prefix + girl.Id + "|" + TakenDayText(first.GameDay));
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: writing the day she was taken in", ex); }
         }
 
         private void SyncHandmaidData(IDataStore dataStore)
@@ -139,7 +175,10 @@ namespace ImmersiveAI
                 if (girl == null || npc == null) return string.Empty;
                 var player = Hero.MainHero;
                 bool wed = player != null && Personas.FamilyBuilder.AreWed(npc, player);
-                return HandmaidText.SpiritFor(girl, player?.Name?.ToString(), wed);
+                double taken = HandmaidTakenDay(npc);
+                return HandmaidText.SpiritFor(girl, player?.Name?.ToString(), wed,
+                    npc.FirstName?.ToString() ?? npc.Name?.ToString(),
+                    taken < 0 ? -1 : Math.Max(0, CampaignTime.Now.ToDays - taken));
             }
             catch { return string.Empty; }
         }
@@ -229,6 +268,7 @@ namespace ImmersiveAI
                     // A girl made before the age fix came out at her wanderer template's age
                     // (Niya was 27). Once per save, put her back at her own age.
                     var girl = HandmaidOf(hero);
+                    if (hero != null && girl != null) HealHandmaidTakenDay(hero, girl);
                     // A girl renamed in the roster (Niya became Neya) takes her present name.
                     var former = HandmaidRoster.FormerNameOf(girl);
                     if (hero != null && girl != null && former != null

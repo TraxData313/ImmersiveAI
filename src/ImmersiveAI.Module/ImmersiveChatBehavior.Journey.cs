@@ -277,7 +277,8 @@ namespace ImmersiveAI
                 if (!JournalOn) return string.Empty;
                 if (speaker == null || partner != Hero.MainHero) return string.Empty;
                 if (Safe(() => speaker.PartyBelongedTo, (MobileParty?)null) != MobileParty.MainParty) return string.Empty;
-                return JourneyText.SituationBlock(_journeyLog!, CampaignTime.Now.ToDays);
+                // A handmaid saw only the road since the day she was taken in.
+                return JourneyText.SituationBlock(_journeyLog!, CampaignTime.Now.ToDays, HandmaidTakenDay(speaker));
             }
             catch { return string.Empty; }
         }

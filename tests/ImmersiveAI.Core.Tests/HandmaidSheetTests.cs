@@ -238,4 +238,27 @@ public class ReplyTrimTests
         Assert.Equal(0, ReplyTrim.CountWords("  — ... * "));
         Assert.Equal(4, ReplyTrim.CountWords("Yes, my lord — gladly."));
     }
+
+    [Theory]
+    [InlineData(-1, "den when I had no one")]
+    [InlineData(0.2, "den this very day, when I had no one")]
+    [InlineData(1.5, "den only yesterday, when I had no one")]
+    [InlineData(9, "den 9 days ago, when I had no one")]
+    [InlineData(40, "den some 5 weeks ago, when I had no one")]
+    [InlineData(100, "den a year ago, when I had no one")]
+    [InlineData(260, "den some 3 years ago, when I had no one")]
+    public void SheKnowsHowLongAgoSheWasTaken(double days, string expected)
+    {
+        var s = HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false, daysSinceTaken: days);
+        Assert.Contains(expected, s);
+        Assert.DoesNotContain("{", s);
+    }
+
+    [Fact]
+    public void SheCarriesTheNameSheHasNow()
+    {
+        var s = HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: true, ownName: "Sofiya");
+        Assert.StartsWith("I am Sofiya, wife of Toni", s);
+        Assert.DoesNotContain("Neya", s);
+    }
 }
