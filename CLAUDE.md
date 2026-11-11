@@ -128,6 +128,28 @@ You usually only need to open:
 - **The road journal** → Core `Journey\` (`JourneyLog` visits/quests + pruning + JSON, `JourneyText` — the witness prose, unit-tested) + the `ImmersiveChatBehavior.Journey.cs` partial (nine campaign-event hooks: stops, trade, recruits, garrison drops, captives, quests) — the situation block only for souls riding IN the player's party.
 - **The nights of a marriage & THE LINE** → Core `Nights\` + `Together\TogetherLine` (the line since we were last alone) (`NightRecord`/`NightLedger` `_nights.json` + `nights.txt`, `NightGifts` the 0/10/100/300/1000 tiers, `NightOdds` the fertility-spread arithmetic, `NightText` — the short Song-of-Songs prompt, the permanent beat marks, the roll; unit-tested) + `MoodTides.Fertility` + the `ImmersiveChatBehavior.Nights.cs` partial + `Nights\PregnancyPatch` (the SECOND Harmony touch) + `UI\NightWindow\` (hotkey H). Decision record docs/nights-and-conception-design.md.
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
+- **The handmaid from the den** (2026.11.11, Toni's design) → Core `Handmaids\` (`HandmaidRoster` the five girls,
+  `HandmaidText` every word of hers, `HandmaidDoubts` her ten small doubts + her misgivings' hand) + the
+  `ImmersiveChatBehavior.Handmaid.cs` partial. After a won hideout (personal fight OR send-troops) his men
+  report a captive girl; a SCRIPTED vanilla talk (no LLM), and taken in she joins as FAMILY (occupation Lord,
+  `Clan.PlayerClan`, his party — never `AddCompanionAction`, so no companion slot); sent away she is removed
+  with `ApplyByRemove` (no death notice). Laws worth keeping: (1) every word lives in Core `Handmaids\`,
+  tested; (2) the MARKER is `HandmaidOf(Hero)`/`IsHandmaid(Hero)`, saved as `ImmersiveAI_Handmaids`
+  ("heroId|girlId") — read it, never infer her from traits; (3) ONCE PER CAMPAIGN, gone if refused; DevMode
+  recalls it at every hideout with a pick list, plus a dialog lever; (4) her quiet-spirit section sits LAST
+  before the player's own words, and she gets NO assigned speech style (it fought her section from the
+  top); (5) the word guard (`HandmaidReplyWords` 80, `Core Text\ReplyTrim`) trims her SPOKEN words to the
+  last whole sentence AFTER the reply, not a token ceiling — a token cap severs mid-sentence and starves
+  the answer's heart field and tool calls, which share the same output; (6) her doubts LIVE IN THE SCHEMA:
+  while she has weighed nothing her first `set_down` carries the ten lines as the `AllowedValues` of three
+  pick parameters, she sets down 1-3 ("none" and free text refused with a correcting answer), and after it
+  she can never set down another (settle/release/reopen only, no revise); the other seven cost no tokens
+  anywhere once chosen; (7) her road is the SAME road, gentler: seeded at Warmth (at accept, at load, at
+  talk; marked seeded so no LLM seed call), her own wording REPLACES the general doubt/step lines in the
+  road section, `tend_courtship` (`CourtshipHands.TendForHandmaid`) and the refusals — never a second copy;
+  (8) the station gate never binds her (`StepFacts.OfHisHouse`), no kin blessing (her clan is his); every
+  other rail is code and stays. Her role line reads "of {player}'s household, his handmaid/wife", not
+  "noble of clan". A married player without Marry Anyone sees one honest wall line on her road from the start.
 
 - **THE SECTION MARKS** (2026.08.27, Anton: *"im not able to read good where the deep memory
   starts, where what section starts"*) → Core `PromptBuilder.Section()`/`Sections`/`StripSections`

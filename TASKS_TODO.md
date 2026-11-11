@@ -1,5 +1,23 @@
 ﻿WHERE THINGS STAND (2026.10.23 — **v3.7.0 IS ON NEXUS, GITHUB AND STEAM**)
 
+  ** PLAYTEST THE HANDMAID (2026.11.11 — built in three steps, never yet played; deploy with the
+      game closed). Check in game:
+      [ ] the popup comes after a PERSONAL hideout fight, and again after SEND TROOPS
+      [ ] taken in: she is on the Family tab, in your party, and takes NO companion slot; relation 30
+      [ ] refused (at the popup and at the end of the talk): she is gone, with NO death notice
+      [ ] old saves (no handmaid in them) load and play as before; a save holding her reloads her
+      [ ] the fixed face codes, once Toni supplies them (a bad code must leave the random face)
+      [ ] the road to the wedding: Warmth at once, love by her own step, her 3 small doubts chosen
+          (watch the frost-blue line), answered by kind words, Ready, "Ask for their hand", the
+          wedding (no companion graduation, no clan change, she stays in your party), and her
+          sheet afterwards says "wife" in the role line and "my husband" in the kin lines
+      [ ] already married without Marry Anyone: her Between-us page shows the one wall line
+
+  ** PART 2: MARRY ANYONE. The mod's support was never removed (PolygamyLoose). The Nexus zip in
+      Downloads is v3.0.4 for game 1.0.1, too old. "Marry Anyone Updated" 3.3.1 sits in Modules,
+      switched off. Task: get it loading on 1.4.8, playtest a handmaid as a second wife, then settle
+      the Steam FAQ compatibility claim.
+
   ** v3.7.0 RELEASED 2026.10.23 (Anton authorized it, unplaytested parts included). The sea stage
       (EnableSeaStage) is ON by default now, and the V9 config migration turns it on for configs
       that still held the old false. Nexus: main file "ImmersiveAI V3.7.0" (V3.5.0 archived), one

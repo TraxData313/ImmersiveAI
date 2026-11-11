@@ -15,6 +15,12 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 
 ## [Unreleased]
 
+### New
+
+- After you clear a bandit hideout, your men may find a captive girl: take her in and she joins your family, using no companion slot (once a campaign).
+- She is meek and speaks few words, and calls you her lord, sometimes in her own people's tongue.
+- She hopes to be your wife: her road to the wedding is the usual one, only gentler — small doubts a kind word answers, and no rank for your clan to climb.
+
 ## v3.7.0 — 2026.10.23
 
 Out on the water they stand on your ship's deck, and a mother names her own child.
