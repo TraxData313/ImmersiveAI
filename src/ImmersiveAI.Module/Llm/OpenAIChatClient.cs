@@ -48,6 +48,8 @@ namespace ImmersiveAI.Llm
         private readonly int _maxTokens;
         private readonly string _endpoint;
         private readonly string _label;
+        // Set the first time a local server refuses reasoning_effort; from then on it is not sent.
+        private volatile bool _localEffortRefused;
         // Set when an empty answer was all silent thinking; read once by CompleteAsync.
         private volatile string? _emptyBecauseThinking;
         private readonly bool _isLocal;
@@ -182,6 +184,16 @@ namespace ImmersiveAI.Llm
                 payload["thinking"] = new JObject { ["type"] = "disabled" };
             else if (reasoningFamily)
                 payload["reasoning_effort"] = _noneEffortRefused ? "low" : "none";
+            else if (_isLocal && !_localEffortRefused)
+                // A LOCAL THINKING MODEL IS TOLD NOT TO (2026.11.11). Measured on LM Studio with
+                // google/gemma-4-e4b, 3 runs each way: with no switch every answer came back as its
+                // own analysis spoken aloud ("Analyze the Request: Persona: ...", 200 to 500
+                // tokens, and LM Studio reported 0 reasoning tokens, so nothing could strip it);
+                // with reasoning_effort "none" every answer was the plain line, 13 to 22 tokens.
+                // The routers' reasoning:{enabled:false} and chat_template_kwargs did nothing. A
+                // server that refuses the field gets one retry without it, below, and is never
+                // sent it again.
+                payload["reasoning_effort"] = "none";
             else if (IsRoutedModel && !_isLocal)
                 // The routers' own unified reasoning switch (documented as ignored by models that
                 // cannot reason) — without it, a routed gpt-5.x thinks at its default effort and
@@ -216,6 +228,17 @@ namespace ImmersiveAI.Llm
             var payloadText = payload.ToString(Formatting.None);
 
             var (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+
+            // A strict local server answers 400 to a field it does not know. Drop ours and ask
+            // again, once; whatever comes back then is that server's own answer.
+            if (status == 400 && _isLocal && !_localEffortRefused && payload["reasoning_effort"] != null)
+            {
+                _localEffortRefused = true;
+                payload.Remove("reasoning_effort");
+                payloadText = payload.ToString(Formatting.None);
+                ModLog.Warn($"{_label}: the server refused 'reasoning_effort' — retrying without it; thinking is then governed by the model you loaded.");
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
 
             // Some routed models cannot have their thinking turned off — fable, grok-4.5 and
             // gemini-3.5 all answer 400 "Reasoning is mandatory for this endpoint" (verified live
