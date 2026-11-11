@@ -29,8 +29,7 @@ namespace ImmersiveAI.Core.Handmaids
 
         public const string PopupTitle = "A captive in the den";
 
-        public const string PopupReport =
-            "\"Captain. Behind the stores, chained to a post, we found a girl. Alive. She will not speak to us.\"";
+        public const string PopupReport = "\"" + SoldierReport + "\"";
 
         public const string PopupNote =
             "Immersive AI: this meeting comes once in a campaign. Take her in and she joins your family, using no companion slot. Send her away and she is gone for good (Dev mode in the mod's settings can call the meeting again at the next hideout you clear).";
@@ -41,6 +40,35 @@ namespace ImmersiveAI.Core.Handmaids
         public const string PopupBringHer = "Bring her forward";
 
         public const string PopupLetHerGo = "Give her bread and let her go";
+
+        // ── The soldier's talk (one of his own men tells it; the popup is the fallback) ──────
+
+        /// <summary>The soldier's opening report, the first time.</summary>
+        public const string SoldierReport =
+            "Captain. Behind the stores, chained to a post, we found a girl. Alive. She will not speak to us.";
+
+        /// <summary>The soldier's opening when the talk opens again (dev: back from her).</summary>
+        public const string SoldierAgain = "Captain?";
+
+        public const string PlayerBringHer = "Bring her forward.";
+
+        public const string PlayerLetHerGo = "Give her bread and let her go.";
+
+        public const string PlayerAskMeeting = "[Immersive AI] What is this meeting?";
+
+        /// <summary>The note to the player, shown as the soldier's line but plainly a note.</summary>
+        public const string SoldierNote =
+            "(Immersive AI: this meeting comes once in a campaign. Take her in and she joins your family, using no companion slot. Send her away, or let her go now, and she is gone for good. Dev mode in the mod's settings can call the meeting again.)";
+
+        public const string SoldierAsYouSay = "As you say, captain.";
+
+        /// <summary>The soldier's opening: the full report the first time, a short word after.</summary>
+        public static string SoldierOpening(bool again) => again ? SoldierAgain : SoldierReport;
+
+        /// <summary>Dev: one "bring her" option per girl, e.g. "Bring Yasmin (Aserai) forward. (this hideout's own)".</summary>
+        public static string DevBringLabel(HandmaidGirl girl, bool isThisDensOwn) =>
+            girl == null ? PlayerBringHer
+                : $"Bring {girl.Name} ({girl.CultureName}) forward." + (isThisDensOwn ? DevOwnMark : string.Empty);
 
         // ── The scripted talk ──────────────────────────────────────────────────────────────
 
@@ -194,6 +222,16 @@ namespace ImmersiveAI.Core.Handmaids
 
         public const string DevLever =
             "Let us part now. [Immersive AI • test — call the captive from the den]";
+
+        /// <summary>Dev, in her options: she steps back and the soldier shows the others.</summary>
+        public const string DevStepBack = "[Immersive AI • test] Step back. Show me the others.";
+
+        /// <summary>The talk screen's Dev panel button.</summary>
+        public const string DevCallButton = "Call the captive (as if a hideout was just cleared)";
+
+        /// <summary>When the dev button is pressed with the feature switched off.</summary>
+        public const string DevCallOffNotice =
+            "Immersive AI: the captive in the den is switched off in the mod's settings.";
 
         // ── Helpers ────────────────────────────────────────────────────────────────────────
 

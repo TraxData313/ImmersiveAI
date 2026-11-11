@@ -5,6 +5,8 @@ using Helpers;
 using ImmersiveAI.Core.Handmaids;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.Conversation;
+using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.MapEvents;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -17,8 +19,11 @@ namespace ImmersiveAI
 {
     /// <summary>
     /// THE CAPTIVE IN THE DEN (2026.11.11, Toni's design). After the player clears a bandit
-    /// hideout his men find a captive girl: the men's report (a popup), then a short SCRIPTED
-    /// talk with her (vanilla dialog lines, no LLM). Taken in, she joins the player's clan as
+    /// hideout his men find a captive girl: one of his OWN men tells him (a scripted map talk
+    /// with the party's best non-hero troop, other men of the party standing behind; the old
+    /// popup only when the party has no such troop), then a short SCRIPTED talk with her
+    /// (vanilla dialog lines, no LLM). The two talks are never one conversation: the soldier's
+    /// ends, and hers opens once the moment is calm again (the same pending path as the hook). Taken in, she joins the player's clan as
     /// FAMILY — occupation Lord, in his party, never AddCompanionAction, so no companion slot.
     /// Sent away, she is removed for good the way vanilla removes a quest girl who should simply
     /// vanish (<c>KillCharacterAction.ApplyByRemove</c>, no notification).
@@ -29,8 +34,10 @@ namespace ImmersiveAI
     /// The act is polled from the application tick because the campaign tick does not run while
     /// the hideout's menu holds time still.
     ///
-    /// Once per campaign (persisted). With DevMode on it fires at every hideout cleared, with a
-    /// pick list of the girl first; a DevMode dialog lever fires it without a hideout.
+    /// Once per campaign (persisted). With DevMode on it fires at every hideout cleared, and the
+    /// soldier offers one "bring her" option per girl; in her talk a dev option sends her back
+    /// and the soldier shows the others. A DevMode dialog lever and a talk-screen Dev button fire
+    /// it without a hideout.
     ///
     /// THE MARKER later steps read: <see cref="HandmaidOf"/> / <see cref="IsHandmaid"/>, backed by
     /// the save (SyncData "ImmersiveAI_Handmaids", entries "heroStringId|girlId").
@@ -44,6 +51,8 @@ namespace ImmersiveAI
         private const string HmTeacherVar = "IMMERSIVEAI_HM_TEACHER";
         private const string HmAcceptedVar = "IMMERSIVEAI_HM_ACCEPTED";
         private const string HmRefusedVar = "IMMERSIVEAI_HM_REFUSED";
+        private const string HmMenOpenVar = "IMMERSIVEAI_HM_MEN_OPEN";
+        private const string HmMenPickVar = "IMMERSIVEAI_HM_MEN_PICK_";
 
         // Frames the moment must stay calm before the popup shows (the hideout menu settles first).
         private const int HandmaidSafeFramesNeeded = 20;
@@ -60,18 +69,23 @@ namespace ImmersiveAI
         // ── Session only ──
         private string? _handmaidPendingDen;   // bandit culture id; "" = the dev lever, no den
         private bool _handmaidPendingDev;
-        private HandmaidGirl? _handmaidPendingGirl; // already chosen: straight to the report
+        private HandmaidGirl? _handmaidPendingGirl; // already chosen: straight to her talk
+        private bool _handmaidPendingAgain;          // dev: back from her, the soldier only says "Captain?"
         private int _handmaidSafeFrames;
         private bool _handmaidPromptUp;
         private HandmaidMeeting? _handmaidMeeting;
+        private HandmaidSoldierTalk? _handmaidSoldier;
 
-        private enum HandmaidOutcome { None, Accepted, Refused }
+        private enum HandmaidOutcome { None, Accepted, Refused, StepBack }
 
         private sealed class HandmaidMeeting
         {
-            public HandmaidMeeting(Hero hero, HandmaidGirl girl) { Hero = hero; Girl = girl; }
+            public HandmaidMeeting(Hero hero, HandmaidGirl girl, string den, bool dev)
+            { Hero = hero; Girl = girl; Den = den ?? string.Empty; Dev = dev; }
             public Hero Hero { get; }
             public HandmaidGirl Girl { get; }
+            public string Den { get; }
+            public bool Dev { get; }
             public HandmaidOutcome Outcome { get; set; }
             public bool Started { get; set; }
             public bool Resolved { get; set; }
@@ -235,6 +249,23 @@ namespace ImmersiveAI
             catch (Exception ex) { ModLog.Error("handmaid: setting her age", ex); }
         }
 
+        /// <summary>The soldier's talk: a plain troop of the player's own party, never a hero, and
+        /// never recorded as a meeting with anyone (the meeting-note listener only reads heroes).</summary>
+        private sealed class HandmaidSoldierTalk
+        {
+            public HandmaidSoldierTalk(CharacterObject troop, string den, bool dev, IReadOnlyList<HandmaidGirl> picks)
+            { Troop = troop; Den = den ?? string.Empty; Dev = dev; Picks = picks; }
+            public CharacterObject Troop { get; }
+            public string Den { get; }
+            public bool Dev { get; }
+            public IReadOnlyList<HandmaidGirl> Picks { get; }
+            public HandmaidGirl? Chosen { get; set; }
+            public bool LetGo { get; set; }
+            public bool Started { get; set; }
+            public bool Resolved { get; set; }
+            public int FramesWaiting { get; set; }
+        }
+
         private bool IsHandmaidMeetingHero(Hero? hero) =>
             hero != null && _handmaidMeeting != null && _handmaidMeeting.Hero == hero;
 
@@ -265,20 +296,67 @@ namespace ImmersiveAI
                 _handmaidPendingDen = den.Culture?.StringId ?? string.Empty;
                 _handmaidPendingDev = dev;
                 _handmaidPendingGirl = null;
+                _handmaidPendingAgain = false;
                 _handmaidSafeFrames = 0;
                 ModLog.Info($"handmaid: hideout {den.StringId} ({_handmaidPendingDen}) cleared; the meeting waits for a calm moment{(dev ? " (dev)" : "")}.");
             }
             catch (Exception ex) { ModLog.Error("handmaid: noting the hideout win", ex); }
         }
 
-        /// <summary>The DevMode lever: the whole meeting without a hideout, as soon as it is calm.</summary>
-        private void OnDebugCallHandmaid()
+        /// <summary>The DevMode lever: the whole meeting without a hideout, as soon as it is calm.
+        /// <paramref name="den"/> is the bandit culture standing in for the den ("" = none).</summary>
+        private void OnDebugCallHandmaid(string den = "")
         {
-            _handmaidPendingDen = string.Empty;
+            _handmaidPendingDen = den ?? string.Empty;
             _handmaidPendingDev = true;
             _handmaidPendingGirl = null;
+            _handmaidPendingAgain = false;
             _handmaidSafeFrames = 0;
-            ModLog.Info("handmaid: dev lever pulled; the meeting waits for a calm moment.");
+            ModLog.Info($"handmaid: dev lever pulled ({(string.IsNullOrEmpty(den) ? "no den" : den)}); the meeting waits for a calm moment.");
+        }
+
+        /// <summary>The talk screen's Dev button: the meeting as if a hideout was just cleared,
+        /// the nearest hideout's bandits standing in for the den (a random roster den if none is
+        /// found). The caller closes the screen; the meeting waits for the calm moment.</summary>
+        internal static void DevCallCaptive()
+        {
+            try
+            {
+                var me = Current;
+                if (me?._config == null || !me._config.DevMode) return;
+                if (!me._config.EnableHideoutHandmaid)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(HandmaidText.DevCallOffNotice, ActivityColor));
+                    return;
+                }
+                me.OnDebugCallHandmaid(NearestHideoutCulture() ?? RandomDenCulture());
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: the dev button", ex); }
+        }
+
+        private static string? NearestHideoutCulture()
+        {
+            try
+            {
+                var party = MobileParty.MainParty;
+                if (party == null) return null;
+                string? best = null;
+                float bestDist = float.MaxValue;
+                foreach (var s in Settlement.All)
+                {
+                    if (s == null || !s.IsHideout || string.IsNullOrEmpty(s.Culture?.StringId)) continue;
+                    var d = s.Position.DistanceSquared(party.Position);
+                    if (d < bestDist) { bestDist = d; best = s.Culture!.StringId; }
+                }
+                return best;
+            }
+            catch { return null; }
+        }
+
+        private static string RandomDenCulture()
+        {
+            var all = HandmaidRoster.All;
+            return all[MBRandom.RandomInt(all.Count)].BanditCulture;
         }
 
         /// <summary>Driven from SubModule.OnApplicationTick: the campaign tick sleeps in menus.</summary>
@@ -292,12 +370,27 @@ namespace ImmersiveAI
                 ModLog.Error("handmaid: tick", ex);
                 me._handmaidPendingDen = null;
                 me._handmaidPendingGirl = null;
+                me._handmaidPendingAgain = false;
                 me._handmaidPromptUp = false;
             }
         }
 
         private void TickHandmaid()
         {
+            var soldier = _handmaidSoldier;
+            if (soldier != null)
+            {
+                // The soldier's talk that never opened is quietly dropped (no event marked done).
+                if (!soldier.Started && !soldier.Resolved && ++soldier.FramesWaiting > HandmaidMeetingOpenFrames
+                    && !(Campaign.Current?.ConversationManager?.IsConversationInProgress ?? false))
+                {
+                    ModLog.Warn("handmaid: the soldier's talk never opened; the meeting is cancelled.");
+                    soldier.Resolved = true;
+                    _handmaidSoldier = null;
+                }
+                return;
+            }
+
             var meeting = _handmaidMeeting;
             if (meeting != null)
             {
@@ -320,11 +413,14 @@ namespace ImmersiveAI
             var den = _handmaidPendingDen;
             bool dev = _handmaidPendingDev;
             var chosen = _handmaidPendingGirl;
+            bool again = _handmaidPendingAgain;
             _handmaidPendingDen = null;
             _handmaidPendingGirl = null;
+            _handmaidPendingAgain = false;
             _handmaidSafeFrames = 0;
-            if (chosen != null) ShowHandmaidPopup(chosen);
-            else FireHandmaidEvent(den, dev);
+            // Already chosen (by the soldier's talk or the popup): she steps forward now.
+            if (chosen != null) BeginHandmaidMeeting(chosen, den, dev);
+            else FireHandmaidEvent(den, dev, again);
         }
 
         // On the map, not a prisoner, no mission, no battle, no field encounter, no talk, no popup.
@@ -340,15 +436,17 @@ namespace ImmersiveAI
             return true;
         }
 
-        // ------------------------------ the popups ------------------------------
+        // ------------------------------ the report ------------------------------
 
-        private void FireHandmaidEvent(string den, bool dev)
+        private void FireHandmaidEvent(string den, bool dev, bool again = false)
         {
             try
             {
                 if (!dev && _handmaidEventDone) return;
+                // One of his own men tells it. Only a party with no plain troop falls back to the popup.
+                if (TryOpenSoldierTalk(den, dev, again)) return;
                 if (dev) ShowHandmaidPickList(den);
-                else ShowHandmaidPopup(HandmaidRoster.ForBanditCulture(den));
+                else ShowHandmaidPopup(HandmaidRoster.ForBanditCulture(den), den, dev);
             }
             catch (Exception ex)
             {
@@ -376,7 +474,7 @@ namespace ImmersiveAI
                         _handmaidPromptUp = false;
                         if (!(chosen?.FirstOrDefault()?.Identifier is HandmaidGirl girl)) return;
                         // A new inquiry never opens inside the closing one's own callback.
-                        MainThreadDispatcher.Enqueue(() => ShowHandmaidPopup(girl));
+                        MainThreadDispatcher.Enqueue(() => ShowHandmaidPopup(girl, den, true));
                     }
                     catch (Exception ex) { ModLog.Error("handmaid: choosing the girl", ex); }
                 },
@@ -384,7 +482,7 @@ namespace ImmersiveAI
             MBInformationManager.ShowMultiSelectionInquiry(data, true);
         }
 
-        private void ShowHandmaidPopup(HandmaidGirl girl)
+        private void ShowHandmaidPopup(HandmaidGirl girl, string den, bool dev)
         {
             try
             {
@@ -399,7 +497,7 @@ namespace ImmersiveAI
                     affirmativeAction: () =>
                     {
                         _handmaidPromptUp = false;
-                        MainThreadDispatcher.Enqueue(() => BeginHandmaidMeeting(girl));
+                        MainThreadDispatcher.Enqueue(() => BeginHandmaidMeeting(girl, den, dev));
                     },
                     negativeAction: () =>
                     {
@@ -416,12 +514,160 @@ namespace ImmersiveAI
             }
         }
 
+        // ------------------------------ the soldier's talk ------------------------------
+
+        /// <summary>The highest-tier plain troop standing healthy in the player's own party; null
+        /// when there is none (a party of heroes alone, or all wounded).</summary>
+        private static CharacterObject? PickHandmaidSoldier()
+        {
+            var roster = MobileParty.MainParty?.MemberRoster;
+            if (roster == null) return null;
+            CharacterObject? best = null;
+            foreach (var e in roster.GetTroopRoster())
+            {
+                var c = e.Character;
+                if (c == null || c.IsHero || c.IsPlayerCharacter) continue;
+                if (e.Number - e.WoundedNumber <= 0) continue;
+                if (best == null || c.Tier > best.Tier || (c.Tier == best.Tier && c.Level > best.Level)) best = c;
+            }
+            return best;
+        }
+
+        /// <summary>Opens the soldier's talk; false only when the party has no troop to send (the
+        /// caller then shows the popup). A throw is logged and the meeting quietly cancelled.</summary>
+        private bool TryOpenSoldierTalk(string den, bool dev, bool again)
+        {
+            var troop = PickHandmaidSoldier();
+            if (troop == null)
+            {
+                ModLog.Info("handmaid: no plain troop in the party to tell it; the popup tells it instead.");
+                return false;
+            }
+            try
+            {
+                var picks = HandmaidRoster.PickOrder(den);
+                var own = HandmaidRoster.OwnOf(den);
+                for (int i = 0; i < HandmaidRoster.All.Count; i++)
+                    MBTextManager.SetTextVariable(HmMenPickVar + i,
+                        i < picks.Count ? HandmaidText.DevBringLabel(picks[i], picks[i] == own) : string.Empty, false);
+                MBTextManager.SetTextVariable(HmMenOpenVar, HandmaidText.SoldierOpening(again), false);
+
+                _handmaidSoldier = new HandmaidSoldierTalk(troop, den, dev, picks);
+                ModLog.Info($"handmaid: {troop.StringId} (tier {troop.Tier}) tells of the captive{(dev ? " (dev)" : "")}.");
+                OpenConversationWithTroop(troop);
+            }
+            catch (Exception ex)
+            {
+                ModLog.Error("handmaid: opening the soldier's talk (the meeting is cancelled)", ex);
+                _handmaidSoldier = null;
+            }
+            return true;
+        }
+
+        // Vanilla's shape for a party's troop (PlayerEncounter / EncounterGameMenuBehavior): the
+        // troop with ITS party in the data. The map tableau then stands up to two more of that
+        // party's men behind him (MapConversationTableau: the bodyguards come from Party.MemberRoster).
+        private void OpenConversationWithTroop(CharacterObject troop)
+        {
+            _finishEncounterAfterTalk = PlayerEncounter.Current == null;
+            var playerData = new ConversationCharacterData(
+                CharacterObject.PlayerCharacter, PartyBase.MainParty,
+                false, false, false, false, false, false);
+            var troopData = new ConversationCharacterData(
+                troop, PartyBase.MainParty,
+                false, false, false, false, false, false);
+            CampaignMapConversation.OpenConversation(playerData, troopData);
+        }
+
+        private bool IsHandmaidSoldierTalk()
+        {
+            var s = _handmaidSoldier;
+            if (s == null || s.Resolved) return false;
+            if (Hero.OneToOneConversationHero != null) return false;
+            return CharacterObject.OneToOneConversationCharacter == s.Troop;
+        }
+
+        private bool IsHandmaidSoldierPick(int index)
+        {
+            var s = _handmaidSoldier;
+            return IsHandmaidSoldierTalk() && s != null && s.Dev && index < s.Picks.Count;
+        }
+
+        private void ChooseHandmaidFromSoldier(int index)
+        {
+            var s = _handmaidSoldier;
+            if (s == null) return;
+            s.Chosen = index >= 0 && index < s.Picks.Count ? s.Picks[index] : HandmaidRoster.ForBanditCulture(s.Den);
+            RequestLeaveFromPartyEncounter();
+        }
+
+        private void AddHandmaidSoldierDialogs(CampaignGameStarter starter)
+        {
+            // The same 210 as her kneel: above the forced-initiation lines (200), so no greeting
+            // and no "Speak freely" ever sees this talk.
+            starter.AddDialogLine("immersiveai_hm_men_open", "start", "immersiveai_hm_men_options",
+                "{=!}{" + HmMenOpenVar + "}", IsHandmaidSoldierTalk,
+                () => { if (_handmaidSoldier != null) _handmaidSoldier.Started = true; }, 210);
+
+            // Dev: one "bring her" per girl, the den's own first.
+            for (int i = 0; i < HandmaidRoster.All.Count; i++)
+            {
+                int index = i;
+                starter.AddPlayerLine("immersiveai_hm_men_pick_" + index, "immersiveai_hm_men_options", "close_window",
+                    "{=!}{" + HmMenPickVar + index + "}", () => IsHandmaidSoldierPick(index),
+                    () => ChooseHandmaidFromSoldier(index), 200 - index);
+            }
+            starter.AddPlayerLine("immersiveai_hm_men_bring", "immersiveai_hm_men_options", "close_window",
+                "{=ImmersiveAI_HmMenBring}" + HandmaidText.PlayerBringHer,
+                () => IsHandmaidSoldierTalk() && _handmaidSoldier?.Dev == false,
+                () => ChooseHandmaidFromSoldier(-1), 200);
+            starter.AddPlayerLine("immersiveai_hm_men_let_go", "immersiveai_hm_men_options", "immersiveai_hm_men_let_go",
+                "{=ImmersiveAI_HmMenLetGo}" + HandmaidText.PlayerLetHerGo, IsHandmaidSoldierTalk,
+                () => { if (_handmaidSoldier != null) _handmaidSoldier.LetGo = true; }, 150);
+            starter.AddPlayerLine("immersiveai_hm_men_ask", "immersiveai_hm_men_options", "immersiveai_hm_men_note",
+                "{=ImmersiveAI_HmMenAsk}" + HandmaidText.PlayerAskMeeting, IsHandmaidSoldierTalk, null, 140);
+
+            starter.AddDialogLine("immersiveai_hm_men_note_line", "immersiveai_hm_men_note", "immersiveai_hm_men_options",
+                "{=ImmersiveAI_HmMenNote}" + HandmaidText.SoldierNote, IsHandmaidSoldierTalk, null, 200);
+            starter.AddDialogLine("immersiveai_hm_men_let_go_line", "immersiveai_hm_men_let_go", "close_window",
+                "{=ImmersiveAI_HmMenAsYouSay}" + HandmaidText.SoldierAsYouSay, IsHandmaidSoldierTalk,
+                RequestLeaveFromPartyEncounter, 200);
+        }
+
+        private void ResolveHandmaidSoldier(HandmaidSoldierTalk s)
+        {
+            try
+            {
+                if (_handmaidSoldier == s) _handmaidSoldier = null;
+                if (s.Chosen != null)
+                {
+                    // She steps forward: her own talk opens once the moment is calm again.
+                    _handmaidPendingDen = s.Den;
+                    _handmaidPendingDev = s.Dev;
+                    _handmaidPendingGirl = s.Chosen;
+                    _handmaidPendingAgain = false;
+                    _handmaidSafeFrames = 0;
+                    ModLog.Info($"handmaid: {s.Chosen.Id} is brought forward.");
+                    return;
+                }
+                if (s.LetGo)
+                {
+                    _handmaidEventDone = true;
+                    InformationManager.DisplayMessage(new InformationMessage(HandmaidText.LetGoNotice, ActivityColor));
+                    ModLog.Info("handmaid: let go at the soldier's word; the event is done.");
+                    return;
+                }
+                ModLog.Info("handmaid: the soldier's talk ended without a choice; the meeting is cancelled.");
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: resolving the soldier's talk", ex); }
+        }
+
         // ------------------------------ the meeting ------------------------------
 
         // She is made only now, CLANLESS (as vanilla's own companion spawn makes a wanderer), hidden
         // from the encyclopedia, and joins the clan only on his word. A refusal removes a hero who
         // never belonged to anyone, which is the cleanest removal there is.
-        private void BeginHandmaidMeeting(HandmaidGirl girl)
+        private void BeginHandmaidMeeting(HandmaidGirl girl, string den, bool dev)
         {
             Hero? hero = null;
             try
@@ -429,7 +675,8 @@ namespace ImmersiveAI
                 if (!HandmaidMomentIsSafe())
                 {
                     ModLog.Warn("handmaid: the moment turned unsafe before the meeting; it waits again.");
-                    _handmaidPendingDen = girl.BanditCulture;
+                    _handmaidPendingDen = den ?? girl.BanditCulture;
+                    _handmaidPendingDev = dev;
                     _handmaidPendingGirl = girl;
                     _handmaidSafeFrames = 0;
                     return;
@@ -449,7 +696,7 @@ namespace ImmersiveAI
                 ApplyHandmaidFace(hero, girl);
                 hero.HiddenInEncyclopedia = true;
 
-                var meeting = new HandmaidMeeting(hero, girl);
+                var meeting = new HandmaidMeeting(hero, girl, den, dev);
                 _handmaidMeeting = meeting;
 
                 MBTextManager.SetTextVariable(HmKneelVar, HandmaidText.KneelLine(), false);
@@ -526,6 +773,8 @@ namespace ImmersiveAI
 
         private void AddHandmaidDialogs(CampaignGameStarter starter)
         {
+            AddHandmaidSoldierDialogs(starter);
+
             // Gated on this one meeting only, and above the forced-initiation lines (200), so the
             // vanilla greeting, "Speak freely" and the recap never see this talk.
             starter.AddDialogLine("immersiveai_hm_kneel", "start", "immersiveai_hm_story",
@@ -545,6 +794,11 @@ namespace ImmersiveAI
             starter.AddPlayerLine("immersiveai_hm_refuse", "immersiveai_hm_options", "immersiveai_hm_refused",
                 "{=ImmersiveAI_HmRefuse}" + HandmaidText.PlayerRefuse, IsHandmaidTalk,
                 () => SetHandmaidOutcome(HandmaidOutcome.Refused), 170);
+            // Dev only: she steps back and the soldier shows the others.
+            starter.AddPlayerLine("immersiveai_hm_dev_step_back", "immersiveai_hm_options", "close_window",
+                "{=!}" + HandmaidText.DevStepBack,
+                () => IsHandmaidTalk() && _handmaidMeeting?.Dev == true && (_config?.DevMode ?? false),
+                () => { SetHandmaidOutcome(HandmaidOutcome.StepBack); RequestLeaveFromPartyEncounter(); }, 160);
 
             starter.AddDialogLine("immersiveai_hm_skill_line", "immersiveai_hm_skill", "immersiveai_hm_options",
                 "{=!}{" + HmSkillVar + "}", IsHandmaidTalk, null, 200);
@@ -576,6 +830,16 @@ namespace ImmersiveAI
         {
             try
             {
+                if (characters == null) return;
+                var s = _handmaidSoldier;
+                if (s != null && !s.Resolved && characters.Any(c => c != null && c == s.Troop))
+                {
+                    s.Resolved = true;
+                    // Next tick: the soldier's talk must finish unwinding before anything follows.
+                    MainThreadDispatcher.Enqueue(() => ResolveHandmaidSoldier(s));
+                    return;
+                }
+
                 var m = _handmaidMeeting;
                 if (m == null || m.Resolved) return;
                 if (characters == null || !characters.Any(c => c?.HeroObject == m.Hero)) return;
@@ -593,6 +857,20 @@ namespace ImmersiveAI
                 if (m.Outcome == HandmaidOutcome.Accepted)
                 {
                     JoinHandmaidToFamily(m);
+                    return;
+                }
+
+                if (m.Outcome == HandmaidOutcome.StepBack)
+                {
+                    // Dev: removed as on refusal, but no silver and the event NOT done; the soldier's
+                    // talk opens again at the pick options once the moment is calm.
+                    RemoveHandmaidHero(m.Hero);
+                    _handmaidPendingDen = m.Den;
+                    _handmaidPendingDev = true;
+                    _handmaidPendingGirl = null;
+                    _handmaidPendingAgain = true;
+                    _handmaidSafeFrames = 0;
+                    ModLog.Info($"handmaid: {m.Girl.Id} stepped back (dev); the others are shown again.");
                     return;
                 }
 

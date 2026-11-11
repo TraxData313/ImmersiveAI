@@ -82,6 +82,40 @@ public class HandmaidTests
     }
 
     [Fact]
+    public void TheSoldierSpeaksTheBriefsWords()
+    {
+        Assert.Equal("Captain. Behind the stores, chained to a post, we found a girl. Alive. She will not speak to us.",
+            HandmaidText.SoldierOpening(again: false));
+        Assert.Equal("Captain?", HandmaidText.SoldierOpening(again: true));
+        Assert.Equal("Bring her forward.", HandmaidText.PlayerBringHer);
+        Assert.Equal("Give her bread and let her go.", HandmaidText.PlayerLetHerGo);
+        Assert.Equal("[Immersive AI] What is this meeting?", HandmaidText.PlayerAskMeeting);
+        Assert.Equal("As you say, captain.", HandmaidText.SoldierAsYouSay);
+        Assert.Equal("\"" + HandmaidText.SoldierReport + "\"", HandmaidText.PopupReport);
+    }
+
+    [Fact]
+    public void TheSoldiersNoteIsPlainlyANote()
+    {
+        var note = HandmaidText.SoldierNote;
+        Assert.StartsWith("(Immersive AI: this meeting comes once in a campaign.", note);
+        Assert.EndsWith(")", note);
+        Assert.Contains("using no companion slot", note);
+        Assert.Contains("let her go now, and she is gone for good", note);
+        Assert.Contains("Dev mode", note);
+    }
+
+    [Fact]
+    public void DevBringLabelsReadLikeTheBrief()
+    {
+        Assert.Equal("Bring Yasmin (Aserai) forward. (this hideout's own)",
+            HandmaidText.DevBringLabel(HandmaidRoster.Yasmin, true));
+        Assert.Equal("Bring Niya (Sturgia) forward.", HandmaidText.DevBringLabel(HandmaidRoster.Niya, false));
+        Assert.Equal("[Immersive AI • test] Step back. Show me the others.", HandmaidText.DevStepBack);
+        Assert.Equal("Call the captive (as if a hideout was just cleared)", HandmaidText.DevCallButton);
+    }
+
+    [Fact]
     public void ThePopupCarriesTheReportThenTheNote()
     {
         Assert.Equal("A captive in the den", HandmaidText.PopupTitle);

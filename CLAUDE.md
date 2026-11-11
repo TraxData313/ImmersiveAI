@@ -131,12 +131,13 @@ You usually only need to open:
 - **The handmaid from the den** (2026.11.11, Toni's design) → Core `Handmaids\` (`HandmaidRoster` the five girls,
   `HandmaidText` every word of hers, `HandmaidDoubts` her ten small doubts + her misgivings' hand) + the
   `ImmersiveChatBehavior.Handmaid.cs` partial. After a won hideout (personal fight OR send-troops) his men
-  report a captive girl; a SCRIPTED vanilla talk (no LLM), and taken in she joins as FAMILY (occupation Lord,
+  report a captive girl — ONE OF HIS OWN MEN tells it (best healthy non-hero troop + `PartyBase.MainParty` = men behind him;
+  popup only with no troop); "Bring her forward" ENDS that talk and hers opens via the pending safe-moment path; a SCRIPTED vanilla talk (no LLM), and taken in she joins as FAMILY (occupation Lord,
   `Clan.PlayerClan`, his party — never `AddCompanionAction`, so no companion slot); sent away she is removed
   with `ApplyByRemove` (no death notice). Laws worth keeping: (1) every word lives in Core `Handmaids\`,
   tested; (2) the MARKER is `HandmaidOf(Hero)`/`IsHandmaid(Hero)`, saved as `ImmersiveAI_Handmaids`
   ("heroId|girlId") — read it, never infer her from traits; (3) ONCE PER CAMPAIGN, gone if refused; DevMode
-  recalls it at every hideout with a pick list, plus a dialog lever; (4) her quiet-spirit section sits LAST
+  recalls it at every hideout with a "Bring X forward." per girl, a "Step back" in hers, a dialog lever and a Dev-panel button; (4) her quiet-spirit section sits LAST
   before the player's own words, and she gets NO assigned speech style (it fought her section from the
   top); (5) the word guard (`HandmaidReplyWords` 80, `Core Text\ReplyTrim`) trims her SPOKEN words to the
   last whole sentence AFTER the reply, not a token ceiling — a token cap severs mid-sentence and starves

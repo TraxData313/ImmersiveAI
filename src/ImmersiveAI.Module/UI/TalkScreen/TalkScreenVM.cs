@@ -2713,6 +2713,19 @@ namespace ImmersiveAI.UI.TalkScreen
             RefreshSelectionState();
         });
 
+        /// <summary>The captive in the den, as if a hideout was just cleared. Needs no one chosen:
+        /// the screen closes and the meeting waits for its own safe moment on the map.</summary>
+        public void ExecuteDevCallCaptive()
+        {
+            if (!_config.DevMode) return;
+            IsDevShown = false;
+            TalkScreenManager.Close();
+            ImmersiveChatBehavior.DevCallCaptive();
+        }
+
+        [DataSourceProperty]
+        public string DevCallCaptiveText => ImmersiveAI.Core.Handmaids.HandmaidText.DevCallButton;
+
 
         // ------------------------------ bound properties ------------------------------
 
