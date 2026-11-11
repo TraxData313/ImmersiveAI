@@ -109,7 +109,7 @@ namespace ImmersiveAI.Core.Handmaids
             "I can ride all day, {title}. I know horses, and the roads the caravans keep.",
             "My grandmother. She said the grass that bends is still standing after the storm.",
             "My grandmother",
-            "<BodyProperties version='4' age='22' weight='0.2' build='0.3' key='001BC8049300400A9777777ABBA4877477B77979A768B6577DC7EA7F779777870074300307947978000000000000000000000000000000000000000000E01002' />");
+            "<BodyProperties version='4' age='21' weight='0.2' build='0.3' key='000AEC0ED300400AB77777777AA4977474877A6B77BB878A7CD6E77F777777750074300207919671000000000000000000000000000000000000000000E01002' />");
 
         /// <summary>All five, in the order the dev pick list shows them after the den's own girl.</summary>
         public static IReadOnlyList<HandmaidGirl> All { get; } = new[] { Niya, Yasmin, Alys, Nessa, Ayla };
