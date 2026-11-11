@@ -53,6 +53,8 @@ namespace ImmersiveAI
 
         // ── Saved ──
         private bool _handmaidEventDone;
+        // One-time heal for girls made before 2026.11.11's age fix (see GiveHandmaidHerAge).
+        private bool _handmaidAgesHealed;
         private List<string> _handmaidMarks = new List<string>();
 
         // ── Session only ──
@@ -106,6 +108,7 @@ namespace ImmersiveAI
         private void SyncHandmaidData(IDataStore dataStore)
         {
             dataStore.SyncData("ImmersiveAI_HandmaidEventDone", ref _handmaidEventDone);
+            dataStore.SyncData("ImmersiveAI_HandmaidAgesHealed", ref _handmaidAgesHealed);
             dataStore.SyncData("ImmersiveAI_Handmaids", ref _handmaidMarks);
             if (_handmaidMarks == null) _handmaidMarks = new List<string>();
         }
@@ -204,10 +207,32 @@ namespace ImmersiveAI
                 {
                     var id = mark?.Split('|')[0];
                     if (string.IsNullOrEmpty(id)) continue;
-                    SeedHandmaidRoad(FindAliveHero(id!));
+                    var hero = FindAliveHero(id!);
+                    SeedHandmaidRoad(hero);
+                    // A girl made before the age fix came out at her wanderer template's age
+                    // (Niya was 27). Once per save, put her back at her own age.
+                    var girl = HandmaidOf(hero);
+                    if (!_handmaidAgesHealed && hero != null && girl != null
+                        && hero.Age > HandmaidText.AgeOf(girl) + 1.5f)
+                        GiveHandmaidHerAge(hero, girl);
                 }
+                _handmaidAgesHealed = true;
             }
             catch (Exception ex) { ModLog.Error("handmaid: seeding the roads at load", ex); }
+        }
+
+        // Vanilla IGNORES the age handed to CreateSpecialHero for a wanderer template
+        // (DefaultHeroCreationModel.GetBirthAndDeathDay: template age + up to 4 years), so her
+        // birthday is set again after she is made.
+        private static void GiveHandmaidHerAge(Hero hero, HandmaidGirl girl)
+        {
+            try
+            {
+                int age = HandmaidText.AgeOf(girl);
+                hero.SetBirthDay(HeroHelper.GetRandomBirthDayForAge(age));
+                ModLog.Info($"handmaid: {hero.StringId} is {age} now.");
+            }
+            catch (Exception ex) { ModLog.Error("handmaid: setting her age", ex); }
         }
 
         private bool IsHandmaidMeetingHero(Hero? hero) =>
@@ -420,6 +445,7 @@ namespace ImmersiveAI
                 hero = HeroCreator.CreateSpecialHero(template, NearestTownOfCulture(girl.Culture), null, null, HandmaidText.AgeOf(girl));
                 var name = new TextObject(girl.Name);
                 hero.SetName(name, name);
+                GiveHandmaidHerAge(hero, girl);
                 ApplyHandmaidFace(hero, girl);
                 hero.HiddenInEncyclopedia = true;
 
