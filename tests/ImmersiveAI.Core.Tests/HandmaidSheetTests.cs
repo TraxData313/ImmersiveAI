@@ -261,4 +261,16 @@ public class ReplyTrimTests
         Assert.StartsWith("I am Sofiya, wife of Toni", s);
         Assert.DoesNotContain("Neya", s);
     }
+
+    [Fact]
+    public void WhileItIsFreshSheIsToldSoInASentenceOfItsOwn()
+    {
+        var today = HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false, daysSinceTaken: 0.1);
+        Assert.Contains("It happened today: only hours ago I was still their captive", today);
+        Assert.Contains("to his face I say you", today);
+        var later = HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false, daysSinceTaken: 9);
+        Assert.DoesNotContain("It happened", later);
+        Assert.DoesNotContain("{", later);
+        Assert.DoesNotContain("{", HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: true));
+    }
 }

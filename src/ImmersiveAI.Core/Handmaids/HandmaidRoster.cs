@@ -75,7 +75,7 @@ namespace ImmersiveAI.Core.Handmaids
         // named Niya until 2026.11.11, when Toni renamed her Neya; FormerNameOf heals old saves.
         public static readonly HandmaidGirl Neya = new HandmaidGirl(
             "niya", "Neya", "sturgia", "Sturgia", "sea_raiders", "spc_wanderer_sturgia_0", "Vladika moy",
-            "I gathered herbs with my mother by the river. The raiders killed her, and the man I was promised to, and kept me because I can close a wound. All winter I bound up the men who slew them.",
+            "I gathered herbs with my mother by the river. The raiders killed her, and the man I was promised to, and kept me because I can close a wound. From that day until the day I was freed, I bound up the men who slew them.",
             "I know herbs and wounds, {title}. I can keep your men alive.",
             "My mother. She said a soft answer turns away wrath, and she lived so until the day they killed her.",
             "My mother",

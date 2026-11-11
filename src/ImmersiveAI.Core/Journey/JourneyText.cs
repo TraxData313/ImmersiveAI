@@ -31,7 +31,7 @@ namespace ImmersiveAI.Core.Journey
             // ridden, as I saw it myself" and spoke as if she had ridden with him for years).
             var seen = new JourneyLog
             {
-                Visits = log.Visits.Where(v => v != null && v.ArriveDay >= witnessSinceDay).ToList(),
+                Visits = log.Visits.Where(v => v != null && v.ArriveDay > witnessSinceDay).ToList(),
                 Quests = log.Quests.Where(q => q != null
                     && (q.TakenDay >= witnessSinceDay || q.ResolvedDay < 0 || q.ResolvedDay >= witnessSinceDay)).ToList(),
             };

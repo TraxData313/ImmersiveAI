@@ -104,11 +104,11 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>Line 1 while she is his handmaid, not yet his wife.</summary>
         public const string SpiritOpeningUnwed =
-            "I am {name}, handmaid of {player}, who took me out of the bandits' den{when} when I had no one. I am his, and glad of it. It is {player} himself who speaks with me now.";
+            "I am {name}, handmaid of {player}, who took me out of the bandits' den{when} when I had no one.{fresh} I am his, and glad of it. It is {player} himself who speaks with me now, and to his face I say you, never his name as though he were elsewhere.";
 
         /// <summary>Line 1 once she is his wife.</summary>
         public const string SpiritOpeningWed =
-            "I am {name}, wife of {player}, who took me out of the bandits' den{when} when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him. It is {player} himself who speaks with me now.";
+            "I am {name}, wife of {player}, who took me out of the bandits' den{when} when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.{fresh} It is {player} himself who speaks with me now, and to his face I say you, never his name as though he were elsewhere.";
 
         /// <summary>The middle lines, the same wed or unwed.</summary>
         public const string SpiritBody =
@@ -140,6 +140,7 @@ namespace ImmersiveAI.Core.Handmaids
             return text
                 .Replace("{name}", name)
                 .Replace("{when}", SinceTaken(daysSinceTaken))
+                .Replace("{fresh}", StillFresh(daysSinceTaken))
                 .Replace("{player}", player)
                 .Replace("{teacher}", teacher)
                 .Replace("{native}", native);
@@ -163,6 +164,20 @@ namespace ImmersiveAI.Core.Handmaids
             if (days < DaysInYear) return $" some {(int)(days / 7)} weeks ago,";
             int years = (int)(days / DaysInYear);
             return years <= 1 ? " a year ago," : $" some {years} years ago,";
+        }
+
+        /// <summary>
+        /// While it is new, the plainest sentence of all, standing by itself (2026.11.11, second
+        /// playtest: with "this very day" already in her opening clause she still answered "it
+        /// was this winter past you came, near a full year has turned": her story speaks of a
+        /// winter in captivity and she laid the rescue there). Empty from the third day on.
+        /// </summary>
+        public static string StillFresh(double days)
+        {
+            if (days < 0 || double.IsNaN(days)) return string.Empty;
+            if (days < 1) return " It happened today: only hours ago I was still their captive, and I have known him no longer than that.";
+            if (days < 2) return " It happened yesterday: a day ago I was still their captive, and I have known him no longer than that.";
+            return string.Empty;
         }
 
         /// <summary>The label before her teacher's words in her seeded deep memory.</summary>
