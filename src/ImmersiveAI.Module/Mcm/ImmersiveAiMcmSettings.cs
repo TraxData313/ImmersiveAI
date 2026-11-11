@@ -410,6 +410,11 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableHideoutHandmaid { get; set; } = true;
 
+        [SettingPropertyInteger("Handmaid's words per reply (0 = no limit)", 0, 400, "0 words", Order = 31, RequireRestart = false,
+            HintText = "The girl from the den speaks few words. A longer reply of hers is cut back to its last whole sentence within this many words, before you see it or she remembers it. Spoken replies only: her letters are never cut. 0 turns the cut off.")]
+        [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
+        public int HandmaidReplyWords { get; set; } = 80;
+
         [SettingPropertyBool("Memories rewind with your saves", Order = 10, RequireRestart = false,
             HintText = "When on, loading a save also rewinds the NPCs' memories to that moment — so reloading to before an NPC's angry turn truly un-remembers it (the game already rewinds the relation number itself). Off: a reload leaves them remembering what, on that timeline, never happened.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]

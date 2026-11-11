@@ -607,6 +607,12 @@ namespace ImmersiveAI
         /// Set false and hideouts yield no one.</summary>
         public bool EnableHideoutHandmaid { get; set; } = true;
 
+        /// <summary>The most words a handmaid from the den speaks in one reply (her spoken words
+        /// only: never her letters, her memory writing or the chronicles). A longer reply is cut
+        /// back to its last whole sentence within this many words, before it is shown or
+        /// remembered. 0 = off. 0..400, default 80.</summary>
+        public int HandmaidReplyWords { get; set; } = 80;
+
         /// <summary>When true, a child born to one of them is named by its MOTHER rather than by the
         /// game's lot: she keeps a name she already spoke aloud for it, or chooses one as her people
         /// would. One short call at the birth. Only when the mother is not you — your own children
@@ -1395,6 +1401,10 @@ namespace ImmersiveAI
             if (TalkScreenFpsLimit < 0) TalkScreenFpsLimit = 0;
             else if (TalkScreenFpsLimit > 0 && TalkScreenFpsLimit < 30) TalkScreenFpsLimit = 30;
             else if (TalkScreenFpsLimit > 360) TalkScreenFpsLimit = 360;
+
+            // The handmaid's word budget: 0 is off, anything else within 1..400.
+            if (HandmaidReplyWords < 0) HandmaidReplyWords = 0;
+            else if (HandmaidReplyWords > 400) HandmaidReplyWords = 400;
 
             // The hotkeys must name real keys; anything unparseable falls back to the defaults.
             if (string.IsNullOrWhiteSpace(ChatWindowHotkey)) ChatWindowHotkey = "O";

@@ -683,6 +683,28 @@ namespace ImmersiveAI.Core.Prompts
             }
         }
 
+        /// <summary>The brevity line on a HANDMAID's sheet (2026.11.11): the same words as everyone's
+        /// with ONE sentence dropped, the "a tale asked of me runs longer" clause, which fought her
+        /// own "a long tale I tell a piece at a time". And the generous end of the dial is not hers:
+        /// Full falls back to the Conversational line, since her section asks for few words.</summary>
+        public static string HandmaidBrevityFor(ReplyLength length)
+        {
+            var line = length == ReplyLength.Brief ? BrevityFor(ReplyLength.Brief) : BrevityGuidance;
+            foreach (var tail in TaleRunsLongerClauses)
+            {
+                int at = line.IndexOf(tail, StringComparison.Ordinal);
+                if (at >= 0) line = line.Substring(0, at).TrimEnd();
+            }
+            return line;
+        }
+
+        /// <summary>The closing clauses dropped from a handmaid's brevity line.</summary>
+        internal static readonly string[] TaleRunsLongerClauses =
+        {
+            "Only a tale expressly asked of me runs longer.",
+            "Only a tale asked of me runs longer.",
+        };
+
         /// <summary>How a soul WRITES (2026.10.01) — the letter's whole "how I speak", in place of the
         /// five spoken lines. Short on purpose: the compose line itself already says what the page
         /// is for. No acts on paper, because the page reaches the player as the letter itself, and
@@ -861,6 +883,7 @@ namespace ImmersiveAI.Core.Prompts
             public const string TheBond = "What stands between you";
             public const string TheArrival = "The moment you spoke";
             public const string HowTheySpeak = "How they speak";
+            public const string HerQuietSpirit = "Her quiet spirit";
             public const string YourOwnWords = "Your own written words";
         }
 
@@ -911,7 +934,9 @@ namespace ImmersiveAI.Core.Prompts
                 sb.AppendLine("My traits are " + LowerFirst(persona.PersonalityDescription.Trim()));
             if (!string.IsNullOrWhiteSpace(persona.Crafts))
                 sb.AppendLine(persona.Crafts.Trim());
-            if (!string.IsNullOrWhiteSpace(persona.SpeechStyle))
+            // A handmaid's manner is her own section's alone: an assigned style ("warm and talkative",
+            // "gives unasked-for advice") would fight it from the top of the sheet.
+            if (!string.IsNullOrWhiteSpace(persona.SpeechStyle) && !persona.IsHandmaid)
                 sb.AppendLine("When I speak, it comes out like this: " + persona.SpeechStyle.Trim());
             return sb.ToString().TrimEnd();
         }
@@ -1076,7 +1101,9 @@ namespace ImmersiveAI.Core.Prompts
             else
             {
                 sb.AppendLine("How I speak:");
-                sb.AppendLine(BrevityFor(persona.ReplyLength));
+                sb.AppendLine(persona.IsHandmaid
+                    ? HandmaidBrevityFor(persona.ReplyLength)
+                    : BrevityFor(persona.ReplyLength));
                 sb.AppendLine(NoLengthDriftGuidance);
                 sb.AppendLine(OldWorldToneGuidance);
                 sb.AppendLine(PlainSpeechGuidance);
@@ -1107,6 +1134,16 @@ namespace ImmersiveAI.Core.Prompts
             {
                 sb.AppendLine();
                 sb.AppendLine(persona.EraNorm.Trim());
+            }
+
+            // A handmaid's own quiet spirit: as late as the sheet allows, so it has the last word on
+            // her manner over everything above it, yet still BEFORE the player's own words, which
+            // keep winning. (No prompt caching in the mod, so placement costs nothing.)
+            if (persona.IsHandmaid)
+            {
+                sb.AppendLine();
+                sb.AppendLine(Section(Sections.HerQuietSpirit));
+                sb.AppendLine(persona.HandmaidSpirit.Trim());
             }
 
             AppendPlayerAuthored(sb, persona);

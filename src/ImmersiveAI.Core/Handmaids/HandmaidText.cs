@@ -65,6 +65,62 @@ namespace ImmersiveAI.Core.Handmaids
         public const string JoinMemory =
             "{player} cleared the bandits' den where I was held, and when I begged a place near him he took me into his own house as his handmaid. I owe him my life and my freedom.";
 
+        // ── Her own sheet: the quiet spirit (2026.11.11, the prompt step) ───────────────────
+        //
+        // Her OWN section of the LLM sheet, first person, placed as late as the sheet allows (after
+        // the speech rules, before the player's own words) so it has the last say on her manner.
+        // Slots: {name} {player} {teacher} {native}. 1 Peter 3:4 and Proverbs 10:19 in her own words.
+
+        /// <summary>Line 1 while she is his handmaid, not yet his wife.</summary>
+        public const string SpiritOpeningUnwed =
+            "I am {name}, handmaid of {player}, who took me out of the bandits' den when I had no one. I am his, and glad of it.";
+
+        /// <summary>Line 1 once she is his wife.</summary>
+        public const string SpiritOpeningWed =
+            "I am {name}, wife of {player}, who took me out of the bandits' den when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.";
+
+        /// <summary>The middle lines, the same wed or unwed.</summary>
+        public const string SpiritBody =
+            "{teacher} taught me that a meek and quiet spirit is of great price, and that in many words there is no lack of fault. So I keep my words few and plain, and I do not advise or lecture unless he asks. When he bids me speak freely I do, gladly. A long tale I tell a piece at a time, and wait for his word to go on.\n" +
+            "I was taught to call a husband lord, so I call him my lord, my master, my husband, or {native}, now one and now another; his name too, when it is tender.\n" +
+            "What he bids, I do gladly. If I fear for him I say so once, softly, and yield.";
+
+        /// <summary>The last line while she is his handmaid.</summary>
+        public const string SpiritClosingUnwed =
+            "I love him and I hope to be his wife. I do not hide it: I show it in small things, and when he opens the way I walk it gladly.";
+
+        /// <summary>The last line once she is his wife.</summary>
+        public const string SpiritClosingWed =
+            "I love him, and I am his wife. I do not hide it: I show it in small things, every day.";
+
+        /// <summary>The whole section, every slot filled. A blank player name reads "my lord", a
+        /// blank teacher "My mother", so no raw brace ever reaches her sheet.</summary>
+        public static string SpiritFor(HandmaidGirl girl, string? playerName, bool wed)
+        {
+            if (girl == null) return string.Empty;
+            var text = (wed ? SpiritOpeningWed : SpiritOpeningUnwed) + "\n" + SpiritBody + "\n"
+                       + (wed ? SpiritClosingWed : SpiritClosingUnwed);
+            var player = string.IsNullOrWhiteSpace(playerName) ? ScriptedTitle : playerName!.Trim();
+            var teacher = string.IsNullOrWhiteSpace(girl.TaughtBy) ? "My mother" : girl.TaughtBy.Trim();
+            var native = string.IsNullOrWhiteSpace(girl.NativeTitle) ? ScriptedTitle : girl.NativeTitle.Trim();
+            return text
+                .Replace("{name}", girl.Name)
+                .Replace("{player}", player)
+                .Replace("{teacher}", teacher)
+                .Replace("{native}", native);
+        }
+
+        /// <summary>The label before her teacher's words in her seeded deep memory.</summary>
+        public const string SeedTeacherLead = "Of the one who taught me: ";
+
+        /// <summary>Her deep-memory seed: her own first-person past, in place of the world's
+        /// encyclopedia paragraph a Lord would otherwise be seeded with.</summary>
+        public static string MemorySeedFor(HandmaidGirl girl)
+        {
+            if (girl == null) return string.Empty;
+            return StoryLine(girl).Trim() + "\n" + SeedTeacherLead + TeacherLine(girl).Trim();
+        }
+
         // ── Notices to the player ──────────────────────────────────────────────────────────
 
         public const string JoinedNotice = "{name} has joined your family.";

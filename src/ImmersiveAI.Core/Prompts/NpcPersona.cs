@@ -202,5 +202,17 @@ namespace ImmersiveAI.Core.Prompts
         /// it, and the layer of words is where this mod lives.
         /// </summary>
         public string PlayerHouseLine { get; set; } = string.Empty;
+
+        /// <summary>
+        /// A handmaid's own quiet spirit (2026.11.11): the girl the player took in from a bandits'
+        /// den, meek and short-spoken (Core Handmaids.HandmaidText.SpiritFor). When set, it stands
+        /// as its own section after the speech rules and before the player's own words, her
+        /// assigned speech style is left off her sheet, and the brevity line loses its "a tale runs
+        /// longer" clause. Empty for every other soul, whose sheet is then exactly as before.
+        /// </summary>
+        public string HandmaidSpirit { get; set; } = string.Empty;
+
+        /// <summary>True when this soul carries a handmaid's section.</summary>
+        public bool IsHandmaid => !string.IsNullOrWhiteSpace(HandmaidSpirit);
     }
 }

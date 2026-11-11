@@ -110,6 +110,57 @@ namespace ImmersiveAI
             if (_handmaidMarks == null) _handmaidMarks = new List<string>();
         }
 
+        // ------------------------------ her own sheet ------------------------------
+
+        /// <summary>Her quiet-spirit section for the sheet, wed or unwed by the game's own marriage;
+        /// empty for anyone who is not a handmaid.</summary>
+        private static string HandmaidSpiritFor(Hero? npc)
+        {
+            try
+            {
+                var girl = HandmaidOf(npc);
+                if (girl == null || npc == null) return string.Empty;
+                var player = Hero.MainHero;
+                bool wed = player != null && Personas.FamilyBuilder.AreWed(npc, player);
+                return HandmaidText.SpiritFor(girl, player?.Name?.ToString(), wed);
+            }
+            catch { return string.Empty; }
+        }
+
+        /// <summary>Seeds a handmaid's empty deep memory with her own story and her teacher's
+        /// words, on the same rails as every story seed (in memory only, SeededFromStory). Called
+        /// from SeedMemoryFromStory after its own guards; true when she was seeded. The marker is
+        /// recorded before her first silent beat loads her memory, so that beat is saved together
+        /// with this seed and the world's paragraph never reaches her.</summary>
+        private static bool SeedHandmaidMemory(Hero npc, Core.Memory.NpcMemory memory)
+        {
+            var girl = HandmaidOf(npc);
+            if (girl == null) return false;
+            var seed = HandmaidText.MemorySeedFor(girl);
+            if (string.IsNullOrWhiteSpace(seed)) return false;
+            memory.Summary = seed;
+            memory.SeededFromStory = true;
+            return true;
+        }
+
+        /// <summary>The length guard: a handmaid's SPOKEN words cut back to the last whole sentence
+        /// within <see cref="ModConfig.HandmaidReplyWords"/> (0 = off). Applied before the words are
+        /// shown and recorded, so her memory holds what she truly said. Never letters, memory
+        /// writing or the chronicles: only the spoken call sites pass through here.</summary>
+        private string GuardHandmaidWords(Hero? npc, string words)
+        {
+            try
+            {
+                int budget = _config?.HandmaidReplyWords ?? 0;
+                if (budget <= 0 || string.IsNullOrEmpty(words) || !IsHandmaid(npc)) return words;
+                var trimmed = Core.Text.ReplyTrim.ToWordBudget(words, budget);
+                if (!ReferenceEquals(trimmed, words) && trimmed != words)
+                    ModLog.Info($"handmaid: {npc?.StringId} spoke {Core.Text.ReplyTrim.CountWords(Core.Voices.VoiceLine.Strip(words))} words; kept {Core.Text.ReplyTrim.CountWords(Core.Voices.VoiceLine.Strip(trimmed))} (budget {budget}).");
+                return trimmed;
+            }
+            catch { return words; }
+        }
+
         private bool IsHandmaidMeetingHero(Hero? hero) =>
             hero != null && _handmaidMeeting != null && _handmaidMeeting.Hero == hero;
 

@@ -873,6 +873,10 @@ namespace ImmersiveAI
                 if (memory.StoryRichness > 0 || !string.IsNullOrWhiteSpace(memory.Summary)) return;
                 if (!string.IsNullOrEmpty(LoadSelf(npc))) return;
 
+                // A handmaid from the den carries her OWN first-person past, never the world's
+                // paragraph about a Lord of the player's clan (and no hearsay of a man she has met).
+                if (SeedHandmaidMemory(npc, memory)) return;
+
                 var seed = BackstoryBuilder.BuildStorySeed(npc);
 
                 // A famed player enters the story already carried: what the world had told this
@@ -1553,7 +1557,7 @@ namespace ImmersiveAI
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
 
                 var rawReply = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
-                var greeting = (rawReply ?? string.Empty).Trim();
+                var greeting = GuardHandmaidWords(npc, (rawReply ?? string.Empty).Trim());
                 if (greeting.Length == 0)
                 {
                     ReleaseGreetingHold(npc);
@@ -1673,7 +1677,7 @@ namespace ImmersiveAI
                 var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, arrivalLine, _config.SystemVoiceName);
                 var rawReply = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
-                var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
+                var greeting = string.IsNullOrWhiteSpace(rawReply) ? "..." : GuardHandmaidWords(npc, rawReply.Trim());
 
                 AppendRecordedTurn(npc, arrivalLine, greeting);
                 _lastNpcLine = ImmersiveAI.Core.Voices.VoiceLine.Strip(greeting);
@@ -2041,6 +2045,9 @@ namespace ImmersiveAI
             // the end-of-exchange save can never clobber it.
             var rawReply = await CompleteSpokenAsync(messages, npc, heart, memory, bargain, troth, bless, door).ConfigureAwait(false);
             var reply = string.IsNullOrWhiteSpace(rawReply) ? "..." : rawReply.Trim();
+            // A handmaid's words are held to her budget BEFORE anything sees them: the feeling
+            // question, the record, the screen — so "go on" continues from what she truly said.
+            reply = GuardHandmaidWords(npc, reply);
 
             // How the exchange moved her heart. Since 2026.10.01 the measure is a REQUIRED field of
             // the answer itself ("heart", beside the words, same call — already applied by the
@@ -3114,7 +3121,7 @@ namespace ImmersiveAI
                 var messages = _promptBuilder.BuildInnerPrompt(
                     ctx.Persona, ctx.Memory, ctx.Scene, ctx.PlayerName, approachLine, _config.SystemVoiceName);
                 var raw = await CompleteSpokenAsync(messages, npc, OneWeighing()).ConfigureAwait(false);
-                var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : raw.Trim();
+                var npcLine = string.IsNullOrWhiteSpace(raw) ? "..." : GuardHandmaidWords(npc, raw.Trim());
 
                 AppendRecordedTurn(npc, PromptBuilder.ApproachNote(ctx.PlayerName, welcomed), npcLine,
                     OutreachMark.Reached, ConversationTurn.InnerSpeaker);
@@ -3822,7 +3829,7 @@ namespace ImmersiveAI
                 // no longer do is be interrogated about it first), and it keeps a stumbling backend from
                 // walking up to the player and saying "...".
                 if (string.IsNullOrWhiteSpace(raw)) { MainThreadDispatcher.Enqueue(() => _initiationInFlight = false); return; }
-                var words = raw.Trim();
+                var words = GuardHandmaidWords(npc, raw.Trim());
 
                 MainThreadDispatcher.Enqueue(() =>
                 {
@@ -4067,6 +4074,9 @@ namespace ImmersiveAI
             // The acting-out invitation (small *gestures* apart from the words) is a config taste, not a tool.
             persona.EncourageActingOut = _config.EnableActingOut;
             persona.ReplyLength = ReplyLengthOf(_config);
+            // A handmaid from the den carries her own quiet spirit, last before the player's words
+            // (and, by it, no assigned speech style and no "a tale runs longer").
+            persona.HandmaidSpirit = HandmaidSpiritFor(npc);
             // A letter is written, not spoken: the sheet says how she WRITES (PromptBuilder.PaperGuidance).
             persona.OnPaper = onPaper;
             // What her voice can do, from the engine speaking NOW — offered only while it is really so,

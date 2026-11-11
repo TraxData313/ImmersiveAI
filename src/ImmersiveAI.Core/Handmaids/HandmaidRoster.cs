@@ -13,7 +13,7 @@ namespace ImmersiveAI.Core.Handmaids
     {
         public HandmaidGirl(string id, string name, string culture, string cultureName,
             string banditCulture, string templateId, string nativeTitle,
-            string story, string skill, string teacher, string faceCode = "")
+            string story, string skill, string teacher, string taughtBy, string faceCode = "")
         {
             Id = id;
             Name = name;
@@ -25,6 +25,7 @@ namespace ImmersiveAI.Core.Handmaids
             Story = story;
             Skill = skill;
             Teacher = teacher;
+            TaughtBy = taughtBy ?? string.Empty;
             FaceCode = faceCode ?? string.Empty;
         }
 
@@ -58,6 +59,10 @@ namespace ImmersiveAI.Core.Handmaids
         /// <summary>Her answer to "Who taught you to be so gentle?", with {title} unfilled.</summary>
         public string Teacher { get; }
 
+        /// <summary>Who taught her meekness, as her own sheet names them at the head of a
+        /// sentence ("My mother"). The {teacher} slot of <see cref="HandmaidText.SpiritFor"/>.</summary>
+        public string TaughtBy { get; }
+
         /// <summary>An optional fixed face: a game <c>&lt;BodyProperties .../&gt;</c> string.
         /// Empty means a random face from her template's range.</summary>
         public string FaceCode { get; }
@@ -70,31 +75,36 @@ namespace ImmersiveAI.Core.Handmaids
             "niya", "Niya", "sturgia", "Sturgia", "sea_raiders", "spc_wanderer_sturgia_0", "Vladika moy",
             "I gathered herbs with my mother by the river. The raiders killed her, and the man I was promised to, and kept me because I can close a wound. All winter I bound up the men who slew them.",
             "I know herbs and wounds, {title}. I can keep your men alive.",
-            "My mother. She said a soft answer turns away wrath, and she lived so until the day they killed her.");
+            "My mother. She said a soft answer turns away wrath, and she lived so until the day they killed her.",
+            "My mother");
 
         public static readonly HandmaidGirl Yasmin = new HandmaidGirl(
             "yasmin", "Yasmin", "aserai", "Aserai", "desert_bandits", "spc_wanderer_aserai_8", "Zawji",
             "My father sold pepper and saffron. They burned our storehouse for a debt he did not owe, and he died in it. I rode with a caravan to my uncle; the caravan never arrived.",
             "I can reckon weights and prices, {title}. No trader will cheat your purse while I watch it.",
-            "An old holy man who kept the well by our street. He told me a quiet heart is worth more than my father's whole storehouse.");
+            "An old holy man who kept the well by our street. He told me a quiet heart is worth more than my father's whole storehouse.",
+            "The old holy man who kept the well by our street");
 
         public static readonly HandmaidGirl Alys = new HandmaidGirl(
             "alys", "Alys", "vlandia", "Vlandia", "forest_bandits", "spc_wanderer_vlandia_9", "Messire",
             "I was born in this camp. My mother was taken; I was only born. She died two winters past, and I do not know what lies beyond these trees.",
             "I can cook for many from little, {title}, and mend, and move through a wood unheard.",
-            "My mother. Even here, among them, she never raised her voice, and she taught me to pray while they slept.");
+            "My mother. Even here, among them, she never raised her voice, and she taught me to pray while they slept.",
+            "My mother");
 
         public static readonly HandmaidGirl Nessa = new HandmaidGirl(
             "nessa", "Nessa", "battania", "Battania", "mountain_bandits", "spc_wanderer_battania_0", "M'fhear",
             "I was healer to a glen. The hill men brought a wounded chief and said: mend him or the village burns. I mended him. They burned it all the same, and kept me.",
             "I can set a bone and cool a fever, {title}.",
-            "The old hermit who taught me my herbs. He said the hand that heals must not be proud.");
+            "The old hermit who taught me my herbs. He said the hand that heals must not be proud.",
+            "The old hermit who taught me my herbs");
 
         public static readonly HandmaidGirl Ayla = new HandmaidGirl(
             "ayla", "Ayla", "khuzait", "Khuzait", "steppe_bandits", "spc_wanderer_khuzait_9", "Nökhör mini",
             "My father guarded caravans and I rode beside him, saving for my dowry. They fell on us at a well. He held them long enough for the others. Not for me.",
             "I can ride all day, {title}. I know horses, and the roads the caravans keep.",
-            "My grandmother. She said the grass that bends is still standing after the storm.");
+            "My grandmother. She said the grass that bends is still standing after the storm.",
+            "My grandmother");
 
         /// <summary>All five, in the order the dev pick list shows them after the den's own girl.</summary>
         public static IReadOnlyList<HandmaidGirl> All { get; } = new[] { Niya, Yasmin, Alys, Nessa, Ayla };

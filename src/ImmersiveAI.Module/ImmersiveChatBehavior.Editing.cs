@@ -26,6 +26,8 @@ namespace ImmersiveAI
                 var persona = PersonaBuilder.Build(npc, self._config);
                 persona.AtmosphereLine = self.ApplyTokens(self._config.AtmosphereLine, persona.Name);
                 persona.Crafts = CraftsBuilder.Build(npc);
+                // A handmaid's block carries no assigned speech style, exactly as her sheet.
+                persona.HandmaidSpirit = HandmaidSpiritFor(npc);
                 return PromptBuilder.BuiltWhoTheyAre(persona);
             }
             catch (Exception ex)

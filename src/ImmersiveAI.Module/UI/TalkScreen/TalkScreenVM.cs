@@ -100,6 +100,7 @@ namespace ImmersiveAI.UI.TalkScreen
                 || title == Sec.TheNights || title == Sec.SinceYouTalked) return SectionBondColor;
             if (title == Sec.TheArrival) return SectionMomentColor;
             if (title == Sec.HowTheySpeak || title == Sec.YourOwnWords) return SectionRuleColor;
+            if (title == Sec.HerQuietSpirit) return SectionSelfColor;
             return PromptSheetColor;
         }
 
@@ -121,6 +122,7 @@ namespace ImmersiveAI.UI.TalkScreen
             if (title == Sec.TheBond) return "Where the heart stands between you, and what it is still waiting on.";
             if (title == Sec.TheArrival) return "You, arriving — the last thing they read before answering.";
             if (title == Sec.HowTheySpeak) return "The few rules on how they talk. Kept short on purpose.";
+            if (title == Sec.HerQuietSpirit) return "The handmaid you took from the den: meek, few-worded, yours. Only your own words come after it.";
             if (title == Sec.YourOwnWords) return "Your own prompt files. These win when anything contradicts them.";
             return string.Empty;
         }
