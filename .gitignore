@@ -13,3 +13,6 @@ steam_appid.txt
 steam_workshop_uploader.txt
 # Manager-mode scratch notes (step plans, diagnosis, progress)
 .manager/
+
+# Baked Pocket TTS states belong in the voice pack zip (tools\make_pocket_pack.py), never in the mod
+module/Voices/**/pocket.safetensors
