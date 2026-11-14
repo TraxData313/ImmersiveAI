@@ -58,9 +58,11 @@ public class HandmaidQuestTests
             HandmaidQuestText.PlayerAsk("Sea Raiders"));
         Assert.Equal("I hear you are looking for someone to deal with the Desert Bandits. (this town's own)",
             HandmaidQuestText.PlayerAsk("Desert Bandits", devTownsOwn: true));
-        Assert.Equal("They den somewhere not far from here. Clear it out quickly: if they took anyone alive, there may still be time. I will pay you for it.", HandmaidQuestText.GiverAsk);
+        Assert.Equal("They den somewhere not far from here. I have no coin to spare for it, but you have armed men at your back, and the folk here are looking for someone to help them. Go quickly: if they took anyone alive, there may still be time.", HandmaidQuestText.GiverAsk(40));
+        Assert.Contains("you have the look of a warrior", HandmaidQuestText.GiverAsk(0));
+        Assert.DoesNotContain("{", HandmaidQuestText.GiverAsk(3));
         Assert.Equal("Then go with my thanks. My man will mark the place on your map.", HandmaidQuestText.GiverAccepted);
-        Assert.Equal("It is done, then. The roads are quieter for it. Take this, and my thanks.", HandmaidQuestText.GiverThanks);
+        Assert.Equal("It is done, then. The roads are quieter for it. I have no coin to give you, but the folk here will not forget it, and neither will I.", HandmaidQuestText.GiverThanks);
         Assert.Equal("Bolat of Ortysia is asking for someone to deal with the Steppe Bandits.",
             HandmaidQuestText.OfferNotice("Steppe Bandits", "Bolat", "Ortysia"));
         Assert.Equal("Speak with Bolat about the Steppe Bandits", HandmaidQuestText.MenuOption("Steppe Bandits", "Bolat"));
@@ -83,7 +85,7 @@ public class HandmaidQuestTests
             HandmaidQuestText.OfferNotice(den, "Corwyn", "Pravend"), HandmaidQuestText.MenuOption(den, "Corwyn"),
             HandmaidQuestText.MenuGiveUp(den), HandmaidQuestText.GiveUpConfirmBody(den, "Corwyn"),
             HandmaidQuestText.PlayerStill(den), HandmaidQuestText.PlayerGiveUp(den),
-            HandmaidQuestText.GiverGreeting, HandmaidQuestText.GiverAsk, HandmaidQuestText.GiverAccepted,
+            HandmaidQuestText.GiverGreeting, HandmaidQuestText.GiverAsk(0), HandmaidQuestText.GiverAsk(30), HandmaidQuestText.GiverAccepted,
             HandmaidQuestText.GiverStill, HandmaidQuestText.GiverGiveUp, HandmaidQuestText.PlayerAccept,
             HandmaidQuestText.PlayerNotNow, HandmaidQuestText.PlayerLeave,
         };
@@ -94,7 +96,7 @@ public class HandmaidQuestTests
             Assert.DoesNotContain("{", l);
             Assert.DoesNotContain("}", l);
         });
-        Assert.Equal("You cleared the Forest Bandits' den. Corwyn sent word: \"It is done, then. The roads are quieter for it. Take this, and my thanks.\"",
+        Assert.Equal("You cleared the Forest Bandits' den. Corwyn sent word: \"It is done, then. The roads are quieter for it. I have no coin to give you, but the folk here will not forget it, and neither will I.\"",
             HandmaidQuestText.SuccessLog(den, "Corwyn", true));
         Assert.DoesNotContain("thanks", HandmaidQuestText.SuccessLog(den, "Corwyn", false));
     }
@@ -107,14 +109,11 @@ public class HandmaidQuestTests
         Assert.Equal(HandmaidQuestText.DenCultures, HandmaidQuestText.DevOrder(null));
     }
 
-    [Theory]
-    [InlineData(-1, 1000)]
-    [InlineData(0, 1000)]
-    [InlineData(3, 1450)]
-    [InlineData(6, 1900)]
-    [InlineData(9, 1900)]
-    public void TheRewardScalesModestly(int tier, int gold)
+    [Fact]
+    public void NoCoinIsPromisedOnlyRegard()
     {
-        Assert.Equal(gold, HandmaidQuestText.RewardFor(tier));
+        Assert.Equal(0, HandmaidQuestText.RewardGold);
+        Assert.True(HandmaidQuestText.RelationOnSuccess > 0);
+        Assert.DoesNotContain("pay", HandmaidQuestText.GiverAsk(20));
     }
 }

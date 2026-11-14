@@ -15,22 +15,16 @@ namespace ImmersiveAI.Core.Handmaids
     {
         // ── The numbers ────────────────────────────────────────────────────────────────────
 
-        /// <summary>The reward's base, in denars.</summary>
-        public const int RewardBase = 1000;
-
-        /// <summary>What each tier of the player's clan adds to the reward.</summary>
-        public const int RewardPerClanTier = 150;
-
         /// <summary>The giver's regard gained when the den is cleared (vanilla's hideout quest gives 5).</summary>
         public const int RelationOnSuccess = 5;
 
-        /// <summary>The reward for a player whose clan stands at this tier: a modest scale, 1000 at
-        /// tier 0, held to tiers 0..6.</summary>
-        public static int RewardFor(int clanTier)
-        {
-            int tier = clanTier < 0 ? 0 : clanTier > 6 ? 6 : clanTier;
-            return RewardBase + RewardPerClanTier * tier;
-        }
+        /// <summary>NO COIN (the owner, 2026.11.14): the asker is an ordinary merchant with none to
+        /// spare, speaking for the local folk. What the player earns is his regard, and theirs.</summary>
+        public const int RewardGold = 0;
+
+        /// <summary>From this many men in his party he is spoken to as a captain; below it, as a warrior.</summary>
+        public const int MenForACaptain = 10;
+
 
         // ── The den's name ─────────────────────────────────────────────────────────────────
 
@@ -80,11 +74,11 @@ namespace ImmersiveAI.Core.Handmaids
 
         /// <summary>His one line when the den is cleared (sent as word, the way vanilla's hideout
         /// quest sends its thanks).</summary>
-        public const string GiverThanks = "It is done, then. The roads are quieter for it. Take this, and my thanks.";
+        public const string GiverThanks = "It is done, then. The roads are quieter for it. I have no coin to give you, but the folk here will not forget it, and neither will I.";
 
         public const string SuccessLogTemplate = "You cleared the {den_of} den. {giver} sent word: \"" + GiverThanks + "\"";
 
-        public const string SuccessNoGiverLogTemplate = "You cleared the {den_of} den. The reward {giver} promised has reached you.";
+        public const string SuccessNoGiverLogTemplate = "You cleared the {den_of} den. The folk {giver} spoke for will not forget it.";
 
         public const string AbandonLogTemplate = "You told {giver} you could not see to the {den} after all.";
 
@@ -117,7 +111,16 @@ namespace ImmersiveAI.Core.Handmaids
 
         public const string PlayerAskTemplate = "I hear you are looking for someone to deal with the {den}.";
 
-        public const string GiverAsk = "They den somewhere not far from here. Clear it out quickly: if they took anyone alive, there may still be time. I will pay you for it.";
+        public const string GiverAskTemplate =
+            "They den somewhere not far from here. I have no coin to spare for it, but {why}, and the folk here are looking for someone to help them. Go quickly: if they took anyone alive, there may still be time.";
+
+        /// <summary>Why he asks THIS traveller: the men at his back, or the look of him.</summary>
+        public const string WhyCaptain = "you have armed men at your back";
+        public const string WhyWarrior = "you have the look of a warrior";
+
+        /// <summary>His ask, fitted to the one before him.</summary>
+        public static string GiverAsk(int menInParty) =>
+            GiverAskTemplate.Replace("{why}", menInParty >= MenForACaptain ? WhyCaptain : WhyWarrior);
 
         public const string PlayerAccept = "I will clear that den.";
 

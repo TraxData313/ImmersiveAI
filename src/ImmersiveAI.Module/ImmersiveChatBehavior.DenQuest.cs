@@ -34,6 +34,7 @@ namespace ImmersiveAI
         private const string DenOfferVar = "IMMERSIVEAI_DEN_OFFER_ASK";
         private const string DenDevOfferVar = "IMMERSIVEAI_DEN_DEV_OFFER_";
         private const string DenStoryVar = "IMMERSIVEAI_DEN_STORY";
+        private const string DenAskVar = "IMMERSIVEAI_DEN_ASK";
         private const string DenStillVar = "IMMERSIVEAI_DEN_STILL";
         private const string DenGiveUpVar = "IMMERSIVEAI_DEN_GIVE_UP";
 
@@ -167,7 +168,9 @@ namespace ImmersiveAI
                 var able = notables.Where(n => n != null && n.IsAlive && !n.IsChild && n != Hero.MainHero).ToList();
                 if (able.Count == 0) return null;
                 var pool = able.Any(n => n.IsMerchant) ? able.Where(n => n.IsMerchant).ToList() : able;
-                var chosen = pool.OrderByDescending(n => n.Power).ThenBy(n => n.StringId, StringComparer.Ordinal).First();
+                // Any merchant of the town, by lot (the owner, 2026.11.14: not the most powerful
+                // one); the lot is drawn once and kept in the save, so he stays the same man.
+                var chosen = pool[MBRandom.RandomInt(pool.Count)];
                 _denGivers.RemoveAll(m => m == null || m.StartsWith(prefix, StringComparison.Ordinal));
                 _denGivers.Add(prefix + chosen.StringId);
                 return chosen;
@@ -388,6 +391,9 @@ namespace ImmersiveAI
                     _denTalk = new DenTalk(hero, Settlement.CurrentSettlement, fromMenu: false);
                 _denTalk.Chosen = culture;
                 MBTextManager.SetTextVariable(DenStoryVar, HandmaidQuestText.StoryFor(culture), false);
+                int men = 0;
+                try { men = (MobileParty.MainParty?.MemberRoster?.TotalManCount ?? 1) - 1; } catch { }
+                MBTextManager.SetTextVariable(DenAskVar, HandmaidQuestText.GiverAsk(men), false);
             }
             catch (Exception ex) { ModLog.Error("den quest: choosing the den", ex); }
         }
@@ -474,7 +480,7 @@ namespace ImmersiveAI
             starter.AddDialogLine("immersiveai_den_story_line", "immersiveai_den_story", "immersiveai_den_ask",
                 "{=!}{" + DenStoryVar + "}", IsDenStoryTalk, null, 200);
             starter.AddDialogLine("immersiveai_den_ask_line", "immersiveai_den_ask", "immersiveai_den_answer",
-                "{=!}" + HandmaidQuestText.GiverAsk, IsDenStoryTalk, null, 200);
+                "{=!}{" + DenAskVar + "}", IsDenStoryTalk, null, 200);
             starter.AddPlayerLine("immersiveai_den_accept", "immersiveai_den_answer", "immersiveai_den_accepted",
                 "{=!}" + HandmaidQuestText.PlayerAccept, IsDenStoryTalk, null, 200);
             starter.AddPlayerLine("immersiveai_den_not_now", "immersiveai_den_answer", "close_window",
@@ -494,7 +500,7 @@ namespace ImmersiveAI
                 var town = t.Town ?? t.Giver.CurrentSettlement;
                 var culture = t.Chosen;
                 var target = NearestActiveDen(town, culture, null);
-                int reward = HandmaidQuestText.RewardFor(Clan.PlayerClan?.Tier ?? 0);
+                int reward = HandmaidQuestText.RewardGold;
                 var id = "immersiveai_den_quest_" + Guid.NewGuid().ToString("N").Substring(0, 8);
                 var quest = new ImmersiveDenQuest(id, t.Giver, town!, culture, reward);
                 quest.Begin(target);

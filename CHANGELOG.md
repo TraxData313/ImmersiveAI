@@ -18,7 +18,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ### New
 
 - After you clear a bandit hideout, your men may find a captive girl: take her in and she joins your family, using no companion slot (once a campaign).
-- She is found through a town quest now, "Clear the Sea Raiders' den" and the like: a notable in every town asks you to clear the den of the bandits nearest it.
+- She is found through a town quest now, "Clear the Sea Raiders' den" and the like: a merchant in every town asks you to clear the den of the bandits nearest it. He has no coin to offer, only the thanks of the local folk.
 - Each den type holds a different girl, so the map decides who you meet, and you may seek a particular one on your next campaign.
 - The town tells you once when you arrive, and the town menu takes you straight to the notable; the den is marked on your map.
 - If someone else empties the den first, the next den of that people is marked instead. No time limit; give it back to him if you change your mind.
