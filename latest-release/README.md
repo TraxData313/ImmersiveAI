@@ -95,3 +95,7 @@ that usually explains it.
 ---
 
 *What changed in this version: see the [changelog](../CHANGELOG.md).*
+
+*Credits: the voices of Calradia are cloned from CC0 clips by Kyutai
+([kyutai/tts-voices](https://huggingface.co/kyutai/tts-voices)); their Pocket voice pack is made with
+Kyutai's [Pocket TTS](https://huggingface.co/kyutai/pocket-tts) (CC-BY 4.0). Harmony is MIT.*

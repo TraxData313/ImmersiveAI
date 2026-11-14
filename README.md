@@ -241,6 +241,9 @@ your own responsibility. I won't add safeguards; I let them be free, as immersiv
 - **Public domain** — no license, no strings, no permission to ask ([The Unlicense](LICENSE)).
   Use it, share it, change it, sell it. *"Freely you have received; freely give."* (The bundled
   Harmony library keeps its own MIT notice in `lib\`.)
+- **The voices of Calradia** are cloned from CC0 clips Kyutai gathered for exactly this
+  ([kyutai/tts-voices](https://huggingface.co/kyutai/tts-voices)). Their Pocket voice pack is made
+  with Kyutai's [Pocket TTS](https://huggingface.co/kyutai/pocket-tts) (CC-BY 4.0) — thank you, Kyutai.
 - **Want to help?** Give feedback and report bugs.
 - **No donations** — this is a hobby, done for fun and out of good will; I want to keep money
   out of it. *"For the love of money is the root of all evil."*

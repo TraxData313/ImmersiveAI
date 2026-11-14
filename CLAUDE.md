@@ -284,7 +284,16 @@ You usually only need to open:
   `.txt` — a ~13 s Qwen render of one Calradian line, made by claude-voice's
   `make_reference_clips.py`, which is what lets Breeze speak them and Pocket clone them (Pocket only
   where Kyutai's gated cloning weights are available; claude-voice records `pocketCloning`). 53 MB of
-  clips. A new voice needs its clip made too, or it speaks on Qwen alone. THE SHIPPING RULE STANDS:
+  clips. **THE POCKET VOICE PACK (2026.11.14)** lifts that gate for players: `tools\bake_pocket_voices.py`
+  (needs the HF sign-in, run once by us) bakes every voice into `pocket.safetensors` OUTSIDE the repo
+  (`..\pocket-voices-pack`), `tools\make_pocket_pack.py` zips them deterministically (to
+  `..\pocket-voices-pack-dist`) and writes `module\Voices\pocket-pack.json` (claude-voice's
+  `docs\voice-packs.md` contract: url + sha256 + bytes + pinned weights revision + every voice path);
+  claude-voice downloads the zip itself. The zip is a GitHub release asset, never in the mod
+  (`package.ps1` refuses a `pocket.safetensors` in module\Voices). RENAME/ADD/REMOVE A VOICE = re-bake
+  `--only <id>` + re-run make_pocket_pack.py + publish the new zip + commit pocket-pack.json, or the
+  pack is refused whole. Voice ids must not collide with claude-voice's own bundled voices (earlier
+  root wins): `male\other\max` became `calradian_male_brave` for exactly that. A new voice needs its clip made too, or it speaks on Qwen alone. THE SHIPPING RULE STANDS:
   CC0/public-domain source only, `package.ps1`'s `$neverShip` + "NOT FOR RELEASE" guard, see the memory
   note `voice-shipping-constraint`. `package.ps1` now REFUSES any executable in the package.
   Player guide with the engine table and requirements: `docs/voiceover-setup.md`. Casting rules

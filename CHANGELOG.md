@@ -29,6 +29,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - With it on, a lady, a companion, the girl from the den, or a woman who is already your lover can walk the whole road to a real wedding; your first wife stays your wife.
 - Your wives learn where you slept, and from whom: "his other lawful wife" or "his lover". How they take it is theirs.
 - Wives of one man now call each other "my husband's other wife", and a look-up of a person names every spouse.
+- Pocket now speaks all 92 voices of Calradia with no sign-in: the voice app downloads their voice pack (about 205 MB) by itself. Made with Kyutai's Pocket TTS.
 
 ### Fixes
 
@@ -38,6 +39,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Local models: a thinking model (Gemma and its kin) is told not to think aloud, the startup check gives it room to answer, and its error no longer blames OpenAI.
 - Claude Code backend: your account email, the real-world date and the folder path no longer reach the characters, and a signed-out error now tells you the command to sign in.
 - A bandit hideout is no longer written into the road journal as a town you rested in.
+- The brave man's voice among the voices of no people was hidden behind the voice app's own "Max"; it is its own voice now, "Calradian Male Brave".
 
 ## v3.7.0 — 2026.10.23
 

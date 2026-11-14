@@ -17,6 +17,22 @@ A voice with only the embedding speaks on Qwen alone. Make the clip with claude-
 
 It renders the same short Calradian line in every voice that lacks one, about 13 seconds each.
 
+The Pocket voice pack
+---------------------
+
+pocket-pack.json, at the top of this folder, tells claude-voice where to download every voice
+here already cloned for Pocket (one zip, ~205 MB), so Pocket speaks them with no Hugging Face
+sign-in. The baked files themselves (pocket.safetensors) never go in this folder or the mod.
+After adding, removing or renaming a voice, rebuild the pack - the sign-in is needed only here:
+
+    python tools\bake_pocket_voices.py --out ..\pocket-voices-pack --fp16 --max-seconds 8 --only <id>
+    python tools\make_pocket_pack.py
+
+then publish the zip at the URL inside pocket-pack.json and commit pocket-pack.json together
+with the voice change (a new zip has a new checksum, and claude-voice fetches it again). A voice missing from the pack only loses
+Pocket; one listed in pocket-pack.json but missing from the zip makes claude-voice refuse the
+whole pack, which is why make_pocket_pack.py refuses first.
+
 Where things go
 ---------------
 
@@ -112,6 +128,9 @@ instead of living in somebody's memory.
 The names and the pitch figures in their descriptions come from a survey of the game's own
 dialogue voiceover, which was used as the SPEC to match against - what a Khuzait curt man should
 sound like - and never as the source audio. That distinction is the whole reason these may ship.
+
+Credits: the donor clips are Kyutai's CC0 kyutai/tts-voices; the Pocket voice pack is made with
+Kyutai's Pocket TTS (kyutai/pocket-tts, CC-BY 4.0).
 
 The rule that actually matters
 ------------------------------

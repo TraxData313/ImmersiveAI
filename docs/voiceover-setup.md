@@ -81,11 +81,14 @@ thread shows those in orange. On **Qwen** they get the moods (performed more gen
 ## Pocket and the voices of Calradia
 
 Ninety-odd voices ship with the mod — the women and men of every people, plus the bandits. Qwen
-and Breeze speak all of them. **Pocket** can only speak them by cloning each from a short clip, and
-Kyutai keeps those cloning weights behind a free Hugging Face sign-in: accept the terms at
-[huggingface.co/kyutai/pocket-tts](https://huggingface.co/kyutai/pocket-tts), then run
-`hf auth login` once. Without it Pocket uses its own 21 English voices instead — every soul still
-gets one of their own sex, just not of their own people.
+and Breeze speak all of them. **Pocket** speaks them too, with **no sign-in**: the voice app
+downloads the mod's Pocket voice pack (about 205 MB) by itself, when it installs or the first time
+Pocket is used. Until that download is done, Pocket speaks with its own English voices — every soul
+still gets one of their own sex, just not of their own people.
+
+The pack is the mod's voices cloned once, ahead of time, with Kyutai's
+[Pocket TTS](https://huggingface.co/kyutai/pocket-tts). Only the person *making* the pack needs
+the Hugging Face sign-in for Kyutai's cloning weights — players never do.
 
 ## Who speaks for whom
 
