@@ -18,8 +18,9 @@ using TaleWorlds.ObjectSystem;
 namespace ImmersiveAI
 {
     /// <summary>
-    /// THE CAPTIVE IN THE DEN (2026.11.11, Toni's design). After the player clears a bandit
-    /// hideout his men find a captive girl: one of his OWN men tells him (a scripted map talk
+    /// THE CAPTIVE IN THE DEN (2026.11.11, Toni's design). After the player clears the bandit
+    /// hideout a town's den quest points at (since 2026.11.14, see the DenQuest partial; before,
+    /// the first hideout of the campaign) his men find a captive girl: one of his OWN men tells him (a scripted map talk
     /// with the party's best non-hero troop, other men of the party standing behind; the old
     /// popup only when the party has no such troop), then a short SCRIPTED talk with her
     /// (vanilla dialog lines, no LLM). The two talks are never one conversation: the soldier's
@@ -161,6 +162,7 @@ namespace ImmersiveAI
             dataStore.SyncData("ImmersiveAI_HandmaidAgesHealed", ref _handmaidAgesHealed);
             dataStore.SyncData("ImmersiveAI_Handmaids", ref _handmaidMarks);
             if (_handmaidMarks == null) _handmaidMarks = new List<string>();
+            SyncDenQuestData(dataStore);
         }
 
         // ------------------------------ her own sheet ------------------------------
@@ -339,6 +341,7 @@ namespace ImmersiveAI
         {
             CampaignEvents.OnHideoutBattleCompletedEvent.AddNonSerializedListener(this, OnHideoutBattleCompletedForHandmaid);
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEndedForHandmaid);
+            RegisterDenQuestEvents();
         }
 
         private void OnHideoutBattleCompletedForHandmaid(BattleSideEnum winnerSide,
@@ -346,7 +349,6 @@ namespace ImmersiveAI
         {
             try
             {
-                if (!_config.EnableHideoutHandmaid) return;
                 if (endState != HideoutEventComponent.HideoutBattleEndState.Victory
                     && endState != HideoutEventComponent.HideoutBattleEndState.SendTroops) return;
                 var den = component?.MapEvent?.MapEventSettlement;
@@ -354,10 +356,19 @@ namespace ImmersiveAI
                 var attacker = den.LastAttackerParty;
                 if (attacker == null || !attacker.IsMainParty) return;
 
-                bool dev = _config.DevMode;
-                if (_handmaidEventDone && !dev) return;
+                // The den quest (DenQuest partial) succeeds whether or not the meeting follows:
+                // the player earned it even with the feature switched off since he took it.
+                var quest = ActiveDenQuest();
+                bool questDen = NoteDenQuestWin(den);
 
-                _handmaidPendingDen = den.Culture?.StringId ?? string.Empty;
+                if (!_config.EnableHideoutHandmaid) return;
+                bool dev = _config.DevMode;
+                // Since 2026.11.14 the captive is found only in the den a town's quest points at
+                // (or any den of that people); the first hideout of a campaign yields no one.
+                // DevMode keeps her at every hideout.
+                if (!dev && (!questDen || _handmaidEventDone)) return;
+
+                _handmaidPendingDen = questDen && quest != null ? quest.DenCulture : den.Culture?.StringId ?? string.Empty;
                 _handmaidPendingDev = dev;
                 _handmaidPendingGirl = null;
                 _handmaidPendingAgain = false;
@@ -842,6 +853,7 @@ namespace ImmersiveAI
         private void AddHandmaidDialogs(CampaignGameStarter starter)
         {
             AddHandmaidSoldierDialogs(starter);
+            AddDenQuestDialogs(starter);
 
             // Gated on this one meeting only, and above the forced-initiation lines (200), so the
             // vanilla greeting, "Speak freely" and the recap never see this talk.

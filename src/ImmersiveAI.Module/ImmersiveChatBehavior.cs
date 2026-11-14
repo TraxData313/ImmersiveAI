@@ -1049,6 +1049,8 @@ namespace ImmersiveAI
                     // talk left a meeting beat behind (see the Nights partial).
                     NoteTalkEnded(npc);
                     if (npc.StringId == alreadyRecorded) continue;
+                    // The den quest's giver: a scripted errand, never a meeting note (DenQuest partial).
+                    if (IsDenTalkHero(npc)) continue;
                     RecordMeetingBeat(npc);
                 }
             }
@@ -1193,6 +1195,8 @@ namespace ImmersiveAI
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
             AddLetterMenus(starter);
             AddChatWindowMenus(starter);
+            // The den quest's door in every town (DenQuest partial).
+            AddDenQuestMenus(starter);
         }
 
         public void AddDialogs(CampaignGameStarter starter)
