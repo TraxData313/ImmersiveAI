@@ -60,11 +60,11 @@ $voicesSource = Join-Path $repoRoot "module\Voices"
 # install is exactly where an unshippable development clone belongs.
 $neverShip = @()
 
-# A durable mark inside voice.json, for the voices a NAME list cannot keep up with. The 91 cloned
-# from Bannerlord's own dialogue VO wear it: no game audio is redistributed (the folders hold only
-# embeddings), but they are still clones of named actors who never agreed to it - the same rule the
-# Alba/Pitt voices fall under, and the one module\Voices\README.txt states. It survives renaming
-# both the folder and the display name, which a name list does not.
+# A durable mark inside voice.json, for the voices a NAME list cannot keep up with. No voice in
+# module\Voices wears it today: all 92 are Qwen clones of CC0 donor clips (kyutai/tts-voices), with
+# the game's own dialogue VO used only as the spec to match, never as source audio - see
+# module\Voices\README.txt. Any future clone of someone who never agreed to it gets the mark. It
+# survives renaming both the folder and the display name, which a name list does not.
 $neverShipMark = "NOT FOR RELEASE"
 
 if (Test-Path $voicesSource) {
@@ -94,6 +94,17 @@ if (Test-Path $voicesSource) {
     if ($blocked.Count -gt 0) {
         $names = ($blocked | ForEach-Object { $_.Name }) -join ", "
         throw "Refusing to package: module\Voices holds voice(s) marked never-ship - $names. Move them out of the repo (they are fine to deploy locally), or take the name off `$neverShip in this script if it is genuinely a different voice."
+    }
+
+    # The baked Pocket states (~2 MB a voice) never ride in the mod: they are the voice pack, a zip
+    # claude-voice downloads by itself from the URL in module\Voices\pocket-pack.json (which DOES
+    # ship). One left in a voice folder would also outrank the pack's own copy on the player's side.
+    $states = @(Get-ChildItem $voicesSource -Recurse -File -Filter "pocket.safetensors" -ErrorAction SilentlyContinue)
+    if ($states.Count -gt 0) {
+        throw "Refusing to package: module\Voices holds $($states.Count) pocket.safetensors file(s), first $($states[0].FullName). They belong in the voice pack zip (tools\make_pocket_pack.py), not in the mod."
+    }
+    if (-not (Test-Path (Join-Path $voicesSource "pocket-pack.json"))) {
+        Write-Warning "module\Voices\pocket-pack.json is missing - Pocket will speak these voices only where cloning is set up."
     }
 
     $voicesDest = Join-Path $moduleDir "Voices"

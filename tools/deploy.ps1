@@ -94,6 +94,12 @@ if (Test-Path $voicesSource) {
     if (Test-Path $voicesDest) { Remove-Item $voicesDest -Recurse -Force }
     New-Item -ItemType Directory -Force $voicesDest | Out-Null
     Copy-Item (Join-Path $voicesSource "*") $voicesDest -Recurse -Force
+    # pocket-pack.json rides along (it tells claude-voice where the Pocket voice pack is); the baked
+    # pocket.safetensors states themselves never do - they come in that pack's zip.
+    Get-ChildItem $voicesDest -Recurse -File -Filter "pocket.safetensors" -ErrorAction SilentlyContinue | ForEach-Object {
+        Write-Warning "Not deploying $($_.FullName): baked Pocket states belong in the voice pack, not the mod."
+        Remove-Item $_.FullName -Force
+    }
     $shipped = @(Get-ChildItem $voicesSource -Recurse -Filter "voice.json" -ErrorAction SilentlyContinue).Count
     Write-Host "Voices shipped with the mod: $shipped"
 }
