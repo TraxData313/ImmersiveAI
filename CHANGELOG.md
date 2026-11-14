@@ -18,6 +18,10 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 ### New
 
 - After you clear a bandit hideout, your men may find a captive girl: take her in and she joins your family, using no companion slot (once a campaign).
+- She is found through a town quest now, "Clear the Sea Raiders' den" and the like: a notable in every town asks you to clear the den of the bandits nearest it.
+- Each den type holds a different girl, so the map decides who you meet, and you may seek a particular one on your next campaign.
+- The town tells you once when you arrive, and the town menu takes you straight to the notable; the den is marked on your map.
+- If someone else empties the den first, the next den of that people is marked instead. No time limit; give it back to him if you change your mind.
 - She is meek and speaks few words, and calls you her lord, sometimes in her own people's tongue.
 - She hopes to be your wife: her road to the wedding is the usual one, only gentler — small doubts a kind word answers, and no rank for your clan to climb.
 - New setting at the top of the menu, "More than one wife" (off by default): turn it on and a woman you court while married can become your lawful second wife, with no other mod needed.
