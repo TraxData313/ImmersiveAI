@@ -93,8 +93,8 @@ namespace ImmersiveAI.Core.Handmaids
         public const string JoinMemory =
             "{player} and his men stormed the bandits' den where I was held captive, and slew the men who kept me. " +
             "His men found me chained behind the stores and brought me before him. I knelt and begged a place near him, " +
-            "and he took me into his own house as his handmaid. Until that hour I was the bandits' captive and served only them; " +
-            "all I do in his service begins from here. I owe him my life and my freedom.";
+            "and he took me into his own house as his handmaid. They had taken me only days before; I do not know what they meant " +
+            "to do with me, for he came before I learned it. All I do in his service begins from here. I owe him my life and my freedom.";
 
         // ── Her own sheet: the quiet spirit (2026.11.11, the prompt step) ───────────────────
         //
@@ -188,7 +188,7 @@ namespace ImmersiveAI.Core.Handmaids
         public static string MemorySeedFor(HandmaidGirl girl)
         {
             if (girl == null) return string.Empty;
-            return StoryLine(girl).Trim() + "\n" + SeedTeacherLead + TeacherLine(girl).Trim();
+            return Fill(girl.Story).Trim() + " " + StoryCloseRemembered + "\n" + SeedTeacherLead + TeacherLine(girl).Trim();
         }
 
         // ── Her road to the wedding (2026.11.11, the courtship step) ────────────────────────
@@ -294,7 +294,14 @@ namespace ImmersiveAI.Core.Handmaids
         public static string PleaLine() => Fill(Plea);
         public static string AcceptedLine() => Fill(HerAccepted);
         public static string RefusedLine() => Fill(HerRefused);
-        public static string StoryLine(HandmaidGirl girl) => Fill(girl.Story);
+        /// <summary>The close of every girl's story (2026.11.14, the owner: it has only just
+        /// happened, and she does not know what they would have done had he not come swiftly).</summary>
+        public const string StoryClose = "I do not know what they meant to do with me. You came before I learned it.";
+
+        /// <summary>The same thought as she keeps it in memory, where no "you" stands before her.</summary>
+        public const string StoryCloseRemembered = "I do not know what they meant to do with me. He came before I learned it.";
+
+        public static string StoryLine(HandmaidGirl girl) => Fill(girl.Story).Trim() + " " + StoryClose;
         public static string SkillLine(HandmaidGirl girl) => Fill(girl.Skill);
         public static string TeacherLine(HandmaidGirl girl) => Fill(girl.Teacher);
 

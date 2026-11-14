@@ -131,7 +131,7 @@ public class HandmaidTests
     {
         var beat = HandmaidText.JoinMemoryFor("Toni");
         Assert.StartsWith("Toni and his men stormed the bandits' den where I was held captive", beat);
-        Assert.Contains("Until that hour I was the bandits' captive", beat);
+        Assert.Contains("They had taken me only days before", beat);
         Assert.EndsWith("I owe him my life and my freedom.", beat);
         Assert.DoesNotContain("{", HandmaidText.JoinMemoryFor(null));
         Assert.Equal("Ayla has joined your family.", HandmaidText.JoinedNoticeFor("Ayla"));

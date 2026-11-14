@@ -117,7 +117,7 @@ namespace ImmersiveAI.Core.Handmaids
 
         public const string PlayerAskTemplate = "I hear you are looking for someone to deal with the {den}.";
 
-        public const string GiverAsk = "They den somewhere not far from here. Clear it out, and I will pay you for it.";
+        public const string GiverAsk = "They den somewhere not far from here. Clear it out quickly: if they took anyone alive, there may still be time. I will pay you for it.";
 
         public const string PlayerAccept = "I will clear that den.";
 
@@ -145,15 +145,15 @@ namespace ImmersiveAI.Core.Handmaids
         private static readonly Dictionary<string, string> Stories = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["sea_raiders"] =
-                "Sea raiders have been coming up the river. Last moon they struck a herb-gatherers' hamlet. My men found a woman dead by the water with her basket still on her arm, and a young man beside her. There was a daughter too, they say. Nobody has seen her since.",
+                "Sea raiders came up the river a few days ago and struck a herb-gatherers' hamlet. My men found a woman dead by the water with her basket still on her arm, and a young man beside her. There was a daughter too, they say. Nobody has seen her since.",
             ["desert_bandits"] =
-                "Desert bandits took a caravan on the road three weeks past. A man of this town still waits for his niece, who rode with it after her father's storehouse burned. Only the camels came back.",
+                "Desert bandits took a caravan on the road a few days past. A man of this town still waits for his niece, who rode with it after her father's storehouse burned. Only the camels came back.",
             ["forest_bandits"] =
-                "The forest bandits have held those woods for twenty years. Women went missing from the farms in my father's time and were never found. Whoever they keep in that camp by now, I doubt anyone is left to ask after them.",
+                "Forest bandits came out of the trees a few days ago. We found a charcoal burner cut down beside his kiln, and a bread basket lying in the path. He had a daughter who carried it to him every day. She is not among the dead.",
             ["mountain_bandits"] =
-                "Hill bandits burned a village in the glen. The shepherds say they came down first asking for the healer, for a wounded chief. We found the ashes, and no healer among the dead.",
+                "Hill bandits burned a village in the glen some days ago. The shepherds say they came down first asking for the healer, for a wounded chief. We found the ashes, and no healer among the dead.",
             ["steppe_bandits"] =
-                "Steppe bandits fell on a caravan at the well. The guard captain held them off so the wagons could run, and we buried him there. He always rode with his daughter. We did not find her.",
+                "Steppe bandits fell on a caravan at the well a few days ago. The guard captain held them off so the wagons could run, and we buried him there. He always rode with his daughter. We did not find her.",
         };
 
         /// <summary>The bandit cultures the quest can name, in roster order.</summary>

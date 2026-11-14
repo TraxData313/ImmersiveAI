@@ -58,13 +58,13 @@ public class HandmaidQuestTests
             HandmaidQuestText.PlayerAsk("Sea Raiders"));
         Assert.Equal("I hear you are looking for someone to deal with the Desert Bandits. (this town's own)",
             HandmaidQuestText.PlayerAsk("Desert Bandits", devTownsOwn: true));
-        Assert.Equal("They den somewhere not far from here. Clear it out, and I will pay you for it.", HandmaidQuestText.GiverAsk);
+        Assert.Equal("They den somewhere not far from here. Clear it out quickly: if they took anyone alive, there may still be time. I will pay you for it.", HandmaidQuestText.GiverAsk);
         Assert.Equal("Then go with my thanks. My man will mark the place on your map.", HandmaidQuestText.GiverAccepted);
         Assert.Equal("It is done, then. The roads are quieter for it. Take this, and my thanks.", HandmaidQuestText.GiverThanks);
         Assert.Equal("Bolat of Ortysia is asking for someone to deal with the Steppe Bandits.",
             HandmaidQuestText.OfferNotice("Steppe Bandits", "Bolat", "Ortysia"));
         Assert.Equal("Speak with Bolat about the Steppe Bandits", HandmaidQuestText.MenuOption("Steppe Bandits", "Bolat"));
-        Assert.StartsWith("Hill bandits burned a village in the glen.", HandmaidQuestText.StoryFor("mountain_bandits"));
+        Assert.StartsWith("Hill bandits burned a village in the glen some days ago.",HandmaidQuestText.StoryFor("mountain_bandits"));
     }
 
     [Fact]

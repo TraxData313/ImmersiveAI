@@ -151,7 +151,10 @@ public class HandmaidSheetTests
     public void HerSeed_IsHerOwnPast_ThenHerTeacher()
     {
         var seed = HandmaidText.MemorySeedFor(HandmaidRoster.Nessa);
-        Assert.Equal(HandmaidRoster.Nessa.Story + "\n" + "Of the one who taught me: " + HandmaidRoster.Nessa.Teacher, seed);
+        Assert.Equal(HandmaidRoster.Nessa.Story + " " + HandmaidText.StoryCloseRemembered + "\n"
+            + "Of the one who taught me: " + HandmaidRoster.Nessa.Teacher, seed);
+        Assert.Contains("dragged me to their den", seed);
+        Assert.EndsWith(HandmaidText.StoryClose, HandmaidText.StoryLine(HandmaidRoster.Nessa));
         Assert.DoesNotContain("{", seed);
     }
 }

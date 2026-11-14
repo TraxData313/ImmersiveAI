@@ -75,7 +75,7 @@ namespace ImmersiveAI.Core.Handmaids
         // named Niya until 2026.11.11, when Toni renamed her Neya; FormerNameOf heals old saves.
         public static readonly HandmaidGirl Neya = new HandmaidGirl(
             "niya", "Neya", "sturgia", "Sturgia", "sea_raiders", "spc_wanderer_sturgia_0", "Vladika moy",
-            "I gathered herbs with my mother by the river. The raiders killed her, and the man I was promised to, and kept me because I can close a wound. From that day until the day I was freed, I bound up the men who slew them.",
+            "I gathered herbs with my mother by the river. Three days ago the raiders came. They killed her, and the man I was promised to, and dragged me to their den.",
             "I know herbs and wounds, {title}. I can keep your men alive.",
             "My mother. She said a soft answer turns away wrath, and she lived so until the day they killed her.",
             "My mother",
@@ -83,7 +83,7 @@ namespace ImmersiveAI.Core.Handmaids
 
         public static readonly HandmaidGirl Yasmin = new HandmaidGirl(
             "yasmin", "Yasmin", "aserai", "Aserai", "desert_bandits", "spc_wanderer_aserai_8", "Zawji",
-            "My father sold pepper and saffron. They burned our storehouse for a debt he did not owe, and he died in it. I rode with a caravan to my uncle; the caravan never arrived.",
+            "My father sold pepper and saffron, until our storehouse burned with him in it. I was riding with a caravan to my uncle when the bandits fell on it, a few days ago, and dragged me to their den.",
             "I can reckon weights and prices, {title}. No trader will cheat your purse while I watch it.",
             "An old holy man who kept the well by our street. He told me a quiet heart is worth more than my father's whole storehouse.",
             "The old holy man who kept the well by our street",
@@ -91,15 +91,15 @@ namespace ImmersiveAI.Core.Handmaids
 
         public static readonly HandmaidGirl Alys = new HandmaidGirl(
             "alys", "Alys", "vlandia", "Vlandia", "forest_bandits", "spc_wanderer_vlandia_9", "Messire",
-            "I was born in this camp. My mother was taken; I was only born. She died two winters past, and I do not know what lies beyond these trees.",
+            "My father burned charcoal at the edge of the wood, and there were only the two of us. Four days ago they came out of the trees as I carried him his bread. They cut him down and dragged me to their den.",
             "I can cook for many from little, {title}, and mend, and move through a wood unheard.",
-            "My mother. Even here, among them, she never raised her voice, and she taught me to pray while they slept.",
+            "My mother, while she lived. She never raised her voice, and she taught me to pray before I sleep.",
             "My mother",
             "<BodyProperties version='4' age='18' weight='0.2' build='0.3' key='00099404530040045777787767948772A98779666474E785A9A8C866777127130A7430A208847874000000000000000000000000000000000000000000E04002' />");
 
         public static readonly HandmaidGirl Nessa = new HandmaidGirl(
             "nessa", "Nessa", "battania", "Battania", "mountain_bandits", "spc_wanderer_battania_0", "M'fhear",
-            "I was healer to a glen. The hill men brought a wounded chief and said: mend him or the village burns. I mended him. They burned it all the same, and kept me.",
+            "I was healer to a glen. Some days ago the hill men brought a wounded chief and said: mend him or the village burns. I mended him. They burned it all the same, and dragged me to their den.",
             "I can set a bone and cool a fever, {title}.",
             "The old hermit who taught me my herbs. He said the hand that heals must not be proud.",
             "The old hermit who taught me my herbs",
@@ -107,7 +107,7 @@ namespace ImmersiveAI.Core.Handmaids
 
         public static readonly HandmaidGirl Ayla = new HandmaidGirl(
             "ayla", "Ayla", "khuzait", "Khuzait", "steppe_bandits", "spc_wanderer_khuzait_9", "Nökhör mini",
-            "My father guarded caravans and I rode beside him, saving for my dowry. They fell on us at a well. He held them long enough for the others. Not for me.",
+            "My father guarded caravans and I rode beside him, saving for my dowry. Five days ago they fell on us at a well. He held them long enough for the others. Not for me. They dragged me to their den.",
             "I can ride all day, {title}. I know horses, and the roads the caravans keep.",
             "My grandmother. She said the grass that bends is still standing after the storm.",
             "My grandmother",
