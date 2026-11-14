@@ -125,12 +125,18 @@ public class HandmaidSheetTests
 
         Assert.Contains("Only a tale asked of me runs longer.", anyone);
         Assert.DoesNotContain("runs longer", hers);
-        Assert.Contains("a sentence or three, then I let them answer.", hers);
+        // Second cut (2026.11.14): her own section sets her length, so the general length lines
+        // ("a sentence or three", "long where truly earned") and the everyone's acts line are gone.
+        Assert.DoesNotContain("a sentence or three", hers);
+        Assert.DoesNotContain(PromptBuilder.NoLengthDriftGuidance, hers);
+        Assert.DoesNotContain(PromptBuilder.ActingOutGuidance, hers);
+        Assert.Contains(HandmaidText.ActingOut, hers);
+        Assert.Contains("one or two short sentences", hers);
+        Assert.Contains("I do not explain or defend myself", hers);
+        Assert.Contains(PromptBuilder.NoLengthDriftGuidance, anyone);
 
-        // What stays for her: the drift rule, plain speech, the acts and the voice line.
-        Assert.Contains(PromptBuilder.NoLengthDriftGuidance, hers);
+        // What stays for her: plain speech.
         Assert.Contains(PromptBuilder.PlainSpeechGuidance, hers);
-        Assert.Contains(PromptBuilder.ActingOutGuidance, hers);
         Assert.Contains("[voice:", hers);
     }
 

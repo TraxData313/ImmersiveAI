@@ -45,14 +45,17 @@ namespace ImmersiveAI.Probe
             int budget = a.TryGetValue("budget", out var b) ? int.Parse(b) : 80;
             int maxTokens = (int?)cfg["MaxTokens"] ?? 1200;
             const string player = "Toni";
-            var girl = HandmaidRoster.Neya;
+            var girl = a.TryGetValue("girl", out var gid) ? (HandmaidRoster.ById(gid) ?? HandmaidRoster.Neya) : HandmaidRoster.Neya;
+            var lines = a.TryGetValue("lines", out var lf) && File.Exists(lf)
+                ? File.ReadAllLines(lf, Encoding.UTF8).Select(x => x.Trim()).Where(x => x.Length > 0 && !x.StartsWith("#")).ToArray()
+                : Lines;
 
             // ---- SYNTHESIZED runtime inputs (the Module builds these from live game state) ----
             var persona = new NpcPersona
             {
                 Name = girl.Name,
                 AtmosphereLine = ((string?)cfg["AtmosphereLine"] ?? "").Replace("{name}", girl.Name),
-                RoleDescription = "A Sturgian noble of clan Blackthorn — a woman of some 20 years.",
+                RoleDescription = "A " + girl.CultureName + " woman of " + player + "'s household, his handmaid — a woman of some 20 years.",
                 PersonalityDescription = "Calculating, merciful.",
                 Crafts = "What my hands and wits are honestly good at: masterly in Medicine; fair in Crafting, Scouting and Trade.",
                 // Given on purpose: Core must leave it off her sheet.
@@ -102,9 +105,9 @@ namespace ImmersiveAI.Probe
             sb.Append("=== SHEET (marked)\n").Append(marked).Append("\n\n");
 
             var pb = new PromptBuilder();
-            for (int i = 0; i < Lines.Length; i++)
+            for (int i = 0; i < lines.Length; i++)
             {
-                var line = Lines[i];
+                var line = lines[i];
                 var messages = pb.Build(persona, memory, scene, player, line, "Angel");
                 IToolChatClient client;
                 List<CallRecord> calls;
@@ -157,7 +160,7 @@ namespace ImmersiveAI.Probe
             }
 
             Directory.CreateDirectory(runsDir);
-            var path = Path.Combine(runsDir, "handmaid_" + road + "_" + DateTime.Now.ToString("HHmmss") + ".txt");
+            var path = Path.Combine(runsDir, "handmaid_" + girl.Id + "_" + road + "_" + DateTime.Now.ToString("HHmmss") + ".txt");
             File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
             Console.WriteLine("→ " + path);
         }

@@ -1101,15 +1101,18 @@ namespace ImmersiveAI.Core.Prompts
             else
             {
                 sb.AppendLine("How I speak:");
-                sb.AppendLine(persona.IsHandmaid
-                    ? HandmaidBrevityFor(persona.ReplyLength)
-                    : BrevityFor(persona.ReplyLength));
-                sb.AppendLine(NoLengthDriftGuidance);
+                // A handmaid's length is set by her own section, so the general length lines (which
+                // allow "a sentence or three" and "long where truly earned") do not ride beside it.
+                if (!persona.IsHandmaid)
+                {
+                    sb.AppendLine(BrevityFor(persona.ReplyLength));
+                    sb.AppendLine(NoLengthDriftGuidance);
+                }
                 sb.AppendLine(OldWorldToneGuidance);
                 sb.AppendLine(PlainSpeechGuidance);
                 // Immediately after the plain-speech rule, because it IS that rule's one exception.
                 if (persona.EncourageActingOut)
-                    sb.AppendLine(ActingOutGuidance);
+                    sb.AppendLine(persona.IsHandmaid ? Handmaids.HandmaidText.ActingOut : ActingOutGuidance);
                 var voice = VoiceGuidance(persona.VoiceSounds, persona.VoiceTakesMood);
                 if (voice.Length > 0)
                     sb.AppendLine(voice);

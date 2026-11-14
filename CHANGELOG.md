@@ -24,6 +24,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - The village tells you when you arrive, and the village menu takes you straight to him; the den is marked on your map.
 - If someone else empties the den first, the next den of that people is marked instead. No time limit; give it back to him if you change your mind.
 - She is meek and speaks few words, and calls you her lord, sometimes in her own people's tongue.
+- She keeps to one or two sentences, makes no plans for you, and says sorry instead of arguing when you scold her; she seldom acts out gestures.
 - She hopes to be your wife: her road to the wedding is the usual one, only gentler — small doubts a kind word answers, and no rank for your clan to climb.
 - New setting at the top of the menu, "More than one wife" (off by default): turn it on and a woman you court while married can become your lawful second wife, with no other mod needed.
 - With it on, a lady, a companion, the girl from the den, or a woman who is already your lover can walk the whole road to a real wedding; your first wife stays your wife.

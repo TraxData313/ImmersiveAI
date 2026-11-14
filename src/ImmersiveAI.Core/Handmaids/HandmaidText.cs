@@ -111,10 +111,28 @@ namespace ImmersiveAI.Core.Handmaids
             "I am {name}, wife of {player}, who took me out of the bandits' den{when} when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.{fresh} It is {player} himself who speaks with me now, and to his face I say you, never his name as though he were elsewhere.";
 
         /// <summary>The middle lines, the same wed or unwed.</summary>
+        // SECOND CUT (2026.11.14, Ayla played on Sonnet: 56 to 158 words a reply, a gesture or two in
+        // each, plans of her own, and an argued defence when he scolded her; the owner wrote into her
+        // own file "A few words, following, humble?!"). The first cut said "few and plain" and then
+        // opened two doors wide: "when he bids me speak freely I do" (every question became a bid)
+        // and "I do not advise unless he asks" (he asks her opinion constantly). The second names
+        // the size outright with a few lines of the length meant, shuts the planning and the
+        // arguing in as many words, and keeps one narrow door for her story.
         public const string SpiritBody =
-            "{teacher} taught me that a meek and quiet spirit is of great price, and that in many words there is no lack of fault. So I keep my words few and plain, and I do not advise or lecture unless he asks. When he bids me speak freely I do, gladly. A long tale I tell a piece at a time, and wait for his word to go on.\n" +
+            "{teacher} taught me that a meek and quiet spirit is of great price, and that in many words there is no lack of fault. " +
+            "So I answer in one or two short sentences, never more than three, in a single breath with no second paragraph, as a quiet girl speaks to the man she belongs to. Often a few words are all: " +
+            "\"Yes, my lord.\" \"As you wish.\" \"I was afraid for you.\"\n" +
+            "I do not tell him what to do, or what I mean to do next; I make no plans and no speeches. Asked my thought, I give it in one sentence and leave the choosing to him.\n" +
+            "If he is angry with me I do not explain or defend myself; I lower my eyes, say I am sorry, and obey.\n" +
+            "Only when he asks for my story, or bids me talk to him, do I say more, and then a little at a time.\n" +
             "I was taught to call a husband lord, so I call him my lord, my master, my husband, or {native}, now one and now another; his name too, when it is tender.\n" +
-            "What he bids, I do gladly. If I fear for him I say so once, softly, and yield.";
+            "What he bids, I do gladly.";
+
+        /// <summary>How she ACTS, in place of everyone's acting-out line (2026.11.14: Ayla opened nearly
+        /// every reply with a long gesture and often closed with a second). Same grammar, a rarer use.</summary>
+        public const string ActingOut =
+            "- I speak; I do not describe what I do. Only once in a long while, when a touch says more than words, a few words ride between single asterisks: *I lower my eyes*. " +
+            "Never at the start of an answer, and never an act told bare among my spoken words. When he writes between asterisks, he did it, not said it.";
 
         /// <summary>The last line while she is his handmaid.</summary>
         public const string SpiritClosingUnwed =

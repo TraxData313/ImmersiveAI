@@ -159,7 +159,12 @@ You usually only need to open:
   offers the quest after); DevMode offers it in every village with the den type picked in his talk, and
   recalls her at every hideout with a "Bring X forward." per girl, a "Step back" in hers, a dialog lever and a Dev-panel button; (4) her quiet-spirit section sits LAST
   before the player's own words, and she gets NO assigned speech style (it fought her section from the
-  top); (5) the word guard (`HandmaidReplyWords` 80, `Core Text\ReplyTrim`) trims her SPOKEN words to the
+  top); since 2026.11.14 her section also OWNS her length and her acts: the general length lines
+  (`BrevityFor`, `NoLengthDriftGuidance`) and `ActingOutGuidance` are left off her sheet for
+  `HandmaidText.ActingOut`, and it names the size (one or two sentences), forbids plans and self-defence
+  when scolded. Probed with Toni's real lines (`probe handmaid --girl ayla --lines <file>`): old
+  `claude-sonnet-5` still runs long with a gesture every reply; `claude-sonnet-5-5` answers 22-42 words, no
+  gestures, defers and apologizes — the model matters as much as the words; (5) the word guard (`HandmaidReplyWords` 80, `Core Text\ReplyTrim`) trims her SPOKEN words to the
   last whole sentence AFTER the reply, not a token ceiling — a token cap severs mid-sentence and starves
   the answer's heart field and tool calls, which share the same output; (6) her doubts LIVE IN THE SCHEMA:
   while she has weighed nothing her first `set_down` carries the ten lines as the `AllowedValues` of three
