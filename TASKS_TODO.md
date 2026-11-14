@@ -1,30 +1,40 @@
 ﻿WHERE THINGS STAND (2026.10.23 — **v3.7.0 IS ON NEXUS, GITHUB AND STEAM**)
 
-  ** PLAYTEST THE DEN QUEST (2026.11.14 — built, never yet played; deploy with the game closed; BACK
-      UP THE SAVE). In order of danger:
+  ** PLAYTEST THE DEN QUEST (2026.11.14 — built, never yet played; a VILLAGE quest since the owner's
+      second ask the same day, offered by only ~20% of villages per 14-day window; deploy with the game
+      closed; BACK UP THE SAVE). In order of danger:
       [ ] SAVE WITH THE QUEST RUNNING, reload: the quest is still in the log (not cancelled), the den
           still marked and tracked; log.txt has no "There is not active issue for quest"
+      [ ] a save with a TOWN-given quest running (built before the village change): loads, clearing
+          the den completes it, +5 with the town notable; no crash in town or village menus
+      [ ] the village menu "Speak with X about the Y" sits ABOVE Leave (no scrolling), opens HIS talk at
+          the greeting (not the vanilla hub, not "Speak freely"); "Not now" closes cleanly and you stay
+          in the village menu
+      [ ] the gate: ride through several villages; only some show the notice, and those exactly are
+          the ones with the menu line and the talk line (never one without the others); a village
+          without the trouble shows none of the three
+      [ ] the notice shows once per village per window; after 14 days the set of villages changes
       [ ] an old save where the captive was already met: no notice, no menu option, no talk line
-      [ ] an old save where she was not met yet: entering a town shows the one notice
-      [ ] the town menu "Speak with X about the Y" opens HIS talk at the greeting (not the vanilla hub,
-          not "Speak freely"); "Not now" closes cleanly and you stay in the town menu
-      [ ] walking up to him in the town scene: the line is in his normal options; a vanilla issue of
-          his is still offered beside it
+      [ ] towns offer nothing any more (no notice, no menu line, no talk line in a town)
+      [ ] walking up to him in the village scene: the line is in his normal options; a vanilla issue
+          of his is still offered beside it
       [ ] accept: quest in the log titled "Clear the <People>' den", the den visible on the map with
-          the arrow from the town; the log names giver, town and people
-      [ ] clear that den in person, and once by SEND TROOPS: the gold (1000 + 150 x clan tier), +5
-          relation, the log line with his thanks, then the soldier's report with THAT people's girl
+          the arrow from the village; the log names giver, village and people
+      [ ] clear that den in person, and once by SEND TROOPS: NO gold, +5 relation, the log line with
+          his thanks, then the soldier's report with THAT people's girl
+      [ ] while it runs, his talk ("still stands" / "cannot see to it") and the menu door to him work
+          even if his village no longer carries the trouble (next window)
       [ ] clear a DIFFERENT den of the same people: counts the same
       [ ] (reasoned only) someone else empties the marked den: the log says the next one is marked;
           none left: "No den of the <People> stands", and a later day marks a new one
-      [ ] give it back in his talk ("I cannot see to..."): quest gone, no cost; another town offers it
+      [ ] give it back in his talk ("I cannot see to..."): quest gone, no cost; another village offers it
       [ ] (reasoned only) the giver dies with the quest running: success still pays, without his line;
-          the town menu then offers "Give up the hunt..." with a yes/no
+          the village (or town) menu then offers "Give up the hunt..." with a yes/no
       [ ] his talk leaves NO meeting note in his memory
-      [ ] a War Sails coastal town gets sea raiders; the den reached by sea counts
-      [ ] DevMode: every town offers it even after the meeting; his talk lists all five, the town's own
-          first marked "(this town's own)"; each gives that girl; the dev levers + Dev-panel button
-          still work with no quest
+      [ ] a War Sails coastal village gets sea raiders; the den reached by sea counts
+      [ ] DevMode: every village offers it even after the meeting; his talk lists all five, the
+          village's own first marked "(this village's own)"; each gives that girl; the dev levers +
+          Dev-panel button still work with no quest
       [ ] setting off: no notice, no menu line, no talk line; a running quest still pays when its den falls
 
   ** PLAYTEST NATIVE SECOND WIVES (2026.11.11 — built, never yet played; Marry Anyone is no longer

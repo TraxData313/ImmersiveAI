@@ -130,17 +130,24 @@ You usually only need to open:
 - **Courtship & marriage** → Core `Courtship\` (CourtshipRoad rails + stages, CourtshipMisgiving + CourtshipMisgivings ops — HER OWN written doubts, the checkable-ask DSL/MatchmakerLedger retired 2026.08.08, CourtshipSeed, CourtshipText — every word she reads, numberless refusals) + Module `Tools\TrothTool` (tend_courtship + bless_marriage) + `Tools\MisgivingTool` (weigh_misgivings) + the `ImmersiveChatBehavior.Courtship.cs` partial (gates, seals, seeding, blessing, Marry Anyone compat, letter-borne offers) + docs/marriage-courtship-design.md.
 - **The handmaid from the den** (2026.11.11, Toni's design) → Core `Handmaids\` (`HandmaidRoster` the five girls,
   `HandmaidText` every word of hers, `HandmaidDoubts` her ten small doubts + her misgivings' hand) + the
-  `ImmersiveChatBehavior.Handmaid.cs` partial. **Since 2026.11.14 she is found through a TOWN QUEST**,
+  `ImmersiveChatBehavior.Handmaid.cs` partial. **Since 2026.11.14 she is found through a VILLAGE QUEST**,
   "Clear the {den type} den" (Core `HandmaidQuestText` every word, tested; Module `DenQuest.cs`
-  `ImmersiveDenQuest` + the `ImmersiveChatBehavior.DenQuest.cs` partial): per town ONE notable (most powerful,
-  merchant preferred, kept in `ImmersiveAI_DenGivers`), den type = culture of the hideout nearest the town; a
-  soft notice once per town, a town-menu door, a line in his own talk (scripted, no meeting note). Target =
+  `ImmersiveDenQuest` + the `ImmersiveChatBehavior.DenQuest.cs` partial; towns offer nothing): per village ONE
+  notable drawn by lot (any adult notable, kept in `ImmersiveAI_DenGivers` as "villageId|heroId"; no notable,
+  no offer), den type = culture of the hideout nearest the village. **Not every village**: Core
+  `HandmaidQuestText.VillageOffersNow(campaignId, villageId, day)` = FNV-1a (UTF-8, + fmix32) of
+  (seed, village, floor(day / `OfferWindowDays` 14)) under `OfferPercent` 20; the notice, the village-menu door
+  (inserted above the menu's first leave option) and his talk line all ask ONE gate, `VillageOffersDen`;
+  a RUNNING quest's doors to its giver never ask it; DevMode = every village. Notice once per village PER
+  WINDOW ("villageId|window" in `ImmersiveAI_DenNoticedTowns`). His talk is scripted, no meeting note. Target =
   nearest den of that people holding bandits, made visible + tracked + arrow (vanilla NearbyBanditBase shape);
-  emptied by others → next one + log line, none → waits (daily look). ANY den of that people counts. Reward
-  1000 + 150 x clan tier, +5 relation, sent as word. The quest is a QuestBase with NO QuestGiver (a giver gets no
+  emptied by others → next one + log line, none → waits (daily look). ANY den of that people counts. NO GOLD
+  (`RewardGold` 0), +5 relation, sent as word. Saves from the town days: old town giver marks are never used;
+  a running town-given quest still loads, retargets and pays (saved field `_town` = its home, index 2
+  unchanged). The quest is a QuestBase with NO QuestGiver (a giver gets no
   new issues and cannot die while it runs, and it has no time limit) and a `SpecialQuestType` (else
   `QuestManager.OnGameLoaded` CANCELS a quest no issue owns); saveable type id 4 in `ImmersiveAISaveDefiner`.
-  Vanilla's quest log has no abandon: it is given back in his talk (or a town-menu way out once he is dead).
+  Vanilla's quest log has no abandon: it is given back in his talk (or a village/town-menu way out once he is dead).
   The installed game DLL is NEWER than `%TEMP%\trax_decomp` (2026.11.11 patch: `Hideout.IsSpotted` is gone) —
   decompile the live DLL. After the quest's won hideout (personal fight OR send-troops) his men
   report a captive girl — ONE OF HIS OWN MEN tells it (best healthy non-hero troop + `PartyBase.MainParty` = men behind him;
@@ -148,8 +155,8 @@ You usually only need to open:
   `Clan.PlayerClan`, his party — never `AddCompanionAction`, so no companion slot); sent away she is removed
   with `ApplyByRemove` (no death notice). Laws worth keeping: (1) every word lives in Core `Handmaids\`,
   tested; (2) the MARKER is `HandmaidOf(Hero)`/`IsHandmaid(Hero)`, saved as `ImmersiveAI_Handmaids`
-  ("heroId|girlId") — read it, never infer her from traits; (3) ONCE PER CAMPAIGN, gone if refused (no town
-  offers the quest after); DevMode offers it in every town with the den type picked in his talk, and
+  ("heroId|girlId") — read it, never infer her from traits; (3) ONCE PER CAMPAIGN, gone if refused (no village
+  offers the quest after); DevMode offers it in every village with the den type picked in his talk, and
   recalls her at every hideout with a "Bring X forward." per girl, a "Step back" in hers, a dialog lever and a Dev-panel button; (4) her quiet-spirit section sits LAST
   before the player's own words, and she gets NO assigned speech style (it fought her section from the
   top); (5) the word guard (`HandmaidReplyWords` 80, `Core Text\ReplyTrim`) trims her SPOKEN words to the
