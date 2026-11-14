@@ -320,16 +320,50 @@ namespace ImmersiveAI
             public int FramesWaiting { get; set; }
         }
 
-        // The wanderer templates wear caps and hoods; she is found bare-headed (Toni, 2026.11.11:
-        // "they all look silly with them"), so her own face is what the player sees.
-        private static void BareHerHead(Hero hero)
+        // A CAPTIVE LOOKS LIKE ONE (Toni, 2026.11.11 and 2026.11.14). The wanderer templates come
+        // in clean town clothes with a cap or hood and a blade at the belt. She is found
+        // bare-headed ("they all look silly with them"), in rags, and unarmed: both kits are
+        // emptied and she is given the game's own Tattered Rags and Ragged Boots. An item this
+        // game version does not have is simply skipped, slot by slot, so she is never left bare.
+        private static readonly string[] CaptiveBody = { "tattered_rags", "ragged_robes", "sackcloth_tunic" };
+        private static readonly string[] CaptiveFeet = { "ragged_boots" };
+
+        private static void DressAsCaptive(Hero hero)
         {
             try
             {
+                var body = FirstItem(CaptiveBody);
+                var feet = FirstItem(CaptiveFeet);
                 foreach (var kit in new[] { hero.BattleEquipment, hero.CivilianEquipment })
-                    if (kit != null) kit[EquipmentIndex.Head] = default(EquipmentElement);
+                {
+                    if (kit == null) continue;
+                    for (var i = EquipmentIndex.WeaponItemBeginSlot; i < EquipmentIndex.NumAllWeaponSlots; i++)
+                        kit[i] = default(EquipmentElement);
+                    kit[EquipmentIndex.Head] = default(EquipmentElement);
+                    kit[EquipmentIndex.Cape] = default(EquipmentElement);
+                    kit[EquipmentIndex.Gloves] = default(EquipmentElement);
+                    kit[EquipmentIndex.Horse] = default(EquipmentElement);
+                    kit[EquipmentIndex.HorseHarness] = default(EquipmentElement);
+                    // Her own clothes stay if the rags are missing: never undressed by a lookup.
+                    if (body != null) kit[EquipmentIndex.Body] = new EquipmentElement(body);
+                    kit[EquipmentIndex.Leg] = feet != null ? new EquipmentElement(feet) : default(EquipmentElement);
+                }
             }
-            catch (Exception ex) { ModLog.Error("handmaid: baring her head", ex); }
+            catch (Exception ex) { ModLog.Error("handmaid: dressing her as a captive", ex); }
+        }
+
+        private static ItemObject? FirstItem(string[] ids)
+        {
+            foreach (var id in ids)
+            {
+                try
+                {
+                    var item = MBObjectManager.Instance.GetObject<ItemObject>(id);
+                    if (item != null) return item;
+                }
+                catch { }
+            }
+            return null;
         }
 
         private bool IsHandmaidMeetingHero(Hero? hero) =>
@@ -769,7 +803,7 @@ namespace ImmersiveAI
                 hero.SetName(name, name);
                 GiveHandmaidHerAge(hero, girl);
                 ApplyHandmaidFace(hero, girl);
-                BareHerHead(hero);
+                DressAsCaptive(hero);
                 // Shown, and known, so her name in the talk is a link to her page with her
                 // skills, as a wanderer's is in a tavern. Hidden again if she is sent away.
                 hero.HiddenInEncyclopedia = false;
