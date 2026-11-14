@@ -225,8 +225,26 @@ def main(argv=None):
         same = (old.get("dtype"), old.get("maxSeconds"), old.get("weights", {}).get("revision")) == \
                (manifest["dtype"], manifest["maxSeconds"], rev)
         if same:
+            # A row whose voice folder is gone (a renamed voice) goes too, file and all,
+            # so the pack never carries a state for a voice the mod no longer has.
             done = {r["id"] for r in rows}
-            rows = [r for r in old.get("voices", []) if r["id"] not in done] + rows
+            live = {f"{s}/{c}/{v}/{STATE}" for s, c, v, _ in find_voices(args.voices)}
+            kept = []
+            for r in old.get("voices", []):
+                if r["id"] in done:
+                    continue
+                if r["file"] not in live:
+                    stale = os.path.join(args.out, *r["file"].split("/"))
+                    if os.path.exists(stale):
+                        os.remove(stale)
+                        try:
+                            os.rmdir(os.path.dirname(stale))
+                        except OSError:
+                            pass
+                    print(f"dropped {r['id']}: no longer in {args.voices}", flush=True)
+                    continue
+                kept.append(r)
+            rows = kept + rows
             rows.sort(key=lambda r: r["file"])
             manifest.update(voices=rows, count=len(rows), totalBytes=sum(r["bytes"] for r in rows))
     with open(mpath, "w", encoding="utf-8") as fh:
