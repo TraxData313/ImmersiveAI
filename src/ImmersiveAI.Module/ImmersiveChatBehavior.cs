@@ -1195,7 +1195,7 @@ namespace ImmersiveAI
             // option lands on the real "town"/"castle"/"village" menus, near Trade and the smithy.
             AddLetterMenus(starter);
             AddChatWindowMenus(starter);
-            // The den quest's door in every town (DenQuest partial).
+            // The den quest's door in the village menu (DenQuest partial).
             AddDenQuestMenus(starter);
         }
 

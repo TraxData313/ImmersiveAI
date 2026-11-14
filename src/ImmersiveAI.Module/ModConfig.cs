@@ -600,12 +600,13 @@ namespace ImmersiveAI
         /// unwritten.</summary>
         public bool EnableBirthChronicle { get; set; } = true;
 
-        /// <summary>The master switch of the captive in the den. When true, a notable in every town
-        /// offers the den quest "Clear the {den type} den" (the bandits nearest that town), and the
+        /// <summary>The master switch of the captive in the den. When true, a notable in some villages
+        /// (about a fifth, changing every 14 days) offers the den quest "Clear the {den type} den"
+        /// (the bandits nearest that village), and the
         /// den it points at yields a captive girl: the men's report, then a short scripted talk with
         /// her, and if the player takes her in she joins his clan as FAMILY (not a companion, no
-        /// companion slot). Once per campaign; with DevMode on every town offers it, the den type is
-        /// chosen in the talk, and every hideout cleared yields her. Set false and no town asks and
+        /// companion slot). Once per campaign; with DevMode on every village offers it, the den type is
+        /// chosen in the talk, and every hideout cleared yields her. Set false and no village asks and
         /// hideouts yield no one.</summary>
         public bool EnableHideoutHandmaid { get; set; } = true;
 

@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace ImmersiveAI.Core.Handmaids
 {
     /// <summary>
-    /// Every player-visible word of the den quest (2026.11.14, the owner's ask): a town notable
+    /// Every player-visible word of the den quest (2026.11.14, the owner's ask): a village notable
     /// asks the player to clear the den of one bandit people, and in that den his men find the
-    /// captive girl of that people. The notable never knew her: his story is the town's own loss,
-    /// linked to hers only loosely. Placeholders are filled through the helpers below, so a line
+    /// captive girl of that people. The notable never knew her: his story is the village's own loss,
+    /// linked to hers only loosely. Since the owner's second ask the same day it is a VILLAGE quest,
+    /// and only some villages carry the trouble at a time (<see cref="VillageOffersNow"/>). Placeholders are filled through the helpers below, so a line
     /// never reaches the player with a brace left in it.
     /// </summary>
     public static class HandmaidQuestText
@@ -18,12 +20,62 @@ namespace ImmersiveAI.Core.Handmaids
         /// <summary>The giver's regard gained when the den is cleared (vanilla's hideout quest gives 5).</summary>
         public const int RelationOnSuccess = 5;
 
-        /// <summary>NO COIN (the owner, 2026.11.14): the asker is an ordinary merchant with none to
+        /// <summary>NO COIN (the owner, 2026.11.14): the asker is a village notable with none to
         /// spare, speaking for the local folk. What the player earns is his regard, and theirs.</summary>
         public const int RewardGold = 0;
 
         /// <summary>From this many men in his party he is spoken to as a captain; below it, as a warrior.</summary>
         public const int MenForACaptain = 10;
+
+        /// <summary>The share of villages that carry the trouble in any one window (the owner,
+        /// 2026.11.14: "not in every place, but a bit more frequent" than vanilla's quests).</summary>
+        public const int OfferPercent = 20;
+
+        /// <summary>How many campaign days one window lasts: which villages offer changes slowly.</summary>
+        public const int OfferWindowDays = 14;
+
+        // ── Which villages offer it now ────────────────────────────────────────────────────
+
+        /// <summary>The window a campaign day falls in: floor(day / <see cref="OfferWindowDays"/>).</summary>
+        public static long OfferWindow(double campaignDay) =>
+            (long)Math.Floor(campaignDay / OfferWindowDays);
+
+        /// <summary>Whether this village carries the trouble on this campaign day: a stable hash of
+        /// (seed, village, window) falls under <see cref="OfferPercent"/>. Pure and deterministic,
+        /// the same on every run and machine, so a reload never reshuffles the villages.</summary>
+        public static bool VillageOffersNow(string campaignSeed, string villageId, double campaignDay) =>
+            VillageOffersIn(campaignSeed, villageId, OfferWindow(campaignDay));
+
+        /// <summary>The same rule for an explicit window.</summary>
+        public static bool VillageOffersIn(string campaignSeed, string villageId, long window)
+        {
+            var key = (campaignSeed ?? string.Empty) + "|" + (villageId ?? string.Empty) + "|"
+                + window.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return StableHash(key) % 100u < (uint)OfferPercent;
+        }
+
+        /// <summary>The saved mark that a village's notice was shown in this window: "villageId|window".</summary>
+        public static string NoticeKey(string villageId, long window) =>
+            (villageId ?? string.Empty) + "|" + window.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        // FNV-1a over the UTF-8 bytes (the mod's stable hash, never string.GetHashCode), finished
+        // with murmur3's fmix32 so neighbouring windows and ids spread evenly over the low digits.
+        private static uint StableHash(string s)
+        {
+            unchecked
+            {
+                uint h = 2166136261;
+                foreach (var b in Encoding.UTF8.GetBytes(s ?? string.Empty))
+                {
+                    h ^= b;
+                    h *= 16777619;
+                }
+                h ^= h >> 16; h *= 0x85ebca6b;
+                h ^= h >> 13; h *= 0xc2b2ae35;
+                h ^= h >> 16;
+                return h;
+            }
+        }
 
 
         // ── The den's name ─────────────────────────────────────────────────────────────────
@@ -60,7 +112,7 @@ namespace ImmersiveAI.Core.Handmaids
         public const string TitleTemplate = "Clear the {den_of} den";
 
         public const string StartLogTemplate =
-            "{giver} of {town} told you that the {den} have been preying on the villagers, and asked you to clear their den. The place is marked on your map.";
+            "{giver} of {village} told you that the {den} have been preying on the villagers, and asked you to clear their den. The place is marked on your map.";
 
         public const string MarkedNoticeTemplate = "{giver} has marked the {den_of} den on your map.";
 
@@ -86,19 +138,19 @@ namespace ImmersiveAI.Core.Handmaids
 
         // ── Finding it ─────────────────────────────────────────────────────────────────────
 
-        /// <summary>The one soft notice on entering a town that offers it.</summary>
-        public const string OfferNoticeTemplate = "{giver} of {town} is asking for someone to deal with the {den}.";
+        /// <summary>The one soft notice on entering a village that offers it (once per window).</summary>
+        public const string OfferNoticeTemplate = "{giver} of {village} is asking for someone to deal with the {den}.";
 
-        /// <summary>The town menu's door to his talk.</summary>
+        /// <summary>The village menu's door to his talk.</summary>
         public const string MenuOptionTemplate = "Speak with {giver} about the {den}";
 
-        /// <summary>The town menu's way out when the giver can no longer be asked.</summary>
+        /// <summary>The settlement menu's way out when the giver can no longer be asked.</summary>
         public const string MenuGiveUpTemplate = "Give up the hunt for the {den_of} den";
 
         public const string GiveUpConfirmTitle = "Give up the den?";
 
         public const string GiveUpConfirmBodyTemplate =
-            "{giver} is gone, and nobody waits on the {den_of} den now. Give up the hunt? You may take such a task again in any town.";
+            "{giver} is gone, and nobody waits on the {den_of} den now. Give up the hunt? You may take such a task again in any village that asks.";
 
         public const string GiveUpYes = "Give it up";
 
@@ -106,7 +158,7 @@ namespace ImmersiveAI.Core.Handmaids
 
         // ── The giver's talk ───────────────────────────────────────────────────────────────
 
-        /// <summary>His opening when the talk is opened from the town menu.</summary>
+        /// <summary>His opening when the talk is opened from the village menu.</summary>
         public const string GiverGreeting = "You wished to speak with me?";
 
         public const string PlayerAskTemplate = "I hear you are looking for someone to deal with the {den}.";
@@ -126,7 +178,7 @@ namespace ImmersiveAI.Core.Handmaids
 
         public const string PlayerNotNow = "Not now.";
 
-        public const string GiverAccepted = "Then go with my thanks. My man will mark the place on your map.";
+        public const string GiverAccepted = "Then go with our thanks. One of our lads will mark the place on your map.";
 
         public const string PlayerLeave = "Another time.";
 
@@ -140,17 +192,17 @@ namespace ImmersiveAI.Core.Handmaids
 
         public const string GiverGiveUp = "Then the roads must wait for someone else. No harm done.";
 
-        /// <summary>DevMode: marks the town's own den type among the five options.</summary>
-        public const string DevOwnMark = " (this town's own)";
+        /// <summary>DevMode: marks the village's own den type among the five options.</summary>
+        public const string DevOwnMark = " (this village's own)";
 
         // ── His story, one per den type ────────────────────────────────────────────────────
 
         private static readonly Dictionary<string, string> Stories = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["sea_raiders"] =
-                "Sea raiders came up the river a few days ago and struck a herb-gatherers' hamlet. My men found a woman dead by the water with her basket still on her arm, and a young man beside her. There was a daughter too, they say. Nobody has seen her since.",
+                "Sea raiders came up the river a few days ago and struck a herb-gatherers' hamlet. Our men found a woman dead by the water with her basket still on her arm, and a young man beside her. There was a daughter too, they say. Nobody has seen her since.",
             ["desert_bandits"] =
-                "Desert bandits took a caravan on the road a few days past. A man of this town still waits for his niece, who rode with it after her father's storehouse burned. Only the camels came back.",
+                "Desert bandits took a caravan on the road a few days past. A man of this village still waits for his niece, who rode with it after her father's storehouse burned. Only the camels came back.",
             ["forest_bandits"] =
                 "Forest bandits came out of the trees a few days ago. We found a charcoal burner cut down beside his kiln, and a bread basket lying in the path. He had a daughter who carried it to him every day. She is not among the dead.",
             ["mountain_bandits"] =
@@ -171,31 +223,31 @@ namespace ImmersiveAI.Core.Handmaids
         /// <summary>Whether this den type has a story of its own (and so a girl of its own).</summary>
         public static bool HasStory(string? banditCulture) => Stories.ContainsKey(Normalize(banditCulture));
 
-        /// <summary>DevMode: the den types in the order the giver's talk lists them, the town's own first.</summary>
-        public static IReadOnlyList<string> DevOrder(string? townsOwn) =>
-            HandmaidRoster.PickOrder(townsOwn).Select(g => g.BanditCulture).ToList();
+        /// <summary>DevMode: the den types in the order the giver's talk lists them, the village's own first.</summary>
+        public static IReadOnlyList<string> DevOrder(string? villagesOwn) =>
+            HandmaidRoster.PickOrder(villagesOwn).Select(g => g.BanditCulture).ToList();
 
         // ── Fillers ────────────────────────────────────────────────────────────────────────
 
-        /// <summary>Fills {den}, {den_of}, {giver} and {town}. A blank giver or town reads as a
+        /// <summary>Fills {den}, {den_of}, {giver} and {village}. A blank giver or village reads as a
         /// plain word, so nothing is left in braces.</summary>
-        public static string Fill(string? template, string? denName, string? giver = null, string? town = null)
+        public static string Fill(string? template, string? denName, string? giver = null, string? village = null)
         {
             var den = string.IsNullOrWhiteSpace(denName) ? "bandits" : denName!.Trim();
             var s = template ?? string.Empty;
             s = s.Replace("{den_of}", Possessive(den));
             s = s.Replace("{den}", den);
             s = s.Replace("{giver}", string.IsNullOrWhiteSpace(giver) ? "A notable" : giver!.Trim());
-            s = s.Replace("{town}", string.IsNullOrWhiteSpace(town) ? "the town" : town!.Trim());
+            s = s.Replace("{village}", string.IsNullOrWhiteSpace(village) ? "the village" : village!.Trim());
             return s;
         }
 
         public static string Title(string? denName) => Fill(TitleTemplate, denName);
 
-        public static string PlayerAsk(string? denName, bool devTownsOwn = false) =>
-            Fill(PlayerAskTemplate, denName) + (devTownsOwn ? DevOwnMark : string.Empty);
+        public static string PlayerAsk(string? denName, bool devVillagesOwn = false) =>
+            Fill(PlayerAskTemplate, denName) + (devVillagesOwn ? DevOwnMark : string.Empty);
 
-        public static string StartLog(string? denName, string? giver, string? town) => Fill(StartLogTemplate, denName, giver, town);
+        public static string StartLog(string? denName, string? giver, string? village) => Fill(StartLogTemplate, denName, giver, village);
 
         public static string MarkedNotice(string? denName, string? giver) => Fill(MarkedNoticeTemplate, denName, giver);
 
@@ -211,7 +263,7 @@ namespace ImmersiveAI.Core.Handmaids
         public static string AbandonLog(string? denName, string? giver, bool giverStillHere) =>
             Fill(giverStillHere ? AbandonLogTemplate : AbandonNoGiverLogTemplate, denName, giver);
 
-        public static string OfferNotice(string? denName, string? giver, string? town) => Fill(OfferNoticeTemplate, denName, giver, town);
+        public static string OfferNotice(string? denName, string? giver, string? village) => Fill(OfferNoticeTemplate, denName, giver, village);
 
         public static string MenuOption(string? denName, string? giver) => Fill(MenuOptionTemplate, denName, giver);
 

@@ -12,7 +12,7 @@ using TaleWorlds.SaveSystem;
 namespace ImmersiveAI
 {
     /// <summary>
-    /// "Clear the {den type} den" (2026.11.14, the owner's ask): the town quest that leads to the
+    /// "Clear the {den type} den" (2026.11.14, the owner's ask): the village quest that leads to the
     /// captive in the den. Its shape is vanilla's NearbyBanditBaseIssueQuest (the target hideout
     /// spotted, made visible, tracked and pointed at with a map arrow; thanks sent as word with the
     /// gold) on the frame of a quest that stands without an issue, as War Sails' InquireAtOstican
@@ -35,6 +35,8 @@ namespace ImmersiveAI
         [SaveableField(1)]
         private string _denCulture = string.Empty;
 
+        // The settlement whose notable gave it: a village since 2026.11.14, a town in saves from
+        // before. The field keeps its old name and index so those saves load unchanged.
         [SaveableField(2)]
         private Settlement? _town;
 
@@ -44,16 +46,16 @@ namespace ImmersiveAI
         [SaveableField(4)]
         private Hero? _giver;
 
-        public ImmersiveDenQuest(string questId, Hero giver, Settlement town, string denCulture, int rewardGold)
+        public ImmersiveDenQuest(string questId, Hero giver, Settlement home, string denCulture, int rewardGold)
             : base(questId, null, CampaignTime.Never, rewardGold)
         {
             _giver = giver;
-            _town = town;
+            _town = home;
             _denCulture = denCulture ?? string.Empty;
         }
 
         public string DenCulture => _denCulture ?? string.Empty;
-        public Settlement? Town => _town;
+        public Settlement? Home => _town;
         public Settlement? Target => _target;
         public Hero? Giver => _giver;
 
@@ -106,14 +108,14 @@ namespace ImmersiveAI
         {
             StartQuest();
             Log(HandmaidQuestText.StartLog(DenName, LinkOf(_giver), LinkOf(_town)));
-            if (target != null) Mark(target, arrowFromTown: true);
+            if (target != null) Mark(target, arrowFromHome: true);
             else Log(HandmaidQuestText.WaitLog(DenName));
             try { MBInformationManager.AddQuickInformation(new TextObject("{=!}" + HandmaidQuestText.MarkedNotice(DenName, NameOf(_giver)))); }
             catch { }
         }
 
         // Vanilla's reveal (NearbyBanditBaseIssueQuest.OnQuestAccepted, as of the 2026.11.11 game DLL).
-        private void Mark(Settlement target, bool arrowFromTown)
+        private void Mark(Settlement target, bool arrowFromHome)
         {
             _target = target;
             try
@@ -121,7 +123,7 @@ namespace ImmersiveAI
                 // This game version has no separate "spotted" flag on a hideout: visible is spotted.
                 target.IsVisible = true;
                 if (!IsTracked(target)) AddTrackedObject(target);
-                if (arrowFromTown && _town != null)
+                if (arrowFromHome && _town != null)
                     QuestHelper.AddMapArrowFromPointToTarget(new TextObject("{=!}" + DenName),
                         _town.Position, target.Position, 5f, 0.1f);
             }
@@ -142,7 +144,7 @@ namespace ImmersiveAI
             Unmark();
             if (next != null)
             {
-                Mark(next, arrowFromTown: false);
+                Mark(next, arrowFromHome: false);
                 Log(wasWaiting ? HandmaidQuestText.FoundAgainLog(DenName) : HandmaidQuestText.RetargetLog(DenName));
             }
             else if (!wasWaiting)
@@ -163,7 +165,7 @@ namespace ImmersiveAI
             CompleteQuestWithSuccess();
         }
 
-        /// <summary>Given back: no cost, and any town may offer it again.</summary>
+        /// <summary>Given back: no cost, and any village that carries the trouble may offer it again.</summary>
         internal void Abandon()
         {
             CompleteQuestWithCancel(new TextObject("{=!}" + HandmaidQuestText.AbandonLog(DenName, LinkOf(_giver), GiverStillHere)));

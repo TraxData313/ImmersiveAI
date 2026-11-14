@@ -414,8 +414,8 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool AllowDutyNights { get; set; } = true;
 
-        [SettingPropertyBool("The captive in the den (a town quest)", Order = 30, RequireRestart = false,
-            HintText = "In every town a notable asks you to clear the den of the bandits nearest it - sea raiders, desert, forest, mountain or steppe bandits (look in the town menu). In that den your men find a captive girl of that people; take her in and she joins your family, no companion slot. Once per campaign. With Developer mode on, every town offers it, you pick the den type, and hideouts always yield her. Off: no town asks and no den yields anyone.")]
+        [SettingPropertyBool("The captive in the den (a village quest)", Order = 30, RequireRestart = false,
+            HintText = "In some villages, not all (about one in five, changing every two weeks), a village notable asks you to clear the den of the bandits nearest it - sea raiders, desert, forest, mountain or steppe bandits (look in the village menu). In that den your men find a captive girl of that people; take her in and she joins your family, no companion slot. Once per campaign. With Developer mode on, every village offers it, you pick the den type, and hideouts always yield her. Off: no village asks and no den yields anyone.")]
         [SettingPropertyGroup("Life of the NPCs", GroupOrder = 2)]
         public bool EnableHideoutHandmaid { get; set; } = true;
 
