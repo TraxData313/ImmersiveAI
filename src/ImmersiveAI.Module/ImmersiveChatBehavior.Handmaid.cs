@@ -321,19 +321,20 @@ namespace ImmersiveAI
         }
 
         // A CAPTIVE LOOKS LIKE ONE (Toni, 2026.11.11 and 2026.11.14). The wanderer templates come
-        // in clean town clothes with a cap or hood and a blade at the belt. She is found
-        // bare-headed ("they all look silly with them"), in rags, and unarmed: both kits are
-        // emptied and she is given the game's own Tattered Rags and Ragged Boots. An item this
-        // game version does not have is simply skipped, slot by slot, so she is never left bare.
-        private static readonly string[] CaptiveBody = { "tattered_rags", "ragged_robes", "sackcloth_tunic" };
-        private static readonly string[] CaptiveFeet = { "ragged_boots" };
-
+        // with a cap or hood and a blade at the belt. She is found bare-headed ("they all look
+        // silly with them") and unarmed, in HER OWN PEOPLE'S plain dress, the one her template
+        // wears in town, made the game's own "Ripped" (the poorest cloth modifier: the name and
+        // worth of the thing, the model stays the same). Her first cut wore the generic Tattered
+        // Rags; the owner asked for her culture's clothes back, only torn. Both kits get the same
+        // dress and shoes, so she does not put on armour for a fight she was never armed for.
+        // A piece with no cloth modifier keeps its plain self; nothing here can leave her bare.
         private static void DressAsCaptive(Hero hero)
         {
             try
             {
-                var body = FirstItem(CaptiveBody);
-                var feet = FirstItem(CaptiveFeet);
+                var town = hero.CivilianEquipment;
+                var dress = Ripped(town != null ? town[EquipmentIndex.Body] : default(EquipmentElement));
+                var shoes = Ripped(town != null ? town[EquipmentIndex.Leg] : default(EquipmentElement));
                 foreach (var kit in new[] { hero.BattleEquipment, hero.CivilianEquipment })
                 {
                     if (kit == null) continue;
@@ -344,26 +345,31 @@ namespace ImmersiveAI
                     kit[EquipmentIndex.Gloves] = default(EquipmentElement);
                     kit[EquipmentIndex.Horse] = default(EquipmentElement);
                     kit[EquipmentIndex.HorseHarness] = default(EquipmentElement);
-                    // Her own clothes stay if the rags are missing: never undressed by a lookup.
-                    if (body != null) kit[EquipmentIndex.Body] = new EquipmentElement(body);
-                    kit[EquipmentIndex.Leg] = feet != null ? new EquipmentElement(feet) : default(EquipmentElement);
+                    // Her battle kit keeps its own body only if the town kit had none to give.
+                    if (dress.Item != null) kit[EquipmentIndex.Body] = dress;
+                    else kit[EquipmentIndex.Body] = Ripped(kit[EquipmentIndex.Body]);
+                    kit[EquipmentIndex.Leg] = shoes;
                 }
             }
             catch (Exception ex) { ModLog.Error("handmaid: dressing her as a captive", ex); }
         }
 
-        private static ItemObject? FirstItem(string[] ids)
+        // The same piece with the poorest modifier its own group offers ("Ripped" for cloth).
+        private static EquipmentElement Ripped(EquipmentElement piece)
         {
-            foreach (var id in ids)
+            try
             {
-                try
-                {
-                    var item = MBObjectManager.Instance.GetObject<ItemObject>(id);
-                    if (item != null) return item;
-                }
-                catch { }
+                var item = piece.Item;
+                if (item == null) return default(EquipmentElement);
+                var mods = item.ItemComponent?.ItemModifierGroup?.ItemModifiers;
+                if (mods == null || mods.Count == 0) return new EquipmentElement(item);
+                var worst = mods.FirstOrDefault(m => m != null && (m.StringId ?? string.Empty).StartsWith("ripped", StringComparison.OrdinalIgnoreCase))
+                            ?? mods.Where(m => m != null).OrderBy(m => m.PriceMultiplier).FirstOrDefault();
+                return worst != null && worst.PriceMultiplier < 1f
+                    ? new EquipmentElement(item, worst)
+                    : new EquipmentElement(item);
             }
-            return null;
+            catch { return piece; }
         }
 
         private bool IsHandmaidMeetingHero(Hero? hero) =>
