@@ -31,8 +31,11 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Your wives learn where you slept, and from whom: "his other lawful wife" or "his lover". How they take it is theirs.
 - Wives of one man now call each other "my husband's other wife", and a look-up of a person names every spouse.
 - Pocket now speaks all 92 voices of Calradia with no sign-in: the voice app downloads their voice pack (about 205 MB) by itself. Made with Kyutai's Pocket TTS.
+- The Local backend has a model dropdown now, with Gemma 4 12B as the tested pick; the text field still takes any other id.
 
 ### Fixes
+
+- Local models in LM Studio no longer go silent now and then: their thinking stays switched off.
 
 - A married man's wall line now names the mod's own setting instead of pointing at Marry Anyone, which cannot marry the player on this game version.
 - A lover conceiving no longer quietly dissolves the player's marriage in the game's own records.

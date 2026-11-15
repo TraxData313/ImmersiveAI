@@ -119,12 +119,17 @@ namespace ImmersiveAI.Mcm
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalEndpoint { get; set; } = string.Empty;
 
-        [SettingPropertyText("Local model id", Order = 16, RequireRestart = false,
-            HintText = "UNSUPPORTED, at your own risk. The EXACT id your server serves (LM Studio: qwen/qwen3-30b-a3b; Ollama: qwen3:30b). It must be an instruct model with native tool calling AND with thinking/reasoning turned OFF in your server — a thinking model spends its whole budget in silence and answers '...'.")]
+        [SettingPropertyDropdown("Local model", Order = 16, RequireRestart = false,
+            HintText = "When the backend is Local: which model your server answers with, by its LM Studio id. google/gemma-4-12b is the tested pick (7.4 GB, fits beside the game on a 16 GB card; meek, short, follows the sheet); google/gemma-4-e4b is the light one (5.9 GB). Download it in LM Studio first. The mod switches their thinking off.")]
+        [SettingPropertyGroup("Connection", GroupOrder = 0)]
+        public Dropdown<string> LocalModelChoice { get; set; } = new Dropdown<string>(McmChoiceLists.LocalModels, 0);
+
+        [SettingPropertyText("Local model (type any id)", Order = 17, RequireRestart = false,
+            HintText = "While this holds text it OVERRIDES the dropdown: the EXACT id your server serves (LM Studio: google/gemma-4-12b; Ollama: gemma4:12b). Empty = the dropdown chooses. It must be an instruct model with native tool calling; a model that keeps thinking spends its budget in silence and answers '...'.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalModel { get; set; } = string.Empty;
 
-        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 17, RequireRestart = false,
+        [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 19, RequireRestart = false,
             HintText = "The context window your server ACTUALLY loads the model with (LM Studio's context-length setting; Ollama's num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int LocalContextWindow { get; set; } = 16384;

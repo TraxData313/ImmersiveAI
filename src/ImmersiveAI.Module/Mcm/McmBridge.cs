@@ -207,6 +207,7 @@ namespace ImmersiveAI.Mcm
             if (s.OpenAIModel == null) { s.OpenAIModel = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0); repaired = true; }
             if (s.OpenRouterModel == null) { s.OpenRouterModel = new Dropdown<string>(McmChoiceLists.OpenRouterModels, 0); repaired = true; }
             if (s.GeminiModel == null) { s.GeminiModel = new Dropdown<string>(McmChoiceLists.GeminiModels, 0); repaired = true; }
+            if (s.LocalModelChoice == null) { s.LocalModelChoice = new Dropdown<string>(McmChoiceLists.LocalModels, 0); repaired = true; }
             if (s.DeepSeekModel == null) { s.DeepSeekModel = new Dropdown<string>(McmChoiceLists.DeepSeekModels, 0); repaired = true; }
             if (s.ClaudeCodeModel == null) { s.ClaudeCodeModel = new Dropdown<string>(McmChoiceLists.ClaudeCodeModels, 0); repaired = true; }
             if (s.CodexModel == null) { s.CodexModel = new Dropdown<string>(McmChoiceLists.CodexModels, 0); repaired = true; }
@@ -245,7 +246,7 @@ namespace ImmersiveAI.Mcm
                 s.DeepSeekApiKey, SelectedOf(s.DeepSeekModel),
                 ChosenModel(s.ClaudeCodeModel, s.ClaudeCodeModelCustom),
                 ChosenModel(s.CodexModel, s.CodexModelCustom),
-                s.OpenAIBaseUrl, s.LocalEndpoint, s.LocalModel, s.LocalContextWindow, s.MaxTokens,
+                s.OpenAIBaseUrl, s.LocalEndpoint, ChosenModel(s.LocalModelChoice, s.LocalModel), s.LocalContextWindow, s.MaxTokens,
                 s.EnableChatWindow, SelectedOf(s.ChatWindowHotkey), SelectedOf(s.LetterWindowHotkey),
                 s.NotifyWhenReplyReady, s.EnableNpcInitiatedChats, s.Socialness, s.ShowSocialnessControl,
                 s.EnableLetters, s.EnableWorldRecall, s.EnableWebSearch,
@@ -336,7 +337,7 @@ namespace ImmersiveAI.Mcm
                 : (c.OpenAIBaseUrl ?? string.Empty);
             // The local endpoint shows its real value — where the server listens IS the information.
             s.LocalEndpoint = c.LocalEndpoint ?? string.Empty;
-            s.LocalModel = c.LocalModel ?? string.Empty;
+            s.LocalModel = SelectOrCustom(s.LocalModelChoice, c.LocalModel ?? string.Empty);
             s.LocalContextWindow = Clamp(c.LocalContextWindow, 2048, 131072);
             s.MaxTokens = Clamp(c.MaxTokens, 100, 2000);
 
@@ -446,7 +447,7 @@ namespace ImmersiveAI.Mcm
             c.LocalEndpoint = string.IsNullOrWhiteSpace(s.LocalEndpoint)
                 ? ModConfig.DefaultLocalEndpoint
                 : s.LocalEndpoint.Trim();
-            c.LocalModel = (s.LocalModel ?? string.Empty).Trim();
+            c.LocalModel = ChosenModel(s.LocalModelChoice, s.LocalModel) ?? string.Empty;
             // The menu's slider is narrower than the config's honest range (131k vs 2M) — adopt its
             // value only when the player truly moved it, so a hand-set wide window survives a sync.
             if (s.LocalContextWindow != Clamp(c.LocalContextWindow, 2048, 131072))
@@ -677,7 +678,6 @@ namespace ImmersiveAI.Mcm
                 AdoptKey(store, "OpenRouterApiKey", live.OpenRouterApiKey, v => live.OpenRouterApiKey = v, "OpenRouter key", adopted);
                 AdoptKey(store, "GeminiApiKey", live.GeminiApiKey, v => live.GeminiApiKey = v, "Gemini key", adopted);
                 AdoptKey(store, "DeepSeekApiKey", live.DeepSeekApiKey, v => live.DeepSeekApiKey = v, "DeepSeek key", adopted);
-                AdoptKey(store, "LocalModel", live.LocalModel, v => live.LocalModel = v, "local model", adopted);
 
                 var defaults = new ModConfig();
                 AdoptModel(store, "AnthropicModel", "AnthropicModelCustom", McmChoiceLists.AnthropicModels,
@@ -690,6 +690,8 @@ namespace ImmersiveAI.Mcm
                     live.GeminiModel, defaults.GeminiModel, v => live.GeminiModel = v, "Gemini model", adopted);
                 // No custom-id field exists for DeepSeek; naming one the store never holds simply
                 // reads as "absent" and falls through to the dropdown index.
+                AdoptModel(store, "LocalModelChoice", "LocalModel", McmChoiceLists.LocalModels,
+                    live.LocalModel, defaults.LocalModel, v => live.LocalModel = v, "local model", adopted);
                 AdoptModel(store, "DeepSeekModel", "DeepSeekModelCustom", McmChoiceLists.DeepSeekModels,
                     live.DeepSeekModel, defaults.DeepSeekModel, v => live.DeepSeekModel = v, "DeepSeek model", adopted);
                 AdoptModel(store, "ClaudeCodeModel", "ClaudeCodeModelCustom", McmChoiceLists.ClaudeCodeModels,

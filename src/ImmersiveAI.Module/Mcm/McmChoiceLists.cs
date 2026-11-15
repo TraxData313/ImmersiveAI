@@ -37,6 +37,10 @@
         public static readonly string[] GeminiModels =
             { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash" };
 
+        /// <summary>Local (LM Studio ids). gemma-4-12b first: tested 2026.11.15 against e4b and
+        /// qwen3.5-9b on the handmaid sheet, the only one short, meek and on-sheet with thinking off.</summary>
+        public static readonly string[] LocalModels = { "google/gemma-4-12b", "google/gemma-4-e4b" };
+
         public static readonly string[] DeepSeekModels = { "deepseek-v4-flash", "deepseek-v4-pro" };
 
         public static readonly string[] AnthropicModels =
