@@ -1,8 +1,11 @@
 ﻿WHERE THINGS STAND (2026.10.23 — **v3.7.0 IS ON NEXUS, GITHUB AND STEAM**)
 
-  ** PLAYTEST THE DEN QUEST (2026.11.14 — built, never yet played; a VILLAGE quest since the owner's
-      second ask the same day, offered by only ~20% of villages per 14-day window; deploy with the game
-      closed; BACK UP THE SAVE). In order of danger:
+  ** PLAYTEST THE DEN QUEST (2026.11.14 — built, never yet played; a VANILLA VILLAGE ISSUE since
+      2026.11.15: blue mark, "Do you have any problems?", Common frequency, 15 days to take, 30 to do;
+      the village menu, entry notice and 14-day windows below are GONE, skip those lines; deploy with
+      the game closed; BACK UP THE SAVE). First: a village notable shows the blue mark with "Clear the
+      ... den" in the preview; the issue talk runs story -> ask -> accept -> marked; "Have you dealt with
+      the ... yet?" while it runs; giving it back ends it. In order of danger:
       [ ] SAVE WITH THE QUEST RUNNING, reload: the quest is still in the log (not cancelled), the den
           still marked and tracked; log.txt has no "There is not active issue for quest"
       [ ] a save with a TOWN-given quest running (built before the village change): loads, clearing

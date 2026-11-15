@@ -121,6 +121,7 @@ namespace ImmersiveAI.UI
             AddClassDefinition(typeof(ImmersiveNightMapNotification), 3);
             // The den quest (2026.11.14): a running quest lives inside the save. Id 4 stays forever.
             AddClassDefinition(typeof(ImmersiveDenQuest), 4);
+            AddClassDefinition(typeof(ImmersiveDenIssue), 5);
         }
     }
 }

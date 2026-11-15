@@ -134,12 +134,16 @@ You usually only need to open:
   "Clear the {den type} den" (Core `HandmaidQuestText` every word, tested; Module `DenQuest.cs`
   `ImmersiveDenQuest` + the `ImmersiveChatBehavior.DenQuest.cs` partial; towns offer nothing): per village ONE
   notable drawn by lot (any adult notable, kept in `ImmersiveAI_DenGivers` as "villageId|heroId"; no notable,
-  no offer), den type = culture of the hideout nearest the village. **Not every village**: Core
-  `HandmaidQuestText.VillageOffersNow(campaignId, villageId, day)` = FNV-1a (UTF-8, + fmix32) of
-  (seed, village, floor(day / `OfferWindowDays` 14)) under `OfferPercent` 20; the notice, the village-menu door
-  (inserted above the menu's first leave option) and his talk line all ask ONE gate, `VillageOffersDen`;
-  a RUNNING quest's doors to its giver never ask it; DevMode = every village. Notice once per village PER
-  WINDOW ("villageId|window" in `ImmersiveAI_DenNoticedTowns`). His talk is scripted, no meeting note. Target =
+  no offer), den type = culture of the hideout nearest the village. **A VANILLA VILLAGE ISSUE since
+  2026.11.15** (the owner: "a normal quest, not a special menu, not more frequent than the others"):
+  `DenIssue.cs` `ImmersiveDenIssue : IssueBase` (save id 5), offered at the game's own issue check
+  (`OnCheckForIssueEvent` -> `OnCheckForDenIssue`, `IssueFrequency.Common`; vanilla's bandit-base issue is
+  VeryCommon) to any village notable near a den of the five peoples while the meeting is still to come; the
+  game draws the blue mark and runs the issue talk (story -> "So you need someone to deal with...?" -> his
+  ask -> "I will clear that den"); it stands 15 days. Its quest is `ImmersiveDenQuest`'s issue constructor
+  (`_fromIssue`, saved field 5): real QuestGiver, 30 days, no special type, vanilla offer/discuss flows. The
+  village menu door, entry notice and 14-day windows are GONE; the standalone constructor and the scripted
+  talk remain only for old saves and DevMode (offer lines in any village notable's talk). Target =
   nearest den of that people holding bandits, made visible + tracked + arrow (vanilla NearbyBanditBase shape);
   emptied by others → next one + log line, none → waits (daily look). ANY den of that people counts. NO GOLD
   (`RewardGold` 0), +5 relation, sent as word. Saves from the town days: old town giver marks are never used;

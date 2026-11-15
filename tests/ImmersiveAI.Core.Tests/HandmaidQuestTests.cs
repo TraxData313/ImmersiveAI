@@ -63,13 +63,13 @@ public class HandmaidQuestTests
         Assert.DoesNotContain("{", HandmaidQuestText.GiverAsk(3));
         Assert.Equal("Then go with our thanks. One of our lads will mark the place on your map.", HandmaidQuestText.GiverAccepted);
         Assert.Equal("It is done, then. The roads are quieter for it. I have no coin to give you, but the folk here will not forget it, and neither will I.", HandmaidQuestText.GiverThanks);
-        Assert.Equal("Bolat of Tasil is asking for someone to deal with the Steppe Bandits.",
-            HandmaidQuestText.OfferNotice("Steppe Bandits", "Bolat", "Tasil"));
+        Assert.Equal("So you need someone to deal with the Steppe Bandits?", HandmaidQuestText.IssueAccept("Steppe Bandits"));
+        Assert.Equal("Bolat of Tasil wants the Steppe Bandits' den cleared.", HandmaidQuestText.Description("Steppe Bandits", "Bolat", "Tasil"));
+        Assert.Equal("Have you dealt with the Steppe Bandits yet?", HandmaidQuestText.GiverNews("Steppe Bandits"));
         Assert.Contains("A man of this village still waits for his niece", HandmaidQuestText.StoryFor("desert_bandits"));
         Assert.Contains("Our men found a woman dead by the water", HandmaidQuestText.StoryFor("sea_raiders"));
         Assert.StartsWith("Corwyn of Pravend told you", HandmaidQuestText.StartLog("Forest Bandits", "Corwyn", "Pravend"));
         Assert.Contains("of the village told you", HandmaidQuestText.StartLog("Forest Bandits", "Corwyn", null));
-        Assert.Equal("Speak with Bolat about the Steppe Bandits", HandmaidQuestText.MenuOption("Steppe Bandits", "Bolat"));
         Assert.StartsWith("Hill bandits burned a village in the glen some days ago.",HandmaidQuestText.StoryFor("mountain_bandits"));
     }
 
@@ -86,12 +86,14 @@ public class HandmaidQuestTests
             HandmaidQuestText.RetargetLog(den), HandmaidQuestText.WaitLog(den), HandmaidQuestText.FoundAgainLog(den),
             HandmaidQuestText.SuccessLog(den, "Corwyn", true), HandmaidQuestText.SuccessLog(den, "Corwyn", false),
             HandmaidQuestText.AbandonLog(den, "Corwyn", true), HandmaidQuestText.AbandonLog(den, "", false),
-            HandmaidQuestText.OfferNotice(den, "Corwyn", "Pravend"), HandmaidQuestText.MenuOption(den, "Corwyn"),
+            HandmaidQuestText.IssueAccept(den), HandmaidQuestText.Description(den, "Corwyn", "Pravend"),
+            HandmaidQuestText.Description(den, null, null), HandmaidQuestText.GiverNews(den),
+            HandmaidQuestText.TimedOutLog(den, "Corwyn"), HandmaidQuestText.Rumor(den, "Corwyn"),
             HandmaidQuestText.MenuGiveUp(den), HandmaidQuestText.GiveUpConfirmBody(den, "Corwyn"),
             HandmaidQuestText.PlayerStill(den), HandmaidQuestText.PlayerGiveUp(den),
-            HandmaidQuestText.GiverGreeting, HandmaidQuestText.GiverAsk(0), HandmaidQuestText.GiverAsk(30), HandmaidQuestText.GiverAccepted,
+            HandmaidQuestText.GiverAsk(0), HandmaidQuestText.GiverAsk(30), HandmaidQuestText.GiverAccepted,
             HandmaidQuestText.GiverStill, HandmaidQuestText.GiverGiveUp, HandmaidQuestText.PlayerAccept,
-            HandmaidQuestText.PlayerNotNow, HandmaidQuestText.PlayerLeave,
+            HandmaidQuestText.PlayerNotNow,
         };
         lines.AddRange(HandmaidQuestText.DenCultures.Select(HandmaidQuestText.StoryFor));
         Assert.All(lines, l =>
@@ -120,9 +122,10 @@ public class HandmaidQuestTests
         var lines = new List<string>
         {
             HandmaidQuestText.GiverAccepted, HandmaidQuestText.GiverThanks, HandmaidQuestText.GiverStill,
-            HandmaidQuestText.GiverGiveUp, HandmaidQuestText.GiverGreeting, HandmaidQuestText.GiverAsk(0),
+            HandmaidQuestText.GiverGiveUp, HandmaidQuestText.GiverAsk(0), HandmaidQuestText.GiverNews(den),
             HandmaidQuestText.GiveUpConfirmBody(den, "Corwyn"), HandmaidQuestText.PlayerAsk(den, true),
-            HandmaidQuestText.StartLog(den, null, null), HandmaidQuestText.OfferNotice(den, null, null),
+            HandmaidQuestText.StartLog(den, null, null), HandmaidQuestText.Description(den, null, null),
+            HandmaidQuestText.Rumor(den, null), HandmaidQuestText.TimedOutLog(den, null),
         };
         lines.AddRange(HandmaidQuestText.DenCultures.Select(HandmaidQuestText.StoryFor));
         Assert.All(lines, l =>
@@ -134,53 +137,12 @@ public class HandmaidQuestTests
         });
     }
 
-    // ── Which villages offer it now ──
-
-    private static List<string> Villages(int n) => Enumerable.Range(0, n).Select(i => "village_" + i).ToList();
-
     [Fact]
-    public void TheGateIsDeterministic()
+    public void TheIssueKeepsVanillasTimes()
     {
-        foreach (var v in Villages(200))
-        {
-            var first = HandmaidQuestText.VillageOffersNow("campaign_ab12cd34_Toni", v, 37.25);
-            Assert.Equal(first, HandmaidQuestText.VillageOffersNow("campaign_ab12cd34_Toni", v, 37.25));
-            // Anywhere inside the same window, the same answer.
-            Assert.Equal(first, HandmaidQuestText.VillageOffersNow("campaign_ab12cd34_Toni", v, 28.0));
-            Assert.Equal(first, HandmaidQuestText.VillageOffersNow("campaign_ab12cd34_Toni", v, 41.99));
-            Assert.Equal(first, HandmaidQuestText.VillageOffersIn("campaign_ab12cd34_Toni", v, 2));
-        }
-        Assert.Equal(2, HandmaidQuestText.OfferWindow(28.0));
-        Assert.Equal(1, HandmaidQuestText.OfferWindow(27.99));
-        Assert.Equal(0, HandmaidQuestText.OfferWindow(0));
-        Assert.Equal("village_3|5", HandmaidQuestText.NoticeKey("village_3", 5));
-    }
-
-    [Fact]
-    public void AboutAFifthOfTheVillagesOffer()
-    {
-        Assert.Equal(20, HandmaidQuestText.OfferPercent);
-        Assert.Equal(14, HandmaidQuestText.OfferWindowDays);
-        foreach (var seed in new[] { "campaign_legacy", "campaign_ab12cd34_Toni", "x" })
-            foreach (var day in new[] { 0.0, 15.5, 400.0 })
-            {
-                int offering = Villages(1000).Count(v => HandmaidQuestText.VillageOffersNow(seed, v, day));
-                Assert.InRange(offering, 150, 250);
-            }
-    }
-
-    [Fact]
-    public void ANewWindowOrANewCampaignMovesTheTrouble()
-    {
-        var villages = Villages(1000);
-        var now = villages.Where(v => HandmaidQuestText.VillageOffersNow("campaign_ab12cd34_Toni", v, 3)).ToList();
-        var nextWindow = villages.Where(v => HandmaidQuestText.VillageOffersNow("campaign_ab12cd34_Toni", v, 3 + 14)).ToList();
-        var otherSeed = villages.Where(v => HandmaidQuestText.VillageOffersNow("campaign_99ff00ee_Ana", v, 3)).ToList();
-        Assert.NotEqual(now, nextWindow);
-        Assert.NotEqual(now, otherSeed);
-        // Different sets, not merely shuffled edges: most of the offering villages change.
-        Assert.True(now.Intersect(nextWindow).Count() < now.Count / 2);
-        Assert.True(now.Intersect(otherSeed).Count() < now.Count / 2);
+        // Vanilla's bandit-base issue stands 15 days and gives 30 to finish.
+        Assert.Equal(15, HandmaidQuestText.IssueDays);
+        Assert.Equal(30, HandmaidQuestText.QuestDays);
     }
 
     [Fact]

@@ -27,57 +27,6 @@ namespace ImmersiveAI.Core.Handmaids
         /// <summary>From this many men in his party he is spoken to as a captain; below it, as a warrior.</summary>
         public const int MenForACaptain = 10;
 
-        /// <summary>The share of villages that carry the trouble in any one window (the owner,
-        /// 2026.11.14: "not in every place, but a bit more frequent" than vanilla's quests).</summary>
-        public const int OfferPercent = 20;
-
-        /// <summary>How many campaign days one window lasts: which villages offer changes slowly.</summary>
-        public const int OfferWindowDays = 14;
-
-        // ── Which villages offer it now ────────────────────────────────────────────────────
-
-        /// <summary>The window a campaign day falls in: floor(day / <see cref="OfferWindowDays"/>).</summary>
-        public static long OfferWindow(double campaignDay) =>
-            (long)Math.Floor(campaignDay / OfferWindowDays);
-
-        /// <summary>Whether this village carries the trouble on this campaign day: a stable hash of
-        /// (seed, village, window) falls under <see cref="OfferPercent"/>. Pure and deterministic,
-        /// the same on every run and machine, so a reload never reshuffles the villages.</summary>
-        public static bool VillageOffersNow(string campaignSeed, string villageId, double campaignDay) =>
-            VillageOffersIn(campaignSeed, villageId, OfferWindow(campaignDay));
-
-        /// <summary>The same rule for an explicit window.</summary>
-        public static bool VillageOffersIn(string campaignSeed, string villageId, long window)
-        {
-            var key = (campaignSeed ?? string.Empty) + "|" + (villageId ?? string.Empty) + "|"
-                + window.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return StableHash(key) % 100u < (uint)OfferPercent;
-        }
-
-        /// <summary>The saved mark that a village's notice was shown in this window: "villageId|window".</summary>
-        public static string NoticeKey(string villageId, long window) =>
-            (villageId ?? string.Empty) + "|" + window.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
-        // FNV-1a over the UTF-8 bytes (the mod's stable hash, never string.GetHashCode), finished
-        // with murmur3's fmix32 so neighbouring windows and ids spread evenly over the low digits.
-        private static uint StableHash(string s)
-        {
-            unchecked
-            {
-                uint h = 2166136261;
-                foreach (var b in Encoding.UTF8.GetBytes(s ?? string.Empty))
-                {
-                    h ^= b;
-                    h *= 16777619;
-                }
-                h ^= h >> 16; h *= 0x85ebca6b;
-                h ^= h >> 13; h *= 0xc2b2ae35;
-                h ^= h >> 16;
-                return h;
-            }
-        }
-
-
         // ── The den's name ─────────────────────────────────────────────────────────────────
 
         // The game's own names (SandBox spclans.xml), used when the live faction cannot be read.
@@ -138,12 +87,6 @@ namespace ImmersiveAI.Core.Handmaids
 
         // ── Finding it ─────────────────────────────────────────────────────────────────────
 
-        /// <summary>The one soft notice on entering a village that offers it (once per window).</summary>
-        public const string OfferNoticeTemplate = "{giver} of {village} is asking for someone to deal with the {den}.";
-
-        /// <summary>The village menu's door to his talk.</summary>
-        public const string MenuOptionTemplate = "Speak with {giver} about the {den}";
-
         /// <summary>The settlement menu's way out when the giver can no longer be asked.</summary>
         public const string MenuGiveUpTemplate = "Give up the hunt for the {den_of} den";
 
@@ -158,9 +101,6 @@ namespace ImmersiveAI.Core.Handmaids
 
         // ── The giver's talk ───────────────────────────────────────────────────────────────
 
-        /// <summary>His opening when the talk is opened from the village menu.</summary>
-        public const string GiverGreeting = "You wished to speak with me?";
-
         public const string PlayerAskTemplate = "I hear you are looking for someone to deal with the {den}.";
 
         public const string GiverAskTemplate =
@@ -174,13 +114,38 @@ namespace ImmersiveAI.Core.Handmaids
         public static string GiverAsk(int menInParty) =>
             GiverAskTemplate.Replace("{why}", menInParty >= MenForACaptain ? WhyCaptain : WhyWarrior);
 
+        // ── As a vanilla village issue (2026.11.15, the owner: "a normal quest, like those the
+        // villages give"): the game's own issue flow asks for these in this order, after the player's
+        // "Do you have any problems?": his story, the player's question, his ask, the player's yes.
+
+        /// <summary>How long the trouble stands in his village before he stops asking (vanilla's
+        /// bandit-base issue: 15 days).</summary>
+        public const int IssueDays = 15;
+
+        /// <summary>The time to clear it once taken (vanilla's bandit-base quest: 30 days).</summary>
+        public const int QuestDays = 30;
+
+        public const string IssueAcceptTemplate = "So you need someone to deal with the {den}?";
+
+        public const string DescriptionTemplate = "{giver} of {village} wants the {den_of} den cleared.";
+
+        public const string GiverNewsTemplate = "Have you dealt with the {den} yet?";
+
+        public const string TimedOutLogTemplate = "You did not clear the {den_of} den in time. {giver} has sought help elsewhere.";
+
+        public const string RumorTemplate = "I hope someone deals with the {den} soon. {giver} says they took someone alive.";
+
+        public static string IssueAccept(string? denName) => Fill(IssueAcceptTemplate, denName);
+        public static string Description(string? denName, string? giver, string? village) => Fill(DescriptionTemplate, denName, giver, village);
+        public static string GiverNews(string? denName) => Fill(GiverNewsTemplate, denName);
+        public static string TimedOutLog(string? denName, string? giver) => Fill(TimedOutLogTemplate, denName, giver);
+        public static string Rumor(string? denName, string? giver) => Fill(RumorTemplate, denName, giver);
+
         public const string PlayerAccept = "I will clear that den.";
 
         public const string PlayerNotNow = "Not now.";
 
         public const string GiverAccepted = "Then go with our thanks. One of our lads will mark the place on your map.";
-
-        public const string PlayerLeave = "Another time.";
 
         // While the quest runs: a word on it, and the way to give it up (vanilla's quest log has
         // no abandon button in this version, so the giver is where it is given back).
@@ -262,10 +227,6 @@ namespace ImmersiveAI.Core.Handmaids
 
         public static string AbandonLog(string? denName, string? giver, bool giverStillHere) =>
             Fill(giverStillHere ? AbandonLogTemplate : AbandonNoGiverLogTemplate, denName, giver);
-
-        public static string OfferNotice(string? denName, string? giver, string? village) => Fill(OfferNoticeTemplate, denName, giver, village);
-
-        public static string MenuOption(string? denName, string? giver) => Fill(MenuOptionTemplate, denName, giver);
 
         public static string MenuGiveUp(string? denName) => Fill(MenuGiveUpTemplate, denName);
 

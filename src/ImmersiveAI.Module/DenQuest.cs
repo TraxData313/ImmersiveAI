@@ -3,6 +3,7 @@ using Helpers;
 using ImmersiveAI.Core.Handmaids;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
@@ -27,6 +28,12 @@ namespace ImmersiveAI
     /// the quest-log steps, and never throws past its own walls.
     ///
     /// Saved as type id 4 in <see cref="ImmersiveAISaveDefiner"/>: never renumber it.
+    ///
+    /// AS A VILLAGE ISSUE (2026.11.15, the owner: "a normal quest, like those the villages give"):
+    /// since then a notable offers it through the game's own issue system (<see cref="ImmersiveDenIssue"/>:
+    /// the blue mark, the issue talk, vanilla's frequency), and the quest it makes is this class built
+    /// with its second constructor: a real QuestGiver, a 30-day limit, no special type, and vanilla's
+    /// offer and discuss dialog flows. The first constructor stays for saves and the dev offer.
     /// </summary>
     public class ImmersiveDenQuest : QuestBase
     {
@@ -46,12 +53,28 @@ namespace ImmersiveAI
         [SaveableField(4)]
         private Hero? _giver;
 
+        // True for a quest made by the village issue (2026.11.15). Old saves read false.
+        [SaveableField(5)]
+        private bool _fromIssue;
+
         public ImmersiveDenQuest(string questId, Hero giver, Settlement home, string denCulture, int rewardGold)
             : base(questId, null, CampaignTime.Never, rewardGold)
         {
             _giver = giver;
             _town = home;
             _denCulture = denCulture ?? string.Empty;
+        }
+
+        /// <summary>The village issue's quest: a real giver and a time limit, started by the offer flow.</summary>
+        public ImmersiveDenQuest(string questId, Hero giver, Settlement home, string denCulture, CampaignTime due)
+            : base(questId, giver, due, HandmaidQuestText.RewardGold)
+        {
+            _giver = giver;
+            _town = home;
+            _denCulture = denCulture ?? string.Empty;
+            _fromIssue = true;
+            SetDialogs();
+            InitializeQuestOnCreation();
         }
 
         public string DenCulture => _denCulture ?? string.Empty;
@@ -63,16 +86,46 @@ namespace ImmersiveAI
 
         public override TextObject Title => new TextObject("{=!}" + HandmaidQuestText.Title(DenName));
 
-        public override bool IsRemainingTimeHidden => true;
+        public override bool IsRemainingTimeHidden => !_fromIssue;
 
-        public override string SpecialQuestType => SpecialType;
+        // Only the standalone quest needs the special type (it keeps a quest no issue owns alive).
+        public override string SpecialQuestType => _fromIssue ? string.Empty : SpecialType;
 
-        protected override void SetDialogs() { }
+        /// <summary>The issue road's talk, in vanilla's shape (NearbyBanditBaseIssueQuest): his word
+        /// when the player agrees, and his question while it runs, with the way to give it back.</summary>
+        protected override void SetDialogs()
+        {
+            if (!_fromIssue) return;
+            OfferDialogFlow = DialogFlow.CreateDialogFlow("issue_classic_quest_start")
+                .NpcLine(new TextObject("{=!}" + HandmaidQuestText.GiverAccepted))
+                .Condition(() => Hero.OneToOneConversationHero == QuestGiver)
+                .Consequence(() => Begin(ImmersiveChatBehavior.NearestActiveDenFor(_town, DenCulture)))
+                .CloseDialog();
+            DiscussDialogFlow = DialogFlow.CreateDialogFlow("quest_discuss")
+                .NpcLine(new TextObject("{=!}" + HandmaidQuestText.GiverNews(DenName)))
+                .Condition(() => Hero.OneToOneConversationHero == QuestGiver)
+                .BeginPlayerOptions()
+                .PlayerOption(new TextObject("{=!}" + HandmaidQuestText.PlayerStill(DenName)))
+                .NpcLine(new TextObject("{=!}" + HandmaidQuestText.GiverStill))
+                .CloseDialog()
+                .PlayerOption(new TextObject("{=!}" + HandmaidQuestText.PlayerGiveUp(DenName)))
+                .NpcLine(new TextObject("{=!}" + HandmaidQuestText.GiverGiveUp))
+                .Consequence(Abandon)
+                .CloseDialog()
+                .EndPlayerOptions()
+                .CloseDialog();
+        }
 
-        protected override void InitializeQuestOnGameLoad() { }
+        protected override void InitializeQuestOnGameLoad() => SetDialogs();
 
-        // Never holds the giver (or anyone) alive: see the class note.
-        public override void OnHeroCanDieInfoIsRequested(Hero hero, KillCharacterAction.KillCharacterActionDetail causeOfDeath, ref bool result) { }
+        // The standalone quest never holds the giver (or anyone) alive: see the class note. The
+        // issue's quest has a time limit, so it keeps vanilla's rule for its giver.
+        public override void OnHeroCanDieInfoIsRequested(Hero hero, KillCharacterAction.KillCharacterActionDetail causeOfDeath, ref bool result)
+        {
+            if (_fromIssue) base.OnHeroCanDieInfoIsRequested(hero, causeOfDeath, ref result);
+        }
+
+        protected override void OnTimedOut() => Log(HandmaidQuestText.TimedOutLog(DenName, LinkOf(_giver)));
 
         // The quest manager ticks every quest daily: a quest still waiting for a den looks again.
         protected override void DailyTick()

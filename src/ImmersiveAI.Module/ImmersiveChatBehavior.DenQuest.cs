@@ -23,11 +23,13 @@ namespace ImmersiveAI
     /// people while the quest runs, succeeds it and brings the soldier's report of the captive
     /// (the Handmaid partial, unchanged).
     ///
-    /// NOT EVERY VILLAGE (the owner's second ask, same day): only those Core's
-    /// <see cref="HandmaidQuestText.VillageOffersNow"/> picks for the current 14-day window, about
-    /// a fifth. All three doors (notice, menu, his talk line) ask the ONE gate
-    /// <see cref="VillageOffersDen"/>, so they can never disagree. A RUNNING quest's doors to its
-    /// giver never ask it. Towns offer nothing since then.
+    /// A VILLAGE ISSUE since 2026.11.15 (the owner: "a normal quest, like those the villages give",
+    /// no special menu, not more frequent than the others): the game's issue manager asks us at its
+    /// own issue check (<see cref="OnCheckForDenIssue"/>) and picks among every behavior's issues at
+    /// their frequencies, so the den quest stands on some notables of some villages, with the
+    /// game's blue mark and issue talk (<see cref="ImmersiveDenIssue"/>). The old village menu,
+    /// entry notice and 14-day village windows are gone. DevMode keeps its own offer lines in any
+    /// village notable's talk (the den type chosen there), through <see cref="VillageOffersDen"/>.
     ///
     /// Once per campaign like the meeting: after it has happened no village offers the quest again
     /// (DevMode: every village, always, with the den type chosen in his talk). The giver's talk is
@@ -37,7 +39,6 @@ namespace ImmersiveAI
     public partial class ImmersiveChatBehavior
     {
         private const string DenMenuVar = "IMMERSIVEAI_DEN_MENU";
-        private const string DenOfferVar = "IMMERSIVEAI_DEN_OFFER_ASK";
         private const string DenDevOfferVar = "IMMERSIVEAI_DEN_DEV_OFFER_";
         private const string DenStoryVar = "IMMERSIVEAI_DEN_STORY";
         private const string DenAskVar = "IMMERSIVEAI_DEN_ASK";
@@ -60,11 +61,9 @@ namespace ImmersiveAI
 
         private sealed class DenTalk
         {
-            public DenTalk(Hero giver, Settlement? home, bool fromMenu) { Giver = giver; Home = home; FromMenu = fromMenu; }
+            public DenTalk(Hero giver, Settlement? home) { Giver = giver; Home = home; }
             public Hero Giver { get; }
             public Settlement? Home { get; }
-            public bool FromMenu { get; }
-            public bool Started { get; set; }
             public string? Chosen { get; set; }
         }
 
@@ -78,10 +77,57 @@ namespace ImmersiveAI
 
         private void RegisterDenQuestEvents()
         {
-            CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEnteredForDen);
             CampaignEvents.OnHideoutDeactivatedEvent.AddNonSerializedListener(this, OnHideoutDeactivatedForDen);
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEndedForDen);
+            CampaignEvents.OnCheckForIssueEvent.AddNonSerializedListener(this, OnCheckForDenIssue);
         }
+
+        // ------------------------------ the village issue ------------------------------
+
+        /// <summary>The game's issue check for one hero: a village notable near a den of one of the five
+        /// peoples, while the captive can still be met, MAY carry the den issue; the issue manager
+        /// decides whether he does, among all his possible issues, at the Common frequency.</summary>
+        private void OnCheckForDenIssue(Hero hero)
+        {
+            try
+            {
+                string? culture = null;
+                var village = hero?.CurrentSettlement;
+                bool can = hero != null && hero.IsNotable && hero.IsAlive && !hero.IsChild
+                    && village != null && village.IsVillage && village.Village != null
+                    && !village.IsRaided && !village.IsUnderRaid
+                    && DenOffersOpen()
+                    && (culture = VillageDenCulture(village)) != null
+                    && NearestActiveDen(village, culture, null) != null;
+                var issues = Campaign.Current?.IssueManager;
+                if (issues == null || hero == null) return;
+                if (can)
+                    issues.AddPotentialIssueData(hero, new TaleWorlds.CampaignSystem.Issues.PotentialIssueData(
+                        OnDenIssueSelected, typeof(ImmersiveDenIssue), TaleWorlds.CampaignSystem.Issues.IssueBase.IssueFrequency.Common, culture));
+                else
+                    issues.AddPotentialIssueData(hero, new TaleWorlds.CampaignSystem.Issues.PotentialIssueData(
+                        typeof(ImmersiveDenIssue), TaleWorlds.CampaignSystem.Issues.IssueBase.IssueFrequency.Common));
+            }
+            catch (Exception ex) { ModLog.Error("den issue: the issue check", ex); }
+        }
+
+        private static TaleWorlds.CampaignSystem.Issues.IssueBase OnDenIssueSelected(
+            in TaleWorlds.CampaignSystem.Issues.PotentialIssueData pid, Hero issueOwner) =>
+            new ImmersiveDenIssue(issueOwner, pid.RelatedObject as string ?? string.Empty);
+
+        /// <summary>The issue stays while its quest runs, or while the captive can still be met, the
+        /// village stands unharmed and its people still hold a den.</summary>
+        internal static bool DenIssueMayStand(ImmersiveDenIssue issue, Settlement? village)
+        {
+            if (issue.IsSolvingWithQuest) return true;
+            var b = Current;
+            if (b == null || village == null || !village.IsVillage || village.IsRaided || village.IsUnderRaid) return false;
+            if (!b.DenOffersOpen()) return false;
+            return NearestActiveDen(village, issue.DenCulture, null) != null;
+        }
+
+        /// <summary>The den the quest marks when it starts: the nearest of its people's, or null to wait.</summary>
+        internal static Settlement? NearestActiveDenFor(Settlement? from, string culture) => NearestActiveDen(from, culture, null);
 
         // ------------------------------ the facts ------------------------------
 
@@ -131,15 +177,13 @@ namespace ImmersiveAI
             return ActiveDenQuest() == null;
         }
 
-        /// <summary>THE ONE GATE every offer door asks (the notice, the village menu, his talk line):
-        /// a village, offers open, and (outside DevMode) one the Core rule picks for this window.
-        /// A running quest's doors to its giver never come through here.</summary>
+        /// <summary>DevMode's offer door: any village notable's talk offers the den quest, the den type
+        /// chosen there. Normal play has no such door: the village issue is the only way in.</summary>
         private bool VillageOffersDen(Settlement? village)
         {
             if (village == null || !village.IsVillage) return false;
-            if (!DenOffersOpen()) return false;
-            if (_config.DevMode) return true;
-            return HandmaidQuestText.VillageOffersNow(_campaignId ?? string.Empty, village.StringId, CampaignTime.Now.ToDays);
+            if (_config == null || !_config.DevMode) return false;
+            return DenOffersOpen();
         }
 
         /// <summary>The bandit people of the hideout nearest this village, among the five the roster
@@ -226,124 +270,14 @@ namespace ImmersiveAI
 
         // ------------------------------ finding it ------------------------------
 
-        private void OnSettlementEnteredForDen(MobileParty party, Settlement settlement, Hero hero)
-        {
-            try
-            {
-                if (party == null || !party.IsMainParty || settlement == null || !settlement.IsVillage) return;
-                if (Hero.MainHero == null || Hero.MainHero.IsPrisoner) return;
-                if (!VillageOffersDen(settlement)) return;
-                // Once per village PER WINDOW: a village that carries the trouble again later says so again.
-                var key = HandmaidQuestText.NoticeKey(settlement.StringId, HandmaidQuestText.OfferWindow(CampaignTime.Now.ToDays));
-                if (_denNoticedTowns.Contains(key)) return;
-                var culture = VillageDenCulture(settlement);
-                var giver = DenGiverOf(settlement);
-                if (culture == null || giver == null) return;
-                _denNoticedTowns.Add(key);
-                InformationManager.DisplayMessage(new InformationMessage(
-                    HandmaidQuestText.OfferNotice(DenNameOf(culture), giver.Name?.ToString(), settlement.Name?.ToString()),
-                    ActivityColor));
-            }
-            catch (Exception ex) { ModLog.Error("den quest: the village's notice", ex); }
-        }
-
         private void AddDenQuestMenus(CampaignGameStarter starter)
         {
-            // The VILLAGE menu ("village", PlayerTownVisitCampaignBehavior). Vanilla's own options end
-            // with "leave_set_sail" and "leave"; ours goes just above the first leave option, so it is
-            // seen without scrolling past Leave (an index of -1 would put it under Leave).
-            starter.AddGameMenuOption("village", "immersiveai_den_quest_talk",
-                "{=!}{" + DenMenuVar + "}", OnDenMenuCondition, _ => OnDenMenuChosen(), false,
-                IndexAboveLeave(starter, "village"), false, null);
-            // The way out once the giver is dead: in villages (where givers live now) and in towns
+            // No offer in the village menu since 2026.11.15: the village issue is the way in.
+            // The way out once the giver of a STANDALONE quest (old saves, dev) is dead: in villages (where givers live now) and in towns
             // (a quest given by a town notable before 2026.11.14).
             foreach (var menuId in new[] { "village", "town" })
                 starter.AddGameMenuOption(menuId, "immersiveai_den_quest_give_up_" + menuId,
                     "{=!}{" + DenMenuVar + "}", OnDenGiveUpMenuCondition, _ => OnDenGiveUpMenuChosen(), false, -1, false, null);
-        }
-
-        /// <summary>The index of the menu's first leave option, so an option inserted there sits just
-        /// above it; -1 (append) when the menu cannot be read or has no leave option.</summary>
-        private static int IndexAboveLeave(CampaignGameStarter starter, string menuId)
-        {
-            try
-            {
-                int i = 0;
-                foreach (var option in starter.GetPresumedGameMenu(menuId).MenuOptions)
-                {
-                    if (option != null && option.IsLeave) return i;
-                    i++;
-                }
-            }
-            catch (Exception ex) { ModLog.Error("den quest: reading the village menu", ex); }
-            return -1;
-        }
-
-        /// <summary>Who the village menu's den option would open a talk with, and about which den;
-        /// null when the option should not show.</summary>
-        private (Hero giver, string den)? DenMenuTarget()
-        {
-            var village = Settlement.CurrentSettlement;
-            if (village == null || !village.IsVillage || Hero.MainHero == null || Hero.MainHero.IsPrisoner) return null;
-            if (_config == null || !_config.EnableHideoutHandmaid) return null;
-
-            // A running quest's door to its giver never asks the gate.
-            var quest = ActiveDenQuest();
-            if (quest != null)
-            {
-                var g = quest.Giver;
-                if (g == null || !g.IsAlive || g.CurrentSettlement != village) return null;
-                return (g, quest.DenCulture);
-            }
-
-            if (!VillageOffersDen(village)) return null;
-            var giver = DenGiverOf(village);
-            if (giver == null || giver.CurrentSettlement != village) return null;
-            var culture = VillageDenCulture(village);
-            if (culture == null)
-            {
-                if (!_config.DevMode) return null;
-                culture = HandmaidQuestText.DenCultures[0];
-            }
-            return (giver, culture);
-        }
-
-        private bool OnDenMenuCondition(MenuCallbackArgs args)
-        {
-            try
-            {
-                args.optionLeaveType = GameMenuOption.LeaveType.Conversation;
-                var target = DenMenuTarget();
-                if (target == null) return false;
-                args.Text?.SetTextVariable(DenMenuVar,
-                    HandmaidQuestText.MenuOption(DenNameOf(target.Value.den), target.Value.giver.Name?.ToString()));
-                return true;
-            }
-            catch (Exception ex) { ModLog.Error("den quest: the village menu", ex); return false; }
-        }
-
-        private void OnDenMenuChosen()
-        {
-            try
-            {
-                var target = DenMenuTarget();
-                if (target == null) return;
-                var giver = target.Value.giver;
-                var village = Settlement.CurrentSettlement;
-                // A conversation never opens inside the menu's own click.
-                MainThreadDispatcher.Enqueue(() =>
-                {
-                    try
-                    {
-                        if (!giver.IsAlive || Hero.MainHero?.CurrentSettlement != village) return;
-                        if (!IsSafeToInitiate()) return;
-                        _denTalk = new DenTalk(giver, village, fromMenu: true);
-                        OpenConversationWith(giver);
-                    }
-                    catch (Exception ex) { _denTalk = null; ModLog.Error("den quest: opening the giver's talk", ex); }
-                });
-            }
-            catch (Exception ex) { ModLog.Error("den quest: the village menu's choice", ex); }
         }
 
         // Vanilla's quest log has no "abandon" in this version; the giver is where the quest is given
@@ -356,7 +290,7 @@ namespace ImmersiveAI
                 var here = Settlement.CurrentSettlement;
                 if (here == null || !(here.IsVillage || here.IsTown)) return false;
                 var quest = ActiveDenQuest();
-                if (quest == null || quest.GiverStillHere) return false;
+                if (quest == null || quest.GiverStillHere || quest.QuestGiver != null) return false;
                 args.Text?.SetTextVariable(DenMenuVar, HandmaidQuestText.MenuGiveUp(quest.DenName));
                 return true;
             }
@@ -393,21 +327,6 @@ namespace ImmersiveAI
             return DenGiverOf(village) == hero ? hero : null;
         }
 
-        /// <summary>The single offer line (normal play): the village's own den type.</summary>
-        private bool IsDenOfferLine()
-        {
-            try
-            {
-                if (_config == null || _config.DevMode) return false;
-                if (DenOfferGiverHere() == null) return false;
-                var culture = VillageDenCulture(Settlement.CurrentSettlement);
-                if (culture == null) return false;
-                MBTextManager.SetTextVariable(DenOfferVar, HandmaidQuestText.PlayerAsk(DenNameOf(culture)), false);
-                return true;
-            }
-            catch { return false; }
-        }
-
         /// <summary>DevMode: one offer line per den type, the village's own first and marked.</summary>
         private bool IsDenDevOfferLine(int index)
         {
@@ -433,7 +352,7 @@ namespace ImmersiveAI
                 var hero = Hero.OneToOneConversationHero;
                 if (hero == null || string.IsNullOrEmpty(culture)) return;
                 if (_denTalk == null || _denTalk.Giver != hero)
-                    _denTalk = new DenTalk(hero, Settlement.CurrentSettlement, fromMenu: false);
+                    _denTalk = new DenTalk(hero, Settlement.CurrentSettlement);
                 _denTalk.Chosen = culture;
                 MBTextManager.SetTextVariable(DenStoryVar, HandmaidQuestText.StoryFor(culture), false);
                 int men = 0;
@@ -456,12 +375,6 @@ namespace ImmersiveAI
             return t != null && t.Chosen != null && Hero.OneToOneConversationHero == t.Giver;
         }
 
-        private bool IsDenMenuTalkOpening()
-        {
-            var t = _denTalk;
-            return t != null && t.FromMenu && !t.Started && Hero.OneToOneConversationHero == t.Giver;
-        }
-
         /// <summary>The quest's giver stands before the player while his quest runs.</summary>
         private bool IsDenQuestGiverTalk()
         {
@@ -469,7 +382,8 @@ namespace ImmersiveAI
             {
                 var hero = Hero.OneToOneConversationHero;
                 var q = ActiveDenQuest();
-                if (hero == null || q == null || q.Giver != hero) return false;
+                // The village issue's quest talks through vanilla's own discuss flow.
+                if (hero == null || q == null || q.Giver != hero || q.QuestGiver != null) return false;
                 MBTextManager.SetTextVariable(DenStillVar, HandmaidQuestText.PlayerStill(q.DenName), false);
                 MBTextManager.SetTextVariable(DenGiveUpVar, HandmaidQuestText.PlayerGiveUp(q.DenName), false);
                 return true;
@@ -483,23 +397,14 @@ namespace ImmersiveAI
         {
             var hero = Hero.OneToOneConversationHero;
             if (hero != null && (_denTalk == null || _denTalk.Giver != hero))
-                _denTalk = new DenTalk(hero, Settlement.CurrentSettlement, fromMenu: false);
+                _denTalk = new DenTalk(hero, Settlement.CurrentSettlement);
         }
 
         private void AddDenQuestDialogs(CampaignGameStarter starter)
         {
-            // Opened from the village menu: his short greeting, above every other "start" line (the
-            // forced initiations are 200), so no vanilla greeting and no "Speak freely" sees it.
-            starter.AddDialogLine("immersiveai_den_open", "start", "immersiveai_den_options",
-                "{=!}" + HandmaidQuestText.GiverGreeting, IsDenMenuTalkOpening,
-                () => { if (_denTalk != null) _denTalk.Started = true; }, 210);
-
-            // The same player lines from his ordinary talk (walked up to) and from the menu's talk.
-            foreach (var (input, tag, prio) in new[] { ("hero_main_options", "hm", 110), ("immersiveai_den_options", "do", 200) })
+            // DevMode's offer lines and a standalone quest's word with its giver, in his ordinary talk.
+            foreach (var (input, tag, prio) in new[] { ("hero_main_options", "hm", 110) })
             {
-                starter.AddPlayerLine("immersiveai_den_offer_" + tag, input, "immersiveai_den_story",
-                    "{=!}{" + DenOfferVar + "}", IsDenOfferLine,
-                    () => ChooseDen(VillageDenCulture(Settlement.CurrentSettlement)), prio);
                 for (int i = 0; i < HandmaidRoster.All.Count; i++)
                 {
                     int index = i;
@@ -518,8 +423,6 @@ namespace ImmersiveAI
                 starter.AddDialogLine("immersiveai_den_give_up_answer_" + tag, "immersiveai_den_give_up_line_" + tag, input,
                     "{=!}" + HandmaidQuestText.GiverGiveUp, null, AbandonDenQuestFromTalk, 200);
             }
-            starter.AddPlayerLine("immersiveai_den_leave", "immersiveai_den_options", "close_window",
-                "{=!}" + HandmaidQuestText.PlayerLeave, null, RequestLeaveFromPartyEncounter, 100);
 
             // His story, then his ask, then the player's answer.
             starter.AddDialogLine("immersiveai_den_story_line", "immersiveai_den_story", "immersiveai_den_ask",
