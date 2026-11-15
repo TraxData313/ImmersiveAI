@@ -41,7 +41,7 @@ namespace ImmersiveAI.Probe
         {
             var cfg = Cases.Config();
             var road = a.TryGetValue("road", out var r) ? r : "claude";
-            if (road != "claude" && road != "codex") throw new ArgumentException("subscription roads only: --road claude|codex");
+            if (road != "claude" && road != "codex" && road != "local") throw new ArgumentException("subscription or local roads only: --road claude|codex|local");
             int budget = a.TryGetValue("budget", out var b) ? int.Parse(b) : 80;
             int maxTokens = (int?)cfg["MaxTokens"] ?? 1200;
             const string player = "Toni";
@@ -118,6 +118,13 @@ namespace ImmersiveAI.Probe
                     var c = new ClaudeProbeClient(model, maxTokens);
                     client = c; calls = c.Calls;
                 }
+                else if (road == "local")
+                {
+                    // LM Studio on this PC, free: the same request shape the mod sends (thinking off).
+                    model = a.TryGetValue("model", out var m) ? m : "google/gemma-4-e4b";
+                    var c = new OpenAIProbeClient("lm-studio", model, "http://127.0.0.1:1234/v1/chat/completions", maxTokens);
+                    client = c; calls = c.Calls;
+                }
                 else
                 {
                     model = a.TryGetValue("model", out var m) ? m : ((string?)cfg["CodexModel"] ?? "gpt-6.1-sol");
@@ -155,6 +162,10 @@ namespace ImmersiveAI.Probe
                 sb.Append("--- raw reply\n").Append(raw).Append('\n');
                 if (!string.Equals(kept, reply, StringComparison.Ordinal))
                     sb.Append("--- recorded after guard\n").Append(kept).Append('\n');
+                if (string.IsNullOrWhiteSpace(raw))
+                    foreach (var c in calls)
+                        sb.Append("--- empty: call ").Append(c.Round).Append(" out ").Append(c.TokensOut)
+                          .Append(" reasoning ").Append(c.TokensReasoning).Append(" raw ").Append(c.RawResult).Append('\n');
                 sb.Append('\n');
                 Console.WriteLine($"{i + 1}. [{answeredBy}] {words} words (kept {keptWords}){(error != null ? " ERROR " + error : "")}");
             }

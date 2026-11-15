@@ -214,7 +214,11 @@ namespace ImmersiveAI.Llm
                 payload["tools"] = BuildTools(AnswerShape.NativeOffer(tools, messages));
                 // Definitions always ride along (a history holding tool calls needs them to validate);
                 // "none" is how a final, spoken-answer-only round is enforced.
-                if (speaking && !_forcedChoiceRefused)
+                // NEVER FORCED ON A LOCAL SERVER (2026.11.15): LM Studio with google/gemma-4-e4b and
+                // reasoning_effort "none" thought anyway in 7 of 8 calls under tool_choice "required"
+                // (180 to 380 tokens, often the whole budget, so the reply came back empty), and in 0
+                // of 8 with the hand merely offered. A plain-text answer is taken as the reply.
+                if (speaking && !_forcedChoiceRefused && !_isLocal)
                     payload["tool_choice"] = allowToolUse
                         ? (JToken)"required"
                         : new JObject

@@ -145,7 +145,9 @@ namespace ImmersiveAI.Core.Llm
             if (signature != null && reaches.Count > 0 && reaches.All(r => r.ProviderSignature == null))
                 reaches[0] = new ToolCall(reaches[0].Id, reaches[0].Name, reaches[0].ArgumentsJson, signature);
 
-            if (string.IsNullOrWhiteSpace(words)) words = text ?? string.Empty;
+            // A plain-text answer beside an offered (not forced) speak hand may carry the hand's own
+            // field name as a label (2026.11.15, gemma-4-e4b on LM Studio, 8 of 8: "words: I am well").
+            if (string.IsNullOrWhiteSpace(words)) words = LeadingWordsLabel.Replace(text ?? string.Empty, string.Empty);
             return new ChatResult(StripLeakedMeasure(words, fields).Trim(), reaches, answers);
         }
 
@@ -205,8 +207,15 @@ namespace ImmersiveAI.Core.Llm
             var cleaned = Regex.Replace(words, @"(?im)^[ \t]*" + tag + @"[ \t.]*(?:\r?\n|$)", string.Empty);
             // A bracketed tag closing a line ("…my love. [heart: +2]").
             cleaned = Regex.Replace(cleaned, @"(?im)[ \t]*[\[\(\{<]\s*[""'*_]*(?:" + alt + @")[""'*_]*\s*[:=]?\s*[+\-−]?\s*\d{1,3}\s*[\]\)\}>][ \t]*$", string.Empty);
+            // A bare "name: n" closing the whole reply, even glued to the last word or behind the
+            // voice key (2026.11.15, gemma-4-e4b with the hand offered, not forced: "...best.heart: 0").
+            cleaned = Regex.Replace(cleaned, @"[ \t]*(?<![A-Za-z])[""'*_]*(?:" + alt + @")[""'*_]*\s*[:=]\s*[+\-−]?\s*\d{1,3}[ \t.]*$", string.Empty, RegexOptions.IgnoreCase);
             return cleaned.TrimEnd();
         }
+
+        /// <summary>"words:" opening a plain-text answer: the speak hand's field name spoken as a label.</summary>
+        private static readonly Regex LeadingWordsLabel =
+            new Regex(@"^\s*[""'*_]*" + WordsParameter + @"[""'*_]*\s*[:=]\s*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         private static JObject? ParseArgs(string json)
         {

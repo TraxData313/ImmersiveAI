@@ -177,6 +177,8 @@ public class AnswerShapeTests
 
     [Theory]
     [InlineData("You came back.\nheart: 2", "You came back.")]
+    [InlineData("Rest would serve us best.heart: 0", "Rest would serve us best.")]
+    [InlineData("I am well. [voice: soft] heart: 2", "I am well. [voice: soft]")]
     [InlineData("You came back.\n[heart: -1]\n[voice: low]", "You came back.\n[voice: low]")]
     [InlineData("You came back. [heart +3]", "You came back.")]
     [InlineData("You came back.\n{\"heart\": 0}", "You came back.")]
@@ -247,6 +249,15 @@ public class AnswerShapeTests
     {
         var tools = new[] { Recall };
         Assert.Same(tools, AnswerShape.NativeOffer(tools));
+    }
+
+    [Fact]
+    public void FromNative_PlainText_DropsALeadingWordsLabel()
+    {
+        var result = AnswerShape.FromNative("words: I am well, my lord.", System.Array.Empty<ToolCall>(), HeartAndRecall);
+        Assert.Equal("I am well, my lord.", result.Text);
+        var untouched = AnswerShape.FromNative("Words fail me, my lord.", System.Array.Empty<ToolCall>(), HeartAndRecall);
+        Assert.Equal("Words fail me, my lord.", untouched.Text);
     }
 
     [Fact]

@@ -57,7 +57,8 @@ namespace ImmersiveAI.Probe
             if (tools != null && tools.Count > 0)
             {
                 payload["tools"] = BuildTools(AnswerShape.NativeOffer(tools, messages));
-                if (speaking)
+                // Mirrors OpenAIChatClient (2026.11.15): a local server is never forced.
+                if (speaking && !_endpoint.Contains("127.0.0.1") && !_endpoint.Contains("localhost"))
                     payload["tool_choice"] = allowToolUse
                         ? (JToken)"required"
                         : new JObject { ["type"] = "function", ["function"] = new JObject { ["name"] = AnswerShape.SpeakTool } };
