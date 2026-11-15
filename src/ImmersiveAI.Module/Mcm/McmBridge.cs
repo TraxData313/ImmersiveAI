@@ -759,6 +759,7 @@ namespace ImmersiveAI.Mcm
                 case "Gemini": return !string.IsNullOrWhiteSpace(c.GeminiApiKey);
                 case "DeepSeek": return !string.IsNullOrWhiteSpace(c.DeepSeekApiKey);
                 case "Local": return true;
+                case "LMStudio": return true;
                 case "ClaudeCode": return true;
                 case "Codex": return true;
                 default: return !string.IsNullOrWhiteSpace(c.AnthropicApiKey);

@@ -13,7 +13,7 @@
         // Gemini and DeepSeek joined on 2026.08.02, ClaudeCode on 2026.08.28, and Codex on
         // 2026.09.18 — all APPENDED, not slotted in beside the other cloud services: an old store
         // file's "3" must keep meaning Local.
-        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek", "ClaudeCode", "Codex" };
+        public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek", "ClaudeCode", "Codex", "LMStudio" };
 
         /// <summary>The current Codex subscription family. Sol mirrors living-abby's proven default;
         /// Astra is the strongest, Terra the balanced step-down, Luna the lightest.</summary>

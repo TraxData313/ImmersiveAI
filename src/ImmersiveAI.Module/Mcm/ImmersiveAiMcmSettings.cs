@@ -40,7 +40,7 @@ namespace ImmersiveAI.Mcm
         // takes hold on the very next reply — no restart.
 
         [SettingPropertyDropdown("Backend", Order = 0, RequireRestart = false,
-            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. ClaudeCode uses a claude.ai plan; Codex uses your ChatGPT subscription after 'codex login' - both need NO key. Anthropic works but is less tested. Local runs on YOUR machine - tinkerers only, unsupported.")]
+            HintText = "Which AI service the NPCs think with. OpenRouter is the default (one key, every model); OpenAI the equal second. Gemini is the FREE road - Google's own free tier, no card. DeepSeek is the cheapest paid one. ClaudeCode uses a claude.ai plan; Codex uses your ChatGPT subscription after 'codex login' - both need NO key. Anthropic works but is less tested. LMStudio is the free road on YOUR machine: install LM Studio (lmstudio.ai) and the game starts it, downloads the model and loads it for you. Local is any other local server - tinkerers only, unsupported.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> Backend { get; set; } = new Dropdown<string>(McmChoiceLists.Backends, 2);
 
@@ -115,12 +115,12 @@ namespace ImmersiveAI.Mcm
         public Dropdown<string> DeepSeekModel { get; set; } = new Dropdown<string>(McmChoiceLists.DeepSeekModels, 0);
 
         [SettingPropertyText("Local server URL", Order = 15, RequireRestart = false,
-            HintText = "Where your local AI server listens, when the backend is Local. LM Studio: http://localhost:1234/v1 (start its server on the Developer tab). Ollama: http://localhost:11434/v1. Blank resets to the LM Studio default. A key, if your server wants one, goes in LocalApiKey in config.json.")]
+            HintText = "Where your local AI server listens, when the backend is Local or LMStudio. LM Studio: http://localhost:1234/v1 (on the LMStudio backend the game starts its server itself; elsewhere start it on the Developer tab). Ollama: http://localhost:11434/v1. Blank resets to the LM Studio default. A key, if your server wants one, goes in LocalApiKey in config.json.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public string LocalEndpoint { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Local model", Order = 16, RequireRestart = false,
-            HintText = "When the backend is Local: which model your server answers with, by its LM Studio id. google/gemma-4-12b is the tested pick (7.4 GB, fits beside the game on a 16 GB card; meek, short, follows the sheet); google/gemma-4-e4b is the light one (5.9 GB). Download it in LM Studio first. The mod switches their thinking off.")]
+            HintText = "When the backend is LMStudio (or Local): which model answers, by its LM Studio id. On LMStudio the game downloads it for you if it is missing. google/gemma-4-12b is the tested pick (7.4 GB, fits beside the game on a 16 GB card; meek, short, follows the sheet); google/gemma-4-e4b is the light one (5.9 GB). Download it in LM Studio first. The mod switches their thinking off.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> LocalModelChoice { get; set; } = new Dropdown<string>(McmChoiceLists.LocalModels, 0);
 
@@ -130,7 +130,7 @@ namespace ImmersiveAI.Mcm
         public string LocalModel { get; set; } = string.Empty;
 
         [SettingPropertyInteger("Local context length", 2048, 131072, "0", Order = 19, RequireRestart = false,
-            HintText = "The context window your server ACTUALLY loads the model with (LM Studio's context-length setting; Ollama's num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
+            HintText = "How much the model reads at once. With LM Studio the game loads the model at exactly this (16384 is the tested default). For another server, match what it ACTUALLY loads (Ollama: num_ctx). The NPCs' memory budget scales against this — claiming more than is truly loaded means silent truncation and strange amnesia. Match your server.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public int LocalContextWindow { get; set; } = 16384;
 

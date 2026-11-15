@@ -36,7 +36,7 @@ namespace ImmersiveAI
             try
             {
                 var backend = SelectBackend(config, out var apiKey, out var model);
-                var isLocal = config?.Backend == "Local";
+                var isLocal = config?.IsLocalBackend == true;
 
                 // The local backend runs keyless by design — its "commonest miss" is a blank model
                 // id instead, which the server cannot forgive (it must know which loaded model to ask).
@@ -61,7 +61,16 @@ namespace ImmersiveAI
 
                 // LM Studio holds the model at the mod's own context length before anyone speaks
                 // (2026.11.15); a failure here is logged and the ping below still tells the tale.
-                if (isLocal)
+                if (config!.IsLmStudioBackend)
+                {
+                    // The LM Studio road: the game starts it, downloads and loads the model itself.
+                    var ready = await LmStudio.PrepareAsync(config,
+                        say: line => Report(line, line.Contains("not installed") || line.Contains("did not") || line.Contains("failed")
+                            || line.Contains("cannot") || line.Contains("refused") ? WarnColor : OkColor),
+                        ask: (title, text) => LmStudio.AskOnGameThread(title, text, "Download", "Not now")).ConfigureAwait(false);
+                    if (!ready) return;
+                }
+                else if (isLocal)
                 {
                     try
                     {
@@ -119,6 +128,9 @@ namespace ImmersiveAI
             {
                 // A dead LOCAL connection almost always means the server simply is not running —
                 // pointing at the internet would send the player entirely the wrong way.
+                if (config?.IsLmStudioBackend == true)
+                    return "could not reach LM Studio at " + HostOf(config.LocalEndpoint)
+                        + ". Open LM Studio (the mod starts its server and loads the model itself), then restart the game.";
                 if (config?.Backend == "Local")
                     return "could not reach your local AI server at " + HostOf(config.LocalEndpoint)
                         + " — is it running, with its server switched on (LM Studio: Developer tab, Start Server; "
@@ -234,6 +246,9 @@ namespace ImmersiveAI
                 case "Local":
                     apiKey = config.LocalApiKey; model = config.LocalModel;
                     return "your local AI server (" + HostOf(config.LocalEndpoint) + ")";
+                case "LMStudio":
+                    apiKey = config.LocalApiKey; model = config.LocalModel;
+                    return "LM Studio";
                 default:
                     apiKey = config?.AnthropicApiKey; model = config?.AnthropicModel;
                     return "Anthropic";

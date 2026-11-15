@@ -161,7 +161,11 @@ namespace ImmersiveAI
         /// <summary>True when the NPCs think on the player's own machine — where replies may
         /// honestly take minutes, so timeouts and watchdogs must breathe wider.</summary>
         [JsonIgnore]
-        public bool IsLocalBackend => Backend == "Local";
+        public bool IsLocalBackend => Backend == "Local" || Backend == "LMStudio";
+
+        /// <summary>LM Studio as a backend of its own (2026.11.15): the game starts its server, offers
+        /// the model download and loads it at the mod's context length, so the player only installs it.</summary>
+        public bool IsLmStudioBackend => Backend == "LMStudio";
 
         /// <summary>Backends where a slow reply is normal rather than lost — the local machine, and
         /// the subscription roads (a whole process per call, and a thinking model may sit long).
@@ -1369,6 +1373,8 @@ namespace ImmersiveAI
             // The local backend's honest settings: the model id is the user's to fill (the health
             // check asks for it kindly when blank); the context window must stay a sane size.
             LocalModel = (LocalModel ?? string.Empty).Trim();
+            // The LM Studio road always has a model: the tested one, when none is named.
+            if (Backend == "LMStudio" && LocalModel.Length == 0) LocalModel = Mcm.McmChoiceLists.LocalModels[0];
             LocalApiKey = (LocalApiKey ?? string.Empty).Trim();
             ReplyLength = (ReplyLength ?? string.Empty).Trim();
             if (ReplyLength != "Brief" && ReplyLength != "Conversational" && ReplyLength != "Full")

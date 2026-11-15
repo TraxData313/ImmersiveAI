@@ -894,7 +894,18 @@ Created on first run under `Documents\Mount and Blade II Bannerlord\Configs\Imme
   the health check gives a local first-ping 180s (model may still be loading), and the reach-out/
   letter watchdogs breathe 12 min instead of 3 on `config.IsLocalBackend` so a slow reply is never
   mistaken for a lost one; LIVE-TESTED 2026.07.17: Qwen3.5-9B speaks and calls recall_company
-  correctly, big Qwen needs the wide timeouts),
+  correctly, big Qwen needs the wide timeouts);
+  `Backend: "LMStudio"` (2026.11.15, appended to the Backends list): LM Studio SUPPORTED on its own —
+  `IsLocalBackend` covers both, the same fields and client (label "LM Studio"); at game entry
+  `Llm/LmStudio.PrepareAsync` starts its server with `~/.lmstudio/bin/lms.exe server start` (falls back to
+  opening the app from `.internal/app-install-location.json`), asks once to download a model not on disk
+  (`/api/v1/models/download` + status polling, progress every 10%), then `LocalModelLoader` loads it at
+  `LocalContextWindow` (reloads a copy at another length; `Core/Llm/LocalModelLoad` decides, tested);
+  the copy the mod loaded is unloaded on process exit. `LocalModel` is a dropdown (`McmChoiceLists.LocalModels`,
+  google/gemma-4-12b first) with the text field as override; a blank model on LMStudio means gemma-4-12b.
+  Local servers are never FORCED onto the speak hand (gemma thought anyway under tool_choice required).
+  The memory line on the talk screen adds "context: the last reply read N of W" from the largest single
+  request the service counted (`UsageLedger.LastContextFor`),
   `AtmosphereLine` (the configurable opening identity line, supports `{name}`) + `RoleplayGuidance`
   (world-wide tone/roleplay guidance, offered as freedom), `NotifyWhenReplyReady` (short "has answered"
   ready-notice; default on) + `ShowConversationInMessageLog` (log each full reply; default off — banner can cover the box),

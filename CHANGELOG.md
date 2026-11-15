@@ -33,6 +33,8 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Pocket now speaks all 92 voices of Calradia with no sign-in: the voice app downloads their voice pack (about 205 MB) by itself. Made with Kyutai's Pocket TTS.
 - The Local backend has a model dropdown now, with Gemma 4 12B as the tested pick; the text field still takes any other id.
 - On the Local backend with LM Studio, the mod loads the model at its own "Local context length" when the game starts or you switch models, so the two always match.
+- LM Studio is now a supported backend of its own: install LM Studio and pick "LMStudio". The game starts it, offers to download Gemma 4 12B, loads it, and frees your graphics card again when you quit.
+- The talk screen shows how much the model read for the last reply, out of how much it can hold, and how much of that was your talks.
 
 ### Fixes
 
