@@ -74,6 +74,7 @@ namespace ImmersiveAI.Llm
                 _signature = signature;
                 _connectionSignature = ConnectionSignature();
                 if (isSwap) AnnounceSwap();
+                if (isSwap && _config.IsLocalBackend) _ = EnsureLocalContextAsync();
                 return _inner;
             }
         }
@@ -100,6 +101,17 @@ namespace ImmersiveAI.Llm
                 c.ClaudeCodeModel, c.ClaudeCodePath,
                 c.CodexModel, c.CodexPath,
                 c.LocalEndpoint, c.LocalModel, c.LocalApiKey);
+        }
+
+        // Switched to (or within) Local mid-game: LM Studio holds the new model at the mod's length too.
+        private async System.Threading.Tasks.Task EnsureLocalContextAsync()
+        {
+            try
+            {
+                var did = await LocalModelLoader.EnsureAsync(_config, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                if (did != null) ModLog.Info(did);
+            }
+            catch (Exception ex) { ModLog.Warn("Could not set the local model's context length: " + ex.Message); }
         }
 
         // A soft one-liner so the player knows the settings change truly took hold — the quiet

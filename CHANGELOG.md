@@ -32,6 +32,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - Wives of one man now call each other "my husband's other wife", and a look-up of a person names every spouse.
 - Pocket now speaks all 92 voices of Calradia with no sign-in: the voice app downloads their voice pack (about 205 MB) by itself. Made with Kyutai's Pocket TTS.
 - The Local backend has a model dropdown now, with Gemma 4 12B as the tested pick; the text field still takes any other id.
+- On the Local backend with LM Studio, the mod loads the model at its own "Local context length" when the game starts or you switch models, so the two always match.
 
 ### Fixes
 

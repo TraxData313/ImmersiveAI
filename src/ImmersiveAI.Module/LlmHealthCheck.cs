@@ -59,6 +59,18 @@ namespace ImmersiveAI
                     return;
                 }
 
+                // LM Studio holds the model at the mod's own context length before anyone speaks
+                // (2026.11.15); a failure here is logged and the ping below still tells the tale.
+                if (isLocal)
+                {
+                    try
+                    {
+                        var did = await LocalModelLoader.EnsureAsync(config!, CancellationToken.None).ConfigureAwait(false);
+                        if (did != null) ModLog.Info(did);
+                    }
+                    catch (Exception ex) { ModLog.Warn("Could not set the local model's context length: " + ex.Message); }
+                }
+
                 // A local model may think before it speaks, and 16 tokens were gone before the
                 // first word (gemma, 2026.11.11: 13 of 16 spent in silence, then "could not be
                 // reached"). A local ping is free, so it gets room to finish the thought.
