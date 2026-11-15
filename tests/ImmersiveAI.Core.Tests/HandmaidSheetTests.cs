@@ -69,16 +69,16 @@ public class HandmaidSheetTests
         var unwed = HandmaidText.SpiritFor(HandmaidRoster.Yasmin, "Toni", wed: false);
         var wed = HandmaidText.SpiritFor(HandmaidRoster.Yasmin, "Toni", wed: true);
 
-        Assert.StartsWith("I am Yasmin, handmaid of Toni, who took me out of the bandits' den", unwed);
-        Assert.EndsWith("I love him and I hope to be his wife. I do not hide it: I show it in small things, and when he opens the way I walk it gladly.", unwed);
-        Assert.StartsWith("I am Yasmin, wife of Toni, who took me out of the bandits' den when I had no one and made me his own. I was his handmaid first, and I am still glad to serve him.", wed);
-        Assert.EndsWith("I love him, and I am his wife. I do not hide it: I show it in small things, every day.", wed);
+        Assert.StartsWith("I am Yasmin, handmaid of Toni, who freed me from the bandits' den", unwed);
+        Assert.EndsWith("I love him and hope to be his wife, and I show it in small things.", unwed);
+        Assert.StartsWith("I am Yasmin, wife of Toni, who freed me from the bandits' den and made me his own. I was his handmaid first.", wed);
+        Assert.EndsWith("I love him, I am his wife, and I show it in small things.", wed);
         Assert.DoesNotContain("hope to be his wife", wed);
 
         // The middle is the same in both.
         Assert.Contains("The old holy man who kept the well by our street taught me that a meek and quiet spirit", unwed);
         Assert.Contains("The old holy man who kept the well by our street taught me that a meek and quiet spirit", wed);
-        Assert.Contains("my lord, my master, my husband, or Zawji, now one and now another;", wed);
+        Assert.Contains("my lord, my master, my husband or Zawji,", wed);
     }
 
     [Theory]
@@ -132,7 +132,7 @@ public class HandmaidSheetTests
         Assert.DoesNotContain(PromptBuilder.ActingOutGuidance, hers);
         Assert.Contains(HandmaidText.ActingOut, hers);
         Assert.Contains("one or two short sentences", hers);
-        Assert.Contains("I do not explain or defend myself", hers);
+        Assert.Contains("I do not tell him what to do", hers);
         Assert.Contains(PromptBuilder.NoLengthDriftGuidance, anyone);
 
         // What stays for her: plain speech.
@@ -249,13 +249,13 @@ public class ReplyTrimTests
     }
 
     [Theory]
-    [InlineData(-1, "den when I had no one")]
-    [InlineData(0.2, "den this very day, when I had no one")]
-    [InlineData(1.5, "den only yesterday, when I had no one")]
-    [InlineData(9, "den 9 days ago, when I had no one")]
-    [InlineData(40, "den some 5 weeks ago, when I had no one")]
-    [InlineData(100, "den a year ago, when I had no one")]
-    [InlineData(260, "den some 3 years ago, when I had no one")]
+    [InlineData(-1, "bandits' den.")]
+    [InlineData(0.2, "den this very day.")]
+    [InlineData(1.5, "den only yesterday.")]
+    [InlineData(9, "den 9 days ago.")]
+    [InlineData(40, "den some 5 weeks ago.")]
+    [InlineData(100, "den a year ago.")]
+    [InlineData(260, "den some 3 years ago.")]
     public void SheKnowsHowLongAgoSheWasTaken(double days, string expected)
     {
         var s = HandmaidText.SpiritFor(HandmaidRoster.Neya, "Toni", wed: false, daysSinceTaken: days);
