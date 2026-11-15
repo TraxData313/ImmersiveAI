@@ -76,8 +76,8 @@ public class HandmaidSheetTests
         Assert.DoesNotContain("hope to be his wife", wed);
 
         // The middle is the same in both.
-        Assert.Contains("The old holy man who kept the well by our street taught me that a meek and quiet spirit", unwed);
-        Assert.Contains("The old holy man who kept the well by our street taught me that a meek and quiet spirit", wed);
+        Assert.Contains("The old holy man who kept the well by our street taught me the way of the holy women of old", unwed);
+        Assert.Contains("The old holy man who kept the well by our street taught me the way of the holy women of old", wed);
         Assert.Contains("my lord, my master, my husband or Zawji,", wed);
     }
 
