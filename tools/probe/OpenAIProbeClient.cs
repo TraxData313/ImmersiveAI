@@ -135,7 +135,7 @@ namespace ImmersiveAI.Probe
             return turns;
         }
 
-        private static JArray BuildTools(IReadOnlyList<ToolDefinition> tools)
+        internal static JArray BuildTools(IReadOnlyList<ToolDefinition> tools)
         {
             var arr = new JArray();
             foreach (var tool in tools)

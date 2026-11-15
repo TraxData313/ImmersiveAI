@@ -79,17 +79,24 @@ namespace ImmersiveAI.Probe
                 "About Toni, my lord: he took me out of the bandits' den some days past. My heart toward him is warm.\n" +
                 "And now Toni comes to me where I sit by the fire, and speaks.";
 
-            var memory = new NpcMemory { NpcId = "CharacterObject_2981", NpcName = girl.Name };
-            memory.Summary = HandmaidText.MemorySeedFor(girl);
-            memory.SeededFromStory = true;
-            memory.AddTurn(new ConversationTurn
+            NpcMemory memory;
+            if (a.TryGetValue("memory", out var memPath) && File.Exists(memPath))
+                // Her REAL memories.json from a campaign folder (2026.11.15, for the token tally).
+                memory = Newtonsoft.Json.JsonConvert.DeserializeObject<NpcMemory>(File.ReadAllText(memPath, Encoding.UTF8))!;
+            else
             {
-                Speaker = ConversationTurn.InnerSpeaker,
-                PlayerLine = HandmaidText.JoinMemoryFor(player),
-                NpcLine = string.Empty,
-                GameDay = 91000.5, CalradiaTime = "1084.08.12 16.40", Place = "a bandits' den in the north",
-            });
-            memory.NotePlayerEngaged();
+                memory = new NpcMemory { NpcId = "CharacterObject_2981", NpcName = girl.Name };
+                memory.Summary = HandmaidText.MemorySeedFor(girl);
+                memory.SeededFromStory = true;
+                memory.AddTurn(new ConversationTurn
+                {
+                    Speaker = ConversationTurn.InnerSpeaker,
+                    PlayerLine = HandmaidText.JoinMemoryFor(player),
+                    NpcLine = string.Empty,
+                    GameDay = 91000.5, CalradiaTime = "1084.08.12 16.40", Place = "a bandits' den in the north",
+                });
+                memory.NotePlayerEngaged();
+            }
 
             var tools = new List<ToolDefinition>();
             tools.AddRange(WorldRecall.Tools);
@@ -105,6 +112,36 @@ namespace ImmersiveAI.Probe
             sb.Append("=== SHEET (marked)\n").Append(marked).Append("\n\n");
 
             var pb = new PromptBuilder();
+            if (a.ContainsKey("tally"))
+            {
+                // Where her context goes, by the same estimator the memory budget uses. No model is asked.
+                var msgs = pb.Build(persona, memory, scene, player, lines[0], "Angel");
+                int Tok(string t) => MemoryTokenEstimator.EstimateTextTokens(t ?? "");
+                var t2 = new StringBuilder("=== token tally (estimate)\n");
+                int sys = 0, hist = 0;
+                foreach (var m in msgs)
+                {
+                    if (m.Role == ChatRole.System) sys += Tok(m.Content);
+                    else hist += Tok(m.Content);
+                }
+                foreach (var sec in System.Text.RegularExpressions.Regex.Split(marked, @"(?=\[\[section:)"))
+                {
+                    if (sec.Trim().Length == 0) continue;
+                    var name = sec.StartsWith("[[section:") ? sec.Substring(10, sec.IndexOf("]]") - 10) : "(head)";
+                    t2.Append("  sheet / ").Append(name).Append(": ").Append(Tok(PromptBuilder.StripSections(sec))).Append('\n');
+                }
+                var offered = AnswerShape.NativeOffer(tools, msgs);
+                int toolTok = Tok(OpenAIProbeClient.BuildTools(offered).ToString(Newtonsoft.Json.Formatting.None));
+                t2.Append("system messages: ").Append(sys).Append('\n')
+                  .Append("chat history + his line: ").Append(hist).Append("  (").Append(memory.RecentTurns.Count).Append(" turns)\n")
+                  .Append("tools (").Append(offered.Count).Append("): ").Append(toolTok).Append('\n')
+                  .Append("total: ").Append(sys + hist + toolTok).Append('\n');
+                foreach (var m in msgs.Where(x => x.Role != ChatRole.System))
+                    t2.Append("  ").Append(m.Role).Append(' ').Append(Tok(m.Content)).Append(": ")
+                      .Append(m.Content.Length > 70 ? m.Content.Substring(0, 70) : m.Content).Append('\n');
+                Console.WriteLine(t2.ToString());
+                return;
+            }
             for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
