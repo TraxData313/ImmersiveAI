@@ -15,7 +15,7 @@ as you scroll — **read only as far as you need.**
 | **The best play, denars no object** | OpenRouter + `openai/gpt-5.6-terra` (or `anthropic/claude-sonnet-5`) | openrouter.ai |
 | **A ChatGPT plan you already pay for** | Codex + `gpt-6.1-sol` — through the Codex app, no API key | ChatGPT |
 | **A Claude plan you already pay for** | ClaudeCode — your claude.ai Pro/Max, through the Claude Code app, no key | — |
-| **Nothing to leave your PC** | Local (LM Studio / Ollama) — [see below](#local-models-tinkerers-only) | — |
+| **Free, on your own PC** | LMStudio + `google/gemma-4-12b` — install LM Studio, the game does the rest. [See below](#lm-studio-free-on-your-own-pc) | lmstudio.ai |
 
 **Not sure? Take the first row.** It's what the mod is built and tested against, and since
 OpenAI cut its price 80% on 30 July 2026 it's also one of the cheapest options there is.
@@ -59,7 +59,8 @@ Every option has exactly one thing worth knowing before you commit.
 | **Anthropic** | Works fine, just less tested here. Pricier per word than the rest. |
 | **Codex** | Needs the [Codex app or CLI](https://developers.openai.com/codex/auth) installed and signed in with a **ChatGPT plan that includes Codex**. The NPCs then ride that subscription with no OpenAI API key or pay-as-you-go fallback. Each call is an isolated, ephemeral app-server session with Codex's shell, web, plugins, MCP and skills disabled; only the mod's own typed NPC tools come back. The notice shows the plan's 5-hour/weekly gauge. |
 | **ClaudeCode** | Needs the [Claude Code](https://claude.com/code) app installed and signed in to a **claude.ai Pro/Max plan** — then the NPCs ride your subscription with **no API key at all**. Replies spend your plan's 5-hour/weekly windows (the cost notice shows the gauge: "5h at 9%, weekly at 1%"), and each one starts a short background run of the app, so it's a touch slower than a direct API call. |
-| **Local** | It's a project, not a setting. [See below.](#local-models-tinkerers-only) |
+| **LMStudio** | Needs a graphics card with **12 GB or more** (the model takes about 7.6 GB beside the game). Plainer than the cloud models, but meek characters play well. [See below.](#lm-studio-free-on-your-own-pc) |
+| **Local** (any other server) | It's a project, not a setting. [See below.](#other-local-servers-tinkerers-only) |
 
 ### Is the free Gemini tier actually good enough?
 
@@ -136,9 +137,34 @@ model has 200k–1M, which is far more than enough. If you use something unusual
 
 ---
 
-## Local models: tinkerers only
+## LM Studio: free, on your own PC
 
-The **Local** backend (LM Studio, Ollama) exists because people asked, not because it plays well.
+Nothing leaves your machine and it costs nothing. **You only install LM Studio; the game handles the rest.**
+
+1. Install **LM Studio** from [lmstudio.ai](https://lmstudio.ai) and open it once.
+2. In Mod Options, set **Backend** to **LMStudio**. **Local model** is already `google/gemma-4-12b`.
+3. Load your game. The mod starts LM Studio's server, asks once to download the model (7.6 GB, in
+   the background while you play), and loads it. When you quit the game it frees your graphics card.
+
+**What it needs:** a graphics card with **12 GB or more** of memory (the model takes about 7.6 GB,
+the game the rest), and 7.6 GB of disk.
+
+**What it plays like:** `google/gemma-4-12b` was tested against Gemma 4 E4B and Qwen 3.5 9B and was
+the only one that stayed short, in character and on its sheet. Replies take a few seconds. It is
+plainer and less sharp than the cloud models: fine for a quiet evening by the fire, weaker at long
+plots and hard bargains. The mod switches its thinking off and loads it with 16384 tokens of
+context, the **Local context length** setting (change one and the other follows).
+
+`google/gemma-4-e4b` is in the dropdown too: lighter (6.3 GB), for smaller cards, and noticeably
+weaker.
+
+The talk screen shows how much the model read for each reply, out of how much it can hold.
+
+---
+
+## Other local servers: tinkerers only
+
+The **Local** backend (Ollama, llama.cpp, or LM Studio driven by hand) exists because people asked.
 Nothing leaves your machine and it costs nothing — but you own the setup entirely. **I don't debug
 local setups.**
 

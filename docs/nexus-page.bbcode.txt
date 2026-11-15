@@ -60,12 +60,13 @@ You bring [b]your own API key[/b] - or a plan you already pay for. Pick a row:
 [*][b]Free[/b] - Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Two catches: Google trains on free-tier traffic, and it's slow.
 [*][b]Cheapest paid[/b] - DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
 [*][b]No key at all[/b] - already pay for ChatGPT or claude.ai? Pick Codex or Claude Code in Mod Options, and your plan carries the NPCs.
-[*][b]Also fine[/b] - OpenAI, Anthropic (Claude), a local model, or any OpenAI-compatible service via the Custom endpoint option.
+[*][b]Free, on your PC[/b] - LM Studio + Gemma 4 12B: install LM Studio ([b]lmstudio.ai[/b]), pick LMStudio, and the game downloads and loads the model itself. Needs a 12 GB+ graphics card; plainer than the cloud.
+[*][b]Also fine[/b] - OpenAI, Anthropic (Claude), another local server, or any OpenAI-compatible service via the Custom endpoint option.
 [/list]
 
 [b]Costs are yours and visible.[/b] A typical exchange runs about a tenth of a cent on the default - $10 covers many thousands of messages, with daily totals and a hard cap. Any model must carry [b]native tool calling[/b].
 
-[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Local models are tinkerers-only, at your own risk[/b] - you own that setup.
+[b]Not sure which to pick?[/b] Prices side by side, each provider's catch, and the full local-model setup: [url=https://github.com/TraxData313/ImmersiveAI/blob/master/docs/choosing-a-model.md]Which AI should I use?[/url] [b]Other local servers (Ollama and the like) are tinkerers-only[/b] - you own that setup.
 
 [b][size=4]Also on[/size][/b]
 [list]
@@ -77,7 +78,7 @@ You bring [b]your own API key[/b] - or a plan you already pay for. Pick a row:
 
 [list=1]
 [*]Vortex: install as usual. Manual: extract the zip into your game's Modules folder, so you get Modules\ImmersiveAI\SubModule.xml.
-[*]Get a key at [b]openrouter.ai[/b] and add a little credit ($5-10 goes a long way), or a free one at [b]aistudio.google.com[/b]. Paying for ChatGPT or claude.ai? Install Codex or Claude Code and log in instead. Running a local model? Skip this step.
+[*]Get a key at [b]openrouter.ai[/b] and add a little credit ($5-10 goes a long way), or a free one at [b]aistudio.google.com[/b]. Paying for ChatGPT or claude.ai? Install Codex or Claude Code and log in instead. Using LM Studio? Skip this step.
 [*]Enable [b]Immersive AI[/b] and start the game once - it creates Documents\...\Configs\ImmersiveAI\config.json and tells you exactly where to paste the key. Paste it (or use Mod Options with MCM), pick your backend, restart.
 [/list]
 
@@ -98,7 +99,7 @@ You bring [b]your own API key[/b] - or a plan you already pay for. Pick a row:
 
 [b][size=4]Compatibility & shaping[/size][/b]
 [list]
-[*]Bannerlord v1.4.8, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered - it coexists with overhauls, War Sails, Marry Anyone and Training Battles. MCM optional; without it, everything is in config.json.
+[*]Bannerlord v1.4.8, new campaigns and existing saves alike. One light Harmony patch (bundled), no vanilla behavior altered - it coexists with overhauls, War Sails and Training Battles (Marry Anyone is not needed: the mod's own "More than one wife" setting lets you wed again). MCM optional; without it, everything is in config.json.
 [*][b]Safe to remove mid-campaign.[/b] Saves load fine without the mod (just the usual "different modules" warning), and memories live outside them - reinstall later and every character remembers you.
 [*]A clean-room rewrite inspired by the ChatAi mod - no code copied, fully original source.
 [*]Under Configs\ImmersiveAI\: global_prompt.txt colors every mind in the world, and each character's folder holds their own prompt (in their own voice), memories, battles, nights and letters as readable text.

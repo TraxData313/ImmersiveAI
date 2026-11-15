@@ -12,8 +12,11 @@ A typical exchange is about a tenth of a cent on the default — $10 covers many
 [b]Can I use OpenRouter / NanoGPT / a local LLM?[/b]
 All of them. [b]OpenRouter is the default and the one I recommend[/b]: pick it in Mod Options, paste one key from openrouter.ai, use [b]openai/gpt-6-luna[/b] (tuned and tested against) or [b]openai/gpt-5.4-mini[/b] as the proven fallback. OpenAI, Gemini, DeepSeek and Claude each have their own backend too; Grok and Mistral ride the router, and any other id can be typed in — at your own risk, and duller without native tool calling. Other OpenAI-compatible services (NanoGPT…) connect through [b]Custom endpoint[/b]: paste the base URL ending in /v1, put that service's key in the OpenAI key field, set its model id in config.json. The connection check at campaign start tells you plainly whether your setup works.
 
-[b]Local models — what to expect?[/b]
-[b]Tinkerers only, at your own risk[/b] — local exists because people asked, not because it plays well. You own the setup, and I don't debug local setups. Still want to? Pick [b]Local[/b] in Mod Options, run [b]LM Studio[/b] (the default, localhost:1234) or [b]Ollama[/b] (paste http://localhost:11434/v1 as the local server URL), set the exact model id your server serves and the context length you loaded it with. Free, private, nothing leaves your PC. The short rules:
+[b]Can I play for free on my own PC?[/b]
+Yes, through [b]LM Studio[/b]. Install it from [b]lmstudio.ai[/b], open it once, and pick [b]LMStudio[/b] as the backend in Mod Options. When you load a game the mod starts LM Studio, asks once to download [b]Gemma 4 12B[/b] (7.6 GB, in the background while you play), loads it, and frees your graphics card again when you quit. You never touch LM Studio's own pages. You need a graphics card with [b]12 GB or more[/b]. Replies take a few seconds; it is plainer than the cloud models, fine for quiet talk, weaker at long plots. Nothing leaves your PC.
+
+[b]Other local servers (Ollama and the like) — what to expect?[/b]
+[b]Tinkerers only, at your own risk[/b] — this exists because people asked, not because it plays well. You own the setup, and I don't debug local setups. Still want to? Pick [b]Local[/b] in Mod Options, run your server (LM Studio by hand at localhost:1234, or [b]Ollama[/b] (paste http://localhost:11434/v1 as the local server URL), set the exact model id your server serves and the context length you loaded it with. Free, private, nothing leaves your PC. The short rules:
 [list]
 [*]An [b]instruct[/b] model with native tool calling — Qwen3.6-35B-A3B, GPT-OSS-20B, Mistral Small 24B. 8B-class models talk but fumble the tools.
 [*][b]Thinking/reasoning OFF[/b] in your server, or replies arrive as "…" — the model spent its whole budget thinking. log.txt says so plainly when it happens.
@@ -63,9 +66,9 @@ Probably just honest: a fresh game is quiet because nobody knows you yet. Approa
 [b]Compatibility — game version, other mods, requirements?[/b]
 [list]
 [*][b]Game version:[/b] built and tested on the current live version (v1.4.7). Older game versions are untested and unlikely to work — the mod uses current APIs.
-[*][b]Requires:[/b] nothing but the base game and an AI to think with — your API key, or a local model. Harmony comes bundled inside the mod — no separate Harmony, ButterLib or UIExtenderEx downloads. MCM (Mod Configuration Menu) is optional: with it you get an in-game settings menu, without it everything is set in config.json.
+[*][b]Requires:[/b] nothing but the base game and an AI to think with — your API key, a plan you already pay for, or LM Studio on your own PC. Harmony comes bundled inside the mod — no separate Harmony, ButterLib or UIExtenderEx downloads. MCM (Mod Configuration Menu) is optional: with it you get an in-game settings menu, without it everything is set in config.json.
 [*][b]Other mods:[/b] it replaces no vanilla behavior (one light Harmony postfix is all), so it coexists peacefully with overhauls and most everything else. Characters added by other mods get minds like everyone else — personalities are built from live game data, whoever put them in the world.
-[*][b]War Sails:[/b] neither required nor conflicting — sea-battles even get their own entries in the battle chronicle. [b]Marry Anyone:[/b] detected automatically; with it installed an existing marriage no longer bars a new courtship, and its rules stay the judge. [b]Training Battles:[/b] drills are never mistaken for real war — nothing enters the chronicle.
+[*][b]War Sails:[/b] neither required nor conflicting — sea-battles even get their own entries in the battle chronicle. [b]Marry Anyone:[/b] not needed — the mod's own "More than one wife" setting lets you wed again (off by default). [b]Training Battles:[/b] drills are never mistaken for real war — nothing enters the chronicle.
 [*][b]Load order:[/b] nothing to arrange — the launcher sorts it automatically (after the game modules, and after MCM if you have it).
 [*][b]Singleplayer only.[/b]
 [/list]

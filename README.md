@@ -26,8 +26,8 @@ If one of these searches brought you here — yes, this is that mod:
 - asking about **game mechanics in-game** instead of alt-tabbing to Google
 - **never knowing what to say?** one key and your own hero drafts your next line for you
 - **OpenRouter** (recommended), OpenAI, Gemini, DeepSeek or Claude — plus your existing
-  **ChatGPT/Codex** or **claude.ai Pro/Max** subscription through the installed app (no API key) — or, for tinkerers only, a
-  **local model (LM Studio / Ollama)** at your own risk
+  **ChatGPT/Codex** or **claude.ai Pro/Max** subscription through the installed app (no API key) — or **free on your
+  own PC through LM Studio**: install it, and the game starts it, downloads the model and loads it
 
 
 ## Alive
@@ -152,7 +152,7 @@ Bring **your own account or API key**. Pick a row:
 | **To pay nothing** | Gemini + `gemini-3.6-flash` — real free tier, no card, but slow | aistudio.google.com |
 | **The lowest bill** | DeepSeek + `deepseek-v4-flash` | platform.deepseek.com |
 | **The best play, denars no object** | `gpt-5.6-terra` — the live-tested step-up | openrouter.ai |
-| **Nothing to leave your PC** | Local (LM Studio / Ollama) — tinkerers only | — |
+| **Free, on your own PC** | LMStudio + `google/gemma-4-12b` — install LM Studio, the game does the rest (12 GB+ graphics card) | lmstudio.ai |
 
 A typical exchange costs about a tenth of a cent on the API default — $10 covers many thousands
 of messages. The Codex and ClaudeCode roads instead spend the subscription you already have and

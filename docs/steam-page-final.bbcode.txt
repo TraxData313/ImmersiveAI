@@ -3,7 +3,7 @@ An advanced roleplaying and relationship mod. I built it as an AI engineer who k
 [h1]Looking for…?[/h1]
 If one of these searches brought you here — yes, this is that mod:
 [list]
-[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], your [b]ChatGPT or claude.ai plan[/b], or a local model
+[*][b]AI dialogue[/b] in Bannerlord — talk to any NPC through [b]OpenRouter / OpenAI / Gemini / DeepSeek / Claude[/b], your [b]ChatGPT or claude.ai plan[/b], or [b]free on your own PC through LM Studio[/b]
 [*]NPCs with [b]real long-term memory[/b] — yours to read and rewrite in game
 [*]NPCs that [b]approach you[/b] and [b]write you letters[/b] on their own
 [*]an [b]AI wife or companion[/b] that roleplays and never forgets your story — [b]courted, proposed to and wed[/b] in conversation, companions included
@@ -57,7 +57,8 @@ Bring [b]your own API key[/b], or a plan. Pick a row:
 [*][b]Free[/b] — Gemini + gemini-3.6-flash: real free tier, no card, ~1,500 replies a day. [b]aistudio.google.com[/b]. Catches: Google trains on it, and it's slow.
 [*][b]Cheapest paid[/b] — DeepSeek + deepseek-v4-flash, about half the default's cost. [b]platform.deepseek.com[/b]
 [*][b]No key[/b] — ChatGPT or claude.ai plan? Pick Codex or Claude Code; the plan carries them.
-[*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or a local model.
+[*][b]Free, on your PC[/b] — LM Studio + Gemma 4 12B: install LM Studio ([b]lmstudio.ai[/b]), pick LMStudio, and the game downloads and loads the model. Needs a 12 GB+ graphics card; plainer than the cloud.
+[*][b]Also fine[/b] — OpenAI, Anthropic (Claude), or another local server.
 [/list]
 
 [b]Costs are yours and visible.[/b] A typical exchange costs a tenth of a cent on the default; daily totals, a hard cap. Any model must carry [b]native tool calling[/b].

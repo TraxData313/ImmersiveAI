@@ -68,7 +68,12 @@ it would have to be a paid tier anyway — so don't bother; just get a real key.
 roleplaying experience to try out first, check out the ChatAI mod — it's good; it inspired this
 one.
 
-**Local models: tinkerers only, at your own risk.** The **Local** backend (LM Studio / Ollama)
+**Free, on your own PC: LM Studio.** Install [LM Studio](https://lmstudio.ai), open it once, and
+pick **LMStudio** as the backend. The game starts it, asks once to download **Gemma 4 12B** (7.6 GB),
+loads it, and frees your graphics card when you quit. You need a graphics card with **12 GB or more**.
+It is plainer than the cloud models, and replies take a few seconds. Nothing leaves your machine.
+
+**Other local servers (Ollama and the like): tinkerers only, at your own risk.** The **Local** backend
 exists because people asked, not because it plays well. You own the setup: an instruct model with
 native tool calling (**Qwen3.6-35B-A3B** instruct, **GPT-OSS-20B**, **Mistral Small 24B**),
 **thinking/reasoning OFF** in your server (a thinking model burns its whole budget in silence and
@@ -91,7 +96,7 @@ away from you.
 
 1. Get a key at **openrouter.ai** (recommended — one key, many models), or
    **platform.openai.com** (GPT) / **console.anthropic.com** (Claude). Create an API key and add
-   a little credit ($5–10 goes a long way). Running a local model instead? No key — skip this step.
+   a little credit ($5–10 goes a long way). Running LM Studio instead? No key — skip this step.
 2. Install the mod, enable **Immersive AI** in the launcher, start the game once — it creates
    `Documents\Mount and Blade II Bannerlord\Configs\ImmersiveAI\config.json` and tells you
    exactly where to paste the key.
