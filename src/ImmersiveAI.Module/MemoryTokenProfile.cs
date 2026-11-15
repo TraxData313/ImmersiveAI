@@ -53,7 +53,7 @@ namespace ImmersiveAI
             // The Local backend's window is whatever the player's own server loads the model with —
             // declared in config (LocalContextWindow), never derivable from a model table: the same
             // model id can be served at 4k or 128k depending on the loading settings.
-            if (backend == "Local")
+            if (backend == "Local" || backend == "LMStudio")
             {
                 var localWindow = config?.LocalContextWindow ?? 0;
                 return new MemoryTokenProfile(localWindow > 0 ? localWindow : FallbackContextTokens);
@@ -119,8 +119,18 @@ namespace ImmersiveAI
                 text += string.Format(CultureInfo.InvariantCulture, " · oldest {0:0.#}d/{1}d",
                     Math.Max(0.0, currentGameDay - oldest), config.MaxRecentDays);
 
-            return text + string.Format(CultureInfo.InvariantCulture, " · trims back to {0}%",
+            text += string.Format(CultureInfo.InvariantCulture, " · trims back to {0}%",
                 config.MinRecentMemoryPercentAfterCompression);
+
+            // What the model truly READ for the last reply (the service's own count of the largest
+            // request), against its window, and how much of it was the talks themselves (2026.11.15).
+            var read = UsageLedger.LastContextFor(memory?.NpcName);
+            if (read > 0 && profile.ContextTokens > 0)
+                text += "\n" + string.Format(CultureInfo.InvariantCulture,
+                    "context: the last reply read {0} of {1} ({2:0}%) · your talks ~{3} · the rest (who they are, the scene, their tools) ~{4}",
+                    Amount(read), Amount(profile.ContextTokens), read * 100.0 / profile.ContextTokens,
+                    Amount(tokens), Amount(Math.Max(0, read - tokens)));
+            return text;
         }
 
         /// <summary>A token count in a glanceable hand: 21.4k, 1.2M, 840.</summary>

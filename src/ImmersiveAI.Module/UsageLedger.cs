@@ -30,7 +30,18 @@ namespace ImmersiveAI
             public long TokensOut;
             public double CostUsd;
             public bool CostKnown = true;
+            /// <summary>The largest single request of the interaction: what the model had to read at once.</summary>
+            public int PeakIn;
         }
+
+        // The last interaction's largest single request, per NPC name (2026.11.15: the context line
+        // in the chat). The process only; it is a gauge, not a record.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> LastPeakByNpc =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, int>(StringComparer.Ordinal);
+
+        /// <summary>How many tokens the model read at once in the last reply of this NPC; 0 when unknown.</summary>
+        public static int LastContextFor(string? npcName) =>
+            !string.IsNullOrEmpty(npcName) && LastPeakByNpc.TryGetValue(npcName!, out var v) ? v : 0;
 
         private sealed class DailyRecord
         {
@@ -134,6 +145,7 @@ namespace ImmersiveAI
                     scope.Calls++;
                     scope.TokensIn += tokensIn;
                     scope.TokensOut += tokensOut;
+                    if (tokensIn > scope.PeakIn) scope.PeakIn = tokensIn;
                     if (known) scope.CostUsd += cost; else scope.CostKnown = false;
                 }
             }
@@ -164,6 +176,7 @@ namespace ImmersiveAI
                 if (scope == null) return;
                 if (Ambient.Value == scope) Ambient.Value = null;
                 if (scope.Calls == 0) return;
+                if (!string.IsNullOrEmpty(scope.Npc) && scope.PeakIn > 0) LastPeakByNpc[scope.Npc] = scope.PeakIn;
 
                 var who = string.IsNullOrEmpty(scope.Npc) ? "" : scope.Npc + " — ";
                 var calls = scope.Calls == 1 ? "1 call" : scope.Calls + " calls";
