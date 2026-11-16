@@ -118,6 +118,10 @@ namespace ImmersiveAI.Core.Handmaids
         // villages give"): the game's own issue flow asks for these in this order, after the player's
         // "Do you have any problems?": his story, the player's question, his ask, the player's yes.
 
+        /// <summary>The player's clan tier from which villages may ask (the owner, 2026.11.16: not for a
+        /// fresh tier-0 nobody).</summary>
+        public const int MinClanTier = 1;
+
         /// <summary>How long the trouble stands in his village before he stops asking (vanilla's
         /// bandit-base issue: 15 days).</summary>
         public const int IssueDays = 15;

@@ -96,6 +96,7 @@ namespace ImmersiveAI
                 bool can = hero != null && hero.IsNotable && hero.IsAlive && !hero.IsChild
                     && village != null && village.IsVillage && village.Village != null
                     && !village.IsRaided && !village.IsUnderRaid
+                    && (Clan.PlayerClan?.Tier ?? 0) >= HandmaidQuestText.MinClanTier
                     && DenOffersOpen()
                     && (culture = VillageDenCulture(village)) != null
                     && NearestActiveDen(village, culture, null) != null;

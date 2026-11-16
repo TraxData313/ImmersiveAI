@@ -20,6 +20,7 @@ tiers the section feeds (see `tools/WORKSHOP-UPLOAD.md`):
 - After you clear a bandit hideout, your men may find a captive girl: take her in and she joins your family, using no companion slot (once a campaign).
 - She is found through a village quest now, "Clear the Sea Raiders' den" and the like: a village elder asks you to clear the den of the bandits nearest it. He has no coin to offer, only the thanks of the local folk.
 - It is an ordinary village quest: a notable who has it shows the blue mark, it is offered through "Do you have any problems?", and it comes no more often than the other village quests.
+- Villages only ask once your clan reaches tier 1. (2026-11-16)
 - Each den type holds a different girl, so the map decides who you meet, and you may seek a particular one on your next campaign.
 - Once you take it, the den is marked on your map.
 - If someone else empties the den first, the next den of that people is marked instead. Like other village quests you have 30 days; give it back to him if you change your mind.
