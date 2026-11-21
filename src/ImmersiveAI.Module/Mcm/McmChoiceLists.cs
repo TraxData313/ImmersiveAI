@@ -15,10 +15,9 @@
         // file's "3" must keep meaning Local.
         public static readonly string[] Backends = { "Anthropic", "OpenAI", "OpenRouter", "Local", "Gemini", "DeepSeek", "ClaudeCode", "Codex", "LMStudio" };
 
-        /// <summary>The current Codex subscription family. Sol mirrors living-abby's proven default;
-        /// Astra is the strongest, Terra the balanced step-down, Luna the lightest.</summary>
         public static readonly string[] CodexModels =
-            { "gpt-6.1-sol", "gpt-6-astra", "gpt-5.6-terra", "gpt-6-luna" };
+            { "gpt-6.1-sol", "gpt-6-astra", "gpt-5.6-terra", "gpt-6-luna",
+                ModConfig.DefaultCodexModel, "gpt-6.2-astra", "gpt-6.1-terra" };
 
         /// <summary>The models the Claude Code road offers by name. Whatever the player's plan
         /// carries works — these are the ones worth listing; anything else goes in the custom
@@ -58,7 +57,8 @@
         // NOT here: on /v1/chat/completions gpt-6.1-sol refuses reasoning "none" and allows tools
         // only at "none" — it cannot carry the hands without the Responses API. Keep 6-sol direct.
         public static readonly string[] OpenAIModels =
-            { "gpt-6-luna", "gpt-5.4-mini", "gpt-5.6-terra", "gpt-6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano", "gpt-6-astra" };
+            { "gpt-6-luna", "gpt-5.4-mini", "gpt-5.6-terra", "gpt-6-sol", "gpt-5.5", "gpt-5.4", "gpt-5.4-nano", "gpt-6-astra",
+                "gpt-6.2-sol", "gpt-6.2-astra", "gpt-6.1-terra" };
 
         public static readonly string[] OpenRouterModels =
         {

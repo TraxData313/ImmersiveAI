@@ -65,7 +65,7 @@ namespace ImmersiveAI.Mcm
         public string OpenAIApiKey { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("OpenAI model", Order = 5, RequireRestart = false,
-            HintText = "gpt-6-luna ($0.10/$0.50 per MTok) is the default - the cheapest there is. gpt-5.6-terra ($2/$12) is the RECOMMENDED step-up if you don't pinch denars - noticeably sharper in live play. gpt-6-sol ($2/$10) the flagship, gpt-6-astra ($10/$50) the heaviest; gpt-5.4-mini ($0.75/$4.50) the proven fallback. Any other id: custom field below, at your own risk.")]
+            HintText = "GPT-6 Luna is the budget default. Standard input/output prices per million tokens: GPT-6.1 Terra $1/$5, GPT-6.2 Sol $2/$10, GPT-6.2 Astra $8/$40. Both 6.2 models use the Responses API with the default OpenAI endpoint.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
         public Dropdown<string> OpenAIModel { get; set; } = new Dropdown<string>(McmChoiceLists.OpenAIModels, 0);
 
@@ -150,9 +150,10 @@ namespace ImmersiveAI.Mcm
         public string ClaudeCodeModelCustom { get; set; } = string.Empty;
 
         [SettingPropertyDropdown("Codex subscription model", Order = 22, RequireRestart = false,
-            HintText = "When the backend is Codex: which model answers through your ChatGPT subscription after one 'codex login'. Sol is the proven living-abby default; Astra is strongest but heavier; Terra and Luna are lighter. No OpenAI API key is used and there is no pay-as-you-go fallback. The cost notice shows the subscription's 5-hour and weekly gauges.")]
+            HintText = "Uses your ChatGPT subscription after 'codex login'. GPT-6.2 Sol is the default, GPT-6.2 Astra is the heavier option, and GPT-6.1 Terra and GPT-6 Luna are lighter choices. The cost notice shows subscription usage.")]
         [SettingPropertyGroup("Connection", GroupOrder = 0)]
-        public Dropdown<string> CodexModel { get; set; } = new Dropdown<string>(McmChoiceLists.CodexModels, 0);
+        public Dropdown<string> CodexModel { get; set; } = new Dropdown<string>(McmChoiceLists.CodexModels,
+            System.Array.IndexOf(McmChoiceLists.CodexModels, ModConfig.DefaultCodexModel));
 
         [SettingPropertyText("Codex model (type any id)", Order = 23, RequireRestart = false,
             HintText = "While this holds text it OVERRIDES the dropdown: any model id your installed Codex app-server lists. Empty = the dropdown chooses.")]

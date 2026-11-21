@@ -47,7 +47,8 @@ namespace ImmersiveAI
         /// pay-as-you-go fallback: the client verifies that the active Codex account is a ChatGPT
         /// login before a model turn begins. Each call is ephemeral and model-only; Codex tools,
         /// plugins, MCP servers, skills and filesystem access stay disabled.</summary>
-        public string CodexModel { get; set; } = "gpt-6.1-sol";
+        public const string DefaultCodexModel = "gpt-6.2-sol";
+        public string CodexModel { get; set; } = DefaultCodexModel;
 
         /// <summary>Where codex.exe lives, only when the finder cannot see it on PATH or inside the
         /// desktop app's versioned bin folder. Blank = find it.</summary>
@@ -1142,7 +1143,10 @@ namespace ImmersiveAI
                 ["claude-sonnet-5.5"] = new ModelPrice(2, 10),
                 ["claude-haiku-5-5"] = new ModelPrice(0.1, 0.5),  // under 100K prompt tokens
                 ["claude-haiku-5.5"] = new ModelPrice(0.1, 0.5),
-                // OpenAI — the GPT-6 line (2026.09.28): Sol and Luna moved up to 6, Terra stays on 5.6.
+                // OpenAI standard API rates in USD per million tokens.
+                ["gpt-6.2-sol"] = new ModelPrice(2, 10),
+                ["gpt-6.2-astra"] = new ModelPrice(8, 40),
+                ["gpt-6.1-terra"] = new ModelPrice(1, 5),
                 ["gpt-6.1-sol"] = new ModelPrice(2, 10),     // 2026.10.02, same price as 6 Sol
                 ["gpt-6-sol"] = new ModelPrice(2, 10),
                 ["gpt-6-astra"] = new ModelPrice(10, 50),
@@ -1409,7 +1413,7 @@ namespace ImmersiveAI
             // Codex: same keyless subscription contract. Model ids come from app-server's own
             // catalog; the path is only an override for desktop installs the inherited PATH missed.
             CodexModel = (CodexModel ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(CodexModel)) CodexModel = new ModConfig().CodexModel;
+            if (string.IsNullOrWhiteSpace(CodexModel)) CodexModel = DefaultCodexModel;
             CodexPath = (CodexPath ?? string.Empty).Trim();
 
             // The daily request cap: negative is a typo; 0 stays "no cap".

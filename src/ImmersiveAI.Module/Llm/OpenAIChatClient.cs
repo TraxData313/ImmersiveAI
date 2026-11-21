@@ -48,6 +48,7 @@ namespace ImmersiveAI.Llm
         private readonly int _maxTokens;
         private readonly string _endpoint;
         private readonly string _label;
+        private readonly bool _useResponses;
         // Set the first time a local server refuses reasoning_effort; from then on it is not sent.
         private volatile bool _localEffortRefused;
         // Set when an empty answer was all silent thinking; read once by CompleteAsync.
@@ -88,6 +89,11 @@ namespace ImmersiveAI.Llm
             if (_dialect == OpenAiDialect.Gemini && _maxTokens < ModConfig.GeminiThinkingFloor)
                 _maxTokens = ModConfig.GeminiThinkingFloor;
             _endpoint = string.IsNullOrWhiteSpace(endpoint) ? ModConfig.DefaultOpenAIEndpoint : endpoint;
+            // Compatible endpoints keep their own chat dialect.
+            _useResponses = !isLocal && dialect == OpenAiDialect.Standard
+                && string.Equals(_endpoint, ModConfig.DefaultOpenAIEndpoint, StringComparison.OrdinalIgnoreCase)
+                && _model.StartsWith("gpt-6.2-", StringComparison.OrdinalIgnoreCase);
+            if (_useResponses) _endpoint = "https://api.openai.com/v1/responses";
             // Errors and log lines name the true provider ("OpenRouter request failed…"), so a
             // router problem never sends the player checking their OpenAI account.
             _label = string.IsNullOrWhiteSpace(providerLabel) ? "OpenAI" : providerLabel;
@@ -159,6 +165,16 @@ namespace ImmersiveAI.Llm
                 throw new InvalidOperationException(_label + " API key is not set. Add it to " + ModConfig.ConfigFilePath);
             if (!UsageLedger.CanCall(out var capReason))
                 throw new InvalidOperationException(capReason);
+
+            if (_useResponses)
+            {
+                var request = OpenAiResponsesShape.BuildRequest(_model, _maxTokens, messages, tools, allowToolUse);
+                var requestText = request.ToString(Formatting.None);
+                var response = await PostOnceAsync(requestText, cancellationToken).ConfigureAwait(false);
+                var result = await ReadSuccessAsync(response, requestText, cancellationToken).ConfigureAwait(false);
+                RecordUsage(result, "input_tokens", "output_tokens");
+                return OpenAiResponsesShape.ParseResult(result, tools);
+            }
 
             // Reasoning is OFF for good (2026.07.13, Anton's call): silent thinking spends billed
             // tokens against the reply's budget and slows every answer — an NPC that "thinks" too
@@ -306,43 +322,8 @@ namespace ImmersiveAI.Llm
                 (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
             }
 
-            // OpenAI's "insufficient permissions" 401 shows up INTERMITTENTLY for a while after
-            // the account's model access is changed (their ACL propagating — observed live
-            // 2026.07.12: the same request shape succeeding and failing seconds apart, and
-            // one 1.5s retry still losing whole replies HOURS after the grant). Three retries
-            // with growing pauses ride out a stale server; a truly bad key fails them all and
-            // is reported as before.
-            for (int attempt = 1; attempt <= 3 && status == 401
-                 && body.IndexOf("insufficient permissions", StringComparison.OrdinalIgnoreCase) >= 0; attempt++)
-            {
-                ModLog.Warn($"{_label} answered 401 'insufficient permissions' — retry {attempt} of 3 (fresh access changes propagate slowly on their side).");
-                await Task.Delay(1500 * attempt, cancellationToken).ConfigureAwait(false);
-                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (status < 200 || status >= 300)
-            {
-                LlmGate.ReportFailure(status, _label, body);
-                throw new InvalidOperationException($"{_label} request failed ({status}): {Truncate(body, 400)}");
-            }
-
-            var json = JObject.Parse(body);
-
-            // The API measures its own tokens — hand them to the ledger, and tell the
-            // gate the road is open again.
-            var completionTokens = (int?)json.SelectToken("usage.completion_tokens") ?? 0;
-            UsageLedger.RecordCall(_model,
-                (int?)json.SelectToken("usage.prompt_tokens") ?? 0,
-                completionTokens);
-            LlmGate.ReportSuccess();
-
-            // The thinking tax, made visible: some backends cannot have thinking switched off
-            // (Gemini 3.x), and any backend could quietly ignore the off switch — when the API
-            // reports reasoning tokens, the log says so, and "why is it slow" is answered by
-            // log.txt instead of guesswork. Silent when the count is zero, which is the norm.
-            var thinkingTokens = (int?)json.SelectToken("usage.completion_tokens_details.reasoning_tokens") ?? 0;
-            if (thinkingTokens > 0)
-                ModLog.Info($"{_label} ({_model}): {thinkingTokens} of {completionTokens} output tokens were silent thinking.");
+            var json = await ReadSuccessAsync((status, body), payloadText, cancellationToken).ConfigureAwait(false);
+            RecordUsage(json, "prompt_tokens", "completion_tokens");
 
             var message = json.SelectToken("choices[0].message");
 
@@ -396,7 +377,48 @@ namespace ImmersiveAI.Llm
             return AnswerShape.FromNative(text, calls, tools);
         }
 
-        /// <summary>One POST to the chat endpoint: status + body, never throwing on an API error
+        private async Task<JObject> ReadSuccessAsync((int Status, string Body) response, string payloadText,
+            CancellationToken cancellationToken)
+        {
+            var (status, body) = response;
+            // Model-access changes can yield intermittent permission errors while they propagate.
+            for (int attempt = 1; attempt <= 3 && status == 401
+                 && body.IndexOf("insufficient permissions", StringComparison.OrdinalIgnoreCase) >= 0; attempt++)
+            {
+                ModLog.Warn($"{_label} answered 401 'insufficient permissions' - retry {attempt} of 3 (fresh access changes propagate slowly on their side).");
+                await Task.Delay(1500 * attempt, cancellationToken).ConfigureAwait(false);
+                (status, body) = await PostOnceAsync(payloadText, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (status < 200 || status >= 300)
+            {
+                LlmGate.ReportFailure(status, _label, body);
+                throw new InvalidOperationException($"{_label} request failed ({status}): {Truncate(body, 400)}");
+            }
+            return JObject.Parse(body);
+        }
+
+        private void RecordUsage(JObject json, string inputField, string outputField)
+        {
+            var usage = json["usage"];
+            // The API measures its own tokens - hand them to the ledger, and tell the
+            // gate the road is open again.
+            var completionTokens = (int?)usage?[outputField] ?? 0;
+            UsageLedger.RecordCall(_model,
+                (int?)usage?[inputField] ?? 0,
+                completionTokens);
+            LlmGate.ReportSuccess();
+
+            // The thinking tax, made visible: some backends cannot have thinking switched off
+            // (Gemini 3.x), and any backend could quietly ignore the off switch - when the API
+            // reports reasoning tokens, the log says so, and "why is it slow" is answered by
+            // log.txt instead of guesswork. Silent when the count is zero, which is the norm.
+            var thinkingTokens = (int?)usage?.SelectToken(outputField + "_details.reasoning_tokens") ?? 0;
+            if (thinkingTokens > 0)
+                ModLog.Info($"{_label} ({_model}): {thinkingTokens} of {completionTokens} output tokens were silent thinking.");
+        }
+
+        /// <summary>One POST to the API endpoint: status + body, never throwing on an API error
         /// status (the caller decides about retries). A failed CONNECTION still throws, after
         /// telling the gate.</summary>
         private async Task<(int Status, string Body)> PostOnceAsync(string payloadText, CancellationToken cancellationToken)
